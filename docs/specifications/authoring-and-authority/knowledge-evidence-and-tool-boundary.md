@@ -53,7 +53,6 @@ Missing guide, unknown target, stale input, unsupported capability와 host refus
 
 ### Tool 교체 호환성 {#spec-authoring-tool-boundary-compatibility}
 
-
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability 이 호환성이 source와 공개 contract를 유지한 client와 agent 교체를 보장한다. -->
 <!-- @evidence requirements/agent-authoring/partial-work.md#agent-resumable-authoring 이 호환성이 hidden host session 없이 저작을 재개하게 한다. -->
 

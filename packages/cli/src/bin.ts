@@ -7,7 +7,9 @@ import {
   ScaffoldPublicationError,
   applyAutoMovieContractMigrationPlan,
   autoMovieContractTargetSources,
+  createAutoMovieContractMigrationReceiptArtifacts,
   inspectAutoMovieAuthoringReachability,
+  observeAutoMovieContractMigrationOutcomes,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
   planAutoMovieContractMigrationPublication,
@@ -715,6 +717,46 @@ export const run = (argv: readonly string[]): number => {
               `Contract migration rename target changed before retirement: ${removal.target}.`,
             );
           fs.unlinkSync(source);
+        }
+        // Every planned target is re-read and judged after publication, and
+        // the predecessor baseline plus the append-only receipt are preserved
+        // before the baseline pointer advances, so a run stopped between those
+        // two writes leaves a complete record of what landed.
+        const outcomes = observeAutoMovieContractMigrationOutcomes({
+          plan,
+          published: readContractFiles(root, from, to),
+        });
+        const unpublished = outcomes.filter(
+          (outcome) => outcome.status !== "published",
+        );
+        if (unpublished.length !== 0)
+          throw new Error(
+            `Contract migration targets did not publish exactly: ${unpublished
+              .map((outcome) => `${outcome.path} ${outcome.status}`)
+              .join(", ")}.`,
+          );
+        const artifacts = createAutoMovieContractMigrationReceiptArtifacts({
+          from,
+          observed: current,
+          outcomes,
+          plan,
+          to,
+        });
+        for (const artifact of [artifacts.predecessor, artifacts.receipt]) {
+          const resident = resolveProjectFile(root, artifact.path);
+          if (fs.existsSync(resident)) {
+            // The same plan reproduces the same record; a resident record with
+            // other bytes is not this migration's and is never overwritten.
+            if (fs.readFileSync(resident, "utf8") !== artifact.source)
+              throw new Error(
+                `Contract migration record differs from its resident predecessor: ${artifact.path}.`,
+              );
+          } else
+            publishProjectCandidate(
+              root,
+              { [artifact.path]: artifact.source },
+              "create",
+            );
         }
         if (
           readProjectTextFile(root, AUTO_MOVIE_CONTRACT_BASELINE_PATH) !==

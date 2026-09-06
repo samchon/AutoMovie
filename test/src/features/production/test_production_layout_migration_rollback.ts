@@ -110,7 +110,9 @@ const failure = (
  *
  * 1. A rename refused midway through publication rolls every published and
  *    staged move back to its legacy path, leaves no staging directory behind,
- *    and reports the refused rename.
+ *    and reports the refused rename. When legacy output roots take part, the
+ *    empty namespaced root the migration created is removed again so the
+ *    staged legacy tree can return to its own path.
  * 2. A legacy entry whose physical identity can no longer be confirmed during
  *    that rollback stops the rollback and reports both failures together.
  * 3. A failure after the migrated registry was published is reported as a
@@ -143,6 +145,53 @@ export const test_production_layout_migration_rollback = (): void => {
     );
     const afterRollback = layout(fixture.root);
     const temporariesAfterRollback = migrationTemporaries(fixture.root);
+
+    // 1b. Legacy output roots move into their own production directory, which
+    //     the migration creates inside the emptied legacy root. A rollback has
+    //     to remove that empty root again before the staged legacy tree can
+    //     return to its path, whether the move was already published (the
+    //     generated root) or still staged (the render root).
+    const legacyOutputs = {
+      generated: path.join(fixture.root, "generated", "stale.json"),
+      renders: path.join(fixture.root, "renders", "stale.bin"),
+    };
+    for (const file of Object.values(legacyOutputs)) {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, "legacy");
+    }
+    let refusedRender = false;
+    const refusedRenderPublish = createTestFileSystem({
+      renameSync: ((...args: unknown[]) => {
+        if (
+          refusedRender === false &&
+          String(args[1]).endsWith(path.join("renders", "fixture-film"))
+        ) {
+          refusedRender = true;
+          throw platformError("EIO");
+        }
+        return Reflect.apply(fs.renameSync, fs, args);
+      }) as typeof fs.renameSync,
+    });
+    const outputsRolledBack = failure(() =>
+      withTestFileSystem(refusedRenderPublish.fileSystem, () =>
+        AutoMovieProductionProject.open(fixture.root),
+      ),
+    );
+    const afterOutputRollback = {
+      layout: layout(fixture.root),
+      outputs: Object.fromEntries(
+        Object.entries(legacyOutputs).map(([name, file]) => [
+          name,
+          fs.existsSync(file),
+        ]),
+      ),
+      namespaced: fs.existsSync(
+        path.join(fixture.root, "generated", "fixture-film"),
+      ),
+      temporaries: migrationTemporaries(fixture.root),
+    };
+    for (const file of Object.values(legacyOutputs))
+      fs.rmSync(path.dirname(file), { recursive: true, force: true });
 
     // 2. An identity that cannot be confirmed during rollback stops it.
     let rollingBack = false;
@@ -210,6 +259,11 @@ export const test_production_layout_migration_rollback = (): void => {
           layout: afterRollback,
           temporaries: temporariesAfterRollback,
         },
+        outputsRolledBack: {
+          message: outputsRolledBack?.message,
+          causes: outputsRolledBack?.causes,
+          ...afterOutputRollback,
+        },
         stopped: {
           message: stopped?.message,
           causes: stopped?.causes.map((cause) => cause.split(":")[0]),
@@ -241,6 +295,21 @@ export const test_production_layout_migration_rollback = (): void => {
             "fixture-film/production.json": false,
             "fixture-film/shots": false,
           },
+          temporaries: [],
+        },
+        outputsRolledBack: {
+          message: "EIO",
+          causes: [],
+          layout: {
+            models: true,
+            "production.json": true,
+            shots: true,
+            "shared/models": false,
+            "fixture-film/production.json": false,
+            "fixture-film/shots": false,
+          },
+          outputs: { generated: true, renders: true },
+          namespaced: false,
           temporaries: [],
         },
         stopped: {

@@ -1,5 +1,8 @@
 import {
+  applyAutoMovieContractMigrationPlan,
   autoMovieContractTargetSources,
+  createAutoMovieContractMigrationReceiptArtifacts,
+  observeAutoMovieContractMigrationOutcomes,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
   planAutoMovieContractMigrationPublication,
@@ -112,6 +115,61 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
         plan: migration,
       }),
     ),
+  );
+  // The apply step re-reads every published target, judges it action by
+  // action, and preserves the predecessor baseline and the append-only receipt
+  // before the baseline pointer advances; an incomplete outcome cannot become
+  // a receipt.
+  const published = applyAutoMovieContractMigrationPlan(
+    migration,
+    previousSources,
+  );
+  const outcomes = observeAutoMovieContractMigrationOutcomes({
+    plan: migration,
+    published,
+  });
+  const receipt = createAutoMovieContractMigrationReceiptArtifacts({
+    from: previousBaseline,
+    observed: previousSources,
+    outcomes,
+    plan: migration,
+    to: nextBaseline,
+  });
+  TestValidator.equals(
+    "the apply step records one published outcome per action and one receipt generation",
+    {
+      outcomes: outcomes.map((outcome) => [
+        outcome.action,
+        outcome.path,
+        outcome.status,
+      ]),
+      generation:
+        receipt.predecessor.path.split("/")[2] ===
+        receipt.receipt.path.split("/")[2],
+      predecessor: receipt.predecessor.source.includes('"version": "0.1.0"'),
+      receiptRecord: (
+        JSON.parse(receipt.receipt.source) as { validation: { status: string } }
+      ).validation.status,
+      incompleteRefused: refuses(() =>
+        createAutoMovieContractMigrationReceiptArtifacts({
+          from: previousBaseline,
+          observed: previousSources,
+          outcomes: observeAutoMovieContractMigrationOutcomes({
+            plan: migration,
+            published: {},
+          }),
+          plan: migration,
+          to: nextBaseline,
+        }),
+      ),
+    },
+    {
+      outcomes: [["write", "docs/discovery/core/common.md", "published"]],
+      generation: true,
+      predecessor: true,
+      receiptRecord: "completed",
+      incompleteRefused: true,
+    },
   );
   const renamedSource = {
     "docs/discovery/core/old.md": "# Contract\n\n## Rule {#rule}\n",

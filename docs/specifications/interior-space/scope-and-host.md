@@ -4,7 +4,6 @@
 
 ### 건물 interior 시스템 경계 {#interior-space-building-interior-boundary}
 
-
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-host-bounded-scope Requires interior facts to remain inside a declared host boundary. -->
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope Limits the current authoring contract to building interiors. -->
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-scope-refusal Requires host escape and unsupported exterior claims to fail explicitly. -->

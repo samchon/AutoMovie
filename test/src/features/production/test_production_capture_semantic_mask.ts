@@ -173,17 +173,6 @@ export const test_production_capture_semantic_mask =
       const firstMask = await shotMask(sameShot, 0);
       const secondMask = await shotMask(sameShot, 1 / 24);
       const incompleteMask = await shotMask(incompleteEvidence, 2 / 24);
-      console.log(
-        "F0CAP",
-        JSON.stringify(firstMask.diagnostics),
-        JSON.stringify(
-          compiled.diagnostics.map((d) => [
-            d.code,
-            d.target,
-            d.message.slice(0, 200),
-          ]),
-        ),
-      );
       const secondManifest =
         secondMask.receipt === null
           ? null

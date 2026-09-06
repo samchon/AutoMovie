@@ -59,6 +59,8 @@ const quarantines = (root: string): string[] =>
  * 2. A refused move after the first root was quarantined puts that root back
  *    and leaves no quarantine; an identity that cannot be confirmed during that
  *    rollback stops it, and a refused rollback move is reported as incomplete.
+ *    A registry write refused after the audit record landed rolls the moves
+ *    back and removes that audit record too.
  * 3. A clean erase quarantines every owned root, records the audit reason,
  *    removes the production from the registry, and refuses further writes.
  */
@@ -221,6 +223,40 @@ export const test_production_erase_production = (): void => {
       });
     }
     const afterIncomplete = roots(owned);
+    // A registry write refused after the audit record landed rolls every move
+    // back and removes that audit, so a failed erase leaves no deletion record
+    // beside the production it did not delete.
+    const auditDirectory = path.join(
+      fixture.root,
+      "automovie",
+      "audit",
+      "production-deletions",
+    );
+    let auditWritten = false;
+    const refusedRegistry = createTestFileSystem({
+      renameSync: ((...args: unknown[]) => {
+        const destination = String(args[1]);
+        if (destination.includes(`${path.sep}production-deletions${path.sep}`))
+          auditWritten = true;
+        if (auditWritten && destination.endsWith(`${path.sep}productions.json`))
+          throw platformError("EIO");
+        return Reflect.apply(fs.renameSync, fs, args);
+      }) as typeof fs.renameSync,
+    });
+    const auditRolledBack = failure(() =>
+      withTestFileSystem(refusedRegistry.fileSystem, () =>
+        AutoMovieProductionProject.open(fixture.root).eraseProduction(
+          "refused registry",
+        ),
+      ),
+    );
+    const afterAuditRollback = {
+      roots: roots(owned),
+      quarantines: quarantines(fixture.root),
+      audits: fs.existsSync(auditDirectory)
+        ? fs.readdirSync(auditDirectory).length
+        : 0,
+    };
 
     // 3. A clean erase.
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -265,6 +301,10 @@ export const test_production_erase_production = (): void => {
           causes: incomplete?.causes.map((cause) => cause.split(":")[0]),
         },
         afterIncomplete,
+        auditRolledBack: {
+          message: auditRolledBack?.message,
+          ...afterAuditRollback,
+        },
         erased,
         audits,
         registry: registry.productions,
@@ -312,6 +352,12 @@ export const test_production_erase_production = (): void => {
           design: true,
           generated: true,
           state: true,
+        },
+        auditRolledBack: {
+          message: "EIO",
+          roots: { design: true, generated: true, state: true },
+          quarantines: [],
+          audits: 0,
         },
         erased: { erased: true, productionId: "fixture-film", remaining: [] },
         audits: [

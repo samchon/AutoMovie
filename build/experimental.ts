@@ -335,12 +335,14 @@ export const runExperimental = (
         `experimental/${name} has no package.json to refresh. Create it first.`,
       );
 
+    // A sandbox created before baselines were frozen has a manifest and no
+    // baseline; the scaffold request names that state instead of an ENOENT.
+    const baselineFile = path.join(target, AUTO_MOVIE_CONTRACT_BASELINE_PATH);
     const refreshSnapshot = refresh
       ? {
-          baseline: fs.readFileSync(
-            path.join(target, AUTO_MOVIE_CONTRACT_BASELINE_PATH),
-            "utf8",
-          ),
+          baseline: fs.existsSync(baselineFile)
+            ? fs.readFileSync(baselineFile, "utf8")
+            : undefined,
           manifest: fs.readFileSync(manifest, "utf8"),
         }
       : undefined;

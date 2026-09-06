@@ -153,6 +153,7 @@ import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import {
   materializeProductionFilmEffects,
   productionFilmEffectEditFingerprint,
+  projectProductionShotEffectFilmIntervals,
 } from "./filmEffectRuntime";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
@@ -201,7 +202,6 @@ import {
 import {
   type IAutoMovieProductionRenderJobPlan,
   canonicalProductionWebVtt,
-  productionRenderLayersForPass,
 } from "./productionRenderJob";
 import {
   AutoMovieProductionRenderLedgerSchemaError,
@@ -239,7 +239,7 @@ import {
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { screenplayTimingDiagnostics } from "./screenplayTimingDiagnostics";
-import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
+import { classifyAutoMovieProductionDeliverableSemanticMask } from "./semanticMaskEvidence";
 import { shotDeterminismDiagnostics } from "./shotDeterminismDiagnostics";
 import {
   IAutoMovieSourceContentFinding,
@@ -378,7 +378,7 @@ export class AutoMovieProductionCompiler {
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
     if (this.authoringEvidence?.manifest.kind === "library")
-      return this.runLibrary(input, materialize);
+      return this.runLibrary(input, materialize, this.authoringEvidence);
     const timedAuthoring = resolveAutoMovieTimedAuthoringKind(
       this.authoringEvidence,
     )!;
@@ -714,10 +714,10 @@ export class AutoMovieProductionCompiler {
                       digest: binding.sourceDigest,
                       target: target!,
                     },
-                    acceptanceSources: (
-                      this.authoringEvidence?.sourceOwners ?? []
-                    )
-                      .filter(
+                    // A resolved binding came from this evidence carrier, so
+                    // the sibling reviewed exports are read from the same one.
+                    acceptanceSources:
+                      this.authoringEvidence!.sourceOwners.filter(
                         (candidate) =>
                           candidate.branch === "shots" &&
                           candidate.reviewed &&
@@ -727,8 +727,7 @@ export class AutoMovieProductionCompiler {
                             candidate.sourcePath === binding.sourcePath &&
                             candidate.exportName === binding.exportName
                           ),
-                      )
-                      .map((candidate) => ({
+                      ).map((candidate) => ({
                         path: candidate.sourcePath,
                         export: candidate.exportName,
                         digest: candidate.sourceDigest,
@@ -1245,15 +1244,14 @@ export class AutoMovieProductionCompiler {
   private runLibrary(
     input: IAutoMovieCompileProjectInput,
     materialize: boolean,
+    initialAuthoring: IAutoMovieProductionEvidence,
   ): IAutoMovieCompileProjectOutput {
+    // The dispatcher selects this path from the evidence it already holds, so
+    // the only question left is whether a fresher reading is available.
     const authoring =
       this.currentAuthoringEvidence === undefined
-        ? this.authoringEvidence
+        ? initialAuthoring
         : this.currentAuthoringEvidence();
-    if (authoring === undefined)
-      throw new Error(
-        "Library compilation requires current authoring evidence.",
-      );
     const inputRevision = this.project.revision();
     const snapshot = captureAutoMovieLibraryAuthoringSnapshot({
       root: this.project.root,
@@ -1354,7 +1352,9 @@ export class AutoMovieProductionCompiler {
           admit: (exportName, design) =>
             resolveAutoMovieSourceOwnerBinding({
               bindings: snapshotAuthoring.sourceOwners,
-              branch: sourceBranchByDesign.get(design) ?? "",
+              // Admission runs only for a design `context` resolved from the
+              // same owner population, so the branch is always recorded.
+              branch: sourceBranchByDesign.get(design)!,
               sourcePath: source,
               exportName,
               owner: design,
@@ -8966,26 +8966,13 @@ const materializeFilmArtifacts = (
     sourceDigest,
   };
   const editFingerprint = productionFilmEffectEditFingerprint(timeline);
-  const shotEffects = timeline.segments.flatMap((segment) => {
-    const shot = shots.get(segment.shot);
-    if (shot === undefined) return [];
-    return shot.effects.flatMap((effect) => {
-      const effectStart = Math.round(effect.start * timeline.fps);
-      const effectEnd = Math.round(effect.end * timeline.fps);
-      const start = Math.max(segment.sourceInFrame, effectStart);
-      const end = Math.min(segment.sourceOutFrame, effectEnd);
-      return end <= start
-        ? []
-        : [
-            {
-              cue: effect.id,
-              shot: segment.shot,
-              zone: effect.zone,
-              startFrame: segment.startFrame + start - segment.sourceInFrame,
-              endFrame: segment.startFrame + end - segment.sourceInFrame,
-            },
-          ];
-    });
+  // Shot cues are projected onto film frames by the same exact rational
+  // half-open boundary the effect runtime samples with, so a cue second that
+  // sits off the frame grid owns the frame whose interval contains it rather
+  // than the frame a float product happens to round to.
+  const shotEffects = projectProductionShotEffectFilmIntervals({
+    timeline,
+    shots,
   });
   return {
     edit: {
@@ -9007,7 +8994,7 @@ const materializeFilmArtifacts = (
         compileFingerprint: inputFingerprint,
         editFingerprint,
       },
-      frameRate: timeline.frameRate ?? timeline.fps,
+      frameRate: resolveProductionFrameRate(timeline),
       world,
       effects: timeline.tracks.effects,
       shotEffects,
@@ -9514,75 +9501,37 @@ const finalDeliverableDiagnostics = (
               ),
             );
           else {
-            let semanticCurrent = true;
-            if (file.semanticMask === undefined) {
-              if (probe.kind === "semantic-mask") {
-                semanticCurrent = false;
-                diagnostics.push(
-                  renderDeliverableDiagnostic(
-                    "render-deliverable-unowned",
-                    deliverable.id,
-                    `Semantic sidecar "${file.path}" has no semantic receipt in the current aggregate manifest.`,
-                    file.path,
-                  ),
-                );
-              }
-            } else {
-              const semantic = file.semanticMask;
-              const ownedByPlan = currentPlan.chunks.some(
-                (chunk) =>
-                  chunk.deliverable === deliverable.id &&
-                  chunk.pass === "mask" &&
-                  chunk.frames.some(
-                    (frame) =>
-                      frame.globalFrame === semantic.frame &&
-                      productionRenderLayersForPass(frame, "mask").some(
-                        (layer) => layer.shot === semantic.shot,
-                      ),
-                  ),
+            // One classifier decides a sidecar's standing for the final gate,
+            // the terminal commit, and the proxy preflight alike, so a
+            // receipt that records incomplete runtime coverage is refused
+            // here exactly as the other two boundaries refuse it.
+            const semantic = classifyAutoMovieProductionDeliverableSemanticMask(
+              {
+                deliverable,
+                file,
+                probe,
+                bytes: actual,
+                plan: currentPlan,
+              },
+            );
+            if (
+              semantic.status === "media" ||
+              semantic.status === "semantic-mask"
+            )
+              observed.push({ file, bytes: actual, probe });
+            else
+              diagnostics.push(
+                renderDeliverableDiagnostic(
+                  semantic.status === "unreceipted"
+                    ? "render-deliverable-unowned"
+                    : "render-deliverable-stale",
+                  deliverable.id,
+                  semantic.status === "stale"
+                    ? `${semantic.reason} Recreate the semantic sidecar from its current mask frame.`
+                    : semantic.reason,
+                  file.path,
+                ),
               );
-              if (
-                deliverable.kind !== "guide-pass" ||
-                probe.kind !== "semantic-mask" ||
-                semantic.sidecar.path !== file.path ||
-                ownedByPlan === false
-              ) {
-                semanticCurrent = false;
-                diagnostics.push(
-                  renderDeliverableDiagnostic(
-                    "render-deliverable-stale",
-                    deliverable.id,
-                    `Semantic sidecar "${file.path}" is not bound to one current mask frame in this guide deliverable.`,
-                    file.path,
-                  ),
-                );
-              } else
-                try {
-                  verifyAutoMovieProductionSemanticMaskReceipt({
-                    receipt: semantic,
-                    expectedFrame: semantic.frame,
-                    expectedShot: semantic.shot,
-                    evidence: {
-                      version: 1,
-                      shot: semantic.shot,
-                      mask: probe.mask,
-                      coverage: semantic.coverage,
-                    },
-                    resident: { path: file.path, bytes: actual },
-                  });
-                } catch (error) {
-                  semanticCurrent = false;
-                  diagnostics.push(
-                    renderDeliverableDiagnostic(
-                      "render-deliverable-stale",
-                      deliverable.id,
-                      `${errorMessage(error)} Recreate the semantic sidecar from its current mask frame.`,
-                      file.path,
-                    ),
-                  );
-                }
-            }
-            if (semanticCurrent) observed.push({ file, bytes: actual, probe });
           }
         }
       } catch (error) {
@@ -9669,7 +9618,10 @@ const appendRenditionDeliveryDiagnostics = (
     }));
     const declared =
       production.visualDelivery === "mixed"
-        ? (production.visualDeliveryLanes ?? [])
+        ? // The design validator requires an explicit lane population for a
+          // mixed delivery, and a design that fails it never reaches this gate
+          // with a current compile fingerprint.
+          production.visualDeliveryLanes!
         : occurrences.map((occurrence) => ({
             ...occurrence,
             lane: production.visualDelivery,
@@ -9828,7 +9780,8 @@ const appendRenditionDeliveryDiagnostics = (
       ),
       policy:
         production.visualDelivery === "mixed"
-          ? (production.mixedVisualDeliveryPolicy ?? null)
+          ? // Required by the design validator beside the lane population.
+            production.mixedVisualDeliveryPolicy!
           : null,
       currentObservationDigest: observationDigest,
     });

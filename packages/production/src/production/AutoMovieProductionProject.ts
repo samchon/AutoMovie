@@ -68,7 +68,6 @@ import {
 } from "./productionPayloadSnapshot";
 import {
   type IAutoMovieProductionRenderJobPlan,
-  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
 } from "./productionRenderJob";
 import {
@@ -115,7 +114,10 @@ import {
   assertProductionRootNamespaceLease,
   releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
-import { verifyAutoMovieProductionSemanticMaskReceipt } from "./semanticMaskEvidence";
+import {
+  assertAutoMovieProductionDeliverableSemanticMask,
+  verifyAutoMovieProductionSemanticMaskReceipt,
+} from "./semanticMaskEvidence";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -3970,47 +3972,16 @@ export class AutoMovieProductionProject {
           mediaType: file.mediaType,
           bytes,
         });
-        if (file.semanticMask === undefined) {
-          if (probe.kind === "semantic-mask")
-            throw new Error(
-              `Semantic sidecar "${file.path}" has no semantic receipt in its deliverable manifest.`,
-            );
-        } else {
-          const semantic = file.semanticMask;
-          const ownedByPlan = props.plan.chunks.some(
-            (chunk) =>
-              chunk.deliverable === deliverable.id &&
-              chunk.pass === "mask" &&
-              chunk.frames.some(
-                (frame) =>
-                  frame.globalFrame === semantic.frame &&
-                  productionRenderLayersForPass(frame, "mask").some(
-                    (layer) => layer.shot === semantic.shot,
-                  ),
-              ),
-          );
-          if (
-            deliverable.kind !== "guide-pass" ||
-            probe.kind !== "semantic-mask" ||
-            semantic.sidecar.path !== file.path ||
-            ownedByPlan === false
-          )
-            throw new Error(
-              `Semantic sidecar "${file.path}" is not bound to one current mask frame in its guide deliverable.`,
-            );
-          verifyAutoMovieProductionSemanticMaskReceipt({
-            receipt: semantic,
-            expectedFrame: semantic.frame,
-            expectedShot: semantic.shot,
-            evidence: {
-              version: 1,
-              shot: semantic.shot,
-              mask: probe.mask,
-              coverage: semantic.coverage,
-            },
-            resident: { path: file.path, bytes },
-          });
-        }
+        // The same classifier the final gate and the proxy preflight consult,
+        // so a receipt recording incomplete runtime coverage cannot enter the
+        // terminal ledger through this commit either.
+        assertAutoMovieProductionDeliverableSemanticMask({
+          deliverable,
+          file,
+          probe,
+          bytes,
+          plan: props.plan,
+        });
         receiptFiles.push({
           deliverable: deliverable.id,
           ...file,
@@ -5925,12 +5896,13 @@ const readRevision = (rootReal: string, file: string): number => {
 };
 
 const requireNextRevision = (revision: number): number => {
+  // Every caller passes a revision `readRevision` already decoded, so the only
+  // refusal a successor can meet here is exhaustion; the decision state is
+  // still quoted rather than assumed.
   const decision = advanceAutoMovieProjectRevision(revision);
   if (decision.state === "next") return decision.revision;
   throw new Error(
-    decision.state === "exhausted"
-      ? "Production revision is exhausted. No production bytes were written because the store cannot publish another safe-integer revision."
-      : "Production revision is invalid. No production bytes were written.",
+    `Production revision is ${decision.state}. No production bytes were written because the store cannot publish another safe-integer revision.`,
   );
 };
 

@@ -2,7 +2,9 @@ import {
   type IAutoMovieContractBaseline,
   applyAutoMovieContractMigrationPlan,
   createAutoMovieContractBaseline,
+  createAutoMovieContractMigrationReceiptArtifacts,
   isAutoMovieContractTargetPath,
+  observeAutoMovieContractMigrationOutcomes,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
   planAutoMovieContractMigrationPublication,
@@ -177,7 +179,9 @@ export const planAutoMovieDeliveryTocPublication = (props: {
 
 export {
   applyAutoMovieContractMigrationPlan,
+  createAutoMovieContractMigrationReceiptArtifacts,
   type IAutoMovieContractBaseline,
+  observeAutoMovieContractMigrationOutcomes,
   parseAutoMovieContractBaseline,
   planAutoMovieContractMigration,
   planAutoMovieContractMigrationPublication,

@@ -4,7 +4,6 @@
 
 ### 범위 선택 {#review-system-scope-selection}
 
-
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-target-identity Defines a stable target identity across versions, variants and profiles. -->
 
 Requestable 대상 레코드는 대상 종류, 안정된 identity, revision 또는 content identity, variant와 적용 profile을 가진다. 같은 표시 이름을 가진 서로 다른 내용은 별도 대상이며, context query와 acceptance criterion은 대상 identity를 추측하지 않는다.
@@ -22,13 +21,11 @@ Criterion dependency scope는 explicit target과 criterion이 읽는 shot을 별
 
 ### 표시와 청취 Context {#review-system-presentation-context}
 
-
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-presentation-conditions Prevents diagnostic presentation from being generalized to a target presentation. -->
 
 Acceptance presentation context는 raster, crop, display transform과 color identity, playback speed, audio channel과 loudness, language, caption과 accessibility selection을 기록한다. Portable subject-observation record는 subject, viewpoint, pose, artifact 종류, runtime identity와 terminal status만 보존하며, 완전한 delivery raster, crop, display·color, playback·audio, language, caption과 accessibility identity는 현재 review-record surface가 아니다. Proxy, thumbnail, muted playback 또는 대체 channel은 원래 presentation과 다른 context identity를 가져야 한다.
 
 ### Context 부재 상태 {#review-system-context-unavailable}
-
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-preconditions-consumers Separates unmet preconditions from a target failure. -->
 

@@ -1,5 +1,9 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
-import type { IAutoMovieCompiledShotSource } from "@automovie/interface";
+import type {
+  IAutoMovieCompiledShotSource,
+  IAutoMovieScreenplayIndex,
+  IAutoMovieShotContract,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -136,6 +140,84 @@ export const test_production_shot_source_owner_compiler = (): void => {
       ],
     }).compile({ scope: "source" });
 
+    // The owner address a shot binding resolves against is the one active
+    // scene its contract cites. A retired scene, a scene the index does not
+    // declare, or two cited scenes leave no single address, so the binding
+    // resolves without a runtime owner claim instead of borrowing one.
+    const screenplayFile = path.join(
+      fixture.root,
+      "automovie",
+      "design",
+      "fixture-film",
+      "screenplay",
+      "index.json",
+    );
+    const contractFile = path.join(
+      fixture.root,
+      "automovie",
+      "design",
+      "fixture-film",
+      "shots",
+      "opening.json",
+    );
+    const authoredScreenplay = fs.readFileSync(screenplayFile, "utf8");
+    const authoredContract = fs.readFileSync(contractFile, "utf8");
+    const lintWithDesign = (props: {
+      screenplay?: (index: IAutoMovieScreenplayIndex) => void;
+      contract?: (value: IAutoMovieShotContract) => void;
+    }): string[] => {
+      if (props.screenplay !== undefined) {
+        const index = JSON.parse(
+          authoredScreenplay,
+        ) as IAutoMovieScreenplayIndex;
+        props.screenplay(index);
+        fs.writeFileSync(screenplayFile, `${JSON.stringify(index, null, 2)}\n`);
+      }
+      if (props.contract !== undefined) {
+        const value = JSON.parse(authoredContract) as IAutoMovieShotContract;
+        props.contract(value);
+        fs.writeFileSync(contractFile, `${JSON.stringify(value, null, 2)}\n`);
+      }
+      try {
+        return new AutoMovieProductionCompiler(
+          AutoMovieProductionProject.openReadOnly(fixture.root),
+          authoring,
+          () => authoring,
+        )
+          .lint({ scope: "source" })
+          .diagnostics.map((diagnostic) => diagnostic.code);
+      } finally {
+        fs.writeFileSync(screenplayFile, authoredScreenplay);
+        fs.writeFileSync(contractFile, authoredContract);
+      }
+    };
+    const citedScene = contract.evidence![0]!;
+    const sceneAddresses = {
+      retiredScene: lintWithDesign({
+        screenplay: (index) => {
+          for (const candidate of index.screenplay.scenes)
+            if (candidate.id === citedScene.scene) candidate.status = "OMITTED";
+        },
+      }),
+      undeclaredScene: lintWithDesign({
+        contract: (value) => {
+          value.evidence = [{ ...citedScene, scene: "SCN-999" }];
+        },
+      }),
+      twoScenes: lintWithDesign({
+        contract: (value) => {
+          value.evidence = [
+            citedScene,
+            {
+              ...citedScene,
+              scene: "SCN-002",
+              reason: "The second scene is cited as well.",
+            },
+          ];
+        },
+      }),
+    };
+
     TestValidator.equals(
       "the graph-selected runtime export is admitted and carried separately from acceptance attribution",
       namedFacts([
@@ -224,6 +306,13 @@ export const test_production_shot_source_owner_compiler = (): void => {
                 false,
             ),
         ],
+        [
+          "aContractWithoutOneActiveCitedSceneBindsWithoutAnOwnerClaim",
+          () =>
+            Object.values(sceneAddresses).every(
+              (codes) => codes.includes("source-owner-mismatch") === false,
+            ),
+        ],
       ]),
       {
         theExactRuntimeBindingCompiles: true,
@@ -234,6 +323,7 @@ export const test_production_shot_source_owner_compiler = (): void => {
         anOwnerBindingMutationInvalidatesTheCompileSnapshot: true,
         anUnreadableCurrentEvidenceSnapshotIsRefused: true,
         aReviewedExportForAnotherSceneCannotBorrowTheStoredPointer: true,
+        aContractWithoutOneActiveCitedSceneBindsWithoutAnOwnerClaim: true,
       },
     );
   } finally {

@@ -4,8 +4,11 @@ import type {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionRenditionDelivery,
   IAutoMovieProductionSoundEvidence,
+  IAutoMovieRepaintSequenceObservation,
 } from "@automovie/interface";
 import {
+  AutoMovieProductionCompiler,
+  AutoMovieProductionProject,
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
   digestAutoMovieRepaintObservationMembers,
@@ -287,6 +290,16 @@ export const test_production_final_deliverable_gate =
           },
         }),
       };
+      // A receipt entry outside the portable path grammar owns nothing, and
+      // the ledger says so beside whatever else that entry left unowned.
+      const receiptEscapesPath = run({
+        receipt: (receipt) => {
+          receipt.files.push({
+            ...structuredClone(receipt.files[0]!),
+            path: "../escape.png",
+          });
+        },
+      });
       const ledgerExpectations: Record<keyof typeof ledger, string> = {
         noPlan:
           "render-deliverable-stale: Final delivery verification requires the current final render plan",
@@ -307,6 +320,14 @@ export const test_production_final_deliverable_gate =
         receiptRepeatsPath:
           "render-deliverable-unowned: The renderer-owned receipt repeats a physical file path",
       };
+      TestValidator.predicate(
+        "a receipt entry outside the portable path grammar owns nothing",
+        receiptEscapesPath.some((diagnostic) =>
+          diagnostic.startsWith(
+            "render-deliverable-unowned: The renderer-owned receipt repeats a physical file path or spells one outside the canonical portable form",
+          ),
+        ),
+      );
       TestValidator.equals(
         "ledger identity refusals return one diagnostic each",
         Object.fromEntries(
@@ -396,6 +417,15 @@ export const test_production_final_deliverable_gate =
             ...tampered.semanticMask!,
             sidecar: { ...tampered.semanticMask!.sidecar, digest: digest("d") },
           };
+          const incomplete = fileOf(
+            manifest,
+            "starter-mask-guide",
+            "frame_00000003.semantic.json",
+          );
+          incomplete.semanticMask = {
+            ...incomplete.semanticMask!,
+            coverage: { unresolved: [], unaddressed: 1 },
+          };
         },
         receipt: (receipt, manifest) => {
           receiptEntry(
@@ -418,6 +448,7 @@ export const test_production_final_deliverable_gate =
           for (const suffix of [
             "frame_00000001.semantic.json",
             "frame_00000002.semantic.json",
+            "frame_00000003.semantic.json",
           ]) {
             const file = fileOf(manifest, "starter-mask-guide", suffix);
             receiptEntry(receipt, file.path).semanticMask = file.semanticMask;
@@ -471,7 +502,7 @@ export const test_production_final_deliverable_gate =
           ),
           sidecarWithoutReceipt: includes(
             files,
-            "has no semantic receipt in the current aggregate manifest",
+            "has no semantic receipt in its deliverable ledger",
           ),
           driftedBytes: includes(
             drift,
@@ -490,13 +521,14 @@ export const test_production_final_deliverable_gate =
             drift,
             "is not owned by the current aggregate manifest",
           ),
-          unboundSidecar: includes(
-            drift,
-            "is not bound to one current mask frame in this guide deliverable",
-          ),
+          unboundSidecar: includes(drift, "names sidecar path"),
           tamperedSidecar: includes(
             drift,
             "Recreate the semantic sidecar from its current mask frame",
+          ),
+          incompleteSidecar: includes(
+            drift,
+            "a delivered mask product requires complete runtime coverage",
           ),
           requiredAbsent: includes(
             absent,
@@ -520,6 +552,7 @@ export const test_production_final_deliverable_gate =
           orphanReceipt: true,
           unboundSidecar: true,
           tamperedSidecar: true,
+          incompleteSidecar: true,
           requiredAbsent: true,
           unreadableMedia: true,
         },
@@ -867,6 +900,74 @@ export const test_production_final_deliverable_gate =
           );
         },
       });
+      const laneRefusal = (
+        mutate: (
+          value: IAutoMovieProductionRenditionDelivery,
+        ) => IAutoMovieProductionRenditionDelivery,
+      ): string[] =>
+        run({
+          manifest: (manifest) => {
+            deliverable(manifest, "starter-feature").rendition = mutate(
+              rendition(deterministicShots),
+            );
+          },
+        }).map((diagnostic) => diagnostic.split(".")[0]!);
+      const deterministicObservation: IAutoMovieRepaintSequenceObservation = {
+        version: 1,
+        productionId: "fixture-film",
+        compileFingerprint: fixture.inputFingerprint,
+        timelineFingerprint: digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(fixture.timeline),
+        ),
+        baseline: {
+          address: "docs/continuity.md#baseline",
+          version: "v1",
+          scope: fixture.timeline.segments.map((segment) => segment.shot),
+          intendedDeltas: [],
+        },
+        members: deterministicShots.map((shot) => ({
+          occurrence: shot.occurrence,
+          shot: shot.shot,
+          lane: "deterministic" as const,
+          sourceDigest: shot.sourceDigest,
+        })),
+        memberSetDigest: rendition(deterministicShots).memberSetDigest,
+        artifact: { path: "observations/none.mp4", digest: digest("7") },
+        playback: { runtime: "viewer 1.0", context: "sequence review" },
+        status: "completed",
+        verdicts: {
+          flicker: "pass",
+          identityDrift: "pass",
+          geometryWarp: "pass",
+          textureCrawl: "pass",
+          transitionMismatch: "pass",
+        },
+      };
+      const laneRefusals = {
+        reordered: laneRefusal((value) => ({
+          ...value,
+          shots: [...value.shots].reverse(),
+        })),
+        foreignDeterministicSource: laneRefusal((value) => ({
+          ...value,
+          shots: value.shots.map((shot, index) =>
+            index === 0
+              ? { ...shot, path: "generated/deterministic/elsewhere" }
+              : shot,
+          ),
+        })),
+        staleMembers: laneRefusal((value) => ({
+          ...value,
+          memberSetDigest: digest("a"),
+        })),
+        observationWithoutRepaint: laneRefusal((value) => ({
+          ...value,
+          observation: deterministicObservation,
+          observationDigest: digestAutoMovieBytes(
+            canonicalAutoMovieJsonBytes(deterministicObservation),
+          ),
+        })),
+      };
       TestValidator.equals(
         "deterministic lane provenance passes exactly and drifts by name",
         {
@@ -874,13 +975,54 @@ export const test_production_final_deliverable_gate =
           driftedLanes: driftedLanes.map(
             (diagnostic) => diagnostic.split(".")[0],
           ),
+          ...laneRefusals,
         },
         {
           exactLanes: [],
           driftedLanes: [
             "render-rendition-provenance-invalid: Feature manifest does not carry the exact current occurrence-lane protocol",
           ],
+          reordered: [
+            "render-rendition-provenance-invalid: Visual lane occurrence 0 is stale or reordered",
+          ],
+          foreignDeterministicSource: [
+            "render-rendition-provenance-invalid: Deterministic occurrence 0 carries repaint provenance",
+          ],
+          staleMembers: [
+            "render-rendition-provenance-invalid: Feature manifest active visual member set is stale",
+          ],
+          observationWithoutRepaint: [
+            "render-rendition-provenance-invalid: Feature manifest aggregate sequence observation is stale",
+          ],
         },
+      );
+
+      // A compiled film whose generated timeline is gone leaves the delivery
+      // with nothing current to join to; a read-only final verification says
+      // so instead of regenerating the timeline it is asked to judge against.
+      const timelineFile = path.join(
+        fixture.project.generatedRoot(),
+        "film-timeline.json",
+      );
+      const generatedTimeline = fs.readFileSync(timelineFile);
+      fs.rmSync(timelineFile);
+      const missingTimeline = new AutoMovieProductionCompiler(
+        AutoMovieProductionProject.openReadOnly(fixture.root),
+        fixture.evidence,
+        () => fixture.evidence,
+        fixture.plan,
+      )
+        .lint({ scope: "final" })
+        .diagnostics.map(
+          (diagnostic) => `${diagnostic.code}: ${diagnostic.message}`,
+        );
+      fs.writeFileSync(timelineFile, generatedTimeline);
+      TestValidator.predicate(
+        "a delivery without a current compiled film timeline cannot be joined",
+        includes(
+          missingTimeline,
+          "Final delivery cannot be joined to the current compiled film timeline",
+        ),
       );
     } finally {
       fixture.dispose();

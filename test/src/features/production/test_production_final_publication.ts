@@ -8,9 +8,18 @@ import {
   productionRenderPublicationIdentity,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import path from "node:path";
 
+import {
+  createTestFileSystem,
+  withTestFileSystem,
+} from "../internal/testFileSystem";
 import { capturedPng } from "./captureHost";
 import { finalPublicationFixture } from "./finalPublicationFixtures";
+
+const platformError = (code: string): Error =>
+  Object.assign(new Error(code), { code });
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
@@ -29,8 +38,14 @@ const digest = (digit: string): AutoMovieContentDigest =>
  *    identity, a compile fingerprint that differs from the identity or the
  *    current compile, stale inputs, duplicate byte sources, files claimed
  *    twice, missing or drifted claimed files, semantic sidecars without a
- *    receipt, a receipt bound to a non-sidecar or tampered, unclaimed bytes,
- *    and a different payload generation at an immutable path.
+ *    receipt, a receipt bound to a non-sidecar or tampered, a receipt whose
+ *    runtime coverage is incomplete, a non-portable byte source path,
+ *    unclaimed bytes, and a different payload generation at an immutable path.
+ * 3. The guarded commit refuses a publication whose payload changes while the
+ *    ledger is written or during the final compiler gate, inputs or a render
+ *    plan that move during that gate, an immutable target another writer
+ *    occupies between the resident check and the link, and a link failure,
+ *    each without leaving a partial ledger behind.
  */
 export const test_production_final_publication = async (): Promise<void> => {
   const fixture = await finalPublicationFixture();
@@ -182,6 +197,22 @@ export const test_production_final_publication = async (): Promise<void> => {
           };
         }),
       }),
+      incompleteCoverage: refusal({
+        manifest: manifest((copy) => {
+          const file = copy.deliverables[5]!.files.find(
+            (candidate) => candidate.path === sidecar.path,
+          )!;
+          file.semanticMask = {
+            ...file.semanticMask!,
+            coverage: { unresolved: [], unaddressed: 1 },
+          };
+        }),
+      }),
+      nonPortablePath: refusal({
+        files: files((copy) => {
+          copy.set("deliverables/../final/stray.bin", Buffer.from("stray"));
+        }),
+      }),
       unclaimedBytes: refusal({
         files: files((copy) => {
           copy.set("deliverables/final/stray.bin", Buffer.from("stray"));
@@ -220,8 +251,16 @@ export const test_production_final_publication = async (): Promise<void> => {
         missingClaimed: ["is missing claimed file", false],
         driftedBytes: ["differs from its manifest byte facts", false],
         sidecarWithoutReceipt: ["has no semantic receipt", false],
-        receiptOnPicture: ["is not bound to one current mask frame", false],
+        receiptOnPicture: [
+          "describes bytes that are not a semantic-mask sidecar",
+          false,
+        ],
         tamperedReceipt: ["semantic sidecar", false],
+        incompleteCoverage: [
+          "a delivered mask product requires complete runtime coverage",
+          false,
+        ],
+        nonPortablePath: ["not one canonical portable relative path", false],
         unclaimedBytes: ["Remove unclaimed bytes", false],
         otherGeneration: ["already contains another payload generation", true],
       };
@@ -246,6 +285,131 @@ export const test_production_final_publication = async (): Promise<void> => {
           { named: true, race },
         ]),
       ),
+    );
+
+    // 3. Races the guarded commit itself has to catch: the payload, the
+    //    inputs, and the immutable targets are all re-observed after the
+    //    ledger lands, and an occupied or unlinkable immutable target is
+    //    refused without a partial ledger.
+    const renderFile = (relative: string): string =>
+      path.join(fixture.project.renderRoot(), ...relative.split("/"));
+    const previewTarget = renderFile(previewFile.path);
+    const previewBytes = fs.readFileSync(previewTarget);
+    const raceWith = (
+      fileSystem: ReturnType<typeof createTestFileSystem>["fileSystem"],
+      override: Parameters<typeof fixture.publish>[0],
+    ): { message: string; race: boolean } | null => {
+      try {
+        return withTestFileSystem(fileSystem, () => refusal(override));
+      } finally {
+        fs.writeFileSync(previewTarget, previewBytes);
+      }
+    };
+    let ledgerReceiptWritten = false;
+    const payloadAfterLedger = createTestFileSystem({
+      renameSync: ((...args: unknown[]) => {
+        const result = Reflect.apply(fs.renameSync, fs, args);
+        if (
+          ledgerReceiptWritten === false &&
+          String(args[1]).endsWith(`${path.sep}render-manifest-receipt.json`)
+        ) {
+          ledgerReceiptWritten = true;
+          fs.writeFileSync(previewTarget, Buffer.from("payload replaced"));
+        }
+        return result;
+      }) as typeof fs.renameSync,
+    });
+    let inputChecks = 0;
+    let planChecks = 0;
+    const relocatedPreview = previewFile.path.replace(
+      /preview\.png$/u,
+      "preview-relocated.png",
+    );
+    const relocated = (): Parameters<typeof fixture.publish>[0] => ({
+      files: files((copy) => {
+        copy.delete(previewFile.path);
+        copy.set(relocatedPreview, fixture.media.picture);
+      }),
+      manifest: manifest((copy) => {
+        copy.deliverables[0]!.files[0]!.path = relocatedPreview;
+      }),
+    });
+    const relocatedTarget = renderFile(relocatedPreview);
+    const occupiedTarget = createTestFileSystem({
+      linkSync: ((...args: unknown[]) => {
+        if (String(args[1]) === relocatedTarget)
+          fs.writeFileSync(relocatedTarget, Buffer.from("occupied"));
+        return Reflect.apply(fs.linkSync, fs, args);
+      }) as typeof fs.linkSync,
+    });
+    const unlinkableTarget = createTestFileSystem({
+      linkSync: ((...args: unknown[]) => {
+        if (String(args[1]) === relocatedTarget) throw platformError("EIO");
+        return Reflect.apply(fs.linkSync, fs, args);
+      }) as typeof fs.linkSync,
+    });
+    const races = {
+      payloadAfterLedger: raceWith(payloadAfterLedger.fileSystem, {}),
+      payloadDuringGate: raceWith(createTestFileSystem().fileSystem, {
+        publicationCurrent: () => {
+          fs.writeFileSync(previewTarget, Buffer.from("gate replaced"));
+        },
+      }),
+      inputsDuringGate: refusal({ inputCurrent: () => ++inputChecks !== 4 }),
+      planDuringGate: refusal({ planCurrent: () => ++planChecks !== 4 }),
+      occupiedTarget: (() => {
+        try {
+          return raceWith(occupiedTarget.fileSystem, relocated());
+        } finally {
+          fs.rmSync(relocatedTarget, { force: true });
+        }
+      })(),
+      unlinkableTarget: raceWith(unlinkableTarget.fileSystem, relocated()),
+    };
+    TestValidator.equals(
+      "the guarded commit re-observes payload, inputs, and immutable targets",
+      {
+        ...Object.fromEntries(
+          Object.entries(races).map(([name, outcome]) => [
+            name,
+            outcome === null
+              ? null
+              : {
+                  message: outcome.message.split(/\.(?=\s|$)/u)[0],
+                  race: outcome.race,
+                },
+          ]),
+        ),
+        relocatedResidue: fs.existsSync(relocatedTarget),
+        checks: { inputChecks, planChecks },
+      },
+      {
+        payloadAfterLedger: {
+          message: `Committed terminal file "${previewFile.path}" failed its post-publication byte check`,
+          race: true,
+        },
+        payloadDuringGate: {
+          message: `Committed terminal file "${previewFile.path}" changed during the final compiler gate`,
+          race: true,
+        },
+        inputsDuringGate: {
+          message:
+            "Production inputs or the render-plan generation changed during the staged terminal publication final gate",
+          race: true,
+        },
+        planDuringGate: {
+          message:
+            "Production inputs or the render-plan generation changed during the staged terminal publication final gate",
+          race: true,
+        },
+        occupiedTarget: {
+          message: `Immutable publication target "${relocatedTarget}" already exists`,
+          race: true,
+        },
+        unlinkableTarget: { message: "EIO", race: false },
+        relocatedResidue: false,
+        checks: { inputChecks: 4, planChecks: 4 },
+      },
     );
     TestValidator.equals(
       "refusals leave the committed publication current",

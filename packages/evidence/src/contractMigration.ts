@@ -901,7 +901,6 @@ const actionIdentity = (
  *
  * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Turns the post-publication re-read of each target into the per-action result a receipt records.
  * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Reports a missing or different target as incomplete or failed instead of letting the pointer advance.
- * @publicUnconsumed packages/cli/src/bin.ts `contracts migrate` apply step: that file is another batch's path this wave, so the target validation wiring lands through the integration hand-off after this API.
  */
 export const observeAutoMovieContractMigrationOutcomes = (props: {
   plan: IAutoMovieContractMigrationPlan;
@@ -933,7 +932,6 @@ export const observeAutoMovieContractMigrationOutcomes = (props: {
  *
  * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Preserves the predecessor and exact target-publication receipt before the baseline pointer changes.
  * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Derives deterministic content-addressed record paths from canonical identities and refuses incomplete validation.
- * @publicUnconsumed packages/cli/src/bin.ts `contracts migrate` apply step: that file is another batch's path this wave, so the receipt publication lands through the integration hand-off after this API.
  */
 export const createAutoMovieContractMigrationReceiptArtifacts = (props: {
   from: IAutoMovieContractBaseline;
