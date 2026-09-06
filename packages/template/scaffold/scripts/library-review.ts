@@ -5,8 +5,6 @@ import {
 import type {
   AutoMovieLibraryReviewEvidence,
   IAutoMovieLibraryReviewObservationPlan,
-  IAutoMovieLibraryReviewOwnerIdentity,
-  IAutoMovieLibraryReviewPlanFile,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
@@ -19,7 +17,6 @@ import {
   readAutoMovieLibraryReviewRequirements,
 } from "@automovie/production";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -27,6 +24,20 @@ import {
   readCurrentLibraryReview,
   readLibraryReviewAuthoring,
 } from "./libraryReviewCurrentness";
+import {
+  admitLibraryReviewReceipt,
+  assertLibraryReviewPlanAuthoring,
+  libraryReviewPublicationSource,
+  parseLibraryReviewPublication,
+  planLibraryReviewUnit,
+  publishLibraryReview,
+  readLibraryReviewPublication,
+  recordLibraryReviewReceipt,
+} from "./libraryReviewPublication";
+import {
+  createLibraryReviewPublicationIO,
+  libraryReviewPublicationFileSystem,
+} from "./libraryReviewPublicationFileSystem";
 import {
   readAutoMovieObservationMeasurements,
   readAutoMovieObservationPose,
@@ -72,14 +83,6 @@ const ownerParts = (owner: string): { design: string; anchor: string } => {
 const planPath = (design: string): string =>
   design.replace(/\.md$/u, ".review.json");
 
-const readPlan = (
-  root: string,
-  relative: string,
-): IAutoMovieLibraryReviewPlanFile =>
-  parseAutoMovieLibraryReviewPlan(
-    fs.readFileSync(path.join(root, relative), "utf8"),
-  );
-
 const actionArguments = {
   inspect: new Set<string>(),
   plan: new Set(["--owner", "--source", "--observation"]),
@@ -115,31 +118,6 @@ const assertActionArguments = (
   }
 };
 
-const writePlan = (props: {
-  root: string;
-  relative: string;
-  plan: IAutoMovieLibraryReviewPlanFile;
-}): void => {
-  const target = path.join(props.root, props.relative);
-  const temporary = `${target}.${process.pid}-${randomUUID()}.tmp`;
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  try {
-    fs.writeFileSync(temporary, `${JSON.stringify(props.plan, null, 2)}\n`, {
-      encoding: "utf8",
-      flag: "wx",
-    });
-    fs.renameSync(temporary, target);
-  } catch (error) {
-    try {
-      fs.rmSync(temporary, { force: true });
-    } catch {
-      // Preserve the original write failure; a later run refuses a resident
-      // temporary path instead of treating it as a current plan.
-    }
-    throw error;
-  }
-};
-
 const observationOf = (raw: string): IAutoMovieLibraryReviewObservationPlan => {
   const [id, evidence, model, ...extra] = raw.split(":");
   if (
@@ -167,15 +145,6 @@ const observationOf = (raw: string): IAutoMovieLibraryReviewObservationPlan => {
     );
   return { id, evidence };
 };
-
-const sameIdentity = (
-  left: IAutoMovieLibraryReviewOwnerIdentity,
-  right: IAutoMovieLibraryReviewOwnerIdentity,
-): boolean =>
-  left.design === right.design &&
-  left.source === right.source &&
-  left.generated === right.generated &&
-  left.plan === right.plan;
 
 const evidenceOf = (props: {
   argv: readonly string[];
@@ -237,7 +206,8 @@ const evidenceOf = (props: {
  * 2. `plan` creates or replaces one H2 plan from exact manifest-owned sources
  *    while retaining its historical receipts for stale classification.
  * 3. `record` reopens one artifact, facts file, or turntable identity, replaces
- *    a duplicate receipt for the same current identity, and writes atomically.
+ *    only a passed receipt at the same current identity, and preserves the
+ *    approved predecessor through exclusive publication or explicit recovery.
  */
 export const runLibraryReviewCommand = (props: {
   argv: readonly string[];
@@ -308,35 +278,39 @@ export const runLibraryReviewCommand = (props: {
         `Branch ${JSON.stringify(owner.branch)} needs its own artifact or facts, not a model turntable.`,
       );
     const relative = planPath(parts.design);
-    const previous = fs.existsSync(path.join(root, relative))
-      ? readPlan(root, relative)
-      : { version: 1 as const, units: [] };
-    const retained = previous.units.find(
-      (unit) => unit.anchor === parts.anchor,
-    );
-    const plan: IAutoMovieLibraryReviewPlanFile = {
-      version: 1,
-      units: [
-        ...previous.units.filter((unit) => unit.anchor !== parts.anchor),
-        {
-          anchor: parts.anchor,
-          sources,
-          observations,
-          // A waiver is the one record that keeps a required observation
-          // unopened, so rebuilding the unit literal without it silently
-          // reopens every waived view. The receipt path mutates `receipts` in
-          // place and already carries waivers through; this is the plan path.
-          ...(retained?.waivers === undefined
-            ? {}
-            : { waivers: retained.waivers }),
-          receipts: retained?.receipts ?? [],
-        },
-      ].sort((left, right) =>
-        left.anchor < right.anchor ? -1 : left.anchor > right.anchor ? 1 : 0,
-      ),
+    const io = createLibraryReviewPublicationIO({
+      root,
+      target: relative,
+      fileSystem: libraryReviewPublicationFileSystem,
+    });
+    const before = readLibraryReviewPublication({ target: relative, io });
+    const previous = parseLibraryReviewPublication({
+      before,
+      parse: parseAutoMovieLibraryReviewPlan,
+    });
+    const plan = planLibraryReviewUnit({
+      previous,
+      unit: { anchor: parts.anchor, sources, observations },
+    });
+    const publication = publishLibraryReview({
+      target: relative,
+      before,
+      io,
+      attempt: randomUUID(),
+      source: libraryReviewPublicationSource({ before, previous, plan }),
+      admit: () =>
+        assertLibraryReviewPlanAuthoring({
+          expected: authoring,
+          read: currentAuthoringEvidence,
+        }),
+    });
+    const result = {
+      action,
+      owner: requested,
+      path: relative,
+      plan,
+      publication,
     };
-    writePlan({ root, relative, plan });
-    const result = { action, owner: requested, path: relative, plan };
     props.output?.(result);
     return result;
   }
@@ -432,21 +406,20 @@ export const runLibraryReviewCommand = (props: {
   }
   const parts = ownerParts(requested);
   const relative = planPath(parts.design);
-  const plan = readPlan(root, relative);
-  const unit = plan.units.find((entry) => entry.anchor === parts.anchor)!;
-  // A new result supersedes the accepted one and nothing else. Dropping every
-  // same-identity receipt erased the failure an author had just recorded, so
-  // re-running an unchanged observation and passing it made the earlier failure
-  // vanish from the file. Only a passed receipt is replaced; a failed,
-  // unsupported or not-run one is the observation history this plan carries.
-  unit.receipts = [
-    ...unit.receipts.filter(
-      (receipt) =>
-        receipt.observation !== observation ||
-        sameIdentity(receipt.identity, owner.identity) === false ||
-        receipt.verdict !== "passed",
-    ),
-    {
+  const io = createLibraryReviewPublicationIO({
+    root,
+    target: relative,
+    fileSystem: libraryReviewPublicationFileSystem,
+  });
+  const before = readLibraryReviewPublication({ target: relative, io });
+  const previous = parseLibraryReviewPublication({
+    before,
+    parse: parseAutoMovieLibraryReviewPlan,
+  });
+  const plan = recordLibraryReviewReceipt({
+    previous,
+    anchor: parts.anchor,
+    receipt: {
       observation,
       evidence,
       identity: owner.identity,
@@ -455,9 +428,21 @@ export const runLibraryReviewCommand = (props: {
       measurements,
       verdict,
     },
-  ];
-  assertCurrentLibraryReview({ expected: snapshot, read: readCurrent });
-  writePlan({ root, relative, plan });
+  });
+  const publication = publishLibraryReview({
+    target: relative,
+    before,
+    io,
+    attempt: randomUUID(),
+    source: libraryReviewPublicationSource({ before, previous, plan }),
+    admit: () =>
+      admitLibraryReviewReceipt({
+        assertCurrent: () =>
+          assertCurrentLibraryReview({ expected: snapshot, read: readCurrent }),
+        expected: evidence,
+        read: () => evidenceOf({ argv: props.argv, project }),
+      }),
+  });
   const result = {
     action,
     owner: requested,
@@ -467,6 +452,7 @@ export const runLibraryReviewCommand = (props: {
     evidence,
     runtimeIdentity,
     verdict,
+    publication,
   };
   props.output?.(result);
   return result;
