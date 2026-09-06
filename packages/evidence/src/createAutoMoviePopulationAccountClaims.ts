@@ -38,7 +38,7 @@ export interface IAutoMoviePopulationAccountClaimsProps {
  */
 export function createAutoMoviePopulationAccountClaims(
   props: IAutoMoviePopulationAccountClaimsProps,
-): ITtscEvidenceGraphClaim[] {
+): ReturnType<typeof createAutoMoviePopulationAccountClaim>[] {
   if (!/^[a-z][a-zA-Z]*$/u.test(props.layer))
     throw new Error(
       `Invalid population account layer ${JSON.stringify(props.layer)}.`,
@@ -70,35 +70,68 @@ export function createAutoMoviePopulationAccountClaims(
     if (seen.has(file))
       throw new Error(`${props.layer} repeats population obligation ${file}.`);
     seen.add(file);
-    const obligation: ITtscEvidenceGraphMarkdownReference = {
-      type: "markdown",
-      root: "docs",
-      files: [file],
-      symbol: "h2",
-      noEvidenceExclude: true,
-      uniqueEvidence: true,
-      singleEvidencePerSymbol: true,
-      requireReview: props.requireReview,
-    };
-    const population: ITtscEvidenceGraphMarkdownReference = {
-      type: "markdown",
-      root: "docs",
-      files: [...props.populationFiles],
-      symbol: "h2",
-      checklist: true,
-      noEvidenceExclude: true,
-      requireReview: props.requireReview,
-    };
-    return {
+    return createAutoMoviePopulationAccountClaim({
       name: `${props.layer} population accounts answer each ${file} obligation once`,
-      type: "markdown",
-      root: "docs",
-      files: [
-        `accounts/${props.layer}/${file.replace(/^obligations\//u, "").replaceAll("/", "-")}`,
-      ],
-      symbol: "h2",
-      disabled: !props.enabled,
-      reference: [obligation, population],
-    };
+      account: `accounts/${props.layer}/${file.replace(/^obligations\//u, "").replaceAll("/", "-")}`,
+      document: file,
+      documentRoot: "docs",
+      populationFiles: props.populationFiles,
+      enabled: props.enabled,
+      requireReview: props.requireReview,
+    });
   });
+}
+
+/**
+ * Builds the native exact-owner and complete-population references together.
+ *
+ * Callers validate the shared or production-local path declaration before
+ * handing it here; this builder gives both account families identical native
+ * cardinality without maintaining another evidence evaluator.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Makes every account own one obligation and compare every authored H2.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits the shared and local exact-one reference beside their no-exclusion population checklist.
+ */
+export function createAutoMoviePopulationAccountClaim(props: {
+  name: string;
+  account: string;
+  document: string;
+  documentRoot: string;
+  populationFiles: readonly string[];
+  enabled: boolean;
+  requireReview: boolean;
+}): Extract<ITtscEvidenceGraphClaim, { type: "markdown" }> & {
+  reference: [
+    ITtscEvidenceGraphMarkdownReference,
+    ITtscEvidenceGraphMarkdownReference,
+  ];
+} {
+  const obligation: ITtscEvidenceGraphMarkdownReference = {
+    type: "markdown",
+    root: props.documentRoot,
+    files: [props.document],
+    symbol: "h2",
+    noEvidenceExclude: true,
+    uniqueEvidence: true,
+    singleEvidencePerSymbol: true,
+    requireReview: props.requireReview,
+  };
+  const population: ITtscEvidenceGraphMarkdownReference = {
+    type: "markdown",
+    root: "docs",
+    files: [...props.populationFiles],
+    symbol: "h2",
+    checklist: true,
+    noEvidenceExclude: true,
+    requireReview: props.requireReview,
+  };
+  return {
+    name: props.name,
+    type: "markdown",
+    root: "docs",
+    files: [props.account],
+    symbol: "h2",
+    disabled: !props.enabled,
+    reference: [obligation, population],
+  };
 }
