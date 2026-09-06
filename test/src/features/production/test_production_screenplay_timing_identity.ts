@@ -34,14 +34,31 @@ const { screenplayTimingDiagnostics } = loadSourceModule<{
 );
 
 /** Only the declared timing owner fields participate in this diagnostic. */
-const timingContract = (id: string): IAutoMovieShotContract =>
-  ({
-    id,
-    evidence: [{ scene: "SCN-A", claims: [] }],
-    durationSeconds: 6,
-    events: [{ id: "event_a", window: { from: 1, to: 2 }, predicates: [] }],
-    reviewFrames: [{ id: "frame_a", time: 3, passes: ["beauty"] }],
-  }) as IAutoMovieShotContract;
+const timingContract = (id: string): IAutoMovieShotContract => ({
+  id,
+  beat: "beat-a",
+  source: { module: "src/shots/timing.ts", export: "timing" },
+  evidence: [{ scene: "SCN-A", reason: "The shot owns this scene's timing." }],
+  durationSeconds: 6,
+  participants: [],
+  opening: [],
+  closing: [],
+  camera: {
+    intent: "Observe timing",
+    requiredSubjects: [],
+    maxOcclusionRatio: 0,
+  },
+  events: [
+    {
+      id: "event_a",
+      kind: "transition",
+      window: { from: 1, to: 2 },
+      subjects: [],
+      predicates: [],
+    },
+  ],
+  reviewFrames: [{ id: "frame_a", time: 3, passes: ["beauty"] }],
+});
 
 /**
  * Preserve the exact timing owner while normalizing prose emphasis.
@@ -92,12 +109,29 @@ export const test_production_screenplay_timing_identity = (): void => {
     [null, null, null],
   );
 
-  const screenplay = {
+  const screenplay: IAutoMovieScreenplayIndex = {
+    version: 2,
+    production: "timing-identity",
+    treatment: { path: "docs/treatment.md", sequences: [] },
     screenplay: {
       path: "docs/scene.md",
-      scenes: [{ id: "SCN-A", status: "active", disposition: null }],
+      lock: null,
+      scenes: [
+        {
+          id: "SCN-A",
+          title: "Action",
+          status: "active",
+          covers: [],
+          location: null,
+          storyTime: "unknown",
+          participants: [],
+          disposition: null,
+        },
+      ],
     },
-  } as IAutoMovieScreenplayIndex;
+    catalog: { characters: [], factions: [], locations: [] },
+    continuity: [],
+  };
   const run = (
     selector: string,
     seconds: number,
@@ -163,7 +197,9 @@ export const test_production_screenplay_timing_identity = (): void => {
       );
   }
   const otherScene = timingContract("shot_a");
-  otherScene.evidence = [{ scene: "SCN-B", claims: [] }];
+  otherScene.evidence = [
+    { scene: "SCN-B", reason: "Another scene owns this shot." },
+  ];
   TestValidator.equals(
     "same identity in another scene has no authority",
     run(

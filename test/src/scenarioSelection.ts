@@ -1,4 +1,8 @@
-/** A complete request, before any scenario discovery or execution. */
+/**
+ * A complete request, before any scenario discovery or execution.
+ *
+ * @author Samchon
+ */
 export interface IScenarioSelection {
   include: string[];
   exclude: string[];
