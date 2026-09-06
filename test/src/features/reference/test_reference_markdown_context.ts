@@ -8,6 +8,8 @@ import { TestValidator } from "@nestia/e2e";
  * 1. Inline raw-text HTML, attributes, code and escapes retain comment-like literals.
  * 2. Actual comments disappear around headings without admitting commented examples.
  * 3. Empty, adjacent and out-of-subtree annotations reconstruct through exact ranges.
+ * 4. An HTML block interrupts backtick text, while a real multiline code span
+ *    preserves its literal comment across LF and CRLF boundaries.
  */
 export const test_reference_markdown_context = async (): Promise<void> => {
   const file = "docs/models/model.md";
@@ -28,9 +30,18 @@ export const test_reference_markdown_context = async (): Promise<void> => {
       "~~~html\n<!-- fenced literal -->\n~~~\n",
       "~~~html\n<!-- fenced literal -->\n~~~\n",
     ],
+    // CommonMark block structure precedes inline parsing: a line-start comment
+    // interrupts the paragraph, so these backticks do not form one code span.
+    ["``multi\n<!-- inline literal -->\nline``", "``multi\n\nline``"],
+    ["``multi\r\n<!-- inline literal -->\r\nline``", "``multi\r\n\r\nline``"],
+    // Ordinary text before the opener keeps the paragraph (and code span) intact.
     [
-      "``multi\n<!-- inline literal -->\nline``",
-      "``multi\n<!-- inline literal -->\nline``",
+      "``multi\ntext <!-- inline literal -->\nline``",
+      "``multi\ntext <!-- inline literal -->\nline``",
+    ],
+    [
+      "``multi\r\ntext <!-- inline literal -->\r\nline``",
+      "``multi\r\ntext <!-- inline literal -->\r\nline``",
     ],
     ["<!-- a --><!-- b -->", ""],
     ["prefix <!-- unclosed", "prefix <!-- unclosed"],
