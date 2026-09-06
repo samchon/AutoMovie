@@ -43,10 +43,8 @@ const RENDERED: Readonly<Record<AutoMovieSourceRealizationBranch, boolean>> = {
  *
  * @evidence requirements/production-evidence/README.md#production-evidence-requirements Separates initial construction from the rendered evidence a completed production owes.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Keeps source realization structural enforcement active while deferring its rendered review payment.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Leaves actual current physical observations to the independent production review gates.
  * @evidence specifications/production-evidence/README.md#production-evidence-specifications Constructs native references without replacing their evaluator.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Separates error coverage from warning rendered freshness without weakening the owning mixed claim.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Does not treat a graph review fingerprint as a current physical observation receipt.
  */
 export const createAutoMovieSourceRealizationReferences = (props: {
   branch: AutoMovieSourceRealizationBranch;

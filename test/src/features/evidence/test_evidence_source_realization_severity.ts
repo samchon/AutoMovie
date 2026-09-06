@@ -39,7 +39,9 @@ export const test_evidence_source_realization_severity = (): void => {
         symbol: "file",
         noEvidenceExclude: true,
         singleEvidencePerSymbol: true,
-      } as const;
+      } satisfies Parameters<
+        typeof createAutoMovieSourceRealizationReferences
+      >[0]["reference"];
       const input = {
         ...reference,
         files: [...reference.files],
@@ -49,7 +51,9 @@ export const test_evidence_source_realization_severity = (): void => {
         reference: input,
         requireReview,
       });
-      const expected = [
+      const expected: ReturnType<
+        typeof createAutoMovieSourceRealizationReferences
+      > = [
         {
           ...input,
           severity: "error",
@@ -79,7 +83,9 @@ export const test_evidence_source_realization_severity = (): void => {
       uniqueEvidence: true,
       singleEvidencePerSymbol: true,
       checklist: true,
-    } as const;
+    } satisfies Parameters<
+      typeof createAutoMovieSourceRealizationReferences
+    >[0]["reference"];
     const output = createAutoMovieSourceRealizationReferences({
       branch: "shots",
       reference: { ...reference, files: [...reference.files] },
