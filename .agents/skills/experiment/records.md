@@ -4,6 +4,14 @@ Read this document before launching a benchmark or comparison campaign. It owns 
 
 Start from the repository's [experiment campaign issue template](../../../.github/ISSUE_TEMPLATE/experiment-campaign.md). The issue is the self-contained launch contract and durable conclusion. Live operational notes may stay in `.wiki`, generated evidence stays with its production, and measurements that must outlive a deleted sandbox go under [`experiments/baselines/`](../../../experiments/baselines/README.md). Chat history and private notes are never the only carrier of a run fact.
 
+## Reconcile The Operative Handoff
+
+Before a new run, reconcile its issue body with the selected repository head and the canonical procedures it names. Read sandbox creation and refresh through [the experiment router](SKILL.md#create-the-sandbox), session identity through [steering](steering.md), and authoring, commands, and capture prerequisites through the generated project's own instructions and manifest. A copied command or contract in an old issue is not an alternative owner. Correct the operative body and record the correction in a comment while preserving the user-selected subject, model and driver, input references, and launch-authorization boundary. Reconcile procedural role assignments with [judgment separation](briefing.md#keep-the-roles-apart), rather than preserving a stale assignment that makes the commissioner its own judge.
+
+A resumed frozen run still belongs to its recorded harness, not to today's repository. Read its pinned instructions and preserve its earlier observations. Adopting a changed harness creates a successor under [the run state machine](#operate-one-frozen-run-as-a-state-machine); updating an issue never upgrades an old run's calibration, actual provenance, or result.
+
+Fill the current campaign template before a new launch. An inherited proposal with missing fields is a proposal to complete, not a ready run. Keep unsupported actual values `unverified` with their reasons, and use [the record matrix](#validate-the-record-before-launch-and-close) to decide readiness. Correcting the handoff grants no permission to launch.
+
 ## Freeze Identity Before Launch
 
 Give the campaign, every subject, condition, experimental unit, run, record, and receipt a stable id. A run records one `subjectId`, one `conditionId`, and one `replicateId`; the replicate id is unique inside that subject and condition. A different subject is a different experimental unit, not another replicate of the same condition.
@@ -47,6 +55,8 @@ Missing calibration, a missing outcome rubric, or a reviewer who overlaps the wr
 
 The reviewer derives its verdict from the frozen corpus independently of the writer and commissioner. Every gate verdict is `PASS`, `FAIL`, or `INCONCLUSIVE`. `FAIL` names the rubric claim, observed evidence, affected artifact and stage, reason, and next action. Audit the evidence topology and claim population before judging content. An empty `claims: []`, a topology the reviewer did not inspect, or a machine-invisible defect is recorded explicitly rather than treated as no finding.
 
+`INCONCLUSIVE` leaves the submitted gate unpassed and records the uncertainty and evidence needed to settle it. It is neither permission to advance nor a content repair verdict. Route it through the predeclared escalation; if it cannot be settled on the frozen basis, retain the limitation and follow the run state machine instead of manufacturing a PASS.
+
 Predeclare escalation. An ambiguous or high-impact judgment, an order-sensitive result, a known blind-spot match, or disagreement with qualified-human truth goes to a reviewer from a different model family or a qualified human. The record names who decided, what evidence they saw, their reason, and which earlier verdict the decision supersedes. Escalation narrows uncertainty; it never rewrites the earlier observation.
 
 ## Operate One Frozen Run As A State Machine
@@ -79,6 +89,10 @@ Use this synthetic matrix against the filled issue and records. It is a manual c
 | An order-sensitive or human-disagreeing verdict retained with both observations and a linked alternate-family or qualified-human escalation | Valid |
 | An empty `claims: []` or single-topology calibration reported as full rubric coverage | Invalid |
 | A FAIL without claim, evidence, reason, or next action | Invalid |
+| An INCONCLUSIVE gate retained with its uncertainty and recorded escalation, without advancing the submitted stage | Valid |
+| An INCONCLUSIVE gate treated as PASS or as an unsupported writer repair request | Invalid |
+| A stale launch issue corrected before a new run, with prior frozen records and the launch-authorization boundary preserved | Valid |
+| A resumed run silently adopting today's harness or missing actual values copied from its plan | Invalid |
 | A retrieval-enabled run without policy and sanitized receipts | Invalid |
 | A trajectory digest without retention, privacy, or hidden-reasoning exclusion | Invalid |
 | Planned values copied into missing actual fields | Invalid |
