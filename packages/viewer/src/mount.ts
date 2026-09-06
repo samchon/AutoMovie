@@ -783,13 +783,11 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-transports The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
- * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-isolation The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership The viewer displays compiled scene inputs; it neither serves authored-Markdown reference requests nor launches repository sandboxes.
  */
 export const mountViewer = (
   canvas: HTMLCanvasElement,
