@@ -1,4 +1,8 @@
 /** AutoMovie production evidence graph construction and validation. */
+export * from "./AutoMovieAuthoredDocumentLayer";
+export * from "./createAutoMovieAuthoredPopulationFiles";
+export * from "./validateAutoMovieLocalContractClaims";
+export * from "./validateAutoMoviePopulationAccountHosts";
 export * from "./AutoMoviePopulationLayer";
 export * from "./AutoMoviePopulationScope";
 export * from "./AutoMovieProductionLanguage";
@@ -21,3 +25,5 @@ export * from "./readAutoMovieProductionEvidence";
 export * from "./verifyAutoMovieEvidenceMetadataRewrite";
 export * from "./walkAutoMovieProjectPopulationFiles";
 export { evidence } from "@ttsc/evidence";
+export * from "./createAutoMovieSourceRealizationReferences";
+export * from "./assertAutoMovieProductionMaintenanceComplete";

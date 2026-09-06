@@ -23,4 +23,6 @@ renders/*/
 AGENTS.md
 CLAUDE.md
 .agents/
+.mcp.json
+.codex/config.toml
 artifacts/

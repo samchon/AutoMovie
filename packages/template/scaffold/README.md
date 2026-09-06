@@ -10,7 +10,9 @@ Use [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) 
 
 ## Static-document updates
 
-This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. `npm run sync` replaces only the ignored `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` instruction surface, while `npm run contracts:migrate` updates only the reusable target inventory owned by [Contract targets](.agents/skills/evidence-graph/contract-targets.md). Neither command overwrites these two tracked overview files. A package upgrade therefore does not silently adopt a later overview revision into an existing production; compare and adopt such a revision explicitly under source control.
+This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. `npm run sync` replaces the ignored `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` instruction surface and synchronizes local reference-client entries, while `npm run contracts:migrate` updates only the reusable target inventory owned by [Contract targets](.agents/skills/evidence-graph/contract-targets.md). Neither command overwrites these two tracked overview files. A package upgrade therefore does not silently adopt a later overview revision into an existing production; compare and adopt such a revision explicitly under source control.
+
+Client registration is separately synchronized in ignored project-local `.mcp.json` and `.codex/config.toml`; unrelated settings are preserved and ownership conflicts refuse. See [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions) for first-client trust and recovery.
 
 ## First run
 
@@ -43,10 +45,11 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `lint` | `npm run lint [-- --scope <scope>]` | Run source and graph lint at `design`, `source`, `review`, or `final` scope; follow [Evidence staging](.agents/skills/evidence-graph/staging.md). |
 | `lint:source` | `npm run lint:source` | Type-check governed source and run registered lint contributors. |
 | `preview` | `npm run preview -- --shot <id> --time <seconds> --pass <pass>` | Capture a current shot frame; follow [Capture](.agents/skills/review-verification/capture.md). |
+| `reference` | `npm run reference -- --request '<JSON>'` | Read-only authored Markdown navigation; follow [Read-only authored reference](.agents/skills/production-lifecycle/index.md#read-only-authored-reference). |
 | `repaint` | `npm run repaint -- <action> --shot <id> [options]` | Use `reroll`, `retry`, `select`, or `reverse`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
 | `render` | `npm run render -- <action> [options]` | Use `all`, `plan`, `run`, `status`, `verify`, `finalize`, or `gc`; follow [Review verification](.agents/skills/review-verification/index.md). |
 | `routes` | `npm run routes -- <kind>` | Inspect supported capability ownership for `film`, `brief`, or `library`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
-| `sync` | `npm run sync` | Replace the generated instruction surface; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
+| `sync` | `npm run sync` | Replace generated instructions and synchronize owned local reference-client entries; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
 | `texture:scale` | `npm run texture:scale` | Measure bound texture scale; follow [Measurements](.agents/skills/review-verification/measurements.md). |
 | `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate delivery index links; follow [Scripts](.agents/skills/production-lifecycle/scripts.md) and [Screenplays](.agents/skills/production-lifecycle/screenplays.md). |
 | `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |

@@ -1,0 +1,35 @@
+{
+  "name": "@automovie/mcp",
+  "version": "0.1.0",
+  "description": "Read-only authored Markdown reference navigation for AutoMovie productions.",
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts", "./package.json": "./package.json" },
+  "bin": { "automovie-mcp": "lib/bin.js", "automovie-reference": "lib/reference-bin.js" },
+  "scripts": { "build": "rimraf lib && ttsc", "prepack": "pnpm run build" },
+  "author": "Samchon",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/samchon/automovie" },
+  "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
+  "publishConfig": {
+    "access": "public",
+    "main": "lib/index.js",
+    "types": "lib/index.d.ts",
+    "exports": { ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" }, "./package.json": "./package.json" }
+  },
+  "dependencies": {
+    "@automovie/evidence": "workspace:^",
+    "@modelcontextprotocol/sdk": "catalog:reference",
+    "htmlparser2": "catalog:reference",
+    "mdast-util-from-markdown": "catalog:reference",
+    "smol-toml": "catalog:reference",
+    "zod": "catalog:reference"
+  },
+  "devDependencies": {
+    "@ttsc/evidence": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript",
+    "@types/mdast": "catalog:reference",
+    "@types/node": "catalog:utils",
+    "rimraf": "catalog:utils",
+    "ttsc": "catalog:typescript"
+  }
+}

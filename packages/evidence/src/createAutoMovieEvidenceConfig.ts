@@ -6,9 +6,9 @@ import {
 } from "@ttsc/evidence";
 import fs from "node:fs";
 import path from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import ts from "typescript-compiler";
 
+import type { AutoMovieAuthoredDocumentLayer } from "./AutoMovieAuthoredDocumentLayer";
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
 import { validateAutoMoviePopulationTransition } from "./AutoMoviePopulationTransition";
 import {
@@ -16,13 +16,16 @@ import {
   isAutoMovieProductionLanguage,
 } from "./AutoMovieProductionLanguage";
 import { assertAutoMovieEvidenceSyntax } from "./assertAutoMovieEvidenceSyntax";
+import { assertAutoMovieProductionMaintenanceComplete } from "./assertAutoMovieProductionMaintenanceComplete";
 import { assertAutoMovieEvidenceReviewReasons } from "./auditAutoMovieEvidenceReviewReasons";
+import { createAutoMovieAuthoredPopulationFiles } from "./createAutoMovieAuthoredPopulationFiles";
 import { createAutoMoviePopulationAccountClaims } from "./createAutoMoviePopulationAccountClaims";
 import { createAutoMoviePopulationFiles } from "./createAutoMoviePopulationFiles";
-import type {
-  AutoMovieProductionContractClaim,
-  AutoMovieProductionContractLayer,
-} from "./createAutoMovieProductionContractClaim";
+import type { AutoMovieProductionContractClaim } from "./createAutoMovieProductionContractClaim";
+import {
+  type AutoMovieSourceRealizationBranch,
+  createAutoMovieSourceRealizationReferences,
+} from "./createAutoMovieSourceRealizationReferences";
 import {
   type IAutoMovieEvidenceTopologyBranch,
   type IAutoMovieEvidenceTopologyDeclaration,
@@ -35,6 +38,12 @@ import {
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
 import { readAutoMovieContractRules } from "./readAutoMovieContractRules";
+import {
+  type IAutoMovieLocalContractProjection,
+  projectAutoMovieLocalContractClaims,
+  validateAutoMovieLocalContractClaims,
+} from "./validateAutoMovieLocalContractClaims";
+import { validateAutoMoviePopulationAccountHosts } from "./validateAutoMoviePopulationAccountHosts";
 import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
@@ -133,31 +142,8 @@ export interface IAutoMovieEvidenceConfigProps {
 
 type IProductionGraph = IAutoMovieEvidenceConfigProps;
 
-type MarkdownLayer =
-  | "briefs"
-  | "instances"
-  | "maps"
-  | "materials"
-  | "models"
-  | "motions"
-  | "research"
-  | "screenplays"
-  | "scripts"
-  | "settings"
-  | "spaces"
-  | "treatments"
-  | "systems";
-type SourceLayer =
-  | "filmSources"
-  | "instanceSources"
-  | "mapSources"
-  | "materialSources"
-  | "modelSources"
-  | "motionSources"
-  | "productionSources"
-  | "shots"
-  | "spaceSources"
-  | "systemSources";
+type MarkdownLayer = AutoMovieAuthoredDocumentLayer;
+type SourceLayer = AutoMovieSourceRealizationBranch;
 type EvidenceBranch = MarkdownLayer | SourceLayer;
 type ContractDomain = "core" | "delivery" | "design" | "story";
 type ContractFamily = "discovery" | "obligations" | "principles" | "upstream";
@@ -198,6 +184,10 @@ interface IAutoMovieContractBindingManifest {
     /** Stable graph diagnostic that owns the host population. */
     claim: string;
     relationship: ContractRelationship;
+    /** Native reference override; absence inherits the graph's error level. */
+    severity?: ITtscEvidenceGraphReference["severity"];
+    /** Whether this reference currently asks for native review freshness. */
+    requireReview?: boolean;
     host: {
       type: "markdown" | "typescript";
       root: string;
@@ -231,24 +221,6 @@ interface IAutoMovieContractBindingManifest {
     declarations: readonly IAutoMovieEvidenceTopologyDeclaration[];
     diagnostics: readonly IAutoMovieEvidenceTopologyDiagnostic[];
   };
-}
-
-interface IAutoMovieLocalContractProjection {
-  claim: string;
-  layer: AutoMovieProductionContractLayer;
-  stage: Stage;
-  enforced: boolean;
-  populationScope: AutoMoviePopulationScope;
-  host: {
-    root: string;
-    files: readonly string[];
-    symbols: readonly string[];
-  };
-  targets: readonly {
-    root: string;
-    files: readonly string[];
-    symbols: readonly string[];
-  }[];
 }
 
 interface IMarkdownPopulation {
@@ -1230,35 +1202,6 @@ const validatePopulationScope = (graph: IProductionGraph): void => {
   throw new Error("first-pilot is available only for a film or library.");
 };
 
-/** Refuse a production-local claim detached from this graph declaration. */
-const validateLocalClaims = (graph: IProductionGraph): void => {
-  for (const raw of graph.claims ?? []) {
-    const claim = raw as Partial<AutoMovieProductionContractClaim>;
-    if (claim.autoMovieBinding === undefined) continue;
-    const binding = claim.autoMovieBinding;
-    if (
-      raw.type !== "markdown" ||
-      binding === null ||
-      typeof binding !== "object" ||
-      !Object.hasOwn(MARKDOWN, binding.layer) ||
-      binding.stage !== graph[binding.layer] ||
-      !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
-      (binding.disposition !== "binding" &&
-        binding.disposition !== "inapplicable") ||
-      (raw.disabled === true) !==
-        (binding.stage === "disabled" ||
-          binding.stage === "draft" ||
-          binding.disposition === "inapplicable") ||
-      (binding.disposition === "inapplicable" &&
-        (binding.populationScope?.mode !== "first-pilot" ||
-          raw.disabled !== true))
-    )
-      throw new Error(
-        `Production-local claim ${JSON.stringify(raw.name)} does not match its declared layer, stage, population scope, or disposition.`,
-      );
-  }
-};
-
 /**
  * Whether a declaration is the shipped scaffold before creation rendered it.
  *
@@ -1300,6 +1243,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
       `Production evidence location is not a directory: ${posix(graph.location)}.`,
     );
   const kind: unknown = graph.kind;
+  assertAutoMovieProductionMaintenanceComplete(graph.location);
   if (!PRODUCTION_KINDS.includes(kind))
     throw new Error(
       `Unsupported production kind ${describeDeclarationValue(kind)}.`,
@@ -1326,7 +1270,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
     throw new Error(
       "Production evidence claims must be an array when present.",
     );
-  validateLocalClaims(graph);
+  validateAutoMovieLocalContractClaims(graph);
 };
 
 const walkFiles = (root: string, extension: ".md" | ".ts"): string[] => {
@@ -2491,11 +2435,8 @@ const validateStages = (graph: IProductionGraph): void => {
 const authoredPopulationFiles = (
   graph: IProductionGraph,
   layer: MarkdownLayer,
-): string[] => {
-  if (layer === "treatments" || layer === "scripts" || layer === "screenplays")
-    return createAutoMoviePopulationFiles(layer, graph.populationScope);
-  return [`${layer}/**/*.md`];
-};
+): string[] =>
+  createAutoMovieAuthoredPopulationFiles(layer, graph.populationScope);
 
 const populationFiles = (
   graph: IProductionGraph,
@@ -2529,61 +2470,78 @@ const markdownPopulationFiles = (
       )
     : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
 
-/** Refuse an enabled population account with no exact physical H2 owners. */
-const validatePopulationAccountHosts = (graph: IProductionGraph): void => {
+/**
+ * Checks the declared shared and local account population through supplied reads.
+ *
+ * The graph factory supplies its physical file walker and Markdown H2 reader;
+ * pure callers can supply the same boundary facts without creating a project.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Derives the exact account allowlist from the same production declaration as graph lint.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Checks local and shared ownership collisions, stage residue, and H2 counts before returning graph configuration.
+ */
+export const validateAutoMovieEvidenceAccounts = (
+  graph: IProductionGraph,
+  input: {
+    residents: readonly string[];
+    readH2Count: (projectRelative: string) => number | undefined;
+  },
+): void => {
+  const accounts: Parameters<
+    typeof validateAutoMoviePopulationAccountHosts
+  >[0]["accounts"][number][] = [];
   for (const layer of Object.keys(MARKDOWN) as MarkdownLayer[]) {
-    if (!MARKDOWN[layer].obligation || !requiresEvidence(graph[layer]))
-      continue;
     const claims = createAutoMoviePopulationAccountClaims({
       layer,
-      populationFiles: authoredPopulationFiles(graph, layer),
+      populationFiles: createAutoMovieAuthoredPopulationFiles(
+        layer,
+        graph[layer] === "disabled"
+          ? { mode: "complete-production" }
+          : graph.populationScope,
+      ),
       obligationFiles: populationObligations(graph, layer),
-      enabled: true,
+      enabled: requiresEvidence(graph[layer]),
       requireReview: requiresReview(graph[layer]),
     });
-    const allowed = new Set([
-      ...claims.flatMap((claim) => claim.files),
-      ...(layer === "settings" ? ["accounts/settings/story-subjects.md"] : []),
-    ]);
-    const residents = walkProjectFiles(
-      graph,
-      path.join(graph.location, DOCS, "accounts", layer),
-      ".md",
-    ).map((file) =>
-      posix(path.relative(path.join(graph.location, DOCS), file)),
-    );
-    const unexpected = residents.filter((file) => !allowed.has(file));
-    if (unexpected.length !== 0)
-      throw new Error(
-        `${layer} population accounts contain unowned files: ${unexpected.join(", ")}.`,
-      );
     for (const claim of claims) {
-      const relative = claim.files[0]!;
-      const file = path.join(graph.location, DOCS, relative);
-      if (!fs.existsSync(file))
-        throw new Error(
-          `${relative}: ${layer} cannot enter ${graph[layer]} without its population account.`,
-        );
-      const references = Array.isArray(claim.reference)
-        ? claim.reference
-        : [claim.reference];
-      const obligation = references.find(
-        (reference) =>
-          reference.type === "markdown" &&
-          (reference.files[0]?.startsWith("obligations/") === true ||
-            reference.files[0]?.startsWith("language/obligations/") === true),
-      ) as ITtscEvidenceGraphMarkdownReference;
-      const targetUnits = markdownIdentities(
-        path.join(graph.location, DOCS, obligation.files[0]!),
-        [2],
-      );
-      const units = markdownIdentities(file, [2]);
-      if (units.length !== targetUnits.length)
-        throw new Error(
-          `${relative}: population account has ${units.length} H2 owners for ${targetUnits.length} ${obligation.files[0]} obligations.`,
-        );
+      const obligation = claim.reference[0];
+      accounts.push({
+        layer,
+        stage: graph[layer],
+        account: claim.files[0]!,
+        target: `${DOCS}/${obligation.files[0]!}`,
+        enabled: claim.disabled !== true,
+      });
     }
   }
+  for (const raw of graph.claims ?? []) {
+    const claim = raw as Partial<AutoMovieProductionContractClaim>;
+    const binding = claim.autoMovieBinding;
+    if (binding?.account === undefined) continue;
+    // Declaration validation has already reconstructed this exact reference pair.
+    const reference = (
+      raw.reference as ITtscEvidenceGraphMarkdownReference[]
+    )[0]!;
+    accounts.push({
+      layer: binding.layer,
+      stage: binding.stage,
+      account: binding.account,
+      target: `${reference.root!}/${reference.files[0]!}`,
+      enabled: raw.disabled !== true,
+    });
+  }
+  validateAutoMoviePopulationAccountHosts({
+    accounts,
+    supplemental:
+      graph.kind === "film"
+        ? []
+        : [
+            {
+              file: "accounts/settings/story-subjects.md",
+              stage: graph.settings,
+            },
+          ],
+    ...input,
+  });
 };
 
 const NUMBERED_NARRATIVE_NAME = /^\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -2732,7 +2690,21 @@ const resetTransitionHosts = (
 };
 
 const validateHosts = (graph: IProductionGraph): void => {
-  validatePopulationAccountHosts(graph);
+  validateAutoMovieEvidenceAccounts(graph, {
+    residents: walkProjectFiles(
+      graph,
+      path.join(graph.location, DOCS, "accounts"),
+      ".md",
+    ).map((file) =>
+      posix(path.relative(path.join(graph.location, DOCS), file)),
+    ),
+    readH2Count: (relative) => {
+      const file = path.join(graph.location, relative);
+      return fs.existsSync(file)
+        ? markdownIdentities(file, [2]).length
+        : undefined;
+    },
+  });
   validateNarrativePopulationTopology(graph);
   const identities = new Map<MarkdownLayer, Map<string, IHeadingIdentity[]>>();
   const titles = new Map<MarkdownLayer, Map<string, string>>();
@@ -3286,15 +3258,18 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           files: [...source.files],
           symbol: [...source.ownerSymbols],
           disabled: !requiresEvidence(graph[name]),
-          reference: {
-            type: "markdown",
-            root: DOCS,
-            files: [`${design}/**/*.md`],
-            symbol: "file",
-            noEvidenceExclude: true,
-            singleEvidencePerSymbol: true,
+          reference: createAutoMovieSourceRealizationReferences({
+            branch: name,
+            reference: {
+              type: "markdown",
+              root: DOCS,
+              files: [`${design}/**/*.md`],
+              symbol: "file",
+              noEvidenceExclude: true,
+              singleEvidencePerSymbol: true,
+            },
             requireReview: review,
-          },
+          }),
         },
         {
           name: `${name} owners answer source-unit principle checklists, realize every ${design} unit, and cover source obligations`,
@@ -3306,14 +3281,17 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
             sourceUnitPrinciples(shared, review),
             upstreamReference(shared, source.obligation, review),
             sourceObligations(shared, source.obligation, review),
-            {
-              type: "markdown",
-              root: DOCS,
-              files: [`${design}/**/*.md`],
-              symbol: "h2",
-              noEvidenceExclude: true,
+            ...createAutoMovieSourceRealizationReferences({
+              branch: name,
+              reference: {
+                type: "markdown",
+                root: DOCS,
+                files: [`${design}/**/*.md`],
+                symbol: "h2",
+                noEvidenceExclude: true,
+              },
               requireReview: review,
-            },
+            }),
           ],
         },
       ),
@@ -3328,16 +3306,21 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
       files: [...SOURCES.shots.files],
       symbol: [...SOURCES.shots.ownerSymbols],
       disabled: !requiresEvidence(graph.shots),
-      reference: {
-        type: "markdown",
-        root: DOCS,
-        files:
-          graph.kind === "film" ? ["screenplays/**/*.md"] : ["briefs/**/*.md"],
-        symbol: "h3",
-        noEvidenceExclude: true,
-        singleEvidencePerSymbol: true,
+      reference: createAutoMovieSourceRealizationReferences({
+        branch: "shots",
+        reference: {
+          type: "markdown",
+          root: DOCS,
+          files:
+            graph.kind === "film"
+              ? ["screenplays/**/*.md"]
+              : ["briefs/**/*.md"],
+          symbol: "h3",
+          noEvidenceExclude: true,
+          singleEvidencePerSymbol: true,
+        },
         requireReview: shotReview,
-      },
+      }),
     }),
     ...branchClaims("shots", {
       name: "shot source owners answer source-unit principle checklists and cover every shot-source obligation",
@@ -3395,17 +3378,20 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           SOURCES.filmSources.obligation,
           requiresReview(graph.filmSources),
         ),
-        {
-          type: "markdown",
-          root: DOCS,
-          files:
-            graph.kind === "film"
-              ? ["screenplays/**/*.md"]
-              : ["briefs/**/*.md"],
-          symbol: "h2",
-          noEvidenceExclude: true,
+        ...createAutoMovieSourceRealizationReferences({
+          branch: "filmSources",
+          reference: {
+            type: "markdown",
+            root: DOCS,
+            files:
+              graph.kind === "film"
+                ? ["screenplays/**/*.md"]
+                : ["briefs/**/*.md"],
+            symbol: "h2",
+            noEvidenceExclude: true,
+          },
           requireReview: requiresReview(graph.filmSources),
-        },
+        }),
       ],
     }),
   );
@@ -3650,6 +3636,8 @@ export const createAutoMovieContractBindingManifest = (
         enforced: binding.claim.disabled !== true,
         claim: binding.claim.name!,
         relationship: relationshipOf(binding, reference, contract),
+        severity: reference.severity,
+        requireReview: reference.requireReview,
         host: {
           type: binding.claim.type as "markdown" | "typescript",
           root: evidenceRoot(binding.claim),
@@ -3676,39 +3664,9 @@ export const createAutoMovieContractBindingManifest = (
       });
     }
   }
-  const localBindings: IAutoMovieLocalContractProjection[] = [];
-  const localAudits: IAutoMovieLocalContractProjection[] = [];
-  for (const raw of graph.claims ?? []) {
-    const claim = raw as Partial<AutoMovieProductionContractClaim>;
-    if (claim.autoMovieBinding === undefined) continue;
-    const references = (
-      Array.isArray(claim.reference) ? claim.reference : [claim.reference]
-    ).filter(
-      (reference): reference is ITtscEvidenceGraphMarkdownReference =>
-        reference?.type === "markdown",
-    );
-    const projection: IAutoMovieLocalContractProjection = {
-      claim: claim.name ?? "",
-      layer: claim.autoMovieBinding.layer,
-      stage: claim.autoMovieBinding.stage,
-      enforced: raw.disabled !== true,
-      populationScope: claim.autoMovieBinding.populationScope,
-      host: {
-        root: evidenceRoot(raw),
-        files: [...raw.files],
-        symbols: symbolsOf(raw.symbol as string | readonly string[]),
-      },
-      targets: references.map((reference) => ({
-        root: evidenceRoot(reference),
-        files: [...reference.files],
-        symbols: symbolsOf(reference.symbol as string | readonly string[]),
-      })),
-    };
-    (claim.autoMovieBinding.disposition === "binding"
-      ? localBindings
-      : localAudits
-    ).push(projection);
-  }
+  const { localBindings, localAudits } = projectAutoMovieLocalContractClaims(
+    graph.claims ?? [],
+  );
   return {
     kind: graph.kind,
     language: graph.language,

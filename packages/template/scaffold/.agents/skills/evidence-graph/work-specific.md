@@ -43,7 +43,7 @@ Give every adopted rule one owner:
 | --- | --- |
 | Delivery fact, world fact, subject, relationship, capability, constraint, or production-wide canon | Independent `docs/settings` H2 |
 | Condition each selected authored unit must satisfy for itself | `docs/contracts/principles-common.md`, `-narratives.md`, or `-<layer>.md` |
-| Role a layer's population covers between its units, with an observable failure and the repair it requires | `docs/contracts/obligations-common.md`, `-narratives.md`, or `-<layer>.md` |
+| Role allocated across a layer's units and compared once against its complete population, with an observable failure and the repair it requires | `docs/contracts/obligations-common.md`, `-narratives.md`, or `-<layer>.md`; its comparison is owned by the declared `docs/accounts/<layer>` account |
 | Relationship already owned by settings, a design branch, narrative, brief, or source evidence | That existing target, selected by an added claim only when the shared graph does not already express it |
 | Independent target with different evidence behavior | A descriptively named `docs/contracts/<name>.md` |
 | Nothing beyond the shared graph for a completed discovery duty | `docs/contracts/index.md`, whose exclusion names the risks examined and the sufficient shared owners |
@@ -56,6 +56,10 @@ Every production-specific target is a file directly under `docs/contracts`. Do n
 ## Activation and revision
 
 Create every production-local target under `docs/contracts` and its additive `claims` entry in `lint.config.ts` in one coherent change. Follow [Evidence staging](staging.md) for population, cardinality, exclusion, stage, and review semantics. An unselected target is not enforced, and an extra claim extends rather than replaces the shared graph. The discovery host is automatic; the claim governing the production's authored or source population is not.
+
+When that target is an authored obligation, register its dedicated account through `createAutoMovieProductionObligationClaim` as specified in [Production-specific claims](staging.md#production-specific-claims). Keep adopted rules in the contract, creative decisions in their authored units, and the complete comparison in the account. Principle claims and source-export obligations keep their own relationship forms from [Contract targets](contract-targets.md).
+
+After changing a local declaration or upgrading its helper contract, complete the declaration and account migration before `npm run sync`. Sync reads the validated production declaration and overwrites generated instructions; it preserves tracked `lint.config.ts`, local contracts, accounts, and authored content. Follow [Static-document updates](../../../README.md#static-document-updates) for tracked scaffold documents that an instruction sync does not replace. Confirm the refreshed router and live `localBindings` or `localAudits` identify the intended account, target, comparison population, stage, and scope.
 
 Before settings enter `draft` and bulk authorship begins, audit every direct instruction and adopted rule, classify its canonical owner, complete the initially applicable contract-hosted discovery searches, and create every retained production target and claim. The contract files are a separate host population and may already carry discovery answers while authored settings remain absent; settings-owned facts identified by the audit are realized during the settings draft. An omitted `claims` property or empty array is valid only after that literal audit finds no independent production-local target and records each applicable truthful negative on `docs/contracts/index.md`; an empty array is not evidence that the audit occurred.
 

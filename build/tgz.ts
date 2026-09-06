@@ -193,8 +193,11 @@ export const packWorkspace = (
   target: string,
   dependencies: IPackWorkspaceDependencies = packWorkspaceDependencies,
   packages: readonly IWorkspacePackage[] = PACKAGES,
+  assertCurrent: () => void = () => {},
 ): IPackWorkspaceResult => {
+  assertCurrent();
   dependencies.makeDirectory(target);
+  assertCurrent();
   const staging = dependencies.makeTemporaryDirectory(
     path.join(target, TARBALL_STAGING_PREFIX),
   );
@@ -208,10 +211,12 @@ export const packWorkspace = (
     }> = [];
     for (const { key, directory: folder, name } of packages) {
       dependencies.write(`Packing ${name}\n`);
+      assertCurrent();
       const packed = dependencies.pack(
         path.join(ROOT, "packages", folder),
         staging,
       );
+      assertCurrent();
       if (packed.status !== 0) throw new Error(`pnpm pack failed for ${name}`);
       // Take the path pack reports rather than guessing the filename. The
       // command-line package publishes as `automovie`, so every scoped sibling
@@ -226,12 +231,15 @@ export const packWorkspace = (
           `pnpm pack named ${produced.length} tarballs for ${name}; expected one.`,
         );
       const original = produced[0];
+      assertCurrent();
       if (!dependencies.exists(original))
         throw new Error(`pnpm pack reported a missing tarball for ${name}`);
+      assertCurrent();
       const digest = digestBytes(dependencies.read(original));
       const file = path
         .basename(original)
         .replace(/\.tgz$/u, `-${digest.slice(0, 12)}.tgz`);
+      assertCurrent();
       dependencies.rename(original, path.join(staging, file));
       packedFiles.push({ digest, file, key, name });
     }
@@ -253,9 +261,11 @@ export const packWorkspace = (
       ]),
     );
 
+    assertCurrent();
     if (dependencies.exists(directory)) {
       const invalid = packedFiles.find(({ digest, file }) => {
         const existing = path.join(directory, file);
+        assertCurrent();
         return (
           !dependencies.exists(existing) ||
           digestBytes(dependencies.read(existing)) !== digest
@@ -265,12 +275,29 @@ export const packWorkspace = (
         throw new Error(
           `workspace package generation ${generation} cannot be reused: ${invalid.file} is missing or has different bytes`,
         );
+      assertCurrent();
       dependencies.remove(staging);
-    } else dependencies.rename(staging, directory);
+    } else {
+      assertCurrent();
+      dependencies.rename(staging, directory);
+    }
 
+    assertCurrent();
     return { directory, generation, specifiers };
   } catch (error) {
-    if (dependencies.exists(staging)) dependencies.remove(staging);
+    try {
+      assertCurrent();
+      if (dependencies.exists(staging)) {
+        assertCurrent();
+        dependencies.remove(staging);
+      }
+    } catch (cleanupError) {
+      if (cleanupError === error) throw error;
+      throw new AggregateError(
+        [error, cleanupError],
+        "Workspace packing failed; staging cleanup could not safely complete.",
+      );
+    }
     throw error;
   }
 };

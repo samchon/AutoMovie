@@ -41,7 +41,7 @@ The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writin
 
 ### Evidence Graph
 
-The committed requirement-to-specification-to-public-source triangle, plus the separate reusable scaffold and language target corpus and the stable anchors, citations, exclusions, README participation, and lint populations that keep both graphs resolvable, `.agents/skills/evidence-graph/SKILL.md`. Read before adding, moving, or reviewing those contract sources, changing public-export evidence JSDoc, or reshaping repository `@ttsc/evidence` configuration and guards.
+The committed requirement-to-specification-to-public-source triangle, plus the separate reusable scaffold and language target corpus and the stable anchors, citations, exclusions, README participation, and lint populations that keep both graphs resolvable, `.agents/skills/evidence-graph/SKILL.md`. Read before adding, moving, or reviewing those contract sources, changing public-export evidence JSDoc, or reshaping repository `@ttsc/evidence` configuration.
 
 ### Review
 

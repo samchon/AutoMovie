@@ -1,39 +1,58 @@
 # `@automovie/evidence`
 
-AutoMovie 제작 저작용 증거 계약을 재사용하는 패키지다. 하나의 제작 종류, 저작 분기별 단계와 선택적인 작품 전용 claim을 `@ttsc/evidence` 그래프로 바꾸고, lint가 시작되기 전에 실제 저작 구조를 검증한다.
+This package turns one generated production's kind, population scope, branch stages, and additive claims into an `@ttsc/evidence` graph. It validates the project-owned physical documents, source populations, topology, and exact contract inventory before returning configuration. The production keeps its decisions and content in its own tracked files.
 
-이 패키지는 공통 discovery·upstream·principle·obligation target inventory, film·brief·library 호환성, 단계 전이, 비활성 폴더 잔여물, target identity, 계보, 소유 cardinality와 작품 전용 claim의 추가 합성을 맡는다. 작품의 결정이나 제작 문장은 소유하지 않는다.
+## Principles, obligations, and discovery
 
-## 원칙과 의무
+A principle is a no-exclusion checklist answered independently by every selected authored H2/H3/H4. An authored obligation is answered by a dedicated H2 under `docs/accounts/<layer>`: that account owns exactly one obligation H2 and compares every H2 in the complete selected authored population. Common, language, and production-local authored obligations use the same account form. Source obligations retain distributed coverage across the family's selected public exports.
 
-Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 `docs/accounts/<layer>`의 전용 H2가 한 항목과 해당 계층의 완전한 H2 모집단을 함께 대조하는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 모집단을 독립적으로 비교하지만, 저술 단위마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 account H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
+Upstream references ask each inheriting authored or source unit what it learned by exercising its actual parents. They permit a concrete exclusion when those parents proved sufficient. Settings and research have no upstream authored parents. Discovery instead uses flat `docs/contracts/*.md` file hosts, with one claim for each active authored layer. Retained rules live in their own contract files; only `contracts/index.md` may record a truthful population-wide no-result exclusion. Discovery begins in draft; authored evidence claims activate in evidence and acquire review requirements in review.
 
-진단 방향도 반대다. 답하지 않은 principle은 그 단위가 자기 질문을 하지 않았다는 뜻이므로 그 단위를 고친다. 답하지 않은 obligation은 계층에 그 역할의 소유자가 없다는 뜻이므로 population의 소유 구조를 고친다. 모든 공용 reference는 한 builder에서 `checklist`와 exclusion 허용 여부를 명시해 이 차이를 드러낸다.
+The graph's structural and freshness checks do not decide prose truth. The shipped evidence-graph and review-verification procedures own literal relationship review and whole-population comparison. Repeated review frames and pasted target questions remain semantic-review alarms.
 
-Upstream은 실제 부모를 상속하는 design·brief·서사 H2/H3/H4와 source export가 각각 답하는 exclusion 허용 checklist다. 하위 작업이 부모 결함을 드러내면 가장 이른 부모에서 고친 사실을 양의 evidence로 기록하고, 부모가 충분했다면 실제 부모와 시험한 결정을 구체적으로 밝힌 exclusion을 기록한다. Settings와 research는 저술 부모가 없어 이 family를 선택하지 않는다. Upstream은 부모의 충분성을 묻고, 무배제 parent-differentiation principle은 자식이 자기 층의 결정을 더했는지를 별도로 묻는다.
+## Rendered realization severity
 
-## 작품별 발견
+The generated graph rule remains `error`. Map, model, space, material, instance, and motion source-to-design references, shot-to-scene references, and film-source-to-delivery references retain an error reference for their exact coverage and cardinality. At `review`, a second native reference requires their rendered review at `warning` severity so source compilation and initial capture can produce the still-missing observation. System evaluation, production serialization, source principles, upstream checks, source obligations, and every authored or account relationship retain error review requirements. The model review-set obligation is a finite pre-render plan and remains an error on both account references.
 
-Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 아니라 별도 작품 계약 감사면의 file-level coverage다. 모든 활성 Markdown 계층은 `docs/contracts/*.md`에서 `discovery/core/common.md`를 답하고, settings는 settings discovery를, 각 model·space·material·instance·motion·system 분기는 designs와 자기 layer discovery를, treatments·scripts·screenplays는 films와 자기 layer discovery를, brief는 brief discovery를 더한다. Research는 common만 답해 외부 근거 채택과 design boundary 탐색을 합치지 않는다. 결과가 있으면 평면 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명한다. 결과가 정말 없으면 `docs/contracts/index.md`만 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 계층 단위 제외를 소유한다. 저술 H2/H3/H4는 제작 내용을 기술할 뿐 감사를 증언하지 않는다. 발견 claim은 저술 계층의 draft부터 활성화되고 review에서 현재 fingerprint를 요구한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
+`createAutoMovieSourceRealizationReferences` implements that split for the factory without changing selectors or interpreting native diagnostics. The manifest retains each reference's optional `severity` and `requireReview`; an absent override inherits the graph's error level. The reader still derives one source-owner lineage identity and its actual current review state. Warning-only lint is not completed review: physical `review` and `final` gates still require current observed evidence, including consumed-model coverage for film and brief and exact selected library owners. Source, target, generated output, or plan changes can reopen those independent obligations. The shipped [rendered-realization procedure](../template/scaffold/.agents/skills/evidence-graph/staging.md#rendered-realization-review) owns the policy table and capture-to-observation workflow.
 
-Evidence conformance는 저술 host가 자기 annotation을 다시 인증하는 principle이 아니다. 생성 프로젝트의 evidence-graph skill은 구조, freshness, rewrite, repair owner를 하나의 conformance map으로 연결하고, review-verification skill은 fingerprint를 붙이기 전 literal host-target 판정과 두 축의 전체 모집단 감사를 독립 절차로 수행한다. 반복 frame과 target-question 복제 측정은 전체 재독을 여는 alarm이며 semantic verdict가 아니다.
+## Production-local accounts
 
-## 공개 표면
+Use the owning branch's values from the single `productionEvidence` declaration in `lint.config.ts`:
 
-| Export | 역할 |
+```ts
+createAutoMovieProductionObligationClaim({
+  name: "Models account for the production's local obligations",
+  document: "contracts/obligations-models.md",
+  account: "accounts/models/local-obligations.md",
+  layer: "models",
+  stage: productionEvidence.models,
+  populationScope: productionEvidence.populationScope,
+});
+```
+
+Append the returned claim to that declaration's `claims`. `documentRoot` defaults to `docs`; alternatively use `documentRoot: "docs/contracts"` and a bare filename. Each H2 in the contract document requires exactly one account H2. Different documents need different account files, and the complete authored H2 population is derived from `layer` and `populationScope`. Callers cannot replace it with a selected subset. Shared filenames and the settings story-subject account are reserved.
+
+Disabled and draft claims remain declared but inactive. Evidence requires physical accounts and targets; review additionally requires current native fingerprints on both references. Both references explicitly use `error` severity. Preserve the helper's omitted claim-level severity: canonical admission refuses any claim-level override, including `off` or `0` that would disable the entire native claim, and refuses a weaker rewritten reference. `inapplicable: true` is permitted only for an explicit first-pilot audit. Complete production and its authorized reset cannot use that disposition to escape a duty. A reset retains the complete denominator while its reset branches remain inactive draft material.
+
+The manifest exposes the account in `localBindings[].host`, its contract in `targets`, and the compared authored H2 selector in `population`. Pilot-only inapplicable declarations appear in `localAudits` with the same identities. `readAutoMovieContractRules` continues to read optional structured metadata from the contract H2s; account H2s do not create new rule definitions.
+
+Existing obligation callers must replace `files` and `symbol` with `account` and split plural documents into one declaration per document. Preserve authored facts and decisions, reread every selected H2 against the obligation, transfer the whole-population comparison to its dedicated account, remove superseded direct obligation annotations, and review the new relationships. Copying generic comparison text or refreshing fingerprints mechanically does not migrate the evidence. After the declaration and accounts are valid, `npm run sync` refreshes generated instructions while preserving these tracked inputs. The shipped [staging procedure](../template/scaffold/.agents/skills/evidence-graph/staging.md#production-specific-claims) owns the full migration workflow.
+
+## Public surface
+
+| Export | Purpose |
 | --- | --- |
-| `createAutoMovieEvidenceConfig` | 하나의 제작 선언을 검증하고 증거그래프를 반환한다. |
-| `IAutoMovieEvidenceConfigProps` | 제작 종류, 분기 단계, 위치와 추가 claim을 선언한다. |
-| `AutoMovieProductionKind` | 상호 배타적인 `film`, `brief`, `library` 형태를 정의한다. |
-| `AutoMovieEvidenceStage` | `disabled -> draft -> evidence -> review` 생명주기를 정의한다. |
-| `createAutoMoviePopulationAccountClaims` | 계층별 obligation과 완전한 저술 H2 모집단을 묶는 전용 account claim을 만든다. |
-| `inspectAutoMovieEvidenceTopology` | settings와 design foundation의 provider-consumer-status-reason 행렬을 검사한다. |
-| `inspectAutoMovieEvidenceReviewAlarms` | 반복 review frame과 target 질문 복사를 비차단 Self-Review alarm으로 관찰한다. |
-| `readAutoMovieProductionEvidence` | 같은 선언에서 topology와 semantic review alarm, 활성 owner와 authored unit, graph가 선택한 source path/export/target/digest/review edge를 하나의 runtime carrier로 읽는다. |
-| `evidence` | 단일 typed `lint.config.ts`에서 쓸 `@ttsc/evidence` lint plugin을 내보낸다. |
+| `createAutoMovieEvidenceConfig` | Validate the sole production declaration and construct its native graph. |
+| `IAutoMovieEvidenceConfigProps` | Declare project root, kind, language, scope, every branch stage, and additive claims. |
+| `AutoMovieProductionKind`, `AutoMovieEvidenceStage` | Define the closed production-shape and branch-lifecycle vocabularies. |
+| `createAutoMovieProductionPrincipleClaim` | Create a local per-unit no-exclusion checklist. |
+| `createAutoMovieProductionObligationClaim` | Declare one local obligation document and its dedicated population account. |
+| `createAutoMoviePopulationAccountClaims` | Generate the shared account family using the same dual-reference builder as local accounts. |
+| `createAutoMovieContractBindingManifest` | Project shared relationships, local bindings and audits, and topology from validated claims. |
+| `readAutoMovieProductionEvidence` | Read the manifest, authored owners, local contract rules, source bindings, and review alarms for production consumers. |
+| `inspectAutoMovieEvidenceTopology` | Inspect the provider, consumer, status, and reason matrix. |
+| `inspectAutoMovieEvidenceReviewAlarms` | Report repeated review frames and pasted target questions for substantive rereading. |
+| `evidence` | Re-export the native lint plugin for the project's typed configuration. |
 
-## 경계
-
-생성 프로젝트는 완전한 제작 선택과 evidence graph를 typed `lint.config.ts` 하나에 둔다. 이 파일이 내보내는 같은 `productionEvidence` 값을 lint, instruction sync, runtime review가 소비하므로 별도 sidecar나 이중 제작 선택이 없다. 저자는 그 선언의 `claims`를 추가할 수 있지만 공통 reference를 교체하거나 cardinality를 바꾸거나 잔여물·topology 검사를 끌 수 없다.
-
-공통 discovery, upstream, principle과 obligation은 scaffold가 생성 프로젝트의 `docs` 안에 그대로 넣는 평범한 Markdown이다. Graph는 설치 package를 다시 찾지 않고 그 project-local exact inventory를 읽으며, 작품 전용 발견 결과와 target은 같은 root의 평면 `docs/contracts`에 남는다. 이 패키지는 공통 inventory, 계약 디렉터리의 평면성, index-only 제외, H1 앞 발견 태그, additive target 선택과 실제 문서 집합을 검사할 뿐, 작품 문장을 숨기거나 생성하지 않는다.
+The factory, instruction synchronization, and production readers consume the same exported declaration. Additive claims extend the shared graph without replacing its populations, cardinality, topology, or physical-input guards. All shared targets live in the generated project's scaffold-local `docs` inventory, and all production-specific targets remain in its flat `docs/contracts` directory.

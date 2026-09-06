@@ -1,0 +1,5 @@
+{
+  "extends": "../../config/tsconfig.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib", "types": ["node"], "module": "Node16", "moduleResolution": "Node16" },
+  "include": ["src"]
+}

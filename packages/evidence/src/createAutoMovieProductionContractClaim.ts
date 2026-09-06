@@ -3,8 +3,14 @@ import type {
   ITtscEvidenceGraphReference,
 } from "@ttsc/evidence";
 
+import {
+  AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS,
+  type AutoMovieAuthoredDocumentLayer,
+} from "./AutoMovieAuthoredDocumentLayer";
 import type { AutoMoviePopulationScope } from "./AutoMoviePopulationScope";
+import { createAutoMovieAuthoredPopulationFiles } from "./createAutoMovieAuthoredPopulationFiles";
 import type { AutoMovieEvidenceStage } from "./createAutoMovieEvidenceConfig";
+import { createAutoMoviePopulationAccountClaim } from "./createAutoMoviePopulationAccountClaims";
 
 type MarkdownClaim = Extract<ITtscEvidenceGraphClaim, { type: "markdown" }>;
 type MarkdownSymbol = Extract<
@@ -12,30 +18,13 @@ type MarkdownSymbol = Extract<
   { type: "markdown" }
 >["symbol"];
 
-const PRODUCTION_CONTRACT_LAYERS = [
-  "briefs",
-  "instances",
-  "maps",
-  "materials",
-  "models",
-  "motions",
-  "research",
-  "screenplays",
-  "scripts",
-  "settings",
-  "spaces",
-  "systems",
-  "treatments",
-] as const;
-
 /**
  * Authored Markdown layer that may answer a production-local contract.
  *
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes local claim ownership an explicit layer identity.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed local-claim layer vocabulary.
  */
-export type AutoMovieProductionContractLayer =
-  (typeof PRODUCTION_CONTRACT_LAYERS)[number];
+export type AutoMovieProductionContractLayer = AutoMovieAuthoredDocumentLayer;
 
 /**
  * Additive graph claim retaining its project-specific binding identity.
@@ -54,11 +43,13 @@ export type AutoMovieProductionContractClaim = MarkdownClaim & {
     stage: AutoMovieEvidenceStage;
     /** Positive binding or explicit pilot-only negative audit entry. */
     disposition: "binding" | "inapplicable";
+    /** Exact account file for an authored obligation, relative to docs. */
+    account?: string;
   };
 };
 
 /**
- * Inputs shared by the two production-local contract claim factories.
+ * Inputs for a production-local per-unit principle claim.
  *
  * A production keeps adopted rules in its flat `docs/contracts` inventory,
  * while this declaration says which authored Markdown population answers
@@ -101,8 +92,7 @@ export interface IAutoMovieProductionContractClaimProps {
   populationScope: AutoMoviePopulationScope;
 
   /**
-   * Markdown units that answer the contract. Principles select authored
-   * H2/H3/H4 units, while obligations select only primary H2 owners.
+   * Authored H2/H3/H4 units that answer the principle for themselves.
    */
   symbol: MarkdownSymbol;
 
@@ -116,6 +106,27 @@ export interface IAutoMovieProductionContractClaimProps {
    * @default false
    */
   inapplicable?: boolean;
+}
+
+/**
+ * One local obligation document and the account file that compares its layer.
+ *
+ * The complete authored H2 denominator is derived from layer and scope. Each
+ * H2 in the document receives exactly one H2 in this account file, so callers
+ * cannot narrow the comparison with an arbitrary authored-host selector.
+ *
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Declares the local account, target, layer, stage, and scope together.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Replaces authored files and symbol selectors with one exact account file and one flat contract document.
+ * @author Samchon
+ */
+export interface IAutoMovieProductionObligationClaimProps extends Omit<
+  IAutoMovieProductionContractClaimProps,
+  "document" | "files" | "symbol"
+> {
+  /** One flat contract document, resolved against documentRoot. */
+  document: string;
+  /** One normalized accounts/<layer>/<name>.md path relative to docs. */
+  account: string;
 }
 
 /**
@@ -134,29 +145,61 @@ export interface IAutoMovieProductionContractClaimProps {
 export function createAutoMovieProductionPrincipleClaim(
   props: IAutoMovieProductionContractClaimProps,
 ): AutoMovieProductionContractClaim {
-  requireSymbol(props.symbol, true);
+  requireSymbol(props.symbol);
   return createClaim(props, true);
 }
 
 /**
  * Creates one production-local obligation claim.
  *
- * The selected host population distributes each H2 role one or more times. It
- * is deliberately not a checklist: one primary H2 may discharge an obligation
- * for its layer, while H3 and H4 never repeat that population duty. Exclusions
- * remain forbidden because an obligation is something the selected population
- * owes, not a question one host may declare irrelevant.
+ * Each account H2 owns exactly one contract H2 and compares every authored H2
+ * selected by the owning layer and current population scope. The account file
+ * is retained in the typed binding so the graph admits only declared owners.
+ * Former callers migrate their authored files/symbol inputs to one account
+ * path and reread the obligation against the complete layer.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Preserves the required no-exclusion population coverage meaning of an obligation.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends this local obligation as population-level H2 coverage without mutating the reusable claims.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits ordinary H2 coverage rather than turning an obligation into a per-host checklist.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Returns one ordinary H2 extension whose population coverage is consumed through the generated claims array.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reuses the common account builder's exact target ownership and complete authored H2 checklist.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Registers the exact local account through the generated claims array without replacing shared claims.
  */
 export function createAutoMovieProductionObligationClaim(
-  props: IAutoMovieProductionContractClaimProps,
+  props: IAutoMovieProductionObligationClaimProps,
 ): AutoMovieProductionContractClaim {
-  requireSymbol(props.symbol, false);
-  return createClaim(props, false);
+  if (typeof props.document !== "string")
+    throw new Error(
+      "A production-local obligation account requires one contract document.",
+    );
+  if (
+    typeof props.account !== "string" ||
+    !props.account.startsWith(`accounts/${props.layer}/`) ||
+    !/^accounts\/[a-zA-Z]+\/[A-Za-z0-9][A-Za-z0-9._-]*\.md$/u.test(
+      props.account,
+    )
+  )
+    throw new Error(
+      `A production-local obligation requires one normalized accounts/${props.layer}/<name>.md account path; migrate authored files and symbol inputs to account.`,
+    );
+  const populationFiles = createAutoMovieAuthoredPopulationFiles(
+    props.layer,
+    props.populationScope,
+  );
+  const base = createClaim(
+    { ...props, files: populationFiles, symbol: "h2" },
+    false,
+  );
+  return {
+    ...createAutoMoviePopulationAccountClaim({
+      name: base.name!,
+      account: props.account,
+      document: props.document,
+      documentRoot: props.documentRoot ?? "docs",
+      populationFiles,
+      enabled: base.disabled !== true,
+      requireReview: props.stage === "review",
+    }),
+    autoMovieBinding: { ...base.autoMovieBinding, account: props.account },
+  };
 }
 
 /** Builds one validated local Markdown claim in its selected cardinality. */
@@ -167,7 +210,11 @@ function createClaim(
   const name: string = props.name.trim();
   if (name.length === 0)
     throw new Error("A production-local contract claim requires a name.");
-  if (!(PRODUCTION_CONTRACT_LAYERS as readonly unknown[]).includes(props.layer))
+  if (
+    !(AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS as readonly unknown[]).includes(
+      props.layer,
+    )
+  )
     throw new Error(
       `A production-local contract claim has unsupported layer ${String(props.layer)}.`,
     );
@@ -270,17 +317,15 @@ function validateContractPath(
 }
 
 /** Refuse a layer/symbol combination that changes claim cardinality. */
-function requireSymbol(symbol: MarkdownSymbol, checklist: boolean): void {
+function requireSymbol(symbol: MarkdownSymbol): void {
   const symbols = Array.isArray(symbol) ? [...symbol] : [symbol];
-  const accepted = checklist ? ["h2", "h3", "h4"] : ["h2"];
+  const accepted = ["h2", "h3", "h4"];
   if (
     symbols.length === 0 ||
     symbols.some((candidate) => !accepted.includes(candidate as string))
   )
     throw new Error(
-      checklist
-        ? "A production-local principle claim selects only H2, H3, or H4 authored units."
-        : "A production-local obligation claim selects only H2 primary owners.",
+      "A production-local principle claim selects only H2, H3, or H4 authored units.",
     );
 }
 

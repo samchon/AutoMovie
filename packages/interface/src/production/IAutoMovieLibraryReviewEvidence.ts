@@ -502,6 +502,12 @@ export interface IAutoMovieLibraryReviewProjectReader {
   root: string;
   /** Read project-owned text, returning null when absent or unsafe. */
   readProseDocument(path: string): string | null;
+  /**
+   * Whether any physical directory entry exists at a project path, including
+   * unsafe files and dangling links. Invalid paths and unsafe ancestors throw.
+   * Physical readers provide this so an unreadable recovery marker is not absence.
+   */
+  proseDocumentExists?(path: string): boolean;
   /** Reopen renderer-owned artifact bytes. */
   readRenderFile(path: string): Uint8Array;
   /** Reopen one exact source file selected by the manifest binding. */

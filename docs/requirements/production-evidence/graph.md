@@ -16,6 +16,8 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 서로 다른 host에서 인용·경로·수치만 바뀐 review frame이 반복되거나 review 이유가 target의 Review question을 그대로 포함하면 그 위치와 반복 수를 결정적인 Self-Review alarm으로 보여야 한다. 이 alarm은 새로운 검토를 지시하되 corpus에 맞춘 자동 거부나 의미 판정이 되어서는 안 되며, target 모집단을 실제로 읽었는지도 결과에 밝혀야 한다.
 
+공통·선택 언어·작품 고유 저술 의무는 같은 전용 account 계약을 따라야 한다. 작품 고유 계정도 하나의 선언으로 대상 의무, 소유 계층과 경로, 완전한 비교 모집단, 현재 단계와 적용 범위를 함께 식별하며, 선언 없는 계정이나 중복 소유로 완료를 주장할 수 없어야 한다.
+
 ### 작품별 발견의 증명 {#agent-production-evidence-discovery}
 
 그래프는 모든 활성 저작 계층이 실제 작품의 지시, 약속, 주제, 자료, 자산, 의존성과 위험을 열린 방식으로 조사하게 해야 한다. 저작 단위 자체가 이 감사를 증언하게 하지 않고, 계층별 `docs/contracts` 감사면이 발견 결과와 현재 실현을 함께 소유해야 한다. 독립 결과가 있으면 별도 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명하고, 결과가 정말 없으면 조사한 구체적 입력과 위험 및 충분한 기존 소유자를 밝힌 계층별 중앙 제외 장부만 허용해야 한다. 조사를 생략한 상태와 조사 결과가 없는 상태가 같은 그래프로 통과해서는 안 된다.
@@ -28,9 +30,13 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 그래프는 `film`, `brief`, `library`를 상호 배타적인 제작 종류로 다루고, 각 저작 분기를 `disabled -> draft -> evidence -> review` 순서와 부모 단계 선행 조건에 따라 전진시켜야 한다. 같은 선언에서 settings와 design foundation topology를 투영하여 stage 선택과 account 행렬이 모순되지 않게 해야 한다. 간단한 영상에는 장편 서사 단계를 강요하지 않고, 재사용 자산에는 촬영·편집 단계를 강요하지 않아야 한다.
 
+렌더된 실현을 확인하는 source 관계는 구조와 관찰 의무를 분리해야 한다. 미관찰·stale 시각 review는 첫 compile과 capture를 허용하는 warning이되, 대상 coverage·소유·cardinality, 저술 및 비시각 source review는 error를 유지해야 한다. Warning만 남았다는 사실은 관찰 완료나 final 수용이 아니며, 실제 다각도·시간·전달 개체군의 current physical evidence가 독립적으로 충족되어야 한다.
+
 ### 실제 대상과 계보의 무결성 {#agent-production-evidence-physical-integrity}
 
 활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 프로젝트가 소유하는 각 입력 파일은 symlink가 아닌 regular file이고 정확히 하나의 directory entry만 가져야 하며, 같은 inode를 여러 경로가 독립 계약이나 source처럼 소유하게 해서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다.
+
+계약·TOC 유지보수가 중단된 트리는 일부 successor가 존재하더라도 완전한 계약 generation으로 받아들이지 않아야 한다. Pending recovery marker의 잘못된 형식이나 읽을 수 없는 entry도 부재로 해석하지 않는다.
 
 ### 추가만 가능한 확장 {#agent-production-evidence-additive-extension}
 

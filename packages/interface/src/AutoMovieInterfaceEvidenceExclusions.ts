@@ -5,6 +5,19 @@
  * interface declarations carry positive evidence; every remaining selected unit
  * stays explicit here so new document units cannot enter the graph silently.
  *
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Sandbox filesystem ownership belongs to the build launcher and template publication capabilities, not portable production data.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-selection The MCP package owns authored Markdown navigation requests and responses independently of portable production schemas.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-source The MCP reader owns source projection and byte revisions; this package neither reads nor projects documents.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds The MCP provider owns response budgets, pagination and reference failures.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation Physical read confinement belongs to the MCP adapter, not portable production data.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-transports MCP and local JSON transports belong to the MCP package and installed client registration.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection The MCP package declares the exact navigation address and heading response contracts.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source Lossless Markdown projection and digest computation are MCP reader responsibilities.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Serialized byte ceilings and continuation admission belong to the MCP provider.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-isolation Root binding and read-handle identity checks belong to the MCP filesystem adapter.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports The MCP server and reference command implement shared transport behavior outside this portable schema package.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership The build launcher and template native publication API retain sandbox generation authority; no portable production schema owns these OS capabilities.
+ *
  * @evidenceExclude requirements/acceptance/approval-exceptions-and-publication.md#acceptance-approval-selection-separation The portable interface package does not own this requirement beyond its declared data boundaries; the owning runtime or workflow package retains implementation and verification responsibility.
  * @evidenceExclude requirements/acceptance/approval-exceptions-and-publication.md#acceptance-approval-status The portable interface package does not own this requirement beyond its declared data boundaries; the owning runtime or workflow package retains implementation and verification responsibility.
  * @evidenceExclude requirements/acceptance/approval-exceptions-and-publication.md#acceptance-conditional-use The portable interface package does not own this requirement beyond its declared data boundaries; the owning runtime or workflow package retains implementation and verification responsibility.

@@ -133,9 +133,21 @@ const readPlan = (props: {
   | { success: true; data: IAutoMovieLibraryReviewPlanFile }
   | { success: false; diagnostic: IAutoMovieDiagnostic } => {
   const relative = planPath(props.owner);
+  const pending = `${relative}.pending`;
+  const assertCompleted = (): void => {
+    if (
+      props.project.proseDocumentExists?.(pending) === true ||
+      props.project.readProseDocument(pending) !== null
+    )
+      throw new Error(
+        `Library review publication requires recovery: ${pending}. A resident sidecar is not completed while its pending record remains.`,
+      );
+  };
   let source: string | null;
   try {
+    assertCompleted();
     source = props.project.readProseDocument(relative);
+    assertCompleted();
   } catch (error) {
     return {
       success: false,

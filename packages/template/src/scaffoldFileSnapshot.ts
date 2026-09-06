@@ -125,9 +125,33 @@ export interface IScaffoldPhysicalDirectory {
   real: string;
 }
 
-interface IScaffoldFileSnapshot {
+/**
+ * Captured pathname generation that authorizes a later read or replacement.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Keeps exact predecessor authority across preparation and publication.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Rejects a later resident instead of treating it as the approved input.
+ */
+export interface IScaffoldFileSnapshot {
+  /**
+   * Physical file identity reported by pathname metadata.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the approved file generation.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses replacement by another physical file.
+   */
   identity: string;
+  /**
+   * Absolute pathname whose resident was captured.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Addresses the same approved target on retry.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Keeps reuse scoped to one named slot.
+   */
   path: string;
+  /**
+   * Size and timestamp generation together with the physical identity.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Detects changed bytes within the original file.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses in-place changes before a repeated operation.
+   */
   version: string;
 }
 
@@ -403,6 +427,8 @@ export const ensureScaffoldFileDirectory = (props: {
 export const writeScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
   bytes: Uint8Array;
+  expected?: IScaffoldFileSnapshot | null;
+  capability?: IScaffoldParentPublicationCapability;
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
   target: string;
@@ -411,7 +437,15 @@ export const writeScaffoldFile = (props: {
   if (path.dirname(absolute) !== props.parent.path)
     throw new Error(`scaffold file changed declared parent: ${absolute}`);
   assertScaffoldOwnership(props.base, props.parent);
-  if (props.force) {
+  if (props.expected !== undefined && props.expected !== null) {
+    if (!props.force || props.expected.path !== absolute)
+      throw new Error(
+        `scaffold replacement lacks exact captured authority: ${absolute}`,
+      );
+    assertScaffoldFileSnapshot(props.expected);
+    return overwriteScaffoldFile({ ...props, existing: props.expected });
+  }
+  if (props.force && props.expected === undefined) {
     let existing: IScaffoldFileSnapshot | null;
     try {
       existing = captureScaffoldFile(absolute);
@@ -425,7 +459,7 @@ export const writeScaffoldFile = (props: {
   }
   return publishScaffoldFileToCapturedParent({
     bytes: Array.from(props.bytes),
-    capability: { publish: publishNativeScaffoldFile },
+    capability: props.capability ?? { publish: publishNativeScaffoldFile },
     parent: props.parent,
     target: absolute,
   });
@@ -451,6 +485,7 @@ const overwriteScaffoldFile = (props: {
   const progress = { bytesWritten: 0 };
   let failure: unknown = undefined;
   let mutated = false;
+  let completedIdentity: string | undefined;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fileSystem.fstatSync(descriptor, { bigint: true });
@@ -465,6 +500,7 @@ const overwriteScaffoldFile = (props: {
     mutated = true;
     writeScaffoldDescriptor(descriptor, props.target, props.bytes, progress);
     const completed = fileSystem.fstatSync(descriptor, { bigint: true });
+    completedIdentity = physicalIdentity(completed);
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
     assertScaffoldFileDescriptor(
@@ -484,6 +520,7 @@ const overwriteScaffoldFile = (props: {
       descriptor,
       physicalVersion(finalStatus),
     );
+    completedSnapshot = assertOpenedScaffoldFileSnapshot(completedSnapshot);
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failure = error;
@@ -512,6 +549,7 @@ const overwriteScaffoldFile = (props: {
     });
   return failure === undefined
     ? Object.freeze({
+        fileIdentity: completedIdentity!,
         parentIdentity: props.parent.identity,
         status: "completed",
       })
@@ -523,7 +561,13 @@ const overwriteScaffoldFile = (props: {
       });
 };
 
-const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
+/**
+ * Capture one ordinary single-link file before its bytes authorize an operation.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the predecessor generation before preparing a repeated write.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses links and non-file targets as reusable inputs.
+ */
+export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
   const absolute = path.resolve(file);
   const status = fileSystem.lstatSync(absolute, { bigint: true });
   assertOrdinarySingleLinkFile(status, absolute);
@@ -539,10 +583,13 @@ const assertScaffoldFileDescriptor = (
   descriptor: number,
   expectedDescriptorVersion: string,
 ): void => {
-  assertScaffoldFileSnapshot(snapshot);
+  assertOpenedScaffoldFileSnapshot(snapshot);
   const opened = fileSystem.fstatSync(descriptor, { bigint: true });
   assertOrdinarySingleLinkFile(opened, snapshot.path);
-  if (physicalVersion(opened) !== expectedDescriptorVersion)
+  if (
+    withoutChangeTime(physicalVersion(opened)) !==
+    withoutChangeTime(expectedDescriptorVersion)
+  )
     throw new Error(
       `scaffold file descriptor changed generation: ${snapshot.path}`,
     );
@@ -551,11 +598,11 @@ const assertScaffoldFileDescriptor = (
   try {
     const resident = fileSystem.fstatSync(residentDescriptor, { bigint: true });
     assertOrdinarySingleLinkFile(resident, snapshot.path);
-    if (physicalVersion(resident) !== physicalVersion(opened))
+    if (writtenVersion(resident) !== writtenVersion(opened))
       throw new Error(
         `scaffold file descriptor changed resident generation: ${snapshot.path}`,
       );
-    assertScaffoldFileSnapshot(snapshot);
+    assertOpenedScaffoldFileSnapshot(snapshot);
   } catch (error) {
     failure = { error };
     throw error;
@@ -568,7 +615,34 @@ const assertScaffoldFileDescriptor = (
   }
 };
 
-const assertScaffoldFileSnapshot = (snapshot: IScaffoldFileSnapshot): void => {
+// Only while this operation holds/reopens a descriptor: our own Windows opens
+// can move ctime. Physical identity, size and mtime still cannot change. The
+// public snapshot assertion keeps ctime for later, separately admitted work.
+const withoutChangeTime = (version: string): string =>
+  version.split(":").slice(0, -1).join(":");
+const assertOpenedScaffoldFileSnapshot = (
+  snapshot: IScaffoldFileSnapshot,
+): IScaffoldFileSnapshot => {
+  const current = captureScaffoldFile(snapshot.path);
+  if (
+    current.identity !== snapshot.identity ||
+    withoutChangeTime(current.version) !== withoutChangeTime(snapshot.version)
+  )
+    throw new Error(
+      `scaffold file changed while its descriptor was open: ${snapshot.path}`,
+    );
+  return current;
+};
+
+/**
+ * Refuse a pathname whose physical file or content generation has changed.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Keeps reuse tied to the originally approved resident.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Checks both identity and byte-generation metadata before reuse.
+ */
+export const assertScaffoldFileSnapshot = (
+  snapshot: IScaffoldFileSnapshot,
+): void => {
   const current = captureScaffoldFile(snapshot.path);
   if (
     current.identity !== snapshot.identity ||
@@ -577,6 +651,49 @@ const assertScaffoldFileSnapshot = (snapshot: IScaffoldFileSnapshot): void => {
     throw new Error(
       `scaffold file changed after descriptor close: ${snapshot.path}`,
     );
+};
+
+/**
+ * Read the descriptor that proves a captured pathname generation. Descriptor
+ * identity is separate because Windows path and handle device ids can differ.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Retains exact bytes and observed generation before a repeated write is planned.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses a changed resident before its bytes can authorize reuse.
+ */
+export const readScaffoldFileSnapshot = (
+  file: string,
+): {
+  snapshot: IScaffoldFileSnapshot;
+  bytes: Buffer;
+  identity: string;
+  version: string;
+} => {
+  const snapshot = captureScaffoldFile(file);
+  const descriptor = fileSystem.openSync(snapshot.path, "r");
+  let failure: IScaffoldDescriptorFailure | undefined;
+  let result: {
+    snapshot: IScaffoldFileSnapshot;
+    bytes: Buffer;
+    identity: string;
+    version: string;
+  };
+  try {
+    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
+    const version = physicalVersion(opened);
+    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    const bytes = fileSystem.readFileSync(descriptor);
+    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    result = { snapshot, bytes, identity: physicalIdentity(opened), version };
+  } catch (error) {
+    failure = { error };
+    throw error;
+  } finally {
+    closeScaffoldDescriptor(descriptor, failure, "read scaffold file");
+  }
+  // Capture after our final close, not before our own resident reopen.
+  const completed = assertOpenedScaffoldFileSnapshot(snapshot);
+  assertScaffoldFileSnapshot(completed);
+  return { ...result, snapshot: completed };
 };
 
 const assertOrdinarySingleLinkFile = (
@@ -697,7 +814,7 @@ const physicalVersion = (status: fs.BigIntStats): string =>
  * The part of a file's identity a writer owns, for comparing two stats of one
  * held descriptor across this module's own verification reads.
  *
- * `ctimeNs` is deliberately absent here and only here. Windows advances a
+ * `ctimeNs` is absent across this operation's own held-descriptor observations. Windows advances a
  * file's change time when _any_ handle opens the path, including the read-only
  * handle `captureScaffoldFile` takes to verify the write, so the check's own
  * probe moved the value the check then compared: measured 20 of 20 with the

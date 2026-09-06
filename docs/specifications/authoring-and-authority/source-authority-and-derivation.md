@@ -55,3 +55,11 @@ Source, license, digest, consumer 또는 current snapshot이 불명확하면 파
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability 이 호환성이 agent, client, external service와 local tool 교체를 허용한다. -->
 
 재개 입력은 source snapshot, 현재 상태 ledger, omission, 진단과 채택 input identity다. 이전 session이나 agent 기억 없이 같은 상태를 열 수 있어야 하며 새 도구가 동일 공개 contract를 지키면 source 권위와 lineage를 이어받을 수 있어야 한다.
+
+### 샌드박스 작업의 물리 귀속 {#spec-authoring-sandbox-physical-ownership}
+
+<!-- @evidence requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary 이 작업 경계가 실험 root, target과 manifest의 승인 세대를 mutation마다 유지한다. -->
+
+Launcher는 모든 ancestor와 실험 root 및 직접 자식 target을 ordinary physical directory로 캡처한다. Pack 전에 기존 manifest와 refresh baseline은 single-link descriptor bytes와 generation으로 읽어 승인하며, 나머지 변경할 leaf는 ordinary single-link generation 또는 absent slot으로 승인한다. 기존 파일은 그 snapshot으로만 교체하며 새 slot은 exclusive publication으로 만든다. Pack의 로컬 pathname effect, publication과 install 진입·복귀에서 같은 승인을 다시 확인하고 no-install도 승인 경계를 생략하지 않는다. 실패한 cleanup은 원래 원인을 보존하며 stale root나 target을 삭제하지 않는다.
+
+Completed 결과만 새 manifest generation을 승인한다. Partial publication은 실제 effect와 retained 경로를 보고하고 재사용 성공으로 바꾸지 않는다. 외부 package manager 프로세스의 실행 중 filesystem namespace를 격리하는 것은 이 operation-boundary 검사와 별개이며, 사전 검사로 그 격리를 보장했다고 주장하지 않는다.

@@ -25,11 +25,13 @@ pnpm run experimental <name> --refresh                 # repack and reinstall, k
 
 The name must be one portable directory segment. Creation, including `--force`, requires one explicit language: `chinese`, `english`, `japanese`, or `korean`. Refresh preserves the existing language; an optional `--language` may only confirm it, never switch it. `--force` and `--refresh` cannot be combined.
 
-`--no-install` skips packing and installation. With creation it only renders the scaffold; with refresh it retains the existing package pins. Neither form proves a package change reached the sandbox.
+`--no-install` skips packing and installation. Creation renders the scaffold; refresh retains the existing package pins. Both synchronize the owned local reference-client entries against the same captured sandbox root while preserving unrelated settings. Neither form proves a package change reached the sandbox.
+
+The launcher refuses linked roots, linked sandbox directories, and linked or multiply linked package manifests. It retains the approved directory and manifest generations through packing, publication, and the install boundary; a replacement requires a new invocation. A refused or partial operation is not permission to delete a sandbox or a package generation. These operation-boundary checks do not isolate an external package manager's filesystem namespace while that process runs.
 
 Creation packs every workspace package, so it runs each package's build and takes several minutes. A sandbox holds the tarballs it was created from, not a live view of the working tree, so **a change under `packages/` reaches it only when you pack again**.
 
-Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites only the manifest's tarball pins, and reinstalls without replacing production content.
+Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites the manifest's tarball pins, reinstalls, and synchronizes owned reference-client entries without replacing production content.
 
 `experimental/` is gitignored. Delete a sandbox when its question is answered, and never commit anything from inside one.
 

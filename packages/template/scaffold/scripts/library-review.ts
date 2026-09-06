@@ -5,8 +5,7 @@ import {
 import type {
   AutoMovieLibraryReviewEvidence,
   IAutoMovieLibraryReviewObservationPlan,
-  IAutoMovieLibraryReviewOwnerIdentity,
-  IAutoMovieLibraryReviewPlanFile,
+  IAutoMovieLibraryReviewProjectReader,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
@@ -18,16 +17,56 @@ import {
   parseAutoMovieLibraryReviewPlan,
   readAutoMovieLibraryReviewRequirements,
 } from "@automovie/production";
+import {
+  assertScaffoldPhysicalDirectory,
+  publishNativeScaffoldFile,
+} from "@automovie/template";
+import {
+  autoMovieMaintenanceFileFromSnapshot,
+  observeAutoMovieMaintenanceFiles,
+  renameAutoMovieMaintenanceFile,
+  syncAutoMovieMaintenanceDirectory,
+} from "automovie";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 
+import {
+  assertCurrentLibraryReview,
+  readCurrentLibraryReview,
+  readLibraryReviewAuthoring,
+} from "./libraryReviewCurrentness";
+import {
+  admitLibraryReviewReceipt,
+  assertLibraryReviewPlanAuthoring,
+  libraryReviewPublicationSource,
+  parseLibraryReviewPublication,
+  planLibraryReviewUnit,
+  publishLibraryReview,
+  readLibraryReviewPublication,
+  recordLibraryReviewReceipt,
+} from "./libraryReviewPublication";
+import { createLibraryReviewPublicationAdmissionReader } from "./libraryReviewPublicationAdmission";
+import {
+  type ILibraryReviewPublicationFileSystem,
+  createLibraryReviewPublicationIO,
+} from "./libraryReviewPublicationFileSystem";
 import {
   readAutoMovieObservationMeasurements,
   readAutoMovieObservationPose,
 } from "./libraryReviewRequest";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
+
+/** Bind the publication policy to the shared native maintenance capabilities. */
+const libraryReviewPublicationFileSystem: ILibraryReviewPublicationFileSystem =
+  {
+    observe: observeAutoMovieMaintenanceFiles,
+    assertDirectory: assertScaffoldPhysicalDirectory,
+    file: autoMovieMaintenanceFileFromSnapshot,
+    publish: publishNativeScaffoldFile,
+    move: renameAutoMovieMaintenanceFile,
+    sync: syncAutoMovieMaintenanceDirectory,
+  };
 
 const values = (argv: readonly string[], name: string): string[] => {
   const output: string[] = [];
@@ -67,14 +106,6 @@ const ownerParts = (owner: string): { design: string; anchor: string } => {
 const planPath = (design: string): string =>
   design.replace(/\.md$/u, ".review.json");
 
-const readPlan = (
-  root: string,
-  relative: string,
-): IAutoMovieLibraryReviewPlanFile =>
-  parseAutoMovieLibraryReviewPlan(
-    fs.readFileSync(path.join(root, relative), "utf8"),
-  );
-
 const actionArguments = {
   inspect: new Set<string>(),
   plan: new Set(["--owner", "--source", "--observation"]),
@@ -110,31 +141,6 @@ const assertActionArguments = (
   }
 };
 
-const writePlan = (props: {
-  root: string;
-  relative: string;
-  plan: IAutoMovieLibraryReviewPlanFile;
-}): void => {
-  const target = path.join(props.root, props.relative);
-  const temporary = `${target}.${process.pid}-${randomUUID()}.tmp`;
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  try {
-    fs.writeFileSync(temporary, `${JSON.stringify(props.plan, null, 2)}\n`, {
-      encoding: "utf8",
-      flag: "wx",
-    });
-    fs.renameSync(temporary, target);
-  } catch (error) {
-    try {
-      fs.rmSync(temporary, { force: true });
-    } catch {
-      // Preserve the original write failure; a later run refuses a resident
-      // temporary path instead of treating it as a current plan.
-    }
-    throw error;
-  }
-};
-
 const observationOf = (raw: string): IAutoMovieLibraryReviewObservationPlan => {
   const [id, evidence, model, ...extra] = raw.split(":");
   if (
@@ -162,15 +168,6 @@ const observationOf = (raw: string): IAutoMovieLibraryReviewObservationPlan => {
     );
   return { id, evidence };
 };
-
-const sameIdentity = (
-  left: IAutoMovieLibraryReviewOwnerIdentity,
-  right: IAutoMovieLibraryReviewOwnerIdentity,
-): boolean =>
-  left.design === right.design &&
-  left.source === right.source &&
-  left.generated === right.generated &&
-  left.plan === right.plan;
 
 const evidenceOf = (props: {
   argv: readonly string[];
@@ -232,7 +229,8 @@ const evidenceOf = (props: {
  * 2. `plan` creates or replaces one H2 plan from exact manifest-owned sources
  *    while retaining its historical receipts for stale classification.
  * 3. `record` reopens one artifact, facts file, or turntable identity, replaces
- *    a duplicate receipt for the same current identity, and writes atomically.
+ *    only a passed receipt at the same current identity, and preserves the
+ *    approved predecessor through exclusive publication or explicit recovery.
  */
 export const runLibraryReviewCommand = (props: {
   argv: readonly string[];
@@ -243,14 +241,11 @@ export const runLibraryReviewCommand = (props: {
   output?: (value: unknown) => void;
 }): unknown => {
   const root = path.resolve(props.root);
-  const authoring = props.read({
-    root,
-    productionEvidence: props.evidence,
-  });
-  if (authoring.manifest.kind !== "library")
-    throw new Error(
-      `Library review commands require production kind "library", not ${JSON.stringify(authoring.manifest.kind)}.`,
+  const currentAuthoringEvidence = () =>
+    readLibraryReviewAuthoring(() =>
+      props.read({ root, productionEvidence: props.evidence }),
     );
+  const authoring = currentAuthoringEvidence();
   const action = props.argv[0] ?? "inspect";
   if (action !== "inspect" && action !== "plan" && action !== "record")
     throw new Error(
@@ -306,35 +301,39 @@ export const runLibraryReviewCommand = (props: {
         `Branch ${JSON.stringify(owner.branch)} needs its own artifact or facts, not a model turntable.`,
       );
     const relative = planPath(parts.design);
-    const previous = fs.existsSync(path.join(root, relative))
-      ? readPlan(root, relative)
-      : { version: 1 as const, units: [] };
-    const retained = previous.units.find(
-      (unit) => unit.anchor === parts.anchor,
-    );
-    const plan: IAutoMovieLibraryReviewPlanFile = {
-      version: 1,
-      units: [
-        ...previous.units.filter((unit) => unit.anchor !== parts.anchor),
-        {
-          anchor: parts.anchor,
-          sources,
-          observations,
-          // A waiver is the one record that keeps a required observation
-          // unopened, so rebuilding the unit literal without it silently
-          // reopens every waived view. The receipt path mutates `receipts` in
-          // place and already carries waivers through; this is the plan path.
-          ...(retained?.waivers === undefined
-            ? {}
-            : { waivers: retained.waivers }),
-          receipts: retained?.receipts ?? [],
-        },
-      ].sort((left, right) =>
-        left.anchor < right.anchor ? -1 : left.anchor > right.anchor ? 1 : 0,
-      ),
+    const io = createLibraryReviewPublicationIO({
+      root,
+      target: relative,
+      fileSystem: libraryReviewPublicationFileSystem,
+    });
+    const before = readLibraryReviewPublication({ target: relative, io });
+    const previous = parseLibraryReviewPublication({
+      before,
+      parse: parseAutoMovieLibraryReviewPlan,
+    });
+    const plan = planLibraryReviewUnit({
+      previous,
+      unit: { anchor: parts.anchor, sources, observations },
+    });
+    const publication = publishLibraryReview({
+      target: relative,
+      before,
+      io,
+      attempt: randomUUID(),
+      source: libraryReviewPublicationSource({ before, previous, plan }),
+      admit: () =>
+        assertLibraryReviewPlanAuthoring({
+          expected: authoring,
+          read: currentAuthoringEvidence,
+        }),
+    });
+    const result = {
+      action,
+      owner: requested,
+      path: relative,
+      plan,
+      publication,
     };
-    writePlan({ root, relative, plan });
-    const result = { action, owner: requested, path: relative, plan };
     props.output?.(result);
     return result;
   }
@@ -343,31 +342,45 @@ export const runLibraryReviewCommand = (props: {
     root,
     props.productionId,
   );
-  const checked = new AutoMovieProductionCompiler(project, authoring).lint({
-    scope: "source",
-  });
-  const population = readAutoMovieLibraryReviewRequirements({
-    authoring,
-    project,
-    compileFingerprint: checked.compiler.inputFingerprint,
-    // The buildings this project's last compile published. Without them this
-    // command would report an owner as owing only what its author already
-    // wrote down, while the compiler charges it every facade, corner and room
-    // its topology derives, and the two answers would disagree at review.
-    environments: autoMovieMaterializedLibraryEnvironments({
-      read: (relative) => project.readGeneratedFile(relative),
-    }),
-    // And the worlds it adopted. A map owner publishes no building at all, so
-    // without these it would be reported as owing only what its author already
-    // wrote down, which is what "an empty population passes every check that
-    // compares against it" looks like from the author's side.
-    contexts: autoMovieMaterializedLibraryContexts({
-      read: (relative) => project.readGeneratedFile(relative),
-    }),
-  });
+  const readCurrent = (
+    reader: IAutoMovieLibraryReviewProjectReader = project,
+  ) =>
+    readCurrentLibraryReview({
+      readAuthoring: currentAuthoringEvidence,
+      compile: (evidence, currentEvidence) =>
+        new AutoMovieProductionCompiler(
+          AutoMovieProductionProject.openReadOnly(root, props.productionId),
+          evidence,
+          currentEvidence,
+        ).lint({ scope: "source" }),
+      population: (evidence, compileFingerprint) =>
+        readAutoMovieLibraryReviewRequirements({
+          authoring: evidence,
+          project: reader,
+          compileFingerprint,
+          // The buildings this project's last compile published. Without them this
+          // command would report an owner as owing only what its author already
+          // wrote down, while the compiler charges it every facade, corner and room
+          // its topology derives, and the two answers would disagree at review.
+          environments: autoMovieMaterializedLibraryEnvironments({
+            read: (relative) => project.readGeneratedFile(relative),
+          }),
+          // And the worlds it adopted. A map owner publishes no building at all, so
+          // without these it would be reported as owing only what its author already
+          // wrote down, which is what "an empty population passes every check that
+          // compares against it" looks like from the author's side.
+          contexts: autoMovieMaterializedLibraryContexts({
+            read: (relative) => project.readGeneratedFile(relative),
+          }),
+        }),
+    });
+  const snapshot = readCurrent();
+  const { population } = snapshot;
   if (action === "inspect") {
-    props.output?.(population);
-    return population;
+    assertCurrentLibraryReview({ expected: snapshot, read: readCurrent });
+    const result = { ...population, compilation: snapshot.compilation };
+    props.output?.(result);
+    return result;
   }
   if (population.diagnostics.length !== 0)
     throw new Error(
@@ -418,21 +431,20 @@ export const runLibraryReviewCommand = (props: {
   }
   const parts = ownerParts(requested);
   const relative = planPath(parts.design);
-  const plan = readPlan(root, relative);
-  const unit = plan.units.find((entry) => entry.anchor === parts.anchor)!;
-  // A new result supersedes the accepted one and nothing else. Dropping every
-  // same-identity receipt erased the failure an author had just recorded, so
-  // re-running an unchanged observation and passing it made the earlier failure
-  // vanish from the file. Only a passed receipt is replaced; a failed,
-  // unsupported or not-run one is the observation history this plan carries.
-  unit.receipts = [
-    ...unit.receipts.filter(
-      (receipt) =>
-        receipt.observation !== observation ||
-        sameIdentity(receipt.identity, owner.identity) === false ||
-        receipt.verdict !== "passed",
-    ),
-    {
+  const io = createLibraryReviewPublicationIO({
+    root,
+    target: relative,
+    fileSystem: libraryReviewPublicationFileSystem,
+  });
+  const before = readLibraryReviewPublication({ target: relative, io });
+  const previous = parseLibraryReviewPublication({
+    before,
+    parse: parseAutoMovieLibraryReviewPlan,
+  });
+  const plan = recordLibraryReviewReceipt({
+    previous,
+    anchor: parts.anchor,
+    receipt: {
       observation,
       evidence,
       identity: owner.identity,
@@ -441,8 +453,33 @@ export const runLibraryReviewCommand = (props: {
       measurements,
       verdict,
     },
-  ];
-  writePlan({ root, relative, plan });
+  });
+  const publication = publishLibraryReview({
+    target: relative,
+    before,
+    io,
+    attempt: randomUUID(),
+    source: libraryReviewPublicationSource({ before, previous, plan }),
+    admit: (pending) =>
+      admitLibraryReviewReceipt({
+        assertCurrent: () =>
+          assertCurrentLibraryReview({
+            expected: snapshot,
+            read: () =>
+              readCurrent(
+                createLibraryReviewPublicationAdmissionReader({
+                  project,
+                  target: relative,
+                  before,
+                  pending,
+                  io,
+                }),
+              ),
+          }),
+        expected: evidence,
+        read: () => evidenceOf({ argv: props.argv, project }),
+      }),
+  });
   const result = {
     action,
     owner: requested,
@@ -452,6 +489,7 @@ export const runLibraryReviewCommand = (props: {
     evidence,
     runtimeIdentity,
     verdict,
+    publication,
   };
   props.output?.(result);
   return result;

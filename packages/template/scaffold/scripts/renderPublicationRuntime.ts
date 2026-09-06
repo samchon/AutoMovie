@@ -58,6 +58,10 @@ import {
 } from "./productionConfiguration";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
 import {
+  assertCurrentRenderSource,
+  captureCurrentRenderSource,
+} from "./renderAuthoringCurrentness";
+import {
   captureRenderChunkPublicationFromPointer,
   consumeCurrentRenderChunkFrames,
   readRenderChunkPublicationFile,
@@ -110,6 +114,7 @@ export interface IProductionRenderPublicationRuntime {
 
 /** Own immutable proxy publication and current chunk assembly. */
 export const createProductionRenderPublicationRuntime = (props: {
+  sourceFingerprint: () => AutoMovieContentDigest;
   assertCurrentEncoder: (plan: IAutoMovieProductionRenderJobPlan) => void;
   inspectChunk: (
     plan: IAutoMovieProductionRenderJobPlan,
@@ -259,15 +264,24 @@ export const createProductionRenderPublicationRuntime = (props: {
     const published = props.publishProxyBundle({
       expected: files,
       parent,
-      preflight: () =>
+      preflight: () => {
+        assertCurrentRenderSource({
+          expected: plan.compileFingerprint,
+          current: props.sourceFingerprint,
+        });
         assertProxyPublicationCandidate({
           bundle,
           expected: publication,
           plan,
           receipt: manifestBytes,
-        }),
+        });
+      },
       renderRoot,
       target,
+    });
+    assertCurrentRenderSource({
+      expected: plan.compileFingerprint,
+      current: props.sourceFingerprint,
     });
     return { published: true, reused: published.reused, bundle, manifest };
   },
@@ -275,8 +289,8 @@ export const createProductionRenderPublicationRuntime = (props: {
 
 /** Own terminal deliverable validation, encoding, and immutable publication. */
 export const createProductionRenderFinalizationRuntime = (props: {
-  /** One invocation-wide snapshot from the tracked authoring declaration. */
-  authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Reopen authoring targets and their reviewed source bindings at each gate. */
+  currentAuthoringEvidence: () => IAutoMovieProductionEvidence;
   encoder: IProductionRenderEncoderRuntime;
   host: IProductionRenderHost;
   planning: ReturnType<typeof createProductionRenderPlanningRuntime>;
@@ -307,6 +321,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const soundRuntime = props.sound;
 
   const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
+    assertCurrentRenderSource({
+      expected: plan.compileFingerprint,
+      current: planningRuntime.sourceFingerprint,
+    });
     renderProgress("finalize.start", { tier: plan.tier.kind });
     // Final publication is gated on the production's own evidence graph rather
     // than on a stored review ledger. A film that has not answered its
@@ -322,7 +340,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (plan.tier.kind === "final") {
       const gate = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.openReadOnly(root, productionId),
-        props.authoringEvidence,
+        props.currentAuthoringEvidence(),
+        props.currentAuthoringEvidence,
       ).lint({ scope: "review" });
       if (gate.success === false)
         // Carry each diagnostic's own message, not just its code and target. A
@@ -854,18 +873,23 @@ export const createProductionRenderFinalizationRuntime = (props: {
         );
         const sample = sampleProductionRenderFrame(timeline, 0);
         const frame = sample.layers.at(-1)!;
-        const captured = await renderHost.capture(
-          productionRenderFrameCaptureInput({
-            root,
-            productionId,
-            plan,
-            shot: frame.shot,
-            sourceFrame: frame.sourceFrame,
-            sourceFps: timeline.fps,
-            sample,
-            pass: "beauty",
-          }),
-        );
+        const captured = await captureCurrentRenderSource({
+          expected: plan.compileFingerprint,
+          current: planningRuntime.sourceFingerprint,
+          capture: () =>
+            renderHost.capture(
+              productionRenderFrameCaptureInput({
+                root,
+                productionId,
+                plan,
+                shot: frame.shot,
+                sourceFrame: frame.sourceFrame,
+                sourceFps: timeline.fps,
+                sample,
+                pass: "beauty",
+              }),
+            ),
+        });
         assertProductionRenderDialogueRuntimeIdentity({
           boundary: `final preview ${deliverable.id}`,
           expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
@@ -996,7 +1020,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
       return published;
     }
     renderProgress("publication.final.start");
-    const snapshot = productionPublicationInputFingerprint(project);
+    const snapshot = productionPublicationInputFingerprint(
+      project,
+      props.currentAuthoringEvidence,
+    );
     const revision = project.commitProductionPublication({
       files: publication,
       manifest,
@@ -1008,12 +1035,13 @@ export const createProductionRenderFinalizationRuntime = (props: {
       inputCurrent: () =>
         productionPublicationInputFingerprint(
           AutoMovieProductionProject.openReadOnly(root, productionId),
+          props.currentAuthoringEvidence,
         ) === snapshot,
       publicationCurrent: () => {
         const staged = new AutoMovieProductionCompiler(
           AutoMovieProductionProject.openReadOnly(root, productionId),
-          props.authoringEvidence,
-          undefined,
+          props.currentAuthoringEvidence(),
+          props.currentAuthoringEvidence,
           plan,
         ).lint({ scope: "final" });
         if (staged.success === false)
@@ -1027,8 +1055,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
     });
     const final = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(root, productionId),
-      props.authoringEvidence,
-      undefined,
+      props.currentAuthoringEvidence(),
+      props.currentAuthoringEvidence,
       plan,
     ).compile({ scope: "final" });
     if (final.success === false)
