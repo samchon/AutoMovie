@@ -12,6 +12,8 @@ Job, checkpoint, artifact, receipt, policy와 audit record는 자신을 해석�
 
 Migration은 원래 durable record와 provenance를 보존하고 새 record가 어느 version과 변환 판단에서 파생되었는지 남겨야 하며, 성공 검증 전에 유일한 recovery point를 덮어쓰지 않아야 한다.
 
+생성 프로젝트의 scaffold contract를 갱신할 때에는 기록된 이전 baseline, 설치된 목표 baseline과 현재 project bytes로 하나의 deterministic plan을 만들고 dry-run과 apply가 같은 plan을 소비해야 한다. Baseline과 일치하는 byte만 자동 교체하며 authored edit, 제거된 anchor, 모호한 rename과 이미 점유된 target은 충돌로 남겨야 한다.
+
 ### 결과 의미의 변화 {#operations-semantic-change-new-identity}
 
 같은 입력이라도 결과를 바꾸는 default, validation, dependency 또는 deterministic semantics의 변화는 새 job identity와 compatibility boundary를 만들고 이전 결과와 byte-equivalent라고 주장하지 않아야 한다.

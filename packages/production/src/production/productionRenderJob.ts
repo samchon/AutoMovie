@@ -1,16 +1,46 @@
 import {
+  canonicalProductionFrameRate,
+  equalProductionFrameRates,
+  productionFrameBoundaryToGridTick,
+  productionFrameIntervalToGridTicks,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureRuntimeIdentity,
+  IAutoMovieCompiledFilmEffect,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionDesign,
+  IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
-import { createHash } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
+import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
+import {
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttIdentifier,
+  serializeAutoMovieWebVttSingleLineText,
+} from "./captionText";
+import {
+  canonicalAutoMovieJsonBytes,
+  canonicalizeAutoMovieJson,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
+import type {
+  IAutoMovieProductionAudioProcessing,
+  IAutoMovieProductionWaveSourceFormat,
+} from "./decodeProductionAudioAsset";
+import {
+  productionFilmEffectEditFingerprint,
+  sampleProductionFilmEffects,
+} from "./filmEffectRuntime";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
+ * @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-encoding-tool-identity Records the encoder identity beside every encoded deliverable so output from a different tool is re-verified instead of trusted by command text.
  */
 export interface IAutoMovieProductionEncoderIdentity {
   /**
@@ -49,11 +79,19 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   /**
    * Render-runtime identity schema.
    */
-  protocolVersion: "automovie.production-render-runtime.v2";
+  protocolVersion: "automovie.production-render-runtime.v3";
   /**
    * Digest of declared viewer, capture, asset, and package input bytes.
    */
   sourceDigest: AutoMovieContentDigest;
+  /**
+   * Final-byte dialogue and viseme runtime installed for every capture, or null
+   * when the planned production is deliberately silent.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-freshness Identifies the current dialogue derivation required by every planned frame capture.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Carries the renderer input identity required to classify every derived capture as current or stale.
+   */
+  dialogueRuntimeIdentity: AutoMovieContentDigest | null;
   /**
    * Package-owned browser and graphics identity.
    */
@@ -66,6 +104,7 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
 
 /**
  * Explicit cost/quality tier sharing one compiler-owned edit.
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-derivatives Binds the proxy tier to the master frame identity and range it derives from so a derivative never stands in for master verification.
  */
 export interface IAutoMovieProductionRenderTier {
   /**
@@ -102,6 +141,7 @@ export interface IAutoMovieProductionRenderLayer {
 
 /**
  * One exact film-global frame with transitions already resolved.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Binds each output frame number to exactly one global film frame so the mapping has no duplicate, gap or off-by-one.
  */
 export interface IAutoMovieProductionRenderFrame {
   /**
@@ -162,12 +202,14 @@ export interface IAutoMovieProductionRenderChunk {
 
 /**
  * Persisted plan reopened by every `automovie render` subcommand.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope Enumerates every product's expected outputs separately so one product's success never stands in for another's.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Fixes the production revision, edit, range, products, dimensions and runtime profile of one render request as the plan every later phase consumes.
  */
 export interface IAutoMovieProductionRenderJobPlan {
   /**
    * Plan schema.
    */
-  version: 3;
+  version: 4;
   /**
    * Exact production namespace that owns every slot and output.
    */
@@ -218,11 +260,14 @@ export interface IAutoMovieProductionRenderJobPlan {
     audio: IAutoMovieFilmTimeline["tracks"]["audio"];
     /** Byte, duration, and format identity for every referenced audio asset. */
     audioAssets: IAutoMovieProductionAudioAssetIdentity[];
+    /** Current executable film-global effect runtimes. */
+    effects: IAutoMovieCompiledFilmEffect[];
   };
 }
 
 /**
  * Byte-exact PNG committed by one completed chunk.
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-image-sequences Records each frame's number, path and digest so a sequence's exact count, gaps and stray frames are checkable.
  */
 export interface IAutoMovieProductionRenderedFrameReceipt {
   /**
@@ -258,7 +303,7 @@ export interface IAutoMovieProductionRenderChunkReceipt {
   /**
    * Receipt schema.
    */
-  version: 1;
+  version: 2;
   /**
    * Stable operational slot.
    */
@@ -271,6 +316,8 @@ export interface IAutoMovieProductionRenderChunkReceipt {
    * Ordered byte facts for the full frame range.
    */
   frames: IAutoMovieProductionRenderedFrameReceipt[];
+  /** Complete semantic dependencies for every shot layer of a mask frame. */
+  semanticMasks: IAutoMovieSemanticMaskReceipt[];
   /**
    * Parser-verified chunk MP4.
    */
@@ -331,7 +378,7 @@ export interface IAutoMovieProductionRenderChunkStatus {
 /**
  * Parser/preflight identity for one compiler-declared audio source asset.
  */
-export interface IAutoMovieProductionAudioAssetIdentity {
+interface IAutoMovieProductionAudioAssetIdentityBase {
   /**
    * Project-relative compiler-declared asset path.
    */
@@ -341,9 +388,13 @@ export interface IAutoMovieProductionAudioAssetIdentity {
    */
   digest: AutoMovieContentDigest;
   /**
-   * Declared source duration.
+   * Exact complete source runtime derived from `sourceFrames / sampleRate`.
    */
   durationSeconds: number;
+  /**
+   * Exact number of source sample frames represented by the asset.
+   */
+  sourceFrames: number;
   /**
    * Declared PCM clock used by the deterministic adapter.
    */
@@ -355,10 +406,44 @@ export interface IAutoMovieProductionAudioAssetIdentity {
 }
 
 /**
+ * Exact source-format or placeholder provenance carried by one audio asset.
+ *
+ * A WAVE arm carries the decoder's source facts and processing lineage into
+ * the plan unchanged, and planning refuses an identity whose format, layout,
+ * precision, or processing contradicts its own rate and channel count. The
+ * placeholder arm names a deterministic guide stem and carries no WAVE facts,
+ * so a stem cannot pose as a decoded source.
+ *
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure Carries the source facts and the exact downmix and resample recipe into the render plan as separate records.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Preserves the ordered speaker layout in the plan instead of reducing an asset to a channel count.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Keeps source facts and processing results as distinct plan fields.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decode-and-derived-source-closure Records the derived source's transform beside its parent facts for every planned cue asset.
+ * @evidence requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption Binds a planned cue to the digest of the adopted source bytes rather than to a URL, prompt or model name.
+ */
+export type IAutoMovieProductionAudioAssetIdentity =
+  IAutoMovieProductionAudioAssetIdentityBase &
+    (
+      | { kind: "placeholder-audio-stem" }
+      | {
+          kind: "wave";
+          sourceFormat: IAutoMovieProductionWaveSourceFormat;
+          processing: IAutoMovieProductionAudioProcessing;
+        }
+    );
+
+/**
  * Build content-addressed chunks from the compiler-owned film edit.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Plans every cue as exact source and presentation sample counts on the rational film clock, so the first and last audible samples are verifiable facts rather than rounded seconds.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Partitions the exact frame schedule into non-overlapping content-addressed chunks whose identity does not depend on chunk size or worker count.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Reads the compiled edit's start-inclusive, end-exclusive frame ranges with exact integer arithmetic rather than rounding a duration by frame rate.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-refusal Refuses an invalid rate, an empty range or an unrepresentable frame count before any chunk is scheduled.
+ * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Carries the exact rational picture rate and the stream timebases as separate plan fields and never recomputes a duration from a decimal rate.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-sample-boundary-and-arrival Converts each cue's rational film time to integer sample indices once, on the fixed audio clock, and records the ranges in the plan.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-failure-contract Refuses a cue with a missing source, a negative or empty duration or an out-of-range sample instead of planning it as silence.
  */
 export const planProductionRenderJob = (props: {
   timeline: IAutoMovieFilmTimeline;
+  effects: readonly IAutoMovieCompiledFilmEffect[];
   production: IAutoMovieProductionDesign;
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
   sourceFingerprints: Readonly<Record<string, AutoMovieContentDigest>>;
@@ -379,23 +464,33 @@ export const planProductionRenderJob = (props: {
     throw new Error(
       "Render runtime sourceDigest must be one current SHA-256 content identity.",
     );
+  if (
+    props.runtimeIdentity.dialogueRuntimeIdentity !== null &&
+    validDigest(props.runtimeIdentity.dialogueRuntimeIdentity) === false
+  )
+    throw new Error(
+      "Render runtime dialogueRuntimeIdentity must be null or one current SHA-256 content identity.",
+    );
   const tier = normalizeRenderTier(props.tier);
   const frameFormat = resolveProductionRenderTierFrameFormat(
     props.production.frameFormat,
     tier,
   );
+  const outputRate = resolveProductionFrameRate(frameFormat);
   if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
+  const timelineRate = resolveProductionFrameRate(props.timeline);
+  const productionRate = resolveProductionFrameRate(
+    props.production.frameFormat,
+  );
   if (
     props.timeline.id !== props.production.id ||
-    props.timeline.fps !== props.production.frameFormat.fps ||
-    props.timeline.totalFrames !==
-      Math.round(
-        props.production.targetRuntimeSeconds *
-          props.production.frameFormat.fps,
-      )
+    equalProductionFrameRates(timelineRate, productionRate) === false ||
+    props.production.targetRuntimeSeconds !==
+      (props.timeline.totalFrames * productionRate.denominator) /
+        productionRate.numerator
   )
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
@@ -407,24 +502,39 @@ export const planProductionRenderJob = (props: {
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
+    // `sourceDurationFrames` is the cue's claim about the complete asset, so it
+    // is checked where the asset's own clock is known: the declared frame count
+    // must land on exactly the sample count the asset carries at its source
+    // rate. The trim inside that duration is the mix's own refusal.
+    const expectedSamples =
+      asset === undefined
+        ? null
+        : productionFrameBoundaryToGridTick({
+            frame: cue.sourceDurationFrames,
+            frameRate: timelineRate,
+            ticksPerSecond: asset.sampleRate,
+            rounding: "nearest",
+          });
     if (
       asset === undefined ||
-      Math.round(asset.durationSeconds * props.timeline.fps) !==
-        cue.sourceDurationFrames
+      asset.sourceFrames !== expectedSamples ||
+      asset.durationSeconds !== asset.sourceFrames / asset.sampleRate
     )
       throw new Error(
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
       );
   }
   const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
-  const editFingerprint = digestJson({
-    protocol: "automovie.production-render-edit.v1",
-    id: props.timeline.id,
-    fps: props.timeline.fps,
-    totalFrames: props.timeline.totalFrames,
-    segments: props.timeline.segments,
-    omissions: props.timeline.omissions,
-    tracks: props.timeline.tracks,
+  const editFingerprint = productionFilmEffectEditFingerprint(props.timeline);
+  sampleProductionFilmEffects({
+    identity: {
+      production: props.production.id,
+      film: props.timeline.id,
+      compileFingerprint: props.timeline.inputFingerprint,
+      editFingerprint,
+    },
+    effects: props.effects.map((effect) => structuredClone(effect)),
+    timelineFrame: 0,
   });
   const frames = Array.from(
     { length: props.timeline.totalFrames / tier.frameStep },
@@ -434,7 +544,8 @@ export const planProductionRenderJob = (props: {
         ...sampleProductionRenderFrame(props.timeline, timelineFrame),
         globalFrame: outputFrame,
         timelineFrame,
-        timeSeconds: outputFrame / frameFormat.fps,
+        timeSeconds:
+          (outputFrame * outputRate.denominator) / outputRate.numerator,
       };
     },
   );
@@ -480,12 +591,13 @@ export const planProductionRenderJob = (props: {
           });
         const slot = `${props.production.id}:${tier.kind}:${deliverable.id}:${pass}:${index}`;
         const identity = {
-          protocol: "automovie.production-render-chunk.v3",
+          protocol: "automovie.production-render-chunk.v4",
           production: props.production.id,
           tier,
           deliverable: deliverable.id,
           kind: deliverable.kind,
           editFingerprint,
+          effects: props.effects.map((effect) => effect.digest),
           sourceFrameFormat: props.production.frameFormat,
           frameFormat,
           frameStart,
@@ -507,7 +619,7 @@ export const planProductionRenderJob = (props: {
       }
   }
   return {
-    version: 3,
+    version: 4,
     productionId: props.production.id,
     compileFingerprint: props.timeline.inputFingerprint,
     editFingerprint,
@@ -522,6 +634,7 @@ export const planProductionRenderJob = (props: {
       captions: canonicalProductionWebVtt(props.timeline),
       audio: structuredClone(props.timeline.tracks.audio),
       audioAssets,
+      effects: props.effects.map((effect) => structuredClone(effect)),
     },
   };
 };
@@ -532,6 +645,7 @@ export const planProductionRenderJob = (props: {
 export const verifyProductionRenderJobPlan = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
   timeline: IAutoMovieFilmTimeline;
+  effects: readonly IAutoMovieCompiledFilmEffect[];
   production: IAutoMovieProductionDesign;
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
   sourceFingerprints: Readonly<Record<string, AutoMovieContentDigest>>;
@@ -540,6 +654,7 @@ export const verifyProductionRenderJobPlan = (props: {
 }): void => {
   const expected = planProductionRenderJob({
     timeline: props.timeline,
+    effects: props.effects,
     production: props.production,
     runtimeIdentity: props.runtimeIdentity,
     sourceFingerprints: props.sourceFingerprints,
@@ -548,7 +663,10 @@ export const verifyProductionRenderJobPlan = (props: {
     guidePasses: props.guidePasses,
     tier: props.plan.tier,
   });
-  if (canonicalJson(props.plan) !== canonicalJson(expected))
+  if (
+    canonicalizeAutoMovieJson(props.plan) !==
+    canonicalizeAutoMovieJson(expected)
+  )
     throw new Error(
       "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
@@ -556,6 +674,7 @@ export const verifyProductionRenderJobPlan = (props: {
 
 /**
  * Resolve one global frame, including exact dissolve and fade weights.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Resolves a frame from its global film time so a chunk or retry yields the same frame as a full render.
  */
 export const sampleProductionRenderFrame = (
   timeline: IAutoMovieFilmTimeline,
@@ -630,6 +749,7 @@ export const sampleProductionRenderFrame = (
  * Beauty is alpha composited. Structural guide passes are classifications or
  * geometric fields, so linearly blending their pixels invents invalid values;
  * they select the dominant shot layer instead (incoming wins an exact tie).
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-multipart-channels Keeps beauty and structural passes as separate products with their own layer sets instead of hiding one pass's failure in another's file.
  */
 export const productionRenderLayersForPass = (
   frame: IAutoMovieProductionRenderFrame,
@@ -649,10 +769,13 @@ export const productionRenderLayersForPass = (
 
 /**
  * Canonical WebVTT derived only from compiled caption placements.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-presentation-form Delivers captions as a selectable WebVTT sidecar derived from compiled placements rather than burning text into the picture.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-audio-cues Derives caption cue times from the same rational film clock and origin the frame schedule uses, so chunking never moves a cue boundary.
  */
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
 ): string => {
+  const frameRate = resolveProductionFrameRate(timeline);
   const cues = [...timeline.tracks.captions].sort(
     (left, right) =>
       left.startFrame - right.startFrame ||
@@ -660,27 +783,37 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${webVttPlainText(timeline.id)}`,
+    `WEBVTT ${serializeAutoMovieWebVttIdentifier(timeline.id)}`,
     "",
-    ...cues.flatMap((cue) => [
-      webVttPlainText(cue.id),
-      `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
-        cue.endFrame / timeline.fps,
-      )}`,
-      `<lang ${webVttPlainText(cue.language)}>${
-        cue.speaker === undefined
-          ? webVttPlainText(cue.text)
-          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
-              cue.text,
-            )}</v>`
-      }</lang>`,
-      "",
-    ]),
+    ...cues.flatMap((cue) => {
+      const interval = productionFrameIntervalToGridTicks({
+        startFrame: cue.startFrame,
+        endFrame: cue.endFrame,
+        frameRate,
+        ticksPerSecond: 1_000,
+        rounding: "nearest",
+      });
+      return [
+        serializeAutoMovieWebVttIdentifier(cue.id),
+        `${webVttTime(interval.start)} --> ${webVttTime(interval.end)}`,
+        `<lang ${webVttCaptionLanguage(cue.language)}>${
+          cue.speaker === undefined
+            ? serializeAutoMovieWebVttCueText(cue.text)
+            : `<v ${serializeAutoMovieWebVttSingleLineText(
+                cue.speaker,
+              )}>${serializeAutoMovieWebVttCueText(cue.text)}</v>`
+        }</lang>`,
+        "",
+      ];
+    }),
   ].join("\n");
 };
 
 /**
  * Classify current identities without treating an old slot as current.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Separates planned, materialized and verified chunk states instead of reading a receipt's existence as proof of frames.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact Reports completed chunks beside the missing set instead of exposing a partial sequence as a complete film.
+ * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-partial-artifact-isolation Keeps a chunk whose slot is not current out of the current set so a partial generation is never consumed as a complete manifest.
  */
 export const productionRenderChunkStatuses = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -700,12 +833,27 @@ export const productionRenderChunkStatuses = (props: {
     const attempt =
       slotAttempts.find((item) => item.chunk === chunk.id) ??
       slotAttempts.at(-1);
-    if (receipt?.chunk === chunk.id)
-      return status(
-        chunk,
-        "complete",
-        "Verify current bytes, then reuse this chunk.",
-      );
+    if (receipt?.chunk === chunk.id) {
+      try {
+        verifyProductionRenderChunkReceipt({
+          plan: props.plan,
+          chunk,
+          receipt,
+        });
+        return status(
+          chunk,
+          "complete",
+          "Verify current bytes, then reuse this chunk.",
+        );
+      } catch (error) {
+        // Receipt verification throws nothing but Error refusals.
+        return status(
+          chunk,
+          "failed",
+          `${(error as Error).message} Rerender this chunk.`,
+        );
+      }
+    }
     if (attempt?.chunk === chunk.id)
       return status(
         chunk,
@@ -730,6 +878,7 @@ export const productionRenderChunkStatuses = (props: {
 
 /**
  * Verify completion identity, exact range coverage, raster, and byte facts.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Admits a chunk for reuse only when its receipt matches the current plan and chunk identity; anything else is rerendered or preserved for adjudication.
  */
 export const verifyProductionRenderChunkReceipt = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -738,7 +887,7 @@ export const verifyProductionRenderChunkReceipt = (props: {
 }): void => {
   const { plan, chunk, receipt } = props;
   if (
-    receipt.version !== 1 ||
+    receipt.version !== 2 ||
     receipt.slot !== chunk.slot ||
     receipt.chunk !== chunk.id
   )
@@ -761,6 +910,56 @@ export const verifyProductionRenderChunkReceipt = (props: {
   });
   if (validByteFact(receipt.encoded) === false)
     throw new Error(`Chunk "${chunk.slot}" has no verified encoded output.`);
+  const expectedSemantic =
+    chunk.pass === "mask"
+      ? chunk.frames.flatMap((frame) =>
+          productionRenderLayersForPass(frame, chunk.pass).map((layer) => ({
+            frame: frame.globalFrame,
+            shot: layer.shot,
+          })),
+        )
+      : [];
+  if (receipt.semanticMasks.length !== expectedSemantic.length)
+    throw new Error(
+      `Chunk "${chunk.slot}" has ${receipt.semanticMasks.length} semantic records; expected ${expectedSemantic.length}.`,
+    );
+  receipt.semanticMasks.forEach((semantic, index) => {
+    const expected = expectedSemantic[index]!;
+    if (
+      semantic.version !== 1 ||
+      semantic.pass !== "mask" ||
+      semantic.frame !== expected.frame ||
+      semantic.shot !== expected.shot ||
+      validByteFact(semantic.sidecar) === false ||
+      validSemanticPath(semantic.sidecar.path) === false ||
+      /^sha256:[0-9a-f]{64}$/u.test(semantic.semanticDigest) === false ||
+      semantic.coverage.unresolved.some(
+        (id, unresolvedIndex) =>
+          id.trim().length === 0 ||
+          (unresolvedIndex !== 0 &&
+            semantic.coverage.unresolved[unresolvedIndex - 1]! >= id),
+      ) ||
+      semantic.coverage.unresolved.length !== 0 ||
+      Number.isSafeInteger(semantic.coverage.unaddressed) === false ||
+      semantic.coverage.unaddressed !== 0
+    )
+      throw new Error(
+        `Chunk "${chunk.slot}" semantic record ${index} is missing, foreign, incomplete, or invalid.`,
+      );
+  });
+};
+
+const validSemanticPath = (candidate: string): boolean => {
+  const segments = candidate.split("/");
+  return (
+    candidate.trim().length !== 0 &&
+    candidate.startsWith("/") === false &&
+    candidate.includes("\\") === false &&
+    /^[A-Za-z]:/u.test(candidate) === false &&
+    segments.every(
+      (segment) => segment !== "" && segment !== "." && segment !== "..",
+    )
+  );
 };
 
 interface IProductionRenderChunkFailure {
@@ -939,7 +1138,7 @@ const closeProductionOwnedDescriptor = (
   target: string,
 ): void => {
   try {
-    fs.closeSync(descriptor);
+    fileSystem.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new ProductionOwnedDescriptorCleanupError(
@@ -1040,7 +1239,7 @@ export function readAutoMovieProductionOwnedFile(props: {
     }
     throw error;
   }
-  const descriptor = fs.openSync(target, "r");
+  const descriptor = fileSystem.openSync(target, "r");
   let failure: IProductionOwnedDescriptorFailure | undefined;
   try {
     const openedIdentity = productionOwnedDescriptorIdentity(
@@ -1053,7 +1252,7 @@ export function readAutoMovieProductionOwnedFile(props: {
         throw new Error(
           `Production-owned path "${target}" changed physical identity while it was read.`,
         );
-      const residentDescriptor = fs.openSync(target, "r");
+      const residentDescriptor = fileSystem.openSync(target, "r");
       let residentFailure: IProductionOwnedDescriptorFailure | undefined;
       try {
         if (
@@ -1075,7 +1274,7 @@ export function readAutoMovieProductionOwnedFile(props: {
       }
     };
     assertResidentFile();
-    const bytes = fs.readFileSync(descriptor);
+    const bytes = fileSystem.readFileSync(descriptor);
     assertResidentFile();
     return bytes;
   } catch (error) {
@@ -1090,12 +1289,15 @@ const frame = (
   timeline: IAutoMovieFilmTimeline,
   globalFrame: number,
   layers: IAutoMovieProductionRenderLayer[],
-): IAutoMovieProductionRenderFrame => ({
-  globalFrame,
-  timelineFrame: globalFrame,
-  timeSeconds: globalFrame / timeline.fps,
-  layers,
-});
+): IAutoMovieProductionRenderFrame => {
+  const frameRate = resolveProductionFrameRate(timeline);
+  return {
+    globalFrame,
+    timelineFrame: globalFrame,
+    timeSeconds: (globalFrame * frameRate.denominator) / frameRate.numerator,
+    layers,
+  };
+};
 
 const normalizeRenderTier = (
   tier: IAutoMovieProductionRenderTier | undefined,
@@ -1136,10 +1338,16 @@ export const resolveProductionRenderTierFrameFormat = (
   if (normalized.kind === "final") return structuredClone(source);
   const even = (value: number): number =>
     Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  const sourceRate = resolveProductionFrameRate(source);
+  const frameRate = canonicalProductionFrameRate({
+    numerator: sourceRate.numerator,
+    denominator: sourceRate.denominator * normalized.frameStep,
+  });
   return {
     width: even(source.width),
     height: even(source.height),
-    fps: source.fps / normalized.frameStep,
+    fps: frameRate.numerator / frameRate.denominator,
+    frameRate,
     colorSpace: source.colorSpace,
     ...(source.crop === undefined
       ? {}
@@ -1194,10 +1402,17 @@ const normalizeAudioAssets = (
         validByteFact({ digest: asset.digest, bytes: 1 }) === false ||
         Number.isFinite(asset.durationSeconds) === false ||
         asset.durationSeconds <= 0 ||
+        Number.isSafeInteger(asset.sourceFrames) === false ||
+        asset.sourceFrames <= 0 ||
+        asset.durationSeconds !== asset.sourceFrames / asset.sampleRate ||
         Number.isSafeInteger(asset.sampleRate) === false ||
         asset.sampleRate <= 0 ||
         Number.isSafeInteger(asset.channels) === false ||
-        asset.channels <= 0
+        asset.channels <= 0 ||
+        (asset.kind !== "placeholder-audio-stem" && asset.kind !== "wave") ||
+        (asset.kind === "placeholder-audio-stem" &&
+          (asset.sampleRate !== 48_000 || asset.channels !== 2)) ||
+        (asset.kind === "wave" && validWaveAudioIdentity(asset) === false)
       )
         throw new Error(
           `Audio asset "${asset.path}" has invalid identity, duration, sample rate, channels, or duplicate ownership.`,
@@ -1208,8 +1423,55 @@ const normalizeAudioAssets = (
   return output;
 };
 
-const webVttTime = (seconds: number): string => {
-  const milliseconds = Math.round(seconds * 1_000);
+const validWaveAudioIdentity = (
+  asset: Extract<IAutoMovieProductionAudioAssetIdentity, { kind: "wave" }>,
+): boolean => {
+  const source = asset.sourceFormat;
+  const processing = asset.processing;
+  const expectedSpeakers =
+    asset.channels === 1 ? ["front-center"] : ["front-left", "front-right"];
+  const expectedMatrix = asset.channels === 1 ? [[1]] : [[0.5, 0.5]];
+  const outputSampleRate = 48_000;
+  const resampled = outputSampleRate !== asset.sampleRate;
+  const expectedKind =
+    asset.channels === 1
+      ? resampled
+        ? "resample"
+        : "copy"
+      : resampled
+        ? "downmix-resample"
+        : "downmix";
+  return (
+    (asset.channels === 1 || asset.channels === 2) &&
+    source.kind === "wave" &&
+    source.sampleRate === asset.sampleRate &&
+    source.channels === asset.channels &&
+    (source.encoding === "pcm-s16le"
+      ? source.containerBits === 16 && source.validBits === 16
+      : source.encoding === "float-f32le" &&
+        source.containerBits === 32 &&
+        source.validBits === 32) &&
+    source.layout.kind === (asset.channels === 1 ? "mono" : "stereo") &&
+    isDeepStrictEqual(source.layout.speakers, expectedSpeakers) &&
+    (source.layout.source === "legacy-default"
+      ? source.header === "wave-format-ex" &&
+        source.layout.mask === null &&
+        source.subFormatGuid === null
+      : source.layout.source === "channel-mask" &&
+        source.header === "wave-format-extensible" &&
+        source.layout.mask === (asset.channels === 1 ? 0x4 : 0x3) &&
+        source.subFormatGuid ===
+          (source.encoding === "pcm-s16le"
+            ? "00000001-0000-0010-8000-00aa00389b71"
+            : "00000003-0000-0010-8000-00aa00389b71")) &&
+    processing.kind === expectedKind &&
+    processing.outputChannels === 1 &&
+    processing.outputSampleRate === outputSampleRate &&
+    isDeepStrictEqual(processing.matrix, expectedMatrix)
+  );
+};
+
+const webVttTime = (milliseconds: number): string => {
   const hours = Math.floor(milliseconds / 3_600_000);
   const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
   const remainder = Math.floor((milliseconds % 60_000) / 1_000);
@@ -1223,13 +1485,14 @@ const webVttTime = (seconds: number): string => {
   )}`;
 };
 
-/** Escape one authored plain-text field into a single WebVTT content line. */
-const webVttPlainText = (value: string): string =>
-  value
-    .replace(/[\u0000-\u001f\u007f]/gu, " ")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+const webVttCaptionLanguage = (value: string): string => {
+  const identity = parseAutoMovieCaptionLanguage(value);
+  if (identity === null)
+    throw new Error(
+      `Caption language "${value}" is not a well-formed RFC 5646 tag.`,
+    );
+  return serializeAutoMovieWebVttSingleLineText(identity.display);
+};
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   Number.isSafeInteger(fact.bytes) &&
@@ -1240,30 +1503,7 @@ const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);
 
 const digestJson = (value: unknown): AutoMovieContentDigest =>
-  `sha256:${createHash("sha256")
-    .update(Buffer.from(canonicalJson(value), "utf8"))
-    .digest("hex")}`;
-
-const canonicalJson = (value: unknown): string => {
-  if (value === null || typeof value === "boolean" || typeof value === "string")
-    return JSON.stringify(value);
-  if (typeof value === "number") {
-    if (Number.isFinite(value) === false)
-      throw new Error("Render identity refuses non-finite numbers.");
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value))
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort(compareCodeUnits)
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(",")}}`;
-  }
-  throw new Error("Render identity requires JSON-compatible values.");
-};
+  digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value));
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
@@ -1274,7 +1514,7 @@ interface IProductionOwnedPathIdentity {
 }
 
 const productionOwnedDirectoryIdentity = (directory: string): string => {
-  const linked = fs.lstatSync(directory, { bigint: true });
+  const linked = fileSystem.lstatSync(directory, { bigint: true });
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
       `Production-owned directory "${directory}" is not a physical directory.`,
@@ -1283,7 +1523,7 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
 };
 
 const productionOwnedFileIdentity = (file: string): string => {
-  const linked = fs.lstatSync(file, { bigint: true });
+  const linked = fileSystem.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${linked.dev}\0${linked.ino}`;
@@ -1293,7 +1533,7 @@ const productionOwnedDescriptorIdentity = (
   file: string,
   descriptor: number,
 ): string => {
-  const opened = fs.fstatSync(descriptor, { bigint: true });
+  const opened = fileSystem.fstatSync(descriptor, { bigint: true });
   if (opened.isFile() === false)
     throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${opened.dev}\0${opened.ino}`;

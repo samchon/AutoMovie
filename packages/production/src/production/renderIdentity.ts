@@ -14,6 +14,7 @@ import {
 
 /**
  * Versioned identity protocol for target-local deterministic render inputs.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-fingerprint-protocol Names the fingerprint encoding revision that is folded into every target identity so a serialization change is a new protocol.
  */
 export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
   "automovie.render.target.v3";
@@ -29,6 +30,9 @@ export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
  * aggregate compile fingerprint remains recorded for provenance, but this
  * identity decides whether verified pixels can survive an unrelated source
  * edit.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity Keeps a retry under the same target fingerprint while any changed input becomes a new identity rather than a merged receipt.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Folds the production, edit, dependency and content facts of one target into a canonical fingerprint distinct from its byte digest.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-dependency-fingerprint Combines the target-owned payload and its named render dependencies by canonical role so an unrelated change leaves the identity intact.
  */
 export const productionRenderTargetFingerprint = (
   project: AutoMovieProductionProject,

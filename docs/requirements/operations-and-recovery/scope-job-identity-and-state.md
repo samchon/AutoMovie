@@ -14,7 +14,7 @@ Job identity는 production revision, 대상 범위, 요청한 작업과 품질 p
 
 ### 요청과 확정된 작업 {#operations-requested-effective-work}
 
-사용자가 요청한 값과 default, 해석, dependency resolution을 거쳐 실제 수행 대상으로 확정된 값을 함께 보존하여 나중에 같은 작업인지 판단할 수 있어야 한다.
+사용자가 요청한 값과 default, 해석, dependency resolution을 거쳐 실제 수행 대상으로 확정된 값을 함께 보존하여 나중에 같은 작업인지 판단할 수 있어야 한다. 명령 host는 command discriminant, 그 명령에 허용된 option, 각 option의 cardinality, positional arity와 default를 포함한 전체 argument vector를 작업 시작 전에 확정해야 한다. 알 수 없는 option, 중복되거나 해당 명령에 적용되지 않는 option, 남는 positional value, 필수 값의 누락이나 공백, 같은 대상을 named와 positional 형식으로 함께 지정한 요청은 거부하고, 거부된 요청은 project state 조회, target 해석, process 실행, capture, compile, derive 또는 mutation을 시작하지 않아야 한다.
 
 ### 상태 Vocabulary {#operations-job-state-vocabulary}
 

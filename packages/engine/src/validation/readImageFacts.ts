@@ -60,6 +60,7 @@ const SOF_MARKERS: ReadonlySet<number> = new Set([
 const readJpeg = (bytes: Uint8Array): IAutoMovieTextureImageFacts | null => {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
   let cursor = 2;
+  let restartInterval = 0;
   while (cursor + 1 < bytes.length) {
     if (bytes[cursor] !== 0xff) return null;
     // A marker may be preceded by any number of 0xFF fill bytes.
@@ -71,15 +72,18 @@ const readJpeg = (bytes: Uint8Array): IAutoMovieTextureImageFacts | null => {
     }
     cursor += 2;
     // Standalone markers carry no length word: restart, TEM, and a second SOI.
-    if (
-      marker === 0x01 ||
-      marker === 0xd8 ||
-      (marker >= 0xd0 && marker <= 0xd7)
-    )
+    if (marker >= 0xd0 && marker <= 0xd7) {
+      if (restartInterval === 0) return null;
       continue;
+    }
+    if (marker === 0x01 || marker === 0xd8) continue;
     if (cursor + 1 >= bytes.length) return null;
     const length = beUint16(bytes, cursor);
     if (length < 2) return null;
+    if (marker === 0xdd) {
+      if (length !== 4 || cursor + length > bytes.length) return null;
+      restartInterval = beUint16(bytes, cursor + 2);
+    }
     if (SOF_MARKERS.has(marker)) {
       if (cursor + 6 >= bytes.length) return null;
       return {

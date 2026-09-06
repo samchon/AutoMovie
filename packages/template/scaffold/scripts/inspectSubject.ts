@@ -1,4 +1,7 @@
-import type { AutoMovieProductionSubjectInspection } from "@automovie/production";
+import {
+  type AutoMovieProductionSubjectInspection,
+  canonicalAutoMovieCaptureRuntimeIdentity,
+} from "@automovie/production";
 import path from "node:path";
 import type { Page } from "playwright";
 import { createServer } from "vite";
@@ -21,6 +24,8 @@ import { pageKey, pageSubject } from "./inspectionPageKey";
 interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
   browser: IAutoMovieCaptureBrowserSession["browser"];
+  runtime: IAutoMovieCaptureBrowserSession["runtime"];
+  assertRuntimeCurrent: IAutoMovieCaptureBrowserSession["assertRuntimeCurrent"];
   origin: string;
   pages: Map<string, IInspectionPageEntry>;
 }
@@ -34,6 +39,7 @@ interface IInspectionPageEntry {
 interface InspectionPage {
   page: Page;
   diagnostics: string[];
+  graphics: Awaited<ReturnType<typeof inspectCaptureGraphics>>;
 }
 
 let sessionPromise: Promise<InspectionSession> | null = null;
@@ -44,11 +50,12 @@ let sessionIdentity: string | null = null;
  *
  * It is a second server and a second browser beside the delivery capture
  * session on purpose, and not because sharing one would be hard. A delivery
- * capture page carries a renderer identity and a tone-mapping curve in its own
- * reuse key, and an inspection page carries neither; folding the two caches
- * together is how an inspection frame would eventually be served from a page a
- * delivery asked for, or the reverse. The session is built on first use, so a
- * host nobody asks for a subject never pays for it.
+ * capture page carries a delivery target and tone-mapping curve in its reuse
+ * key, while an inspection page carries a subject target and compile identity;
+ * folding the two caches together is how an inspection frame would eventually
+ * be served from a page a delivery asked for, or the reverse. Both report the
+ * actual renderer identity of their separate session. The inspection session
+ * is built on first use, so a host nobody asks for a subject never pays for it.
  */
 const startSession = async (
   projectRoot: string,
@@ -79,6 +86,8 @@ const startSession = async (
     return {
       server,
       browser: launched.browser,
+      runtime: launched.runtime,
+      assertRuntimeCurrent: launched.assertRuntimeCurrent,
       origin: `http://${viewerHost}:${address.port}`,
       pages: new Map(),
     };
@@ -147,10 +156,12 @@ const inspectionPage = (
         const previous = await candidate.opening.catch(() => null);
         if (previous !== null) await previous.page.close();
       }
+    session.assertRuntimeCurrent();
     const page = await session.browser.newPage({
       viewport: { width: input.width, height: input.height },
       deviceScaleFactor: 1,
     });
+    session.assertRuntimeCurrent();
     const diagnostics: string[] = [];
     page.on("console", (message) =>
       diagnostics.push(`console:${message.type()}: ${message.text()}`),
@@ -172,22 +183,30 @@ const inspectionPage = (
     url.searchParams.set("shot", input.target.shot);
     url.searchParams.set("revision", input.revision);
     try {
+      session.assertRuntimeCurrent();
       await page.goto(url.href, { waitUntil: "networkidle" });
+      session.assertRuntimeCurrent();
       await page.waitForFunction(
         () => window.__automovieInspect?.ready === true,
       );
+      session.assertRuntimeCurrent();
       // Named on the way in rather than inferred from the picture afterwards.
       // The capture browser asks for ANGLE's SwiftShader backend on purpose, so
       // two machines inspecting one subject agree pixel for pixel; printing the
       // renderer is what keeps that a stated choice instead of an unnoticed
       // fallback whoever reads the frames has to guess at.
       const graphics = await inspectCaptureGraphics(page);
+      canonicalAutoMovieCaptureRuntimeIdentity({
+        ...session.runtime,
+        graphics,
+      });
+      session.assertRuntimeCurrent();
       process.stderr.write(
         `automovie inspect: ${input.target.shot}/${input.target.subject} ` +
           `${graphics.api} requested=${graphics.requestedBackend} ` +
           `vendor=${graphics.vendor} RENDERER=${graphics.renderer}\n`,
       );
-      return { page, diagnostics };
+      return { page, diagnostics, graphics };
     } catch (error) {
       const failure = new Error(
         `${error instanceof Error ? error.message : String(error)} Browser diagnostics: ${
@@ -220,10 +239,11 @@ const inspectionPage = (
  * reviewer opening `viewer/subject.html` on the same subject are looking
  * through one eye.
  *
- * Nothing it returns is delivery evidence. It produces no renderer identity, no
- * target fingerprint and no render bundle, and it writes no file; the inspection
- * service publishes the bytes under `automovie/inspections`, outside the render
- * root a delivery review reads.
+ * Nothing it returns is delivery evidence. It reports the exact browser and
+ * graphics identity that made the pixels, but produces no target fingerprint
+ * or render bundle and writes no file; the inspection service publishes the
+ * bytes under `automovie/inspections`, outside the render root a delivery
+ * review reads.
  */
 export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
   async (input) => {
@@ -234,6 +254,7 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
     const resident = await inspectionPage(session, input);
     let answer: IAutoMovieInspectionAnswer;
     try {
+      session.assertRuntimeCurrent();
       // Waited for on every viewpoint, not only when the page is opened. A
       // sweep is many draws through one resident page, and anything that
       // reloads it in between - an author saving a viewer source while the dev
@@ -246,6 +267,7 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
       await resident.page.waitForFunction(
         () => window.__automovieInspect?.ready === true,
       );
+      session.assertRuntimeCurrent();
       answer = await resident.page.evaluate(
         ({ pose, viewpoint, subject }) =>
           window.__automovieInspect!.view(pose, viewpoint, subject),
@@ -255,6 +277,7 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
           subject: input.target.subject,
         },
       );
+      session.assertRuntimeCurrent();
     } catch (error) {
       const failure = new Error(
         `${error instanceof Error ? error.message : String(error)} Browser diagnostics: ${
@@ -287,11 +310,26 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
       throw new Error(
         `The inspection page returned "${drawn.dataUrl.slice(0, 32)}…" rather than a base64 PNG data URL.`,
       );
+    const graphics = await inspectCaptureGraphics(resident.page);
+    const runtimeIdentity = { ...session.runtime, graphics };
+    if (
+      canonicalAutoMovieCaptureRuntimeIdentity(runtimeIdentity) !==
+      canonicalAutoMovieCaptureRuntimeIdentity({
+        ...session.runtime,
+        graphics: resident.graphics,
+      })
+    )
+      throw new Error(
+        "The inspection page graphics identity changed during the subject draw. Reopen the inspection host and recapture the whole subject.",
+      );
+    session.assertRuntimeCurrent();
     return {
       bytes: new Uint8Array(
         Buffer.from(drawn.dataUrl.slice(prefix.length), "base64"),
       ),
       width: drawn.width,
       height: drawn.height,
+      runtimeIdentity,
+      assertRuntimeCurrent: session.assertRuntimeCurrent,
     };
   };

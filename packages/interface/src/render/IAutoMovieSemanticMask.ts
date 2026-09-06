@@ -59,7 +59,7 @@ export interface IAutoMovieSemanticMask {
    * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `version` as the portable data boundary for the rendering identity mask channels requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `version` for the spec render pass products system contract.
    */
-  version: 1;
+  version: 2;
 
   /**
    * Versioned palette-derivation protocol.
@@ -67,7 +67,7 @@ export interface IAutoMovieSemanticMask {
    * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `protocol` as the portable data boundary for the rendering identity mask channels requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `protocol` for the spec render pass products system contract.
    */
-  protocol: "automovie.semantic-mask.v1";
+  protocol: "automovie.semantic-mask.v2";
 
   /**
    * Reserved background colour, never assigned to an entry.
@@ -99,12 +99,73 @@ export interface IAutoMovieSemanticMask {
   unaddressed: IAutoMovieSemanticMaskGap[];
 
   /**
-   * Digest over the protocol and every entry's id, kind and colour.
+   * Digest over the complete canonical versioned payload except this field.
+   * It therefore seals background, every entry field, and every bounded gap.
    *
    * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `digest` as the portable data boundary for the rendering identity mask channels requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `digest` for the spec render pass products system contract.
    */
   digest: AutoMovieContentDigest;
+}
+
+/**
+ * Runtime agreement between a semantic palette and the scene actually drawn.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskCoverage` as the portable data boundary for complete structural evidence.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskCoverage` for the semantic render-product closure.
+ */
+export interface IAutoMovieSemanticMaskCoverage {
+  /** Declared drawable ids absent from the built scene, in ascending order. */
+  unresolved: string[];
+  /** Built meshes that the palette could not name. */
+  unaddressed: number;
+}
+
+/**
+ * One shot's palette and runtime coverage captured as one indivisible fact.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskEvidence` as the portable data boundary for same-frame palette and coverage evidence.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskEvidence` for the semantic render-product closure.
+ */
+export interface IAutoMovieSemanticMaskEvidence {
+  /** Evidence envelope schema. */
+  version: 1;
+  /** Exact compiled shot whose drawn scene was audited. */
+  shot: string;
+  /** Verified current semantic palette. */
+  mask: IAutoMovieSemanticMask;
+  /** Coverage observed from the same built frame. */
+  coverage: IAutoMovieSemanticMaskCoverage;
+}
+
+/**
+ * Resident semantic dependency of one mask image.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskReceipt` as the portable data boundary for content-addressed semantic evidence.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskReceipt` for reopening a semantic render product.
+ */
+export interface IAutoMovieSemanticMaskReceipt {
+  /** Receipt record schema. */
+  version: 1;
+  /** Frame identity inside the owning bundle or chunk. */
+  frame: number;
+  /** Structural product this record accompanies. */
+  pass: "mask";
+  /** Exact compiled shot represented by the product. */
+  shot: string;
+  /** Canonical sidecar resident beside the image. */
+  sidecar: {
+    /** Portable owner-relative path. */
+    path: string;
+    /** Digest of the exact resident UTF-8 bytes. */
+    digest: AutoMovieContentDigest;
+    /** Positive resident byte count. */
+    bytes: number;
+  };
+  /** Digest of the canonical semantic payload inside the sidecar. */
+  semanticDigest: AutoMovieContentDigest;
+  /** Runtime coverage preserved without normalizing gaps away. */
+  coverage: IAutoMovieSemanticMaskCoverage;
 }
 
 /**

@@ -1,6 +1,16 @@
-import type { IAutoMovieFilmTimeline } from "@automovie/interface";
+import {
+  equalProductionFrameRates,
+  resolveProductionFrameRate,
+} from "@automovie/engine";
+import type {
+  IAutoMovieFilmTimeline,
+  IAutoMovieProductionFrameRate,
+  IAutoMovieProductionMediaProbe,
+} from "@automovie/interface";
 import type {
   Box,
+  BoxKind,
+  DataStream,
   IsoFileOptions,
   Movie,
   Sample,
@@ -12,6 +22,10 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import {
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "./productionMp4Profile";
 import { residentMp4Box } from "./residentCodecs";
 import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
@@ -23,23 +37,35 @@ export const muxProductionFeatureMp4 = (props: {
   audio: Uint8Array;
 }): Uint8Array => {
   const videoProbe = probeProductionVideoMp4(props.video);
+  // An audio-mix probe resolves to an audio probe or throws, so the union is
+  // narrowed here instead of being re-checked after the fact.
   const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
     bytes: props.audio,
-  });
+  }) as Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>;
   const video = parseMp4(props.video);
   const audio = parseMp4(props.audio);
   const videoTrack = video.movie.videoTracks[0]!;
   const audioTrack = audio.movie.audioTracks[0]!;
   if (
-    videoProbe.kind !== "video" ||
-    audioProbe.kind !== "audio" ||
-    videoProbe.runtimeSeconds !== audioProbe.runtimeSeconds
+    exactClockProduct(
+      videoProbe.presentation.movieDuration,
+      audioProbe.timebase.movieTimescale,
+    ) !==
+    exactClockProduct(
+      audioProbe.timebase.movieDuration,
+      videoProbe.presentation.movieTimescale,
+    )
   )
     throw new Error(
       "Feature mux requires byte sources with exactly equal track runtimes.",
     );
+  const presentationSamples = exactPresentationTicks(
+    audioProbe.timebase.movieDuration,
+    audioProbe.timebase.movieTimescale,
+    audioProbe.sampleRate,
+  );
   const output = residentMp4Box().createFile();
   output.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
@@ -66,9 +92,7 @@ export const muxProductionFeatureMp4 = (props: {
     mediaTimescale: audioTrack.timescale,
     movieTimescale: videoTrack.timescale,
     primingSamples: audioProbe.primingSamples,
-    presentationSamples: Math.round(
-      audioProbe.runtimeSeconds * audioProbe.sampleRate,
-    ),
+    presentationSamples,
   });
   const bytes = new Uint8Array(output.getBuffer().buffer);
   probeProductionMedia({
@@ -78,6 +102,104 @@ export const muxProductionFeatureMp4 = (props: {
   });
   return bytes;
 };
+
+/**
+ * Preserve one H.264 elementary stream while adding the explicit sRGB sample
+ * description required by every final production picture.
+ */
+export const normalizeProductionH264Mp4 = (bytes: Uint8Array): Uint8Array => {
+  const source = parseMp4(bytes);
+  const track = source.movie.videoTracks[0];
+  if (track === undefined || source.movie.tracks.length !== 1)
+    throw new Error("H.264 normalization requires exactly one video track.");
+  const samples = source.file.getTrackSamplesInfo(track.id);
+  if (samples.length === 0)
+    throw new Error("H.264 normalization requires resident video samples.");
+  const description = sampleDescription(samples[0]!);
+  const output = residentMp4Box().createFile();
+  output.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: track.timescale,
+    duration: track.duration,
+  });
+  const outputTrack = output.addTrack({
+    type: description.type,
+    hdlr: "vide",
+    name: "AutoMovie explicit sRGB H.264",
+    timescale: track.timescale,
+    media_duration: track.duration,
+    duration: track.duration,
+    width: track.video!.width,
+    height: track.video!.height,
+    language: track.language,
+    description_boxes: [
+      ...description.boxes
+        .filter((box) => box.type !== "colr")
+        .map((box) => box as unknown as BoxKind),
+      productionSrgbColorBox() as unknown as BoxKind,
+    ],
+  });
+  for (const sample of samples)
+    output.addSample(
+      outputTrack,
+      Uint8Array.from(
+        bytes.subarray(sample.offset, sample.offset + sample.size),
+      ),
+      sampleOptions(sample),
+    );
+  const normalized = new Uint8Array(output.getBuffer().buffer);
+  const probe = probeProductionVideoMp4(normalized);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: probe.width,
+      height: probe.height,
+      frameRate: probe.frameRate,
+    }),
+    actual: probe,
+  });
+  return normalized;
+};
+
+/** Writable nclx box because the installed parser exposes no colr writer. */
+const productionSrgbColorBox = (): BoxKind => {
+  const box = new (residentMp4Box().BoxParser.box.colr)();
+  box.write = function (stream: DataStream): void {
+    this.size = 11;
+    this.writeHeader(stream);
+    stream.writeString("nclx");
+    stream.writeUint16(1);
+    stream.writeUint16(13);
+    stream.writeUint16(1);
+    stream.writeUint8(0x80);
+  };
+  return box;
+};
+
+const exactClockProduct = (left: number, right: number): bigint => {
+  if (
+    Number.isSafeInteger(left) === false ||
+    left <= 0 ||
+    Number.isSafeInteger(right) === false ||
+    right <= 0
+  )
+    throw new Error("MP4 presentation clocks must be positive safe integers.");
+  return BigInt(left) * BigInt(right);
+};
+
+/**
+ * The audio presentation length in 48 kHz samples.
+ *
+ * The audio-mix probe's Opus profile assertion already proved this presentation
+ * an exact safe-integer sample count on its 48 kHz clock, and the runtime
+ * comparison proved the movie timescale a positive safe integer, so the exact
+ * division needs no second verdict here.
+ */
+const exactPresentationTicks = (
+  duration: number,
+  timescale: number,
+  destinationTimescale: number,
+): number =>
+  Number(exactClockProduct(duration, destinationTimescale) / BigInt(timescale));
 
 /**
  * Conform immutable per-shot repaint clips into the current cut-only timeline.
@@ -125,16 +247,187 @@ export const conformProductionRenditionVideoMp4 = (props: {
     );
   const bytes = new Uint8Array(output.getBuffer().buffer);
   const probe = probeProductionVideoMp4(bytes);
+  const frameRate = resolveProductionFrameRate(props.timeline);
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: first.probe.width,
+      height: first.probe.height,
+      frameRate,
+    }),
+    actual: probe,
+  });
   if (
-    probe.kind !== "video" ||
     probe.frameCount !== props.timeline.totalFrames ||
-    Math.abs(probe.fps - props.timeline.fps) > 1e-9
+    equalProductionFrameRates(probe.frameRate, frameRate) === false
   )
     throw new Error(
       "Conformed repaint video failed exact parser verification.",
     );
   return bytes;
 };
+
+/**
+ * Losslessly conform explicit deterministic and repaint occurrence lanes.
+ *
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Selects pixels only from the declared lane and refuses fallback at a lane crossing.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Preserves the shared H.264 presentation contract while joining occurrence-addressed sources.
+ */
+export const conformProductionVisualDeliveryVideoMp4 = (props: {
+  timeline: IAutoMovieFilmTimeline;
+  sources: ReadonlyArray<{
+    occurrence: string;
+    lane: "deterministic" | "repainted";
+    bytes: Uint8Array;
+  }>;
+}): Uint8Array => {
+  if (
+    props.sources.length !== props.timeline.segments.length ||
+    props.sources.some(
+      (source, index) =>
+        source.occurrence !==
+        productionVisualDeliveryOccurrence(
+          props.timeline.segments[index]!,
+          index,
+        ),
+    )
+  )
+    throw new Error(
+      "Visual delivery sources must exactly join the current timeline occurrences.",
+    );
+  let deterministic: IProductionRenditionClip | undefined;
+  const parsed = props.timeline.segments.map((segment, index) => {
+    if (
+      segment.transitionIn.kind !== "cut" ||
+      segment.transitionOut.kind !== "cut"
+    )
+      throw new Error(
+        `Mixed visual delivery currently requires cut-only editing at occurrence ${index}.`,
+      );
+    const source = props.sources[index]!;
+    if (source.lane === "deterministic") {
+      deterministic ??= parseProductionRenditionClip(
+        source.bytes,
+        "Deterministic feature source",
+      );
+      if (
+        deterministic.probe.frameCount !== props.timeline.totalFrames ||
+        source.bytes.length !== deterministic.bytes.length ||
+        source.bytes.some(
+          (value, offset) => value !== deterministic!.bytes[offset],
+        )
+      )
+        throw new Error(
+          "Every deterministic lane must cite the same exact current feature source.",
+        );
+      const samples = deterministic.samples.slice(
+        segment.startFrame,
+        segment.endFrame,
+      );
+      if (
+        samples.length !== segment.endFrame - segment.startFrame ||
+        (index > 0 &&
+          props.sources[index - 1]!.lane !== "deterministic" &&
+          samples[0]?.is_sync !== true)
+      )
+        throw new Error(
+          `Deterministic occurrence ${index} cannot begin losslessly at its declared lane crossing.`,
+        );
+      return {
+        ...deterministic,
+        samples,
+        decodeStart: samples[0]!.dts,
+        presentationStart: samples.reduce(
+          (minimum, sample) => Math.min(minimum, sample.cts),
+          samples[0]!.cts,
+        ),
+      };
+    }
+    const clip = parseProductionRenditionClip(
+      source.bytes,
+      `Repaint occurrence ${index}`,
+    );
+    if (
+      segment.sourceInFrame !== 0 ||
+      segment.sourceOutFrame !== clip.probe.frameCount ||
+      segment.endFrame - segment.startFrame !== clip.probe.frameCount
+    )
+      throw new Error(
+        `Repaint occurrence ${index} must supply the exact full-shot clip.`,
+      );
+    return clip;
+  });
+  const first = parsed[0];
+  if (first === undefined)
+    throw new Error("Mixed visual delivery requires a non-empty timeline.");
+  const description = sampleDescription(first.samples[0]!);
+  for (const [index, clip] of parsed.entries())
+    if (
+      clip.probe.width !== first.probe.width ||
+      clip.probe.height !== first.probe.height ||
+      clip.track.timescale !== first.track.timescale ||
+      clip.sampleDuration !== first.sampleDuration ||
+      sameSampleDescription(
+        description,
+        sampleDescription(clip.samples[0]!),
+      ) === false
+    )
+      throw new Error(
+        `Visual delivery occurrence ${index} changes the exact video presentation contract.`,
+      );
+  const output = residentMp4Box().createFile();
+  const mediaDuration = props.timeline.totalFrames * first.sampleDuration;
+  output.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: first.track.timescale,
+    duration: mediaDuration,
+  });
+  const trackId = output.addTrack({
+    type: description.type,
+    hdlr: "vide",
+    name: "AutoMovie explicit visual-lane feature",
+    timescale: first.track.timescale,
+    media_duration: mediaDuration,
+    duration: mediaDuration,
+    width: first.probe.width,
+    height: first.probe.height,
+    language: first.track.language,
+    description_boxes: description.boxes,
+  });
+  let frame = 0;
+  for (const clip of parsed)
+    frame = appendLosslessVideoClip({
+      file: output,
+      track: trackId,
+      clip,
+      frame,
+      sampleDuration: first.sampleDuration,
+    });
+  if (frame !== props.timeline.totalFrames)
+    throw new Error("Visual delivery sources do not cover the current film.");
+  const bytes = new Uint8Array(output.getBuffer().buffer);
+  // The frame count was proved equal to the film above, and the profile
+  // assertion proves the exact rational clock of every written sample.
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: first.probe.width,
+      height: first.probe.height,
+      frameRate: resolveProductionFrameRate(props.timeline),
+    }),
+    actual: probeProductionVideoMp4(bytes),
+  });
+  return bytes;
+};
+
+/**
+ * Stable identity of one current timeline occurrence.
+ * @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery Keeps repeated shot labels occurrence-addressed.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-failure-publication Gives config, conform, manifest, and reopen one join key.
+ */
+export const productionVisualDeliveryOccurrence = (
+  segment: IAutoMovieFilmTimeline["segments"][number],
+  index: number,
+): string =>
+  `occurrence:${index}:${segment.startFrame}-${segment.endFrame}:${segment.shot}`;
 
 /**
  * Assemble one whole-film video from the per-chunk H.264 encodes a chunked
@@ -163,13 +456,19 @@ export const conformProductionRenditionVideoMp4 = (props: {
  * One chunk covering the whole film is returned verbatim: it already is the
  * film's video, so an assembly that spans a single chunk is byte-identical to
  * encoding that chunk.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Assembles the feature only from a contiguous, complete set of current chunks and refuses a partial set as encode input.
  */
 export const assembleProductionChunkVideoMp4 = (props: {
   /** Encoded chunk MP4s in play order, read once. */
   chunks: Iterable<Uint8Array>;
 
   /** Exact raster and rational frame clock every chunk must already carry. */
-  frameFormat: { fps: number; height: number; width: number };
+  frameFormat: {
+    fps: number;
+    frameRate?: IAutoMovieProductionFrameRate;
+    height: number;
+    width: number;
+  };
 
   /** Exact total output frames the assembled chunks must cover. */
   totalFrames: number;
@@ -183,6 +482,7 @@ export const assembleProductionChunkVideoMp4 = (props: {
     | undefined;
   let frame = 0;
   let index = 0;
+  const frameRate = resolveProductionFrameRate(props.frameFormat);
   for (const bytes of props.chunks) {
     const clip = parseProductionRenditionClip(bytes, `Render chunk ${index}`);
     const description = sampleDescription(clip.samples[0]!);
@@ -197,7 +497,7 @@ export const assembleProductionChunkVideoMp4 = (props: {
     if (
       clip.probe.width !== props.frameFormat.width ||
       clip.probe.height !== props.frameFormat.height ||
-      Math.abs(clip.probe.fps - props.frameFormat.fps) > 1e-9 ||
+      equalProductionFrameRates(clip.probe.frameRate, frameRate) === false ||
       clip.track.timescale !== reference.timescale ||
       clip.sampleDuration !== reference.sampleDuration ||
       sameSampleDescription(reference.description, description) === false
@@ -205,6 +505,16 @@ export const assembleProductionChunkVideoMp4 = (props: {
       throw new Error(
         `Render chunk ${index} does not share the assembled raster, rational frame clock, and H.264 decoder configuration.`,
       );
+    // The chunk is attributed by index above; only then does the generic
+    // delivery profile judge its container facts.
+    assertProductionVideoProfile({
+      expected: resolveProductionVideoProfile({
+        width: props.frameFormat.width,
+        height: props.frameFormat.height,
+        frameRate,
+      }),
+      actual: clip.probe,
+    });
     ++index;
     if (opening === undefined) {
       opening = { bytes, clip };
@@ -243,7 +553,7 @@ export const assembleProductionChunkVideoMp4 = (props: {
     probe.frameCount !== props.totalFrames ||
     probe.width !== props.frameFormat.width ||
     probe.height !== props.frameFormat.height ||
-    Math.abs(probe.fps - props.frameFormat.fps) > 1e-9
+    equalProductionFrameRates(probe.frameRate, frameRate) === false
   )
     throw new Error(
       `Assembled chunk video parses as ${probe.frameCount} frames of ${probe.width}x${probe.height} at ${probe.fps} fps; expected ${props.totalFrames} frames of ${props.frameFormat.width}x${props.frameFormat.height} at ${props.frameFormat.fps} fps.`,
@@ -261,6 +571,7 @@ export const assertProductionRenditionClipDelivery = (props: {
   width: number;
   height: number;
   fps: number;
+  frameRate?: IAutoMovieProductionFrameRate;
   frameCount: number;
   runtimeSeconds: number;
 }): void => {
@@ -268,16 +579,33 @@ export const assertProductionRenditionClipDelivery = (props: {
     props.bytes,
     `Repaint clip "${props.shot}"`,
   );
+  const frameRate = resolveProductionFrameRate(props);
+  // The shot's own contract is judged first and by name, so a raster, clock,
+  // count, or runtime drift is attributed to the clip before the generic
+  // delivery profile speaks.
   if (
     clip.probe.width !== props.width ||
     clip.probe.height !== props.height ||
     clip.probe.frameCount !== props.frameCount ||
-    Math.abs(clip.probe.fps - props.fps) > 1e-9 ||
-    Math.abs(clip.probe.runtimeSeconds - props.runtimeSeconds) > 1e-9
+    props.runtimeSeconds !==
+      (props.frameCount * frameRate.denominator) / frameRate.numerator ||
+    BigInt(clip.probe.presentation.movieDuration) *
+      BigInt(frameRate.numerator) !==
+      BigInt(props.frameCount) *
+        BigInt(frameRate.denominator) *
+        BigInt(clip.probe.presentation.movieTimescale)
   )
     throw new Error(
       `Repaint clip "${props.shot}" does not match its exact raster, rational frame clock, frame count, and runtime contract.`,
     );
+  assertProductionVideoProfile({
+    expected: resolveProductionVideoProfile({
+      width: props.width,
+      height: props.height,
+      frameRate,
+    }),
+    actual: clip.probe,
+  });
 };
 
 /**
@@ -450,6 +778,8 @@ interface IProductionRenditionClip {
   track: Track;
   samples: Sample[];
   sampleDuration: number;
+  /** Decode time of the clip's first sample on its own clock. */
+  decodeStart: number;
   presentationStart: number;
 }
 
@@ -509,7 +839,11 @@ const appendLosslessVideoClip = (props: {
   sampleDuration: number;
 }): number => {
   for (const sample of props.clip.samples) {
-    const dtsFrame = sample.dts / props.clip.sampleDuration;
+    // Both clocks are re-based on the clip's own first sample: a range cut from
+    // the middle of a feature carries absolute decode times, and re-timing
+    // only the presentation side would push cts below dts.
+    const dtsFrame =
+      (sample.dts - props.clip.decodeStart) / props.clip.sampleDuration;
     const ctsFrame =
       (sample.cts - props.clip.presentationStart) / props.clip.sampleDuration;
     props.file.addSample(
@@ -532,6 +866,7 @@ const productionRenditionVideoPlan = (props: {
   timeline: IAutoMovieFilmTimeline;
   clips: ReadonlyMap<string, Uint8Array>;
 }) => {
+  const frameRate = resolveProductionFrameRate(props.timeline);
   const parsed = props.timeline.segments.map((segment) => {
     if (
       segment.transitionIn.kind !== "cut" ||
@@ -553,7 +888,7 @@ const productionRenditionVideoPlan = (props: {
       segment.sourceInFrame !== 0 ||
       segment.sourceOutFrame !== clip.probe.frameCount ||
       segment.endFrame - segment.startFrame !== clip.probe.frameCount ||
-      Math.abs(clip.probe.fps - props.timeline.fps) > 1e-9
+      equalProductionFrameRates(clip.probe.frameRate, frameRate) === false
     )
       throw new Error(
         `Repainted feature delivery requires one full-shot ${props.timeline.fps}fps clip for segment "${segment.shot}"; partial trims and mismatched media are not representable yet.`,
@@ -661,6 +996,7 @@ const parseProductionRenditionClip = (
     track,
     samples,
     sampleDuration,
+    decodeStart: samples[0]!.dts,
     presentationStart,
   };
 };

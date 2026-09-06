@@ -44,6 +44,9 @@ export interface IProductionRenderReadOnlyRuntime<
   renderStatus: (
     plan: Plan,
   ) => IRenderStatusRow[] | Promise<IRenderStatusRow[]>;
+  reportStatus?: (
+    plan: Plan,
+  ) => IRenderStatusRow[] | Promise<IRenderStatusRow[]>;
   runtimeIdentitiesEqual: (left: unknown, right: unknown) => boolean;
   sourceFingerprint: () => string;
   staleRows: (
@@ -278,7 +281,7 @@ export const reportProductionRenderStatus = async <
   const rows = await settleProductionRenderReadOnly(
     () =>
       readWhileCurrent(
-        () => runtime.renderStatus(inspected.plan),
+        () => (runtime.reportStatus ?? runtime.renderStatus)(inspected.plan),
         inspected.assertCurrent,
       ),
     inspected.resources,

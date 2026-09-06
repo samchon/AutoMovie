@@ -1,3 +1,5 @@
+import type { AutoMoviePopulationTransitionReceipt } from "./AutoMoviePopulationTransition";
+
 /**
  * Selects the exact authored population being written and reviewed.
  *
@@ -19,6 +21,10 @@ export type AutoMoviePopulationScope =
     }
   | {
       mode: "complete-production-reset";
+      /** Current owner accepting responsibility for the reset transition. */
+      owner: string;
+      /** Exact passed-pilot predecessor that authorizes this reset. */
+      transition: AutoMoviePopulationTransitionReceipt;
     }
   | {
       mode: "first-pilot";

@@ -1,28 +1,58 @@
-import * as HME from "h264-mp4-encoder";
-import { createFile } from "mp4box";
+import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
+  currentAutoMovieLocalProcessOwner,
+  isAutoMovieLocalProcessOwner,
+  observeAutoMovieLocalProcessOwner,
+} from "@automovie/production";
+import type * as HME from "h264-mp4-encoder";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import type { PNG } from "pngjs";
 
 import {
   type IProductionFrameCaptureRuntime,
   createProductionFrameCaptureRuntime,
 } from "./capture";
+import {
+  type IRuntimePackageGenerationHandle,
+  loadResidentRuntimePackage,
+} from "./runtimePackageGeneration";
+import type { IRuntimePackageSnapshot } from "./runtimePackageSnapshot";
+
+type H264Module = typeof HME & {
+  default?: Pick<typeof HME, "createH264MP4Encoder">;
+};
+type Mp4Module = typeof import("mp4box");
+type PngModule = typeof import("pngjs") & { PNG: typeof PNG };
 
 export interface IProductionRenderHost {
   arch: string;
+  assertRuntimePackagesCurrent: () => void;
   capture: IProductionFrameCaptureRuntime["capture"];
   captureMetrics: IProductionFrameCaptureRuntime["metrics"];
   closeCapture: IProductionFrameCaptureRuntime["close"];
   installDialogue: IProductionFrameCaptureRuntime["installDialogue"];
-  h264Module: typeof HME & {
-    default?: Pick<typeof HME, "createH264MP4Encoder">;
-  };
-  createMp4File: typeof createFile;
+  h264Generation: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    H264Module
+  >;
+  mp4Generation: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    Mp4Module
+  >;
   filesystem: typeof fs;
   now: () => number;
+  owner: IAutoMovieLocalProcessOwner;
   pid: number;
   platform: NodeJS.Platform;
-  processAlive: (pid: number) => boolean;
+  pngGeneration: IRuntimePackageGenerationHandle<
+    IRuntimePackageSnapshot,
+    PngModule
+  >;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
   randomUuid: () => string;
   root: string;
   setExitCode: (value: number) => void;
@@ -36,13 +66,14 @@ export interface IProductionRenderHostSystem {
   captureMetrics: IProductionFrameCaptureRuntime["metrics"];
   closeCapture: IProductionFrameCaptureRuntime["close"];
   installDialogue: IProductionFrameCaptureRuntime["installDialogue"];
-  h264Module: IProductionRenderHost["h264Module"];
-  createMp4File: typeof createFile;
+  h264Generation: IProductionRenderHost["h264Generation"];
+  mp4Generation: IProductionRenderHost["mp4Generation"];
   filesystem: typeof fs;
   kill: (pid: number, signal: 0) => true;
   now: () => number;
-  pid: number;
+  owner: IAutoMovieLocalProcessOwner;
   platform: NodeJS.Platform;
+  pngGeneration: IProductionRenderHost["pngGeneration"];
   randomUuid: () => string;
   root: string;
   setExitCode: (value: number) => void;
@@ -50,41 +81,48 @@ export interface IProductionRenderHostSystem {
   stdout: (value: string) => void;
 }
 
-/** Resolve process liveness without treating an access refusal as death. */
-export const productionRenderProcessAlive = (
-  pid: number,
+/** Resolve one render owner without treating PID occupancy as generation proof. */
+export const productionRenderProcessOwnerObservation = (
+  owner: unknown,
+  current: IAutoMovieLocalProcessOwner,
   kill: IProductionRenderHostSystem["kill"],
-): boolean => {
-  try {
-    kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-};
+): AutoMovieLocalProcessOwnerObservation =>
+  observeAutoMovieLocalProcessOwner({ owner, current, query: kill });
 
 /** Bind an explicit host system to one production-render invocation. */
 export const createProductionRenderHost = (
   system: IProductionRenderHostSystem,
-): IProductionRenderHost => ({
-  arch: system.arch,
-  capture: system.capture,
-  captureMetrics: system.captureMetrics,
-  closeCapture: system.closeCapture,
-  installDialogue: system.installDialogue,
-  h264Module: system.h264Module,
-  createMp4File: system.createMp4File,
-  filesystem: system.filesystem,
-  now: system.now,
-  pid: system.pid,
-  platform: system.platform,
-  processAlive: (pid) => productionRenderProcessAlive(pid, system.kill),
-  randomUuid: system.randomUuid,
-  root: system.root,
-  setExitCode: system.setExitCode,
-  stderr: system.stderr,
-  stdout: system.stdout,
-});
+): IProductionRenderHost => {
+  if (isAutoMovieLocalProcessOwner(system.owner) === false)
+    throw new Error("Production render host process owner is invalid.");
+  return {
+    arch: system.arch,
+    assertRuntimePackagesCurrent: () => {
+      system.h264Generation.assertCurrent();
+      system.mp4Generation.assertCurrent();
+      system.pngGeneration.assertCurrent();
+    },
+    capture: system.capture,
+    captureMetrics: system.captureMetrics,
+    closeCapture: system.closeCapture,
+    installDialogue: system.installDialogue,
+    h264Generation: system.h264Generation,
+    mp4Generation: system.mp4Generation,
+    filesystem: system.filesystem,
+    now: system.now,
+    owner: system.owner,
+    pid: system.owner.pid,
+    platform: system.platform,
+    observeProcessOwner: (owner) =>
+      productionRenderProcessOwnerObservation(owner, system.owner, system.kill),
+    pngGeneration: system.pngGeneration,
+    randomUuid: system.randomUuid,
+    root: system.root,
+    setExitCode: system.setExitCode,
+    stderr: system.stderr,
+    stdout: system.stdout,
+  };
+};
 
 /** Bind the real Node, capture, encoder, and filesystem for one invocation. */
 export const createNodeProductionRenderHost = (): IProductionRenderHost =>
@@ -95,20 +133,30 @@ export const createNodeProductionRenderHost = (): IProductionRenderHost =>
 /** Bind the real Node host to one caller-owned capture runtime. */
 export const createNodeProductionRenderHostWithCapture = (
   captureRuntime: IProductionFrameCaptureRuntime,
-): IProductionRenderHost =>
-  createProductionRenderHost({
+): IProductionRenderHost => {
+  const h264 = loadResidentRuntimePackage<H264Module>({
+    packageName: "h264-mp4-encoder",
+  });
+  const mp4 = loadResidentRuntimePackage<typeof import("mp4box")>({
+    packageName: "mp4box",
+  });
+  const png = loadResidentRuntimePackage<PngModule>({
+    packageName: "pngjs",
+  });
+  return createProductionRenderHost({
     arch: process.arch,
     capture: captureRuntime.capture,
     captureMetrics: captureRuntime.metrics,
     closeCapture: captureRuntime.close,
     installDialogue: captureRuntime.installDialogue,
-    h264Module: HME,
-    createMp4File: createFile,
+    h264Generation: h264,
+    mp4Generation: mp4,
     filesystem: fs,
     kill: (pid, signal) => process.kill(pid, signal),
     now: Date.now,
-    pid: process.pid,
+    owner: currentAutoMovieLocalProcessOwner(),
     platform: process.platform,
+    pngGeneration: png,
     randomUuid: randomUUID,
     root: process.cwd(),
     setExitCode: (value) => {
@@ -117,3 +165,4 @@ export const createNodeProductionRenderHostWithCapture = (
     stderr: (value) => process.stderr.write(value),
     stdout: (value) => process.stdout.write(value),
   });
+};

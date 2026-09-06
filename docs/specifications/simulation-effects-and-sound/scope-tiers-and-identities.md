@@ -28,7 +28,6 @@ Effect identity는 production, shot, instance, causal event, tier, parameter rev
 
 ### 외부 결과와 provider 중립성 {#external-result-provider-neutrality}
 
-<!-- @evidenceObligation provider-neutral-provenance 외부 생성 결과의 source, provider, model, terms, cost, consumer와 생성 시점을 provider-neutral record로 보존. -->
 <!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-external-provider-neutrality 이 절은 외부 effect 결과를 provider가 아닌 채택 artifact로 식별한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-provider-neutrality 이 절은 sound source와 timing을 provider product에 종속시키지 않는다. -->
 <!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-content-provenance 동일 content와 서로 다른 source provenance를 합치지 않는 identity 경계를 유지한다. -->

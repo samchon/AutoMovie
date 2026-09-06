@@ -64,6 +64,9 @@ const execute = <T>(props: {
   attemptId?: () => string;
   signal?: AbortSignal;
   wait?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
+  admitAttempt?: Parameters<
+    typeof executeAutoMovieRepaintRequest
+  >[0]["admitAttempt"];
 }) => {
   let attempt = 0;
   let virtualElapsed = 0;
@@ -98,6 +101,9 @@ const execute = <T>(props: {
     },
     execute: props.calls,
     onAttempt: (record) => records.push(record),
+    ...(props.admitAttempt === undefined
+      ? {}
+      : { admitAttempt: props.admitAttempt }),
   }).then((result) => ({ result, records }));
 };
 
@@ -111,6 +117,10 @@ const execute = <T>(props: {
  *    deterministic backoff, then stops on the first accepted candidate.
  * 3. Provider refusal, invalid partial output, timeout, cancellation, elapsed
  *    exhaustion, and cost exhaustion all close without a candidate.
+ * 4. A dispatch admission the claim store refuses, throws on, or answers
+ *    outside its contract stops the request before any provider call and
+ *    carries the typed cause beside the stop reason; an acquired admission
+ *    dispatches normally and carries no refusal.
  */
 export const test_production_repaint_execution = async (): Promise<void> => {
   const invalid = [
@@ -1418,5 +1428,145 @@ export const test_production_repaint_execution = async (): Promise<void> => {
       malformedMessages.some((message) => message.includes("valid instant")) &&
       malformedMessages.at(-1) ===
         "Repaint request elapsed clock observation failed without an inspectable message.",
+  );
+
+  let admittedProviderCalls = 0;
+  const admitted = (
+    admitAttempt: () => unknown,
+  ): ReturnType<typeof execute<number>> =>
+    execute<number>({
+      policy: policy(),
+      admitAttempt: admitAttempt as NonNullable<
+        Parameters<typeof execute>[0]["admitAttempt"]
+      >,
+      calls: async () => {
+        ++admittedProviderCalls;
+        return {
+          value: 1,
+          costUnits: 1,
+          availableOutput: { digest: digest("admitted"), bytes: 4 },
+        };
+      },
+    });
+  const [
+    heldByOwner,
+    closedByUnknownOutcome,
+    movedPrefix,
+    storeThrew,
+    storeOutsideContract,
+    storeWithoutOwner,
+    acquired,
+  ] = await Promise.all([
+    admitted(() => ({ status: "already-active", ownerAttemptId: "owner-1" })),
+    admitted(() => ({ status: "unknown-outcome", ownerAttemptId: "owner-2" })),
+    admitted(() => ({ status: "prefix-changed" })),
+    admitted(() => {
+      throw new Error("claim store offline");
+    }),
+    admitted(() => ({ status: "granted" })),
+    admitted(() => ({ status: "already-active", ownerAttemptId: " " })),
+    admitted(async () => ({ status: "acquired" })),
+  ]);
+  const signalled = await execute<number>({
+    policy: policy(),
+    signal: new AbortController().signal,
+    admitAttempt: (() => {
+      throw new Error("claim store offline");
+    }) as NonNullable<Parameters<typeof execute>[0]["admitAttempt"]>,
+    calls: async () => ({ value: 1, costUnits: 0, availableOutput: null }),
+  });
+  const refusalOf = (
+    outcome: Awaited<ReturnType<typeof execute<number>>>,
+  ): unknown => ({
+    stop: outcome.result.stop,
+    attempts: outcome.result.attempts.length,
+    records: outcome.records.length,
+    accepted: outcome.result.accepted,
+    claimRefusal: outcome.result.claimRefusal,
+  });
+  TestValidator.equals(
+    "a refused, thrown, or malformed admission stops before the provider with its typed cause",
+    {
+      heldByOwner: refusalOf(heldByOwner),
+      closedByUnknownOutcome: refusalOf(closedByUnknownOutcome),
+      movedPrefix: refusalOf(movedPrefix),
+      storeThrew: refusalOf(storeThrew),
+      storeOutsideContract: refusalOf(storeOutsideContract),
+      storeWithoutOwner: refusalOf(storeWithoutOwner),
+      acquired: {
+        stop: acquired.result.stop,
+        attempts: acquired.result.attempts.length,
+        claimRefusal: acquired.result.claimRefusal,
+      },
+      providerCalls: admittedProviderCalls,
+      signalledStoreThrew: refusalOf(signalled),
+    },
+    {
+      heldByOwner: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: { status: "already-active", ownerAttemptId: "owner-1" },
+      },
+      closedByUnknownOutcome: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: { status: "unknown-outcome", ownerAttemptId: "owner-2" },
+      },
+      movedPrefix: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: { status: "prefix-changed" },
+      },
+      storeThrew: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: {
+          status: "admission-failed",
+          message: "claim store offline",
+        },
+      },
+      storeOutsideContract: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: {
+          status: "admission-failed",
+          message:
+            "Repaint attempt claim store answered outside the admission contract.",
+        },
+      },
+      storeWithoutOwner: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: {
+          status: "admission-failed",
+          message:
+            "Repaint attempt claim store reported already-active without naming the owning attempt.",
+        },
+      },
+      acquired: { stop: "accepted", attempts: 1, claimRefusal: null },
+      providerCalls: 1,
+      signalledStoreThrew: {
+        stop: "claim-refused",
+        attempts: 0,
+        records: 0,
+        accepted: null,
+        claimRefusal: {
+          status: "admission-failed",
+          message: "claim store offline",
+        },
+      },
+    },
   );
 };

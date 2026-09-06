@@ -1,9 +1,7 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionFrameCapture,
-  IAutoMovieCaptionReadabilityBoundary,
-  IAutoMovieCaptionReadabilityMeasurement,
-  IAutoMovieCaptionReadabilityOutcome,
+  IAutoMovieCaptionGraphemeSegmentationIdentity,
   IAutoMovieCaptionReadabilityProfile,
   IAutoMovieCaptionReadabilityReport,
   IAutoMovieCompileProjectInput,
@@ -21,6 +19,7 @@ import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import type { IAutoMovieProductionServices } from "./AutoMovieProductionContext";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import { inspectAutoMovieCaptionReadabilityWithRuntime } from "./captionReadability";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
@@ -51,21 +50,33 @@ import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign
  */
 const PROJECT_MARKERS = ["package.json", "lint.config.ts"] as const;
 
+const CAPTION_GRAPHEME_REQUESTED_LOCALE = "en";
+const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter(
+  CAPTION_GRAPHEME_REQUESTED_LOCALE,
+  {
+    granularity: "grapheme",
+  },
+);
+const CAPTION_GRAPHEME_SEGMENTER_OPTIONS =
+  CAPTION_GRAPHEME_SEGMENTER.resolvedOptions();
+
 /**
  * Exact grapheme implementation this package can evaluate.
  *
- * The production still chooses whether to adopt this identity and owns every
- * threshold. A different algorithm or Unicode/ICU revision is reported as
- * unsupported and never evaluated through a substitute profile.
+ * The identity is derived from the same segmenter that performs measurement.
+ * The production still chooses whether to adopt it and owns every threshold;
+ * a different complete identity remains unsupported without fallback.
  */
 export const AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION = Object.freeze({
   algorithm: "intl-segmenter-grapheme",
   version: `unicode-${process.versions.unicode}/icu-${process.versions.icu}`,
-});
-
-const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
-  granularity: "grapheme",
-});
+  granularity: CAPTION_GRAPHEME_SEGMENTER_OPTIONS.granularity as "grapheme",
+  locale: Object.freeze({
+    kind: "requested-resolved" as const,
+    requested: CAPTION_GRAPHEME_REQUESTED_LOCALE,
+    resolved: CAPTION_GRAPHEME_SEGMENTER_OPTIONS.locale,
+  }),
+}) satisfies IAutoMovieCaptionGraphemeSegmentationIdentity;
 
 /**
  * Find the nearest immutable AutoMovie workspace from one host-owned seed.
@@ -118,6 +129,8 @@ export const openAutoMovieProduction = (props: {
   archetypes?: AutoMovieModelArchetypeRegistry;
   /** Exact graph-derived authoring identity for review and final gates. */
   authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh graph reader used by every atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
 }): IAutoMovieProductionServices => {
   const project = AutoMovieProductionProject.open(
     findAutoMovieProjectRoot(props.projectRoot),
@@ -127,10 +140,12 @@ export const openAutoMovieProduction = (props: {
   const statusCompiler = new AutoMovieProductionCompiler(
     project,
     props.authoringEvidence,
+    props.currentAuthoringEvidence,
   );
   const compiler = new AutoMovieProductionCompiler(
     project,
     props.authoringEvidence,
+    props.currentAuthoringEvidence,
   );
   return {
     project,
@@ -144,6 +159,9 @@ export const openAutoMovieProduction = (props: {
 
 /**
  * Compile through the package API.
+ * @evidence requirements/agent-authoring/partial-work.md#agent-partial-verification-scope Returns the result of the requested compile scope only, so a source-scope success is never read as a full-film verification.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Takes the requested compile scope as an explicit input and applies atomicity to that target rather than to the whole production.
+ * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-diagnostic-failure-channel Returns diagnostics through the typed result channel even when no artifact could be published, never through the artifact path.
  */
 export const compileAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -164,11 +182,14 @@ export const compileAutoMovieProduction = (props: {
    * every generated project calls.
    */
   authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh graph reader used by every atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 
 /**
  * Project status projection for CLI and lint consumers.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Projects each render and caption result with the exact target and inputs it covers and leaves unanswered scope unknown.
  */
 export const inspectAutoMovieProduction = (
   services: IAutoMovieProductionServices,
@@ -240,7 +261,7 @@ export const inspectAutoMovieProduction = (
           ),
           graph.production.captionReadabilityProfiles ?? [],
         )
-      : { version: 1 as const, cues: [] };
+      : { version: 2 as const, cues: [] };
   return {
     revision: services.project.revision(),
     design: services.project.inventory(),
@@ -263,124 +284,11 @@ export const inspectAutoMovieProduction = (
 export const inspectAutoMovieCaptionReadability = (
   timeline: IAutoMovieFilmTimeline,
   profiles: readonly IAutoMovieCaptionReadabilityProfile[],
-): IAutoMovieCaptionReadabilityReport => {
-  const profilesByLanguage = new Map(
-    profiles.map((profile) => [profile.language, profile] as const),
-  );
-  const precedingEndByLanguage = new Map<string, number>();
-  return {
-    version: 1,
-    cues: timeline.tracks.captions.map((cue) => {
-      const lines = cue.text.split(/\r\n|[\n\r]/u);
-      const graphemesByLine = lines.map(countCaptionGraphemes);
-      const graphemes = graphemesByLine.reduce(
-        (total, count) => total + count,
-        0,
-      );
-      const durationFrames = cue.endFrame - cue.startFrame;
-      const precedingEnd = precedingEndByLanguage.get(cue.language);
-      precedingEndByLanguage.set(cue.language, cue.endFrame);
-      const measurement: IAutoMovieCaptionReadabilityMeasurement = {
-        cue: cue.id,
-        language: cue.language,
-        graphemes,
-        lines: lines.length,
-        maxLineGraphemes: Math.max(...graphemesByLine),
-        durationFrames,
-        gapBeforeFrames:
-          precedingEnd === undefined ? null : cue.startFrame - precedingEnd,
-        graphemesPerSecond: (graphemes * timeline.fps) / durationFrames,
-      };
-      return {
-        measurement,
-        outcome: captionReadabilityOutcome(
-          measurement,
-          profilesByLanguage.get(cue.language),
-        ),
-      };
-    }),
-  };
-};
-
-const countCaptionGraphemes = (value: string): number =>
-  [...CAPTION_GRAPHEME_SEGMENTER.segment(value)].length;
-
-const captionReadabilityOutcome = (
-  measurement: IAutoMovieCaptionReadabilityMeasurement,
-  profile: IAutoMovieCaptionReadabilityProfile | undefined,
-): IAutoMovieCaptionReadabilityOutcome => {
-  if (profile === undefined)
-    return {
-      status: "not-run",
-      segmentation: null,
-      reason: "caption-readability-profile-not-declared",
-    };
-  if (
-    profile.segmentation.algorithm !==
-      AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION.algorithm ||
-    profile.segmentation.version !==
-      AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION.version
-  )
-    return {
-      status: "not-run",
-      segmentation: profile.segmentation,
-      reason: "caption-grapheme-segmentation-unsupported",
-    };
-  const breaches: Extract<
-    IAutoMovieCaptionReadabilityOutcome,
-    { status: "evaluated" }
-  >["breaches"] = [];
-  if (
-    maximumBoundaryPassed(
-      measurement.graphemesPerSecond,
-      profile.maxGraphemesPerSecond,
-    ) === false
-  )
-    breaches.push("graphemes-per-second");
-  if (
-    maximumBoundaryPassed(measurement.lines, profile.maxLinesPerCue) === false
-  )
-    breaches.push("lines-per-cue");
-  if (
-    maximumBoundaryPassed(
-      measurement.maxLineGraphemes,
-      profile.maxGraphemesPerLine,
-    ) === false
-  )
-    breaches.push("graphemes-per-line");
-  if (
-    minimumBoundaryPassed(
-      measurement.durationFrames,
-      profile.minDurationFrames,
-    ) === false
-  )
-    breaches.push("duration-frames");
-  if (
-    measurement.gapBeforeFrames !== null &&
-    minimumBoundaryPassed(measurement.gapBeforeFrames, profile.minGapFrames) ===
-      false
-  )
-    breaches.push("gap-frames");
-  return {
-    status: "evaluated",
-    profile: profile.id,
-    segmentation: profile.segmentation,
-    passed: breaches.length === 0,
-    breaches,
-  };
-};
-
-const maximumBoundaryPassed = (
-  value: number,
-  boundary: IAutoMovieCaptionReadabilityBoundary,
-): boolean =>
-  boundary.inclusive ? value <= boundary.value : value < boundary.value;
-
-const minimumBoundaryPassed = (
-  value: number,
-  boundary: IAutoMovieCaptionReadabilityBoundary,
-): boolean =>
-  boundary.inclusive ? value >= boundary.value : value > boundary.value;
+): IAutoMovieCaptionReadabilityReport =>
+  inspectAutoMovieCaptionReadabilityWithRuntime(timeline, profiles, {
+    identity: AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION,
+    segment: (value) => CAPTION_GRAPHEME_SEGMENTER.segment(value),
+  });
 
 const listFiles = (root: string): string[] => {
   const output: string[] = [];

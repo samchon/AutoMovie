@@ -1,6 +1,6 @@
 ---
 name: development
-description: Defines automovie implementation rules, testing standards, the always-100% coverage mandate, validation, consequence analysis, and change integrity. Use before writing or modifying source, tests, workflows, package wiring, or fixtures.
+description: Defines automovie implementation rules, testing standards (pure unit tests under 500 ms, every branch a change writes covered), validation, consequence analysis, and change integrity. Use before writing or modifying source, tests, workflows, package wiring, or fixtures.
 ---
 
 # Development
@@ -11,7 +11,7 @@ description: Defines automovie implementation rules, testing standards, the alwa
 - [Work Rules](#work-rules)
 - [Consequence Analysis](#consequence-analysis)
 - [Testing](#testing)
-- [Coverage is always 100%](#coverage-is-always-100)
+- [Coverage is 100% on what you write](#coverage-is-100-on-what-you-write)
 - [Validation](#validation)
 - [Change Integrity](#change-integrity)
 
@@ -53,13 +53,15 @@ Fix the verified class of failure, not only the reported witness. Cover positive
 
 Tests are `@nestia/e2e` `DynamicExecutor` cases under `test/src/features/<domain>/`. **One scenario per file, the exported `test_<snake_case>` matching the file name.** Builders and boolean predicates live under `features/internal/` (`createSkeleton`, `joint`, `makeMotion`, `hasViolation`, `vclose`, `qclose`); do not reach into another concern's internals.
 
-Only unit and logic tests belong in this repository. Exercise a function or module through its typed inputs and observable result, including its positive, negative, and boundary behavior. Do not install a generated project, launch a CLI or child process, reproduce operating-system or filesystem semantics, or keep an end-to-end scenario whose cost does not prove product logic.
+Only unit and logic tests belong in this repository. Exercise a function or module through its typed inputs and observable result, including its positive, negative, and boundary behavior. Do not install a generated project, launch a CLI or child process, reproduce operating-system or filesystem semantics, or keep an end-to-end scenario whose cost does not prove product logic. There is no fixture project in this repository and no helper that writes one to a temporary directory; a branch that can only be reached by compiling a whole project is a branch whose owner has not been separated into a testable function yet, and the fix is that separation, not a fixture.
+
+**Every test function finishes in under 500 ms, without exception.** The runner prints each scenario's elapsed time; a scenario over the budget is deleted or rewritten against a smaller unit, never kept because of what it proves. Package-local test directories do not exist either: every test in the repository is a scenario under `test/src/features/`.
 
 Never hardcode a test to the current repository shape or implementation text. A test must not read source, `package.json`, workflow YAML, configuration bytes, line counts, export spellings, or a generated file merely to compare them with literals copied from the same implementation. Expected values come from the product contract, a specification, or an independent calculation; when the only way to update a test is to copy the implementation's new output, the test does not qualify.
 
 Assert with `TestValidator.equals(title, actual, expected)` for exact values and `TestValidator.predicate(title, <boolean>)` for floats (build the boolean with the `nclose`/`vclose`/`qclose` helpers, never deep-equality on floats). Code JSDoc is English in the interia voice: a contract paragraph (what it pins and why) followed by a numbered `Scenarios:` list naming each experiment's inputs, expected result, and the branch it guards.
 
-Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @automovie/test build` (the suite itself runs straight through ts-node, no compile step).
+Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @automovie/test build` (the suite itself runs straight through `ttsx`, with no emitted compile step).
 
 **A case that arranges its own subject must fail when the arrangement fails.** A refusal case that rewrites scaffold source by string anchor, an oracle injected into a fixture, a probe spliced into a generated file: when the anchor is gone, `String.replace` returns the input and the case proceeds against unmutated material, so it does not go red, it quietly starts asserting something else. Route every such rewrite through a helper that throws when it changed nothing, rather than trusting that the anchor still exists.
 
@@ -67,31 +69,11 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 **A measurement nothing gates goes back up.** Counting a defect class is what makes it payable, and paying it down once is not the same as keeping it down. Three counts in this repository have drifted while a tool that measured them sat unused: diagnostic codes outgrew the guides that name them, guide coverage emptied and refilled without anyone noticing, and the folded-assertion count returned after a PR drove it down. When you build the measure, wire it to a check in the same change, and fix the total rather than a per-file exemption list, because an exemption list is the thing that never shrinks.
 
-**A new compiler obligation is first a claim about every existing fixture.** A gate the compiler did not have is a gate no fixture was written against, so the first run after adding one reports defects the fixtures were already carrying. Read each as a finding about the fixture before treating it as evidence the gate is too strict; a fixture is the cheapest place a real contradiction shows up.
-
 ## Coverage is 100% on what you write
 
-**Every executable position on a line a change writes ends at 100% on statements, branches, functions, and lines.** That is the obligation, it is per change, and it is not negotiable by difficulty. A whole new file is every line of it.
+**Every executable position on a line a change writes is exercised by a unit test on statements, branches, functions, and lines.** That is the obligation, it is per change, and it is not negotiable by difficulty. A whole new file is every line of it. Inherited gaps in files a change did not touch are their own work rather than a toll on the next unrelated change.
 
-The repository total is a different number and always has been, for a reason worth keeping here rather than in a workflow file: the whole measured set has never met 100%, a permanently red job told nobody anything, and it buried real regressions in the same colour. So the repository carries inherited gaps in files nobody has touched, and closing them is its own work rather than a toll on the next unrelated change.
-
-The demand used to be the whole of any file a change touched, and that headline and this paragraph gave different answers on a real file: `packages/template/scaffold/scripts/capture-browser.ts` took three lines of edit -- one import source and two message strings -- and carries 1,322 statements, so the file rule asked for all 1,322. A toll like that is not strictness. It prices the cheapest correct move, opening a large untested file to fix one line, above leaving the line wrong, and it buys nothing, because the 1,319 statements nobody touched are no better tested after it is paid.
-
-Code a change makes newly reachable is not lost to the narrower rule, and needs no judgment about reachability. It follows from the demand: a changed line routing into code nothing ran before must be covered in every branch it carries, and covering it runs what it routes into. What is given up is a position that ran before the change and stops running after it on a line the change did not touch; catching that needs a second full suite at the merge base, an hour of CI for what a failing test reports first.
-
-What that means in practice:
-
-- A position is yours when the change occupies any line of its span, not only the line the span opens on. Editing the middle of a multi-line statement is editing that statement.
-- Do not treat an inherited gap in a file you never opened as your obligation, and do not report the repository total as if it were your result. The gate prints what it excused, per file, as `INHERITED GAP:` on a passing run; read that line rather than assuming a green run measured everything in the file.
-- Report the per-file numbers for the files you own, with the command and the moment you measured them.
-
-The measured set is authored executable TypeScript in runtime library packages, as declared by `test/src/coverage/coverageInstrumentPopulation`. Five categories sit outside it and each is a decision rather than an oversight: `packages/template/scaffold/` and `packages/playground/` are shipped material a generated project runs, not this repository; `packages/cli/` is command orchestration with no repository-side process test; `packages/evidence/` is the build-time contract compiler whose former repository-shape tests were removed; root `build/` and package-local build directories are packaging tooling; and `test/src/coverage`, `test/src/integrity`, lint/vite configurations, and evidence exclusion lists are test or configuration machinery rather than product runtime. Their correctness is settled by the checks they run and by focused logic tests where a pure decision exists, not by recursively demanding coverage of the gate from the process the gate launches. `isAuthoredExecutableSource` and the instrument arguments are two spellings of one rule, and the population gate refuses them when they disagree. The measure runs with `--all`, so a runtime source no test imports is reported rather than silently absent; test scenarios and fixtures, generated outputs, declarations, and the established `index.ts` and `bin.ts` entry barrels are the closed exclusions. Measure with `pnpm --filter @automovie/test coverage`: this single typed command runs the c8 suite, prints the inherited gap report, and then refuses any base-to-final changed line whose statements, branches, and functions are not 100% or whose exact source snapshot was not instrumented. c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`.
-
-Read the historical output from `test/src/coverage/reportCoverageGaps.ts` knowing what it can and cannot say, because a list that looks exact is how it misleads. Two classes of entry are dropped before you see them, both provable: a function whose name ran under another entry in the same file, and a name the file never contains, which is a helper the transpile emitted. The report says how many it dropped. Positions are a weaker claim than names because a function entry can be anchored at its body rather than its signature. The report also says how many of the listed positions do not contain their own function's name; find those by name and distrust the line. The one thing it refuses outright is a position past the end of the file **as measured**, which exits non-zero, because nothing in the source sits there to be left untested. That check needs the measurement sidecars beside the report; without them the reporter says how many files it could not check, and the touched-file gate refuses to judge a source against coverage of different bytes.
-
-A zero-percent reading is three different facts wearing one number, and the run now separates them before you chase any of them. `NO PROCESS LOADED:` names a measured source no record mentions, which is the only honest reading of nothing running it. `MEASURED SOURCE GONE AT REPORT TIME:` names one a process did load and the report could not read back, because the file was addressed somewhere that no longer exists. `UNION SHORTFALL:` names a file the shape fold wrote without a line one of its readings had. What is left after those three is ordinary untested code. Four separate ways of guessing which kind a gap was gave four different answers on the same files before these lines existed; read the lines instead.
-
-A whole-suite per-file figure is a lower bound, and a scoped run over the same file is the exact one. Measured on this repository: a geometry-scoped run reports `tessellate.ts` at 226/226 statements where the full suite reports 172/226, same source and same denominator, and the full run's entry carries two extra function entries naming two of its own functions at a line that defines neither, with zero hits. The measurement says how often that happened: `coverage shapes: 339 scripts were read by more than one process, 338 of those in more than one shape` on one run. A source loaded by a child process in a different form produces a second set of ranges, and the merge keeps both readings rather than the union. So confirm a gap with a scoped run before chasing it, and never read a full-run percentage as the amount of untested code.
+The repository carries no coverage instrument and no coverage gate; the obligation is met by the tests a change ships and verified by the reviewer reading the diff beside them. When a unit is too large to see that every branch is reached, split it into functions whose inputs a test can construct in memory.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 
@@ -100,7 +82,7 @@ A whole-suite per-file figure is a lower bound, and a scoped run over the same f
 - **Boundaries.** The empty case, the single element, the exact limit, the immobile axis, the degenerate/zero input.
 - **Oracle-derived expectations.** Take expected numbers from the spec or hand math, not from whatever the code currently emits. A snapshot of the code's own output locks its bugs in.
 
-Do not reach 100% by ignoring a branch. A genuinely unreachable defensive branch is removed by refactoring (drop a dead lookup, document a precondition), not hidden behind `c8 ignore`.
+Do not reach 100% by ignoring a branch. A genuinely unreachable defensive branch is removed by refactoring (drop a dead lookup, document a precondition), not excused.
 
 ## Validation
 
@@ -108,7 +90,7 @@ Run the narrowest command that proves the change first, then a broader one when 
 
 - **Bug fix**: name the failing case and expected behavior; add a repro test that fails before and passes after.
 - **Feature**: name the observable behavior; exercise it end-to-end, and for a render/viewer change verify visually (`viewer-verification/SKILL.md`).
-- **Refactor**: name what stays unchanged; rely on the suite or a behavior-locking probe, and re-measure coverage.
+- **Refactor**: name what stays unchanged; rely on the suite or a behavior-locking probe.
 - **Review**: name concrete risks, missing tests, regressions.
 
 ## Change Integrity

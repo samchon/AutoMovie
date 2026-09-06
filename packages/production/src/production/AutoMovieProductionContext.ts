@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionFrameCapture,
   IAutoMovieCompileProjectOutput,
@@ -41,13 +42,24 @@ export class AutoMovieProductionContext {
   private readonly root: string;
   private readonly services = new Map<string, IAutoMovieProductionServices>();
 
-  /** Open one host-fixed production context. */
+  /**
+   * Open one host-fixed production context.
+   *
+   * The compile identity a production publishes includes the reviewed source
+   * owner bindings of its authoring evidence, so a context that judges
+   * generated freshness without the same declaration reads every compiled
+   * production as stale. Hand it the declaration the compile read.
+   */
   public constructor(
     private readonly capture?: AutoMovieProductionFrameCapture,
     projectRoot?: string,
     private readonly defaultProductionId?: string,
     /** Archetype catalogue every production opened here is judged against. */
     private readonly archetypes?: AutoMovieModelArchetypeRegistry,
+    /** Exact graph-derived authoring identity the compile was judged against. */
+    private readonly authoringEvidence?: IAutoMovieProductionEvidence,
+    /** Fresh graph reader used by every atomic currentness confirmation. */
+    private readonly currentAuthoringEvidence?: () => IAutoMovieProductionEvidence,
   ) {
     validateProductionId(defaultProductionId);
     this.root = findAutoMovieProjectRoot(projectRoot);
@@ -82,6 +94,8 @@ export class AutoMovieProductionContext {
       productionId: selected,
       capture: this.capture,
       archetypes: this.archetypes,
+      authoringEvidence: this.authoringEvidence,
+      currentAuthoringEvidence: this.currentAuthoringEvidence,
     });
     this.services.set(opened.project.productionId, opened);
     return opened;

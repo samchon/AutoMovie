@@ -111,6 +111,16 @@ export interface IAutoMovieTreatmentSequence {
  */
 export interface IAutoMovieSceneBeatCoverage {
   /**
+   * Stable {@link IAutoMovieTreatmentBeat.id} carried by this scene.
+   *
+   * Identity, rather than coincidentally equal prose, keeps a beat in the
+   * scene that owns it when two scenes use similar words.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes the exact treatment-beat join that authoritative scene prose must carry.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the stable beat identity compared with the prose authority carrier.
+   */
+  id: string;
+  /**
    * Why this scene is responsible for the cited dramatic beat.
    *
    * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `reason` as the portable data boundary for the story screenplay index prose requirement.
@@ -147,6 +157,39 @@ export interface IAutoMovieSceneDisposition {
    * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `reason` for the narrative intent scene prose index system contract.
    */
   reason: string;
+}
+
+/**
+ * Closed participation modes a screenplay scene may declare.
+ *
+ * A cast entry is not automatically an on-screen performer. The mode keeps
+ * presence, speech, crowds, objects, environmental agency and reference-only
+ * mentions distinct without asking the compiler to infer prose.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Preserves every promised way a subject can participate in one scene.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the closed participant vocabulary used by the prose authority join.
+ * @author Samchon
+ */
+export type AutoMovieScreenplayParticipantMode =
+  | "on-screen"
+  | "off-screen"
+  | "crowd"
+  | "object"
+  | "environmental"
+  | "referenced";
+
+/**
+ * One stable story identity participating in one screenplay scene.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Separates stable participant identity from its scene-local mode.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the exact participant pair compared between index and prose.
+ * @author Samchon
+ */
+export interface IAutoMovieScreenplayParticipant {
+  /** Stable character, faction, object or environmental identity. */
+  id: string;
+  /** How that identity participates in this exact scene. */
+  mode: AutoMovieScreenplayParticipantMode;
 }
 
 /**
@@ -206,6 +249,23 @@ export interface IAutoMovieScreenplayScene {
    * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `location` for the narrative intent scene prose index system contract.
    */
   location: string | null;
+  /**
+   * Exact story-time identity stated by the authoritative prose carrier.
+   *
+   * Use `unknown` when the story deliberately leaves the time unresolved. An
+   * absent carrier is different from that explicit state and is refused.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-place-time Exposes the exact story-time identity shared with authoritative prose.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the story-time half of the scene authority join.
+   */
+  storyTime: string;
+  /**
+   * Exact scene-local participant identities and modes.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Exposes participation without inferring it from a global cast list.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types the participant set compared with the bounded prose carrier.
+   */
+  participants: IAutoMovieScreenplayParticipant[];
   /**
    * Explicit local exemption from shot realization, or null when required.
    *
@@ -389,7 +449,7 @@ export interface IAutoMovieScreenplayIndex {
    * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `version` as the portable data boundary for the story screenplay index prose requirement.
    * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `version` for the narrative intent scene prose index system contract.
    */
-  version: 1;
+  version: 2;
   /**
    * Exact active production id.
    *

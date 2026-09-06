@@ -1,5 +1,6 @@
 import { autoMovieSemanticMaskNodeIndex } from "@automovie/engine";
 import {
+  IAutoMovieSemanticMaskCoverage as AutoMovieSemanticMaskCoverage,
   IAutoMovieScene,
   IAutoMovieSemanticMask,
   IAutoMovieSemanticMaskEntry,
@@ -11,6 +12,8 @@ import {
   applyFormationCycleMaterial,
   formationCycleOf,
 } from "./formationCycle";
+
+export type { IAutoMovieSemanticMaskCoverage } from "@automovie/interface";
 
 /**
  * A reversible semantic-mask override, restored exactly like a render mode.
@@ -126,39 +129,6 @@ export const autoMovieSemanticMaskOf = (
     | undefined) ?? null;
 
 /**
- * How completely one palette and one built scene account for each other.
- *
- * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
- * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
- * @author Samchon
- */
-export interface IAutoMovieSemanticMaskCoverage {
-  /**
-   * Semantic ids that name a drawable this scene does not hold, ascending: what
-   * the production declared and the viewer never built.
-   *
-   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
-   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
-   */
-  unresolved: string[];
-
-  /**
-   * Meshes in the scene that no entry claims: what the viewer built and the
-   * palette cannot name.
-   *
-   * A mask frame paints these the reserved background, so they vanish rather
-   * than mislead, and this count is the only thing that says they vanished.
-   * Zero is a real answer and means the palette named every mesh; above zero,
-   * the two populations that land here today are a formation's anonymous
-   * members and an effect's particles, which the palette does not address yet.
-   *
-   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
-   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
-   */
-  unaddressed: number;
-}
-
-/**
  * Hold one palette against one built scene, in both directions.
  *
  * This is the join the pipeline was missing. The mask is derived from the
@@ -190,7 +160,7 @@ export const auditAutoMovieSemanticMaskScene = (props: {
   design: IAutoMovieScene;
   /** Palette derived from the same production. */
   mask: IAutoMovieSemanticMask;
-}): IAutoMovieSemanticMaskCoverage => {
+}): AutoMovieSemanticMaskCoverage => {
   const roots = maskRoots(props);
   let unaddressed = 0;
   props.scene.traverse((object) => {
@@ -326,14 +296,24 @@ export const applyAutoMovieSemanticMask = (props: {
       return;
     }
     ++painted;
-    mesh.material = materialOf(entry.color, formationCycleOf(mesh));
-    if (entry.kind !== "instance-set") return;
+    const cycle = formationCycleOf(mesh);
+    if (entry.kind !== "instance-set") {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
     const instanced = mesh as THREE.InstancedMesh;
-    if (instanced.isInstancedMesh !== true) return;
+    if (instanced.isInstancedMesh !== true) {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
     const slots = instanced.userData.automovieSlots as number[] | undefined;
-    if (slots === undefined || slots.length === 0) return;
-    // Per-slot identity: the batch material stays white and three multiplies it
-    // by the instance colour, so each slot renders its own exact palette value.
+    if (slots === undefined || slots.length === 0) {
+      mesh.material = materialOf(entry.color, cycle);
+      return;
+    }
+    // Three multiplies the base material by `instanceColor`. White is therefore
+    // the only base that renders each slot's exact assigned palette value.
+    mesh.material = materialOf("#FFFFFF", cycle);
     const previous = instanced.instanceColor;
     colors.push({
       mesh: instanced,

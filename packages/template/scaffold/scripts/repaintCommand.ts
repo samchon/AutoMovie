@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionContext,
   AutoMovieProductionRepaintService,
@@ -87,6 +88,10 @@ export const createNodeProductionRepaintHost = (props: {
   capture: ConstructorParameters<typeof AutoMovieProductionContext>[0];
   closeCapture: IProductionRepaintHost["closeCapture"];
   root: string;
+  /** The authoring declaration the current compile was judged against. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh reader of that declaration for atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
   signal?: AbortSignal;
   setExitCode: IProductionRepaintHost["setExitCode"];
   stdout: IProductionRepaintHost["stdout"];
@@ -97,12 +102,28 @@ export const createNodeProductionRepaintHost = (props: {
       props.capture,
       props.root,
       invocation.productionId,
+      undefined,
+      props.authoringEvidence,
+      props.currentAuthoringEvidence,
     );
     if (invocation.kind === "selection" || invocation.kind === "reversal") {
-      const candidate = context
+      const inspection = context
         .forProduction(invocation.productionId)
-        .project.verifiedRepaintCandidates([invocation.request.shot])
+        .project.inspectVerifiedRepaintCandidates([invocation.request.shot]);
+      const candidate = inspection.records
+        .map((record) => record.value)
         .find((receipt) => receipt.attemptId === invocation.attemptId);
+      if (candidate === undefined && inspection.findings.length !== 0)
+        return repaintSelectionRefusal(
+          invocation,
+          null,
+          `Repaint candidate inspection refused: ${inspection.findings
+            .map(
+              (finding) =>
+                `${finding.target.recordId}:${finding.stage}:${finding.failure}`,
+            )
+            .join(", ")}.`,
+        );
       if (candidate === undefined)
         return repaintSelectionRefusal(
           invocation,

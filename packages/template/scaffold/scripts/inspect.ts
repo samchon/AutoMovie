@@ -1,9 +1,11 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionContext,
   AutoMovieProductionSubjectInspectionService,
   findAutoMovieProjectRoot,
 } from "@automovie/production";
 
+import { productionEvidence } from "../lint.config";
 import { readAutoMovieInspectRequest } from "./inspectRequest";
 import { inspectProductionSubject } from "./inspectSubject";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
@@ -46,10 +48,25 @@ const request = readAutoMovieInspectRequest(process.argv.slice(2));
 // inspection instrument, not through the delivery frame capture, and handing
 // the context a capture would offer a second way to photograph the same
 // subject whose bytes a delivery review must never accept.
+/**
+ * This project's own graph-derived authoring identity, read the way
+ * `compile` reads it. The compile identity includes the reviewed source owner
+ * bindings, so a capture judged without the same declaration would read every
+ * compiled production as stale.
+ */
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: productionEvidence.location,
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
 const context = new AutoMovieProductionContext(
   undefined,
   projectRoot,
   productionId,
+  undefined,
+  authoringEvidence,
+  currentAuthoringEvidence,
 );
 const inspection = new AutoMovieProductionSubjectInspectionService(
   inspectProductionSubject,

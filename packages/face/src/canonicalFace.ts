@@ -530,6 +530,7 @@ const CANONICAL_FACE_POSITIONS_RAW: number[] = [
  * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-visibility-reveal-readability Static face geometry and morph helpers carry no timed performance or staging orchestration and therefore no staging space, subject placement, choreography state, transition, or scene authority implementation or result.
  * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-compatibility-stale-state Static face geometry and morph helpers carry no timed performance or staging orchestration and therefore no staging space, subject placement, choreography state, transition, or scene authority implementation or result.
  * @author Samchon
+ * @evidenceExclude specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module The frozen face package implements bounded proxy geometry; the production language module is a generated-project authoring contract owned by the evidence and template packages.
  */
 export const CANONICAL_FACE_POSITIONS: number[] = CANONICAL_FACE_POSITIONS_RAW;
 

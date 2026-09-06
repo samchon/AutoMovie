@@ -11,7 +11,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
+    "build": "rimraf lib && ttsc",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
   },
@@ -48,13 +48,14 @@
   },
   "dependencies": {
     "@automovie/engine": "workspace:^",
+    "@automovie/evidence": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/template": "workspace:^",
     "typia": "catalog:samchon"
   },
   "devDependencies": {
-    "@automovie/evidence": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@ttsc/evidence": "catalog:typescript",
     "@types/node": "catalog:utils",

@@ -1,5 +1,7 @@
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import { AutoMovieProductionProject } from "@automovie/production";
 
+import { productionEvidence } from "../lint.config";
 import { repaintSelectionReviews } from "../repaintSelectionReviews";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
@@ -14,6 +16,19 @@ import {
 
 /** The production namespace this project declares in its own package manifest. */
 const productionId = currentAutoMovieProductionId();
+
+/**
+ * This project's own graph-derived authoring identity, read the way
+ * `compile` reads it. The compile identity includes the reviewed source owner
+ * bindings, so a capture judged without the same declaration would read every
+ * compiled production as stale.
+ */
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: productionEvidence.location,
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
 
 /**
  * Derive one shot's repainted rendition from its deterministic source.
@@ -55,6 +70,8 @@ await runProductionRepaintCommand(
       capture: captureRuntime,
       productionId,
       root: process.cwd(),
+      authoringEvidence,
+      currentAuthoringEvidence,
     });
     const host = createNodeProductionRepaintHost({
       adapter: repaintProductionShot,
@@ -62,6 +79,8 @@ await runProductionRepaintCommand(
       closeCapture: (failure) =>
         cancellation.closeCapture(failure, captureRuntime.close),
       root: process.cwd(),
+      authoringEvidence,
+      currentAuthoringEvidence,
       signal: cancellation.signal,
       setExitCode: (value) => {
         process.exitCode = value;

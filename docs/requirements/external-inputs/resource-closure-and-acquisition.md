@@ -6,7 +6,7 @@
 
 ### Media별 Dependency Closure {#external-resource-media-dependencies}
 
-glTF buffer와 image, material texture, image profile, video와 audio stream, subtitle와 sidecar, motion skeleton, spatial reference와 tile, text schema와 linked metadata, archive member처럼 선택한 결과가 읽는 dependency를 식별하고 digest로 결속해야 한다. Optional dependency와 required dependency를 구분하고 required member 누락을 빈 값으로 채우지 않아야 한다.
+glTF buffer와 image, material texture, image profile, video와 audio stream, subtitle와 sidecar, motion skeleton, spatial reference와 tile, text schema와 linked metadata, archive member처럼 선택한 결과가 읽는 dependency를 식별하고 digest로 결속해야 한다. Semantic mask PNG의 palette sidecar와 runtime coverage도 해석에 필요한 required dependency이며 preview bundle과 render chunk가 resident bytes까지 다시 열어 검증해야 한다. Optional dependency와 required dependency를 구분하고 required member 누락을 빈 값으로 채우지 않아야 한다.
 
 ### Path, URI와 Redirect 경계 {#external-resource-location-boundary}
 

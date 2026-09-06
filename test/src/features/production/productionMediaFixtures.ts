@@ -1,6 +1,16 @@
-import { trimProductionAudioPresentation } from "@automovie/production";
+import {
+  normalizeProductionH264Mp4,
+  trimProductionAudioPresentation,
+} from "@automovie/production";
 import * as HME from "h264-mp4-encoder";
-import { BoxParser, createFile } from "mp4box";
+import {
+  type Box,
+  type BoxKind,
+  BoxParser,
+  MP4BoxBuffer,
+  type Movie,
+  createFile,
+} from "mp4box";
 import { PNG } from "pngjs";
 
 interface IProductionMediaEncoderFailure {
@@ -53,7 +63,9 @@ export const productionH264Mp4 = async (props: {
       encoder.addFrameRgba(frame);
     }
     encoder.finalize();
-    return Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
+    return normalizeProductionH264Mp4(
+      Uint8Array.from(encoder.FS.readFile(encoder.outputFilename)),
+    );
   } catch (error) {
     failure = { error };
     throw error;
@@ -107,6 +119,14 @@ export const productionAudioMp4 = (): Uint8Array =>
 export const productionOpusMp4 = (
   sampleFrames: number,
   channels: 1 | 2 = 2,
+  options: {
+    /**
+     * Explicit movie clock and track-header duration. When given, the file
+     * carries no presentation edit, so the movie header alone states the
+     * runtime the way a foreign muxer might.
+     */
+    movie?: { timescale: number; duration: number };
+  } = {},
 ): Uint8Array => {
   const primingSamples = 312;
   const codedSampleFrames =
@@ -121,18 +141,22 @@ export const productionOpusMp4 = (
   description.StreamCount = 1;
   description.CoupledCount = channels - 1;
   description.ChannelMapping = [];
+  const movie = options.movie ?? {
+    timescale: 48_000,
+    duration: codedSampleFrames,
+  };
   const file = createFile();
   file.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
-    timescale: 48_000,
-    duration: codedSampleFrames,
+    timescale: movie.timescale,
+    duration: movie.duration,
   });
   const track = file.addTrack({
     type: "Opus",
     hdlr: "soun",
     timescale: 48_000,
     media_duration: codedSampleFrames,
-    duration: codedSampleFrames,
+    duration: movie.duration,
     samplerate: 48_000,
     channel_count: channels,
     samplesize: 16,
@@ -145,15 +169,102 @@ export const productionOpusMp4 = (
       cts: dts,
       is_sync: true,
     });
-  trimProductionAudioPresentation({
-    file,
-    track,
-    mediaTimescale: 48_000,
-    movieTimescale: 48_000,
-    primingSamples,
-    presentationSamples: sampleFrames,
-  });
+  if (options.movie === undefined)
+    trimProductionAudioPresentation({
+      file,
+      track,
+      mediaTimescale: 48_000,
+      movieTimescale: 48_000,
+      primingSamples,
+      presentationSamples: sampleFrames,
+    });
   return new Uint8Array(file.getBuffer().buffer);
+};
+
+/** Parse one MP4 the way the production probe does. */
+export const parseProductionMp4 = (
+  bytes: Uint8Array,
+): { file: ReturnType<typeof createFile>; movie: Movie } => {
+  const file = createFile();
+  let movie: Movie | null = null;
+  file.onReady = (info) => {
+    movie = info;
+  };
+  const copy = Uint8Array.from(bytes).buffer;
+  file.appendBuffer(MP4BoxBuffer.fromArrayBuffer(copy, 0), true);
+  file.flush();
+  return { file, movie: movie ?? file.getInfo() };
+};
+
+/**
+ * One raw child box for a visual sample entry, written from its exact payload
+ * so a test can author the header shapes the encoder never produces.
+ */
+export const rawMp4Box = (type: "colr" | "pasp", payload: Uint8Array): Box => {
+  const box = new BoxParser.box[type]() as Box & { data?: Uint8Array };
+  box.data = payload;
+  return box;
+};
+
+/**
+ * Re-serialize one normalized H.264 MP4 through the resident writer.
+ *
+ * `movie` replaces the movie clock and track-header duration,
+ * `descriptionBoxes` rewrites the sample-entry child boxes, and `mutate`
+ * may reshape the writable file before it is serialized.
+ */
+export const rewriteProductionH264Mp4 = (
+  bytes: Uint8Array,
+  props: {
+    movie?: { timescale: number; duration: number };
+    descriptionBoxes?: (boxes: Box[]) => Box[];
+    mutate?: (file: ReturnType<typeof createFile>, track: number) => void;
+  } = {},
+): Uint8Array => {
+  const { file, movie } = parseProductionMp4(bytes);
+  const track = movie.videoTracks[0]!;
+  const samples = file.getTrackSamplesInfo(track.id);
+  const description = samples[0]!.description as unknown as {
+    type: NonNullable<
+      Parameters<ReturnType<typeof createFile>["addTrack"]>[0]
+    >["type"];
+    boxes: Box[];
+  };
+  const output = createFile();
+  output.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: props.movie?.timescale ?? track.timescale,
+    duration: props.movie?.duration ?? track.duration,
+  });
+  const outputTrack = output.addTrack({
+    type: description.type,
+    hdlr: "vide",
+    name: "AutoMovie rewritten H.264",
+    timescale: track.timescale,
+    media_duration: track.duration,
+    duration: props.movie?.duration ?? track.duration,
+    width: track.video!.width,
+    height: track.video!.height,
+    language: track.language,
+    description_boxes: (props.descriptionBoxes ?? ((boxes) => boxes))(
+      description.boxes,
+    ) as unknown as BoxKind[],
+  });
+  for (const sample of samples)
+    output.addSample(
+      outputTrack,
+      Uint8Array.from(
+        bytes.subarray(sample.offset, sample.offset + sample.size),
+      ),
+      {
+        duration: sample.duration,
+        dts: sample.dts,
+        cts: sample.cts,
+        is_sync: sample.is_sync,
+      },
+    );
+  props.mutate?.(output, outputTrack);
+  return new Uint8Array(output.getBuffer().buffer);
 };
 
 /** One actual MPEG-4 Part 2 video track used to reject non-AVC MP4. */
@@ -193,48 +304,51 @@ export const productionMpeg4Part2Mp4 = (): Uint8Array =>
 
 /** One actual inter-frame H.264 stream whose sync table can be challenged. */
 export const productionInterframeH264Mp4 = (): Uint8Array =>
-  Buffer.from(
-    [
-      "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMpbW9vdgAAAGxtdmhkAAAAAAAA",
-      "AAAAAAAAAAAD6AAAA+gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAA",
-      "AAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlN0cmFrAAAAXHRr",
-      "aGQAAAADAAAAAAAAAAAAAAABAAAAAAAAA+gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA",
-      "AAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAA",
-      "AAEAAAPoAAAAAAABAAAAAAHLbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAQABVxAAA",
-      "AAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABdm1pbmYA",
-      "AAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAA",
-      "AQAAATZzdGJsAAAAtnN0c2QAAAAAAAAAAQAAAKZhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAA",
-      "AAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2Mi4yOC4xMDIgbGlieDI2NAAAAAAAAAAAAAAA",
-      "GP//AAAALGF2Y0MBQsAK/+EAFWdCwAraewEQAAADABAAAAMAQPEiagEABGjOD8gAAAAQcGFz",
-      "cAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAc2AAAAAAAAAAYc3R0cwAAAAAAAAABAAAAAgAAIAAA",
-      "AAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3Rz",
-      "egAAAAAAAAAAAAAAAgAAA1wAAAA/AAAAFHN0Y28AAAAAAAAAAQAAA1kAAABidWR0YQAAAFpt",
-      "ZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0",
-      "b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYyLjEyLjEwMgAAAAhmcmVlAAADo21kYXQAAAJTBgX/",
-      "/0/cRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY1IHIzMjIzIDA0ODBjYjAgLSBILjI2",
-      "NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDI1IC0gaHR0cDovL3d3dy52",
-      "aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MSBkZWJsb2Nr",
-      "PTA6MDowIGFuYWx5c2U9MDowIG1lPWRpYSBzdWJtZT0wIHBzeT0xIHBzeV9yZD0xLjAwOjAu",
-      "MDAgbWl4ZWRfcmVmPTAgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0wIDh4OGRj",
-      "dD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0",
-      "PTAgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0w",
-      "IGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9p",
-      "bnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTMwIGtleWludF9taW49MTYgc2Nl",
-      "bmVjdXQ9MCBpbnRyYV9yZWZyZXNoPTAgcmM9Y3JmIG1idHJlZT0wIGNyZj0yMy4wIHFjb21w",
-      "PTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTAAgAAA",
-      "AQFliIQ6DGAB0AAQZw5QLq2Dy171KxY34ACzZqt/MgJhoC37loKhXHxcGijS3AIgIK9XOVCI",
-      "jbfq7EAEARiiIRw5enjzKW7WgEUFKc+EGuU8HCr/iwBAEY4YRRXNQaYe4X5TxAAAgLgACAOD",
-      "7g4AgCMACsdgC1VQFDhO/poEZSGnjEPsHAEARgQAQBGAOy4D8RAQaJX9tzkAG9cgBAX1/wYA",
-      "AgEAAJYEZ4ALoIVnXzDRpkNUWEIq5lRRwJW5iA+k2QtgHE2044BAIlkvJJAtsAAsHgFAukdZ",
-      "NZUlzr3ADgCh9LT1gUowntz0yMAAQDFDX8BwjJHo/9oNwAiH8zw6Ws4E2gAAADtBmiEvDHAB",
-      "tR5iVAR182J7zX0wa7KIaKCvvjEwpsnugihEAlHAFssVLPkFe6HIQuwBjB5InOhkNtj06g==",
-    ].join(""),
-    "base64",
+  normalizeProductionH264Mp4(
+    Buffer.from(
+      [
+        "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMpbW9vdgAAAGxtdmhkAAAAAAAA",
+        "AAAAAAAAAAAD6AAAA+gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAA",
+        "AAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlN0cmFrAAAAXHRr",
+        "aGQAAAADAAAAAAAAAAAAAAABAAAAAAAAA+gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAA",
+        "AAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAA",
+        "AAEAAAPoAAAAAAABAAAAAAHLbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAQABVxAAA",
+        "AAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABdm1pbmYA",
+        "AAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAA",
+        "AQAAATZzdGJsAAAAtnN0c2QAAAAAAAAAAQAAAKZhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAA",
+        "AAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2Mi4yOC4xMDIgbGlieDI2NAAAAAAAAAAAAAAA",
+        "GP//AAAALGF2Y0MBQsAK/+EAFWdCwAraewEQAAADABAAAAMAQPEiagEABGjOD8gAAAAQcGFz",
+        "cAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAc2AAAAAAAAAAYc3R0cwAAAAAAAAABAAAAAgAAIAAA",
+        "AAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3Rz",
+        "egAAAAAAAAAAAAAAAgAAA1wAAAA/AAAAFHN0Y28AAAAAAAAAAQAAA1kAAABidWR0YQAAAFpt",
+        "ZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0",
+        "b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYyLjEyLjEwMgAAAAhmcmVlAAADo21kYXQAAAJTBgX/",
+        "/0/cRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY1IHIzMjIzIDA0ODBjYjAgLSBILjI2",
+        "NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDI1IC0gaHR0cDovL3d3dy52",
+        "aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MSBkZWJsb2Nr",
+        "PTA6MDowIGFuYWx5c2U9MDowIG1lPWRpYSBzdWJtZT0wIHBzeT0xIHBzeV9yZD0xLjAwOjAu",
+        "MDAgbWl4ZWRfcmVmPTAgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0wIDh4OGRj",
+        "dD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0",
+        "PTAgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0w",
+        "IGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9p",
+        "bnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTMwIGtleWludF9taW49MTYgc2Nl",
+        "bmVjdXQ9MCBpbnRyYV9yZWZyZXNoPTAgcmM9Y3JmIG1idHJlZT0wIGNyZj0yMy4wIHFjb21w",
+        "PTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTAAgAAA",
+        "AQFliIQ6DGAB0AAQZw5QLq2Dy171KxY34ACzZqt/MgJhoC37loKhXHxcGijS3AIgIK9XOVCI",
+        "jbfq7EAEARiiIRw5enjzKW7WgEUFKc+EGuU8HCr/iwBAEY4YRRXNQaYe4X5TxAAAgLgACAOD",
+        "7g4AgCMACsdgC1VQFDhO/poEZSGnjEPsHAEARgQAQBGAOy4D8RAQaJX9tzkAG9cgBAX1/wYA",
+        "AgEAAJYEZ4ALoIVnXzDRpkNUWEIq5lRRwJW5iA+k2QtgHE2044BAIlkvJJAtsAAsHgFAukdZ",
+        "NZUlzr3ADgCh9LT1gUowntz0yMAAQDFDX8BwjJHo/9oNwAiH8zw6Ws4E2gAAADtBmiEvDHAB",
+        "tR5iVAR182J7zX0wa7KIaKCvvjEwpsnugihEAlHAFssVLPkFe6HIQuwBjB5InOhkNtj06g==",
+      ].join(""),
+      "base64",
+    ),
   );
 
 /** Encode one non-uniform actual PNG raster. */
 export const productionPng = (width: number, height: number): Uint8Array => {
   const image = new PNG({ width, height });
+  image.gamma = 0.45455;
   image.data.fill(180);
   image.data[0] = 0;
   return PNG.sync.write(image);
@@ -258,11 +372,21 @@ export const productionWav = (props: {
   formatTag?: number;
   /** Leading tag of an extensible header's sub-format GUID. */
   subFormatTag?: number;
+  /** Extensible valid precision; defaults to the container depth. */
+  validBitsPerSample?: number;
+  /** Extensible extension byte count; defaults to the required 22. */
+  extensionBytes?: number;
+  /** Extensible speaker mask; defaults to FC mono or FL/FR stereo. */
+  channelMask?: number;
+  /** Optional replacement for the final fourteen canonical GUID bytes. */
+  subFormatGuidTail?: Uint8Array;
   /** Declared bit depth; 32 encodes float samples, anything else int16. */
   bitsPerSample?: number;
   /** Declared channel count; defaults to how many channels were supplied. */
   declaredChannels?: number;
   sampleRate?: number;
+  blockAlign?: number;
+  averageBytesPerSecond?: number;
   /** One sample array per channel, all of the same length. */
   channels?: readonly (readonly number[])[];
   /** Exact data-chunk payload, replacing the encoded channels. */
@@ -277,6 +401,13 @@ export const productionWav = (props: {
   metadata?: boolean;
   omitFormatChunk?: boolean;
   omitDataChunk?: boolean;
+  duplicateFormatChunk?: boolean;
+  duplicateDataChunk?: boolean;
+  /** Omit only the final odd chunk's required word-alignment byte. */
+  omitFinalChunkPadding?: boolean;
+  /** Raw bytes included in RIFF extent after the final complete chunk. */
+  terminalBytes?: Uint8Array;
+  declaredRiffSize?: number;
 }): Uint8Array => {
   const formatTag = props.formatTag ?? 1;
   const bitsPerSample = props.bitsPerSample ?? 16;
@@ -288,7 +419,8 @@ export const productionWav = (props: {
     props.formatChunkSize ?? (formatTag === 0xfffe ? 40 : 16);
   const format = new Uint8Array(formatChunkSize);
   const formatView = new DataView(format.buffer);
-  const blockAlign = Math.trunc((declaredChannels * bitsPerSample) / 8);
+  const blockAlign =
+    props.blockAlign ?? Math.trunc((declaredChannels * bitsPerSample) / 8);
   // A deliberately short format chunk still carries every declared field that
   // fits in it, so a "too short" case is short and otherwise well formed.
   const put16 = (at: number, value: number): void => {
@@ -300,14 +432,27 @@ export const productionWav = (props: {
   put16(0, formatTag);
   put16(2, declaredChannels);
   put32(4, sampleRate);
-  put32(8, sampleRate * blockAlign);
+  put32(8, props.averageBytesPerSecond ?? sampleRate * blockAlign);
   put16(12, blockAlign);
   put16(14, bitsPerSample);
   if (formatTag === 0xfffe) {
-    put16(16, 22);
-    put16(18, bitsPerSample);
-    put32(20, 0);
+    put16(16, props.extensionBytes ?? 22);
+    put16(18, props.validBitsPerSample ?? bitsPerSample);
+    put32(
+      20,
+      props.channelMask ?? (declaredChannels === 1 ? 0x0000_0004 : 0x0000_0003),
+    );
     put16(24, props.subFormatTag ?? 1);
+    const tail =
+      props.subFormatGuidTail ??
+      Uint8Array.from([
+        0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xaa, 0, 0x38, 0x9b, 0x71,
+      ]);
+    if (formatChunkSize > 26)
+      format.set(
+        tail.subarray(0, Math.min(tail.length, formatChunkSize - 26)),
+        26,
+      );
   }
   const chunks: Array<{
     id: string;
@@ -318,24 +463,34 @@ export const productionWav = (props: {
     chunks.push({ id: "LIST", payload: Buffer.from("INFOfixture", "utf8") });
   if (props.omitFormatChunk !== true)
     chunks.push({ id: "fmt ", payload: format });
+  if (props.duplicateFormatChunk === true)
+    chunks.push({ id: "fmt ", payload: format });
   if (props.omitDataChunk !== true)
     chunks.push({
       id: "data",
       payload,
       declaredSize: props.declaredDataSize,
     });
+  if (props.duplicateDataChunk === true) chunks.push({ id: "data", payload });
   const padded = (length: number): number => length + (length % 2);
-  const riffSize = chunks.reduce(
-    (total, chunk) => total + 8 + padded(chunk.payload.length),
-    4,
-  );
+  const terminalBytes = props.terminalBytes ?? new Uint8Array();
+  const chunkBytes = (chunk: (typeof chunks)[number], index: number): number =>
+    8 +
+    (props.omitFinalChunkPadding === true && index === chunks.length - 1
+      ? chunk.payload.length
+      : padded(chunk.payload.length));
+  const riffSize =
+    chunks.reduce(
+      (total, chunk, index) => total + chunkBytes(chunk, index),
+      4,
+    ) + terminalBytes.length;
   const bytes = new Uint8Array(8 + riffSize);
   const view = new DataView(bytes.buffer);
   writeWavTag(bytes, 0, "RIFF");
-  view.setUint32(4, riffSize, true);
+  view.setUint32(4, props.declaredRiffSize ?? riffSize, true);
   writeWavTag(bytes, 8, props.form ?? "WAVE");
   let cursor = 12;
-  for (const chunk of chunks) {
+  for (const [index, chunk] of chunks.entries()) {
     writeWavTag(bytes, cursor, chunk.id);
     view.setUint32(
       cursor + 4,
@@ -343,8 +498,9 @@ export const productionWav = (props: {
       true,
     );
     bytes.set(chunk.payload, cursor + 8);
-    cursor += 8 + padded(chunk.payload.length);
+    cursor += chunkBytes(chunk, index);
   }
+  bytes.set(terminalBytes, cursor);
   return bytes;
 };
 

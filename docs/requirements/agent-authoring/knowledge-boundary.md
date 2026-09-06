@@ -14,7 +14,7 @@ AutoMovie는 저자 에이전트가 project source에서 올바른 능력을 사
 
 ### Host-produced evidence {#agent-host-evidence}
 
-Frame capture, 분석, 진단과 검토 입력은 host가 실제 project와 target을 실행하여 생산해야 하며, receipt는 입력 digest와 target identity를 포함해야 한다.
+Frame capture, 분석, 진단과 검토 입력은 host가 실제 project와 target을 실행하여 생산해야 하며, receipt는 입력 digest와 target identity를 포함해야 한다. Shot mask capture는 host가 같은 frame에서 관찰한 semantic palette와 runtime coverage를 분리하지 않고 반환하며, preview와 render receipt는 sidecar path, resident-byte digest, semantic digest, shot과 coverage를 함께 결속해야 한다.
 
 ### 저작 API 중복의 거부 {#agent-authoring-api-refusal}
 

@@ -51,11 +51,11 @@ export const captureProxyPublicationGcTarget = <Value>(props: {
 export const publishProxyBundle = (props: {
   expected: ReadonlyMap<string, Uint8Array>;
   parent: string;
-  processAlive: (pid: number) => boolean;
+  preflight: () => void;
   renderRoot: string;
   target: string;
 }): { reused: boolean } => {
-  void props.processAlive;
+  props.preflight();
   assertDirectChild(props.parent, props.target);
   const expected = expectedFiles(props.expected);
   if (expected.has("publication.json") === false)

@@ -1,3 +1,8 @@
+import {
+  canonicalAutoMovieJsonBytes,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
+
 type AutoMovieContentDigest =
   import("@automovie/interface").AutoMovieContentDigest;
 type IAutoMovieProductionRenderJobPlan =
@@ -5,6 +10,9 @@ type IAutoMovieProductionRenderJobPlan =
 
 /**
  * One renderer-owned disk entry considered by mark-and-sweep.
+ *
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Carries the exact target, generation, bytes, and finding an operator previews.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Supplies the immutable inventory fact behind one cleanup decision.
  */
 export interface IAutoMovieProductionRenderGcCandidate {
   /**
@@ -29,25 +37,197 @@ export interface IAutoMovieProductionRenderGcCandidate {
   /**
    * Recursive resident byte count reported by the host.
    */
-  bytes: number;
+  bytes: number | null;
+  /**
+   * Physical generation captured for this exact target, or null when the host
+   * could not authenticate one without weakening the ownership boundary.
+   */
+  generation: string | null;
+  /**
+   * Content identity of the captured generation, or null when the host could
+   * not capture one. A host that binds one target to private evidence (a
+   * quarantine marker and its preserved bytes) reports one digest over both,
+   * so a change to either side changes the plan basis before apply.
+   */
+  fingerprint: AutoMovieContentDigest | null;
+  /**
+   * A host finding that must override ordinary reference-based retention.
+   */
+  observation: IAutoMovieProductionRenderCleanupObservation | null;
 }
 
 /**
- * Dry-run result; hosts may delete only the exact `remove` entries.
+ * Mutually exclusive artifact states preserved through cleanup decisions.
+ *
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Keeps unresolved render evidence distinguishable from absence and verified stale output.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Names the state carried from inspection through resume and finalization.
+ */
+export type AutoMovieProductionRenderArtifactState =
+  | "absent"
+  | "current"
+  | "verified-stale"
+  | "integrity-failed"
+  | "unsafe-locator"
+  | "foreign-generation"
+  | "unavailable"
+  | "observation-conflict";
+
+/**
+ * Physical authority proved by the host for one captured generation.
+ *
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety Prevents an ambiguous or successor generation from inheriting mutation authority.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-concurrency-safety Limits apply to an exact captured remove or quarantine boundary.
+ */
+export type AutoMovieProductionRenderCleanupAuthority =
+  | "none"
+  | "exact-remove"
+  | "exact-quarantine";
+
+/** Inspection boundary that produced one render-artifact finding. */
+export type AutoMovieProductionRenderArtifactStage =
+  | "absence"
+  | "locator"
+  | "capture"
+  | "receipt"
+  | "inventory"
+  | "media"
+  | "currentness"
+  | "ownership"
+  | "reference";
+
+/**
+ * One sanitized finding produced without collapsing uncertainty to stale.
+ *
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Preserves the reason and safe next action for each unresolved chunk.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Carries inspection failure without copying raw artifact bytes into diagnostics.
+ */
+export interface IAutoMovieProductionRenderCleanupObservation {
+  /** Mutually exclusive result of the observation. */
+  state: AutoMovieProductionRenderArtifactState;
+  /** Exact mutation authority proved by the observation. */
+  authority: AutoMovieProductionRenderCleanupAuthority;
+  /** Boundary that produced the observation. */
+  stage: AutoMovieProductionRenderArtifactStage;
+  /** Sanitized operator-facing explanation. */
+  reason: string;
+}
+
+/**
+ * One reasoned member of an immutable cleanup disposition set.
+ *
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Makes every preview entry explain its exact classification.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Binds a disposition to the captured candidate and sanitized reason.
+ */
+export interface IAutoMovieProductionRenderCleanupDecision {
+  /** Exact inventory candidate being adjudicated. */
+  candidate: IAutoMovieProductionRenderGcCandidate;
+  /** State carried from inspection or reference classification. */
+  state: AutoMovieProductionRenderArtifactState;
+  /** Mutation authority retained by this decision. */
+  authority: AutoMovieProductionRenderCleanupAuthority;
+  /** Boundary responsible for the decision. */
+  stage: AutoMovieProductionRenderArtifactStage;
+  /** Sanitized reason for the selected disposition. */
+  reason: string;
+  /** Immutable decision identity bound to one complete plan basis. */
+  receipt: IAutoMovieProductionRenderCleanupReceipt;
+}
+
+/**
+ * One decision restated as a self-contained record an apply can be held to.
+ *
+ * The receipt repeats the candidate identity and the decision rather than
+ * pointing at them, so a host that quarantines a target can store the receipt
+ * beside the evidence and a later inventory can read why the move happened
+ * without the plan that ordered it.
+ *
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety Names the exact dry-run basis a mutation must still match, so apply cannot act on a plan the inventory has since outgrown.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-quarantine-boundary Carries the original identity, captured generation, reason, and adjudication authority a quarantine must keep with its preserved evidence.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record Restates each decision with target identity, authority, stage and reason so a removed artifact is never mistaken for one that was never produced.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-deletion-outcome-tombstone Carries the exact target generation, disposition, authority and reason of a decision without any payload that could reconstruct the artifact.
+ */
+export interface IAutoMovieProductionRenderCleanupReceipt {
+  /** Receipt schema. */
+  version: 1;
+  /** The plan basis this decision was computed under. */
+  basis: AutoMovieContentDigest;
+  /** The disposition set the decision was placed in. */
+  disposition: "retain" | "remove" | "quarantine" | "manual-adjudication";
+  /** Ownership class of the adjudicated candidate. */
+  kind: IAutoMovieProductionRenderGcCandidate["kind"];
+  /** Canonical logical path of the adjudicated candidate. */
+  path: string;
+  /** Physical generation the decision was made against, or null. */
+  generation: string | null;
+  /** Content identity the decision was made against, or null. */
+  fingerprint: AutoMovieContentDigest | null;
+  /** Artifact state that selected the disposition. */
+  state: AutoMovieProductionRenderArtifactState;
+  /** Mutation authority the host proved for this generation. */
+  authority: AutoMovieProductionRenderCleanupAuthority;
+  /** Boundary that produced the state. */
+  stage: AutoMovieProductionRenderArtifactStage;
+  /** Sanitized reason repeated from the decision. */
+  reason: string;
+}
+
+type IUnreceiptedRenderCleanupDecision = Omit<
+  IAutoMovieProductionRenderCleanupDecision,
+  "receipt"
+>;
+
+/**
+ * Decide whether one typed artifact finding may feed or replace a chunk.
+ *
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Allows reuse only for current evidence and materialization only for proven absence.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Makes every unresolved existing generation a render refusal.
+ */
+export const productionRenderMaterializationDecision = (
+  state: AutoMovieProductionRenderArtifactState,
+): "render" | "reuse" | "refuse" => {
+  if (isRenderCleanupState(state) === false)
+    throw new Error(`Render artifact state "${String(state)}" is invalid.`);
+  if (state === "absent") return "render";
+  if (state === "current") return "reuse";
+  return "refuse";
+};
+
+/**
+ * Dry-run result; hosts may mutate only the exact `remove` and `quarantine`
+ * entries and must preserve every manual-adjudication target.
+ *
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Exposes all four required disposition sets before apply.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Keeps automatic and operator-owned recovery disjoint.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility Reports blocked and manual-adjudication candidates beside removable ones so a reclaim shortfall is visible rather than absorbed by sacrificing current artifacts.
  */
 export interface IAutoMovieProductionRenderGcPlan {
   /**
    * GC plan schema.
    */
-  version: 2;
+  version: 4;
+  /**
+   * Digest over the current plans, every retention input, and every decision
+   * in canonical order. Two inventories that classify the same population the
+   * same way share a basis whatever order they were collected in, and an apply
+   * must present the basis of the dry-run it is executing.
+   */
+  basis: AutoMovieContentDigest;
   /**
    * Entries retained because a current plan or publication marks them.
    */
-  keep: IAutoMovieProductionRenderGcCandidate[];
+  retain: IAutoMovieProductionRenderCleanupDecision[];
   /**
    * Unreferenced entries safe to sweep.
    */
-  remove: IAutoMovieProductionRenderGcCandidate[];
+  remove: IAutoMovieProductionRenderCleanupDecision[];
+  /**
+   * Exact captured corrupt generations safe to move out of every consumer.
+   */
+  quarantine: IAutoMovieProductionRenderCleanupDecision[];
+  /**
+   * Unresolved generations retained for an operator because no move is proved.
+   */
+  manualAdjudication: IAutoMovieProductionRenderCleanupDecision[];
   /**
    * Exact sum of removable resident bytes.
    */
@@ -60,6 +240,13 @@ export interface IAutoMovieProductionRenderGcPlan {
  * Locks, attempts, and arbitrary paths never enter this planner. The CLI keeps
  * those operational records outside the candidate inventory so GC cannot race
  * an active worker.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Returns explicit retain, remove, quarantine, and manual-adjudication sets with one exact reason per target.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Keeps integrity, ownership, availability, and observation conflicts distinct from verified stale output.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Allows automatic mutation only when the host proved authority over the captured generation.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Preserves unresolved render output instead of converting a read failure into absence.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention Retains every artifact a current plan or publication references before any candidate is considered for removal.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-reference-aware-retention Computes the retained closure from current plans and publications before any candidate may be removed, and never reads an unreadable reference as permission.
+ * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-partial-artifact-retention Decides retain, remove, quarantine or manual adjudication per partial artifact with its authority and reason, preserving past evidence.
  */
 export const planProductionRenderGc = (props: {
   /** Current plans from every retained tier. */
@@ -99,17 +286,17 @@ export const planProductionRenderGc = (props: {
   }
   const paths = new Set<string>();
   const chunkPublicationCandidates = new Set<string>();
-  const keep: IAutoMovieProductionRenderGcCandidate[] = [];
-  const remove: IAutoMovieProductionRenderGcCandidate[] = [];
+  const retain: IUnreceiptedRenderCleanupDecision[] = [];
+  const remove: IUnreceiptedRenderCleanupDecision[] = [];
+  const quarantine: IUnreceiptedRenderCleanupDecision[] = [];
+  const manualAdjudication: IUnreceiptedRenderCleanupDecision[] = [];
   for (const candidate of [...props.candidates].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   )) {
     const path = canonicalRelativePath(candidate.path);
     const chunkPath = /^(proxy|final)\/chunks\/([0-9a-f]{64})$/u.exec(path);
     const pointerPath = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
-    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(
-      path,
-    );
+    const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(path);
     const ownedDigest =
       candidate.kind === "chunk"
         ? chunkPath?.[2]
@@ -126,8 +313,20 @@ export const planProductionRenderGc = (props: {
           : null;
     if (
       paths.has(path) ||
-      Number.isSafeInteger(candidate.bytes) === false ||
-      candidate.bytes < 0 ||
+      (candidate.bytes !== null &&
+        (Number.isSafeInteger(candidate.bytes) === false ||
+          candidate.bytes < 0)) ||
+      (candidate.generation !== null &&
+        (candidate.generation.trim().length === 0 ||
+          /[\r\n\0]/u.test(candidate.generation))) ||
+      (candidate.fingerprint !== null &&
+        /^sha256:[0-9a-f]{64}$/u.test(candidate.fingerprint) === false) ||
+      (candidate.observation !== null &&
+        (isRenderCleanupState(candidate.observation.state) === false ||
+          isRenderCleanupAuthority(candidate.observation.authority) === false ||
+          isRenderCleanupStage(candidate.observation.stage) === false ||
+          candidate.observation.reason.trim().length === 0 ||
+          /[\r\n\0]/u.test(candidate.observation.reason))) ||
       ((candidate.kind === "chunk" ||
         candidate.kind === "chunk-pointer" ||
         candidate.kind === "chunk-tree") &&
@@ -136,7 +335,9 @@ export const planProductionRenderGc = (props: {
           ownedDigest === undefined ||
           candidate.digest !== `sha256:${ownedDigest}`)) ||
       (candidate.kind === "quarantine" &&
-        /^(?:proxy|final)\/quarantine\/[^/]+$/u.test(path) === false) ||
+        /^(?:(?:proxy|final)\/quarantine|quarantine\/(?:project|production|render-job|publication))\/[^/]+$/u.test(
+          path,
+        ) === false) ||
       (candidate.kind === "publication" &&
         path.startsWith("publication/") === false) ||
       ((candidate.kind === "dialogue-cache" ||
@@ -158,7 +359,7 @@ export const planProductionRenderGc = (props: {
     if (candidate.kind === "chunk-pointer" || candidate.kind === "chunk-tree")
       chunkPublicationCandidates.add(path);
     const normalized = { ...candidate, path };
-    if (
+    const marked =
       (candidate.kind === "chunk" &&
         chunkPath !== null &&
         activeChunks.has(`${chunkPath[1]}\0${chunkPath[2]}`)) ||
@@ -168,10 +369,56 @@ export const planProductionRenderGc = (props: {
       ((candidate.kind === "dialogue-cache" ||
         candidate.kind === "model-cache") &&
         retainedCachePaths.has(path)) ||
-      (candidate.kind === "publication" && activePublication.has(path))
+      (candidate.kind === "publication" && activePublication.has(path));
+    const observation =
+      normalized.observation ??
+      (marked
+        ? {
+            state: "current" as const,
+            authority: "none" as const,
+            stage: "reference" as const,
+            reason:
+              "the current plan or aggregate publication marks this exact target",
+          }
+        : {
+            state: "verified-stale" as const,
+            authority: "exact-remove" as const,
+            stage: "reference" as const,
+            reason:
+              "no current plan, authenticated chunk pair, cache generation, or publication references this exact target",
+          });
+    const decision: IUnreceiptedRenderCleanupDecision = {
+      candidate: normalized,
+      state: observation.state,
+      authority: observation.authority,
+      stage: observation.stage,
+      reason: observation.reason,
+    };
+    const exactGeneration =
+      normalized.bytes !== null &&
+      normalized.generation !== null &&
+      normalized.fingerprint !== null;
+    if (
+      observation.state === "current" &&
+      observation.authority === "none" &&
+      marked
     )
-      keep.push(normalized);
-    else remove.push(normalized);
+      retain.push(decision);
+    else if (observation.state === "absent" && observation.authority === "none")
+      retain.push(decision);
+    else if (
+      observation.state === "verified-stale" &&
+      observation.authority === "exact-remove" &&
+      exactGeneration
+    )
+      remove.push(decision);
+    else if (
+      observation.state === "integrity-failed" &&
+      observation.authority === "exact-quarantine" &&
+      exactGeneration
+    )
+      quarantine.push(decision);
+    else manualAdjudication.push(decision);
   }
   for (const path of retainedChunkPaths)
     if (chunkPublicationCandidates.has(path) === false)
@@ -195,7 +442,7 @@ export const planProductionRenderGc = (props: {
   const retainedPairs = new Map<string, { pointers: number; trees: number }>();
   for (const path of retainedChunkPaths) {
     const pointer = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
-    const tree = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(path);
+    const tree = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^/]+$/u.exec(path);
     // Retained paths already proved an exact pointer/tree candidate above.
     const match = (pointer ?? tree)!;
     const key = `${match[1]}\0${match[2]}`;
@@ -214,20 +461,108 @@ export const planProductionRenderGc = (props: {
         `Render GC retained chunk publication "${key.replace("\0", "/")}" is not one exact current pointer/tree pair.`,
       );
   const reclaimableBytes = remove.reduce(
-    (total, candidate) => total + candidate.bytes,
+    (total, decision) => total + decision.candidate.bytes!,
     0,
   );
   if (Number.isSafeInteger(reclaimableBytes) === false)
     throw new Error(
       "Render GC reclaimable byte total exceeds safe integer range.",
     );
+  const dispositionEntries = [
+    ...retain.map((decision) => ({ disposition: "retain" as const, decision })),
+    ...remove.map((decision) => ({ disposition: "remove" as const, decision })),
+    ...quarantine.map((decision) => ({
+      disposition: "quarantine" as const,
+      decision,
+    })),
+    ...manualAdjudication.map((decision) => ({
+      disposition: "manual-adjudication" as const,
+      decision,
+    })),
+  ].sort((left, right) =>
+    // Candidate paths were proved unique above, so the path alone orders the
+    // partition.
+    compareCodeUnits(
+      left.decision.candidate.path,
+      right.decision.candidate.path,
+    ),
+  );
+  const planKeys = props.plans
+    .map((plan) => Buffer.from(canonicalAutoMovieJsonBytes(plan)).toString())
+    .sort(compareCodeUnits);
+  const basis = digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      version: 1,
+      plans: planKeys,
+      publicationPaths: [...activePublication].sort(compareCodeUnits),
+      retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),
+      retainedCachePaths: [...retainedCachePaths].sort(compareCodeUnits),
+      decisions: dispositionEntries,
+    }),
+  );
+  const bind = (
+    disposition: IAutoMovieProductionRenderCleanupReceipt["disposition"],
+    decisions: readonly IUnreceiptedRenderCleanupDecision[],
+  ): IAutoMovieProductionRenderCleanupDecision[] =>
+    decisions.map((decision) => ({
+      ...decision,
+      receipt: {
+        version: 1,
+        basis,
+        disposition,
+        kind: decision.candidate.kind,
+        path: decision.candidate.path,
+        generation: decision.candidate.generation,
+        fingerprint: decision.candidate.fingerprint,
+        state: decision.state,
+        authority: decision.authority,
+        stage: decision.stage,
+        reason: decision.reason,
+      },
+    }));
   return {
-    version: 2,
-    keep,
-    remove,
+    version: 4,
+    basis,
+    retain: bind("retain", retain),
+    remove: bind("remove", remove),
+    quarantine: bind("quarantine", quarantine),
+    manualAdjudication: bind("manual-adjudication", manualAdjudication),
     reclaimableBytes,
   };
 };
+
+const isRenderCleanupState = (
+  value: unknown,
+): value is AutoMovieProductionRenderArtifactState =>
+  value === "absent" ||
+  value === "current" ||
+  value === "verified-stale" ||
+  value === "integrity-failed" ||
+  value === "unsafe-locator" ||
+  value === "foreign-generation" ||
+  value === "unavailable" ||
+  value === "observation-conflict";
+
+const isRenderCleanupAuthority = (
+  value: unknown,
+): value is AutoMovieProductionRenderCleanupAuthority =>
+  value === "none" || value === "exact-remove" || value === "exact-quarantine";
+
+const isRenderCleanupStage = (
+  value: unknown,
+): value is AutoMovieProductionRenderArtifactStage =>
+  value === "absence" ||
+  value === "locator" ||
+  value === "capture" ||
+  value === "receipt" ||
+  value === "inventory" ||
+  value === "media" ||
+  value === "currentness" ||
+  value === "ownership" ||
+  value === "reference";
+
+const compareCodeUnits = (left: string, right: string): number =>
+  Number(left > right) - Number(left < right);
 
 function canonicalRelativePath(value: string): string {
   if (

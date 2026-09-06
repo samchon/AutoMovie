@@ -5,8 +5,11 @@ import {
 } from "automovie";
 
 import { productionEvidence } from "../lint.config";
+import { assertAutoMovieNoArguments } from "./commandArguments";
 import { runAutoMovieBuildingDerivation } from "./deriveBuilding";
 import { currentAutoMovieProductionId } from "./projectIdentity";
+
+assertAutoMovieNoArguments("building:report", process.argv.slice(2));
 
 /**
  * Derive this project's buildings, with the world this host actually has.
@@ -19,12 +22,23 @@ import { currentAutoMovieProductionId } from "./projectIdentity";
  * other half.
  */
 const productionId = currentAutoMovieProductionId();
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: process.cwd(),
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
 
 runAutoMovieBuildingDerivation({
   evidence: productionEvidence,
   productionId,
   read: readAutoMovieProductionEvidence,
   state: requireCurrentAutoMovieProjectState(
-    loadAutoMovieProjectState({ root: process.cwd(), productionId }),
+    loadAutoMovieProjectState({
+      root: process.cwd(),
+      productionId,
+      authoringEvidence,
+      currentAuthoringEvidence,
+    }),
   ),
 });

@@ -61,6 +61,8 @@ Run the scaffold's configured doctor or verify path. Check current compile ident
 
 If a renderer produces bytes but the receipt gate rejects them, the bytes are not deliverable. Preserve the diagnostic, correct runtime or configuration, and regenerate.
 
+An existing unresolved chunk or proxy is not a missing render. Read the typed artifact finding from `npm run render -- status` or the four disposition sets from `npm run render -- gc` first. Apply removes only `verified-stale` exact generations and quarantines only an exact integrity-failed generation; unsafe locators, foreign generations, unavailable reads, changed observations, and invalid manifest references remain under `manualAdjudication`. Preserve that target and its evidence until an operator proves the next action, because rerunning render will refuse to erase or overwrite it.
+
 ## Repaint failures
 
 First confirm that deterministic source and full beauty/control grid are correct. Then check reference authorization and digest, adapter identity, fixed parameters, output media facts, and input-race diagnostics. A reroll changes identity and requires review; repeated rerolls are not debugging unless one controlled variable and a falsifiable hypothesis are recorded.

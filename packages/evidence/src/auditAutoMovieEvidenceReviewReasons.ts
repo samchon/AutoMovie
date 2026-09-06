@@ -1,10 +1,10 @@
+import {
+  type IAutoMovieEvidenceSyntaxDocument,
+  parseAutoMovieEvidenceSyntax,
+} from "./parseAutoMovieEvidenceSyntax";
+
 /** One authored document inspected for mechanically invalid review reasons. */
-interface IAutoMovieEvidenceReviewDocument {
-  /** Repository-relative path used to identify the review host. */
-  path: string;
-  /** Complete current UTF-8 source. */
-  source: string;
-}
+type IAutoMovieEvidenceReviewDocument = IAutoMovieEvidenceSyntaxDocument;
 
 /** A review-reason defect that can be decided without judging prose quality. */
 interface IAutoMovieEvidenceReviewReasonDiagnostic {
@@ -33,6 +33,7 @@ interface IAnnotation {
 }
 
 interface IPendingAcknowledgement extends IAnnotation {
+  endLine: number;
   line: number;
 }
 
@@ -43,65 +44,8 @@ interface IReviewOccurrence {
 
 const REVIEW = /^@evidence(Exclude)?Review\s+(\S+)\s+#[^\s]+\s+(.+?)\s*$/u;
 const ACKNOWLEDGEMENT = /^@evidence(Exclude)?\s+(\S+)\s+(.+?)\s*$/u;
-const MARKDOWN_HEADING = /^(#{1,6})\s+(.+?)\s*$/u;
-const EXPLICIT_ANCHOR = /\s+\{#([^}]+)\}\s*$/u;
-const TYPESCRIPT_DOCUMENTATION_START = /^\s*\/\*\*/u;
-const MARKDOWN_FENCE = /^\s*(```|~~~)/u;
-
-const annotationText = (line: string): string =>
-  line
-    .trim()
-    .replace(/^<!--\s*/u, "")
-    .replace(/\s*-->$/u, "")
-    .replace(/^\*\s?/u, "")
-    .trim();
-
-/**
- * Rejoin an annotation with the lines its formatter wrapped it onto.
- *
- * A JSDoc reason long enough to wrap is stored as several ` * ` lines, and a
- * reader taking only the first of them sees a fragment. That is not a cosmetic
- * loss: `@evidence obligations/design/motion-sources.md#design-owned-transition
- * Implements` is what four separate motion sources look like once truncated,
- * and comparing those fragments finds four hosts saying one thing when in fact
- * they say `only the cited advance endpoints and ease-in-out path`, `only the
- * cited endpoints, spatial relation, and ease-out path`, `only the cited
- * constant endpoints and linear phase`, and `the exact endpoint owned by the
- * cited motion design`.
- *
- * It cuts the other way too. Every comparison in this audit was reading
- * truncated reasons, so two genuinely copied wrapped reasons agreed on their
- * first fragment and were caught for the wrong evidence, while two that
- * diverged only after the wrap were never compared at all.
- *
- * A continuation is any following line inside the same block that carries text
- * and does not begin a new annotation. Both block terminators stop it: the
- * closing marker of a documentation comment, and the `-->` of a Markdown
- * comment, each reduce to nothing once the leading marker is stripped.
- */
-const joinWrappedAnnotations = (lines: readonly string[]): string[] => {
-  const joined = [...lines];
-  for (let index = 0; index < joined.length; index++) {
-    if (annotationOf(joined[index]!) === null) continue;
-    let cursor = index + 1;
-    while (cursor < joined.length) {
-      const candidate = joined[cursor]!;
-      if (/^\s*\*\//u.test(candidate)) break;
-      const text = annotationText(candidate);
-      if (text.length === 0 || text === "/") break;
-      if (annotationOf(candidate) !== null) break;
-      if (/^\s*(?:#{1,6}\s|```|~~~)/u.test(candidate.trim())) break;
-      joined[index] = `${joined[index]!.replace(/\s+$/u, "")} ${text}`;
-      joined[cursor] = "";
-      cursor++;
-    }
-    index = cursor - 1;
-  }
-  return joined;
-};
-
 const annotationOf = (line: string): IAnnotation | null => {
-  const text = annotationText(line);
+  const text = line.trim();
   const review = REVIEW.exec(text);
   if (review !== null)
     return {
@@ -151,13 +95,6 @@ const reviewKey = (annotation: IAnnotation): string =>
       annotation.reason.replaceAll(annotation.target, "<target>"),
     ),
   );
-
-const markdownHost = (path: string, heading: string): string => {
-  const anchor = EXPLICIT_ANCHOR.exec(heading)?.[1];
-  return anchor === undefined
-    ? `${path}::${heading.replace(EXPLICIT_ANCHOR, "").trim()}`
-    : `${path}#${anchor}`;
-};
 
 /**
  * The identity a shared reason is keyed by: what is being said, about what.
@@ -214,32 +151,13 @@ const auditAutoMovieEvidenceReviewReasons = (
     { host: string; line: number; path: string }
   >();
   for (const document of documents) {
-    const markdown = /\.md$/iu.test(document.path);
-    let fenced = false;
-    let host = `${document.path}::file`;
     let pending: IPendingAcknowledgement | null = null;
     const observations = new Map<string, IReviewOccurrence>();
-    const lines = joinWrappedAnnotations(document.source.split(/\r?\n/u));
-    for (let index = 0; index < lines.length; index++) {
-      const line = lines[index]!;
-      if (markdown && MARKDOWN_FENCE.test(line)) {
-        fenced = !fenced;
+    for (const carrier of parseAutoMovieEvidenceSyntax(document)) {
+      if (pending !== null && carrier.line !== pending.endLine + 1)
         pending = null;
-        continue;
-      }
-      if (fenced) continue;
-      if (markdown) {
-        const heading = MARKDOWN_HEADING.exec(line);
-        if (heading !== null) {
-          host = markdownHost(document.path, heading[2]!);
-          pending = null;
-          continue;
-        }
-      } else if (TYPESCRIPT_DOCUMENTATION_START.test(line)) {
-        host = `${document.path}::docblock@${index + 1}`;
-        pending = null;
-      }
-      const annotation = annotationOf(line);
+      const host = carrier.host;
+      const annotation = annotationOf(carrier.text);
       if (annotation === null) {
         pending = null;
         continue;
@@ -248,7 +166,7 @@ const auditAutoMovieEvidenceReviewReasons = (
       if (sharing === undefined)
         shared.set(sharedKey(annotation), {
           host,
-          line: index + 1,
+          line: carrier.line,
           path: document.path,
         });
       else if (sharing.host !== host)
@@ -256,16 +174,20 @@ const auditAutoMovieEvidenceReviewReasons = (
           code: "evidence-reason-shared",
           path: document.path,
           host,
-          line: index + 1,
+          line: carrier.line,
           target: annotation.target,
           message: `Reason is word for word the one ${sharing.path}:${sharing.line} gives for the same target on host ${JSON.stringify(sharing.host)}; a sentence true of both hosts states nothing about either, so say what this host does.`,
         });
       if (annotation.review === false) {
-        pending = { ...annotation, line: index + 1 };
+        pending = {
+          ...annotation,
+          endLine: carrier.endLine,
+          line: carrier.line,
+        };
         continue;
       }
 
-      const lineNumber = index + 1;
+      const lineNumber = carrier.line;
       if (
         pending !== null &&
         pending.target === annotation.target &&

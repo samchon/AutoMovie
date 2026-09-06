@@ -51,5 +51,5 @@ A model is not its most flattering view. Verify front, three-quarter and side, a
 ## Pipeline discipline
 
 - Verification (measure, render, review) precedes any claim of quality.
-- Keep every source file a change touches at 100% coverage; the development skill states the obligation and its per-change scope.
+- Cover every executable position the change writes at 100%; the development skill owns the exact per-change scope.
 - Keep scratch in gitignored directories and promote only stabilized logic into packages. The render harness drives the deployed viewer headless, multi-angle, with form-revealing lighting.

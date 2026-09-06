@@ -86,7 +86,7 @@ Dispatch one owner per issue in the current wave. Give each owner its issue, the
 Every owner:
 
 1. Implements its issue across every layer the issue's **Scope** section names, tracing the full consequence surface rather than the reported witness. A layer that lands in an integration file is handed over, not edited.
-2. Leaves every source file it created or modified at 100% coverage, by testing rather than by hiding code. The obligation is per change; the repository total carries inherited gaps in files nobody touched, and an owner neither inherits those nor reports the total as its own result.
+2. Leaves every executable position it wrote at 100% statements, branches, functions, and lines, by testing rather than by hiding code. The obligation is per change; the repository total carries inherited gaps in files nobody touched, and an owner neither inherits those nor reports the total as its own result.
 3. Runs a complete solo Self-Review over its own surface under the [review skill's law](../review/SKILL.md#non-negotiable-review-law), repeating full rounds until one finds nothing.
 4. Runs `pnpm run format`, commits its own paths, and pushes.
 5. Reports what is closed, what is not, its commit SHAs, the integration wiring it needs, its coverage numbers, and every verification it could not run.

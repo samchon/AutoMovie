@@ -451,8 +451,8 @@ const report = (props: {
     inventory,
     budget: budget(props.metric, props.limit),
     mask: {
-      version: 1,
-      protocol: "automovie.semantic-mask.v1",
+      version: 2,
+      protocol: "automovie.semantic-mask.v2",
       background: "#000000",
       entries: [],
       unaddressed: [],

@@ -35,3 +35,19 @@ Every model H2 identifies its review-critical silhouette, surface partition, and
 Review question: which fixed views and visible boundaries would falsify the model before it is used in motion or a shot?
 
 Sources: [glTF 2.0 geometry and material structures](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#geometry); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
+
+## Observable style basis {#model-observable-style-basis}
+
+A style, era, genre, or reference label names the observable silhouette, proportion, construction, surface partition, and abstraction decisions it constrains. A label inferred from a filename, mood word, or familiar asset category cannot substitute for those decisions, and this model does not claim camera, lighting, or finish choices owned downstream.
+
+Review question: which observable model decision would falsify the declared style or reference label, and which tempting inference belongs to another owner?
+
+Sources: [OpenUSD model and asset terminology](https://openusd.org/release/glossary.html); [CityEngine shape grammar tutorial](https://doc.arcgis.com/en/cityengine/latest/tutorials/tutorial-6-basic-shape-grammar.htm)
+
+## Scale and layer completion {#model-scale-layer-completion}
+
+A model H2 is semantically complete only when its reference scale, occupied layers, hierarchy, stable interfaces, visible boundaries, proxy limits, and review observations jointly determine the promised blocking representation. A parseable mesh recipe or valid hierarchy is not complete when an implementer must invent a missing layer, scale relation, or visible owner.
+
+Review question: which formally valid representation still lacks the scale, layer, boundary, or observation needed to satisfy its declared use?
+
+Sources: [glTF 2.0 nodes, meshes, skins, and units](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html); [OpenUSD composition and model terminology](https://openusd.org/release/glossary.html)

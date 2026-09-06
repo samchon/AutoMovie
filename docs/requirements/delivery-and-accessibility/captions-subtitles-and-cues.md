@@ -10,7 +10,7 @@ Same-language dialogue caption, dialogue translation subtitle, non-speech sound 
 
 ### Text와 Language Integrity {#delivery-cue-text-language}
 
-Unicode text, language, writing direction, line break, emphasis-like semantic과 source relation을 보존해야 한다. Invalid encoding, missing glyph 또는 mixed-language cue를 replacement character나 unspecified language로 조용히 publish해서는 안 된다.
+Unicode text, language, writing direction, authored line break, emphasis-like semantic과 source relation을 보존해야 한다. CRLF와 CR은 LF presentation으로 canonicalize하고 legal tab은 보존하며, delivery format이 금지하는 control character는 명시적으로 sanitize하거나 거절해야 한다. Invalid encoding, missing glyph 또는 mixed-language cue를 replacement character나 unspecified language로 조용히 publish해서는 안 된다.
 
 ### Reading과 Overlap {#delivery-caption-reading-overlap}
 
@@ -18,7 +18,7 @@ Cue duration, text length, reading pace-like profile, overlap, shot cut, speaker
 
 ### 가독성 Profile과 Measure-only 상태 {#delivery-caption-readability-profile}
 
-Caption 가독성 profile은 versioned grapheme segmentation, 초당 grapheme 상한, cue당 line 수와 line당 길이 상한, 최소 cue duration과 cue 사이 최소 gap 및 경계값의 포함 여부를 target language별로 선언해야 한다. 적용할 profile이 없으면 실제 grapheme 수, reading rate, line, duration과 gap을 측정해 보고하되 pass 또는 fail verdict를 만들지 않아야 한다.
+Caption 가독성 profile은 algorithm과 revision, grapheme granularity 및 실제 실행에 참여한 requested·resolved locale 또는 명시적인 locale-neutral 상태를 포함한 complete versioned grapheme segmentation identity, 초당 grapheme 상한, cue당 line 수와 line당 길이 상한, 최소 cue duration과 cue 사이 최소 gap 및 경계값의 포함 여부를 target language별로 선언해야 한다. 측정은 실제 실행 identity를 항상 보고하고, profile의 complete identity와 정확히 일치할 때만 verdict를 계산해야 한다. 적용할 profile이 없거나 identity가 지원되지 않으면 실제 grapheme 수, reading rate, line, duration과 gap을 측정해 보고하되 pass 또는 fail verdict를 만들지 않아야 한다.
 
 ### Styling과 Safe Region {#delivery-caption-style-region}
 

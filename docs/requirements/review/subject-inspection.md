@@ -40,9 +40,13 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 ### 주체 검토의 Evidence와 Freshness {#review-subject-evidence}
 
-주체 검토 evidence는 관찰한 주체 identity와 compiled revision, compile fingerprint, 전체 required viewpoint plan, 각 관찰의 실제 pose, artifact identity와 digest를 함께 가져야 한다. Plan은 각 viewpoint identity의 direction, distance, projection, pose와 state를 선언하고 실제 관찰 집합과 분리되어야 한다. 필수 시점을 관찰하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
+주체 검토 evidence는 production과 관찰한 주체 target·identity, compiled revision, compile fingerprint, 전체 required viewpoint plan identity, 각 관찰의 실제 pose, artifact identity와 digest, 실제 browser·graphics runtime identity와 terminal passed verdict를 함께 가져야 한다.
+Plan은 각 viewpoint identity의 direction, distance, projection, pose와 state를 선언하고 실제 관찰 집합과 분리되어야 한다.
+필수 시점을 관찰하지 못했거나 capture runtime을 식별하거나 관찰 전후에 current임을 확인하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, runtime-unidentified, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.
 
-주체 또는 구성요소가 바뀌어 새 compiled revision이나 compile fingerprint가 발행되거나, required viewpoint plan의 identity 또는 관찰 조건이 바뀌면 이전 관찰은 current가 아니다. 현재 plan을 먼저 게시하고 그 plan의 모든 시점을 새 observation sweep으로 생산해야 한다. Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
+주체 또는 구성요소가 바뀌어 새 compiled revision이나 compile fingerprint가 발행되거나, required viewpoint plan의 identity, exact pose, 관찰 artifact bytes 또는 capture runtime identity가 바뀌면 이전 관찰은 current가 아니다.
+현재 plan을 먼저 게시하고 그 plan의 모든 시점을 같은 current runtime에서 새 observation sweep으로 생산해야 한다.
+Shot을 다시 render했다는 사실은 주체 검토를 current로 만들지 않고, 주체 검토를 다시 수행했다는 사실은 그 주체가 등장하는 frame 판정을 current로 만들지 않는다.
 
 ### 주체 Coverage {#review-subject-coverage}
 
@@ -51,6 +55,8 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 원형 단위 coverage와 배치 단위 coverage는 서로 다른 주장이며 각각의 관찰 범위와 미관찰 범위를 따로 보존해야 한다. 표본만 관찰했다면 선택 규칙과 근거를 표시하고 전체 개체군 승인과 구분해야 한다.
 
 ### Library 전달 개체군 {#review-library-delivery-coverage}
+
+Library owner의 완료 결과는 현재 공개 carrier가 존재하는 branch에 한정한다. Map owner는 하나 이상의 context, model owner는 하나 이상의 model, space owner는 하나 이상의 built environment를 반환하고 다른 branch의 carrier는 비워야 한다. Material, instance, motion, system source는 독립 carrier가 생기기 전에는 다른 owner 결과 안에 중첩해 완료로 승격하지 않는다.
 
 Library 검토는 shot에 등장한 항목이 아니라 evidence graph가 선택한 active reviewed design/source branch의 exact design owner와 H2를 전달 개체군으로 사용해야 한다. 선택된 branch의 owner 개체군이 비었거나 owner의 유한 관찰 계획, current source·compiled identity, 실제 artifact 또는 structured facts, tool/runtime identity와 terminal verdict 가운데 하나라도 없으면 review와 final은 실패해야 한다. Map은 current world extent·coordinate·terrain·water·network·site interface를 반증할 수 있는 plan·section·elevation·traversal 관찰을, model은 current compiled asset의 고정 whole-model turntable과 적용 가능한 rig range를 사용해야 한다. Space·material·instance·motion·system은 각각 plan·section·elevation·perspective·traversal, surface·channel·scale, membership·placement·clearance, endpoint·phase·contact·transition, finite-state·stress·budget·terminal-state 가운데 선언한 유한 집합을 사용해야 한다. Film과 brief에서 실제 consumer가 사용하지 않은 inventory, disabled branch와 delivery scope 밖 residue는 이 개체군에 들어오지 않아야 한다.
 

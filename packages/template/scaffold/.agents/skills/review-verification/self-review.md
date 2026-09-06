@@ -18,6 +18,8 @@ The author who performed the process is its one reviewer. Declare one complete a
 4. Repair the complete finding set together at its earliest owners. Propagate every consequence, renew affected evidence reviews, and run the process's narrowest required verification.
 5. After any edit, restart a complete round from the current state with no preset round limit. Continue or hand off only after one complete round finds nothing and makes no edit.
 
+When the boundary includes evidence authorship, repair, or review, complete [Independent semantic review](semantic-review.md) over every affected relationship and both completing-population axes. Compiler diagnostics and a clean graph remain inputs to this Self-Review, never its semantic verdict.
+
 For an authorship repair, do not patch only the unit where its symptom appeared. Reread enough of the owning layer, its dependencies, descendants, governed source, tests, derived design, and review artifacts to restore the complete affected relationship.
 
 ## Narrative repair

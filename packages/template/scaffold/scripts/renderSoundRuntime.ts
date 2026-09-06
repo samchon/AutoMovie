@@ -1,8 +1,8 @@
 import {
-  productionPhonemesToVisemes,
   productionSoundSpectrogram,
   productionSoundWaveform,
   renderProductionSound,
+  resolveProductionFrameRate,
 } from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
@@ -15,10 +15,11 @@ import {
   type AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionRenderJobPlan,
-  assertAutoMovieExternalGeneratorTermsAt,
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  normalizeProductionH264Mp4,
+  parseAutoMovieStructuredJson,
   readAutoMovieFilmTimeline,
   trimProductionAudioPresentation,
 } from "@automovie/production";
@@ -32,6 +33,21 @@ import {
   captureExistingDialogueCache,
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
+import {
+  type IProductionDialogueCacheFinding,
+  type IProductionDialogueCacheIdentity,
+  generateProductionDialogueCache,
+  inspectProductionDialogueCache,
+  productionDialogueCacheIdentity,
+  projectProductionDialogueReceipt,
+  validateProductionDialogueCache,
+} from "./dialogueCacheTextIdentity";
+import {
+  type IKokoroGenerationWorker,
+  type IKokoroGenerationWorkerPackage,
+  createKokoroGenerationWorker,
+} from "./kokoroGenerationWorker";
+import { encodeOpusGeneration } from "./opusGenerationWorker";
 import {
   type IAutoMovieDialogueSynthesisSelection,
   AUTOMOVIE_DIALOGUE_MODEL_REVISION as KOKORO_MODEL_REVISION,
@@ -57,14 +73,13 @@ import {
   ensureRenderPhysicalDirectory,
 } from "./renderGcSnapshot";
 import type { IProductionRenderHost } from "./renderHost";
+import { loadResidentRuntimePackage } from "./runtimePackageGeneration";
 import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
   assertRuntimePackageSnapshotCurrent,
-  bindRuntimePackageSnapshotGeneration,
   snapshotRuntimePackage,
 } from "./runtimePackageSnapshot";
-import { withKokoroRuntimeOverrides } from "./withKokoroRuntimeOverrides";
 
 export interface IProductionRenderEncoderRuntime {
   assertCurrent: (plan: IAutoMovieProductionRenderJobPlan) => void;
@@ -95,46 +110,8 @@ export interface IPreparedProductionSoundRuntime {
   };
 }
 
-export interface IProductionDialogueCacheIdentity {
-  key: AutoMovieContentDigest;
-  path: string;
-}
-
 class ProductionRuntimeClosureError extends AggregateError {}
-
-interface IResidentRuntimePackage<Module> {
-  module: Module;
-  snapshot: IRuntimePackageSnapshot;
-}
-
-const residentRequire = createRequire(import.meta.url);
-const residentRuntimePackages = new Map<
-  string,
-  IResidentRuntimePackage<unknown>
->();
-
-/** Snapshot and bind a package generation before Node is allowed to load it. */
-const residentRuntimePackage = <Module>(
-  packageName: string,
-): IResidentRuntimePackage<Module> => {
-  const existing = residentRuntimePackages.get(packageName);
-  if (existing !== undefined) {
-    assertRuntimePackageSnapshotCurrent(existing.snapshot);
-    return existing as IResidentRuntimePackage<Module>;
-  }
-  const snapshot = snapshotRuntimePackage({
-    entry: residentRequire.resolve(packageName),
-    moduleClosure: true,
-    packageName,
-  });
-  bindRuntimePackageSnapshotGeneration(snapshot);
-  const loaded = {
-    module: residentRequire(packageName) as Module,
-    snapshot,
-  };
-  residentRuntimePackages.set(packageName, loaded);
-  return loaded;
-};
+class ProductionDialogueCacheObservationError extends Error {}
 
 /** Revalidate one runtime closure without replacing an operation failure. */
 export const runWithProductionRuntimeClosure = async <Output>(
@@ -142,53 +119,25 @@ export const runWithProductionRuntimeClosure = async <Output>(
   operation: () => Output | Promise<Output>,
 ): Promise<Output> => {
   assertCurrent();
-  let failure: unknown;
+  let failure: { error: unknown } | undefined;
   let output: Output | undefined;
   try {
     output = await operation();
   } catch (error) {
-    failure = error;
+    failure = { error };
   }
   try {
     assertCurrent();
   } catch (closureFailure) {
     if (failure === undefined) throw closureFailure;
     throw new ProductionRuntimeClosureError(
-      [failure, closureFailure],
+      [failure.error, closureFailure],
       "Production runtime closure changed after the operation failed.",
-      { cause: failure },
+      { cause: failure.error },
     );
   }
-  if (failure !== undefined) throw failure;
+  if (failure !== undefined) throw failure.error;
   return output!;
-};
-
-/** Current private dialogue-cache generation; older identities never hit. */
-export const PRODUCTION_DIALOGUE_CACHE_VERSION = 5 as const;
-
-/** Exact normalized identity of one line and its executable runtime assets. */
-export const productionDialogueCacheIdentity = (props: {
-  cacheRoot: string;
-  selection: IAutoMovieDialogueSynthesisSelection;
-  text: string;
-  language: string;
-  speaker: string | null;
-  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
-}): IProductionDialogueCacheIdentity => {
-  const key = digestAutoMovieBytes(
-    Buffer.from(
-      JSON.stringify({
-        version: PRODUCTION_DIALOGUE_CACHE_VERSION,
-        ...props.selection,
-        text: props.text.normalize("NFKC"),
-        language: props.language.normalize("NFKC"),
-        speaker: props.speaker?.normalize("NFKC") ?? null,
-        runtimeAssets: props.runtimeAssets,
-      }),
-      "utf8",
-    ),
-  );
-  return { key, path: path.join(props.cacheRoot, key.slice(7)) };
 };
 
 /** Bind render-owned content and one explicit dialogue runtime into one source. */
@@ -342,6 +291,7 @@ export const createProductionSoundRuntime = (props: {
     bytes: Uint8Array,
   ): {
     durationSeconds: number;
+    sourceFrames: number;
     sampleRate: number;
     channels: number;
   } | null => {
@@ -352,7 +302,10 @@ export const createProductionSoundRuntime = (props: {
     if (lead !== 0x7b) return null;
     let metadata: unknown;
     try {
-      metadata = JSON.parse(Buffer.from(bytes).toString("utf8"));
+      metadata = parseAutoMovieStructuredJson({
+        record: "placeholder-audio-stem",
+        bytes,
+      });
     } catch {
       return null;
     }
@@ -365,6 +318,9 @@ export const createProductionSoundRuntime = (props: {
     if (value?.kind !== "placeholder-audio-stem") return null;
     if (
       Number.isFinite(value.durationSeconds) === false ||
+      Number.isSafeInteger(value.durationSeconds! * value.sampleRate!) ===
+        false ||
+      value.durationSeconds! * value.sampleRate! <= 0 ||
       Number.isSafeInteger(value.sampleRate) === false ||
       Number.isSafeInteger(value.channels) === false ||
       value.sampleRate !== 48_000 ||
@@ -375,6 +331,7 @@ export const createProductionSoundRuntime = (props: {
       );
     return {
       durationSeconds: value.durationSeconds!,
+      sourceFrames: value.durationSeconds! * value.sampleRate!,
       sampleRate: value.sampleRate,
       channels: value.channels,
     };
@@ -399,7 +356,15 @@ export const createProductionSoundRuntime = (props: {
         const digest = digestAutoMovieBytes(bytes);
         const stem = placeholderAudioStem(asset, bytes);
         if (stem !== null)
-          return { identity: { path: asset, digest, ...stem }, samples: null };
+          return {
+            identity: {
+              kind: "placeholder-audio-stem" as const,
+              path: asset,
+              digest,
+              ...stem,
+            },
+            samples: null,
+          };
         const decoded = decodeProductionAudioAsset({
           path: asset,
           bytes,
@@ -410,8 +375,12 @@ export const createProductionSoundRuntime = (props: {
             path: asset,
             digest,
             durationSeconds: decoded.durationSeconds,
+            sourceFrames: decoded.sourceFrames,
             sampleRate: decoded.sourceSampleRate,
             channels: decoded.sourceChannels,
+            kind: "wave",
+            sourceFormat: decoded.sourceFormat,
+            processing: decoded.processing,
           },
           samples: decoded.samples,
         };
@@ -454,7 +423,6 @@ export const createProductionSoundRuntime = (props: {
       packageExports: options.packageExports,
       packageName,
     });
-    bindRuntimePackageSnapshotGeneration(snapshot);
     packageSnapshots.set(key, snapshot);
     return snapshot;
   };
@@ -476,9 +444,10 @@ export const createProductionSoundRuntime = (props: {
       packageExports: true,
     });
 
-  const onnxRuntimeNodeIdentity = (): ReturnType<
-    typeof packageSnapshotIdentity
-  > & {
+  const onnxRuntimeNodePackage = (
+    importer: IRuntimePackageSnapshot,
+  ): {
+    snapshot: IRuntimePackageSnapshot;
     nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
   } => {
     const relative = [
@@ -489,9 +458,11 @@ export const createProductionSoundRuntime = (props: {
     ].join("/");
     let snapshot: IRuntimePackageSnapshot;
     try {
-      snapshot = resolvedPackageSnapshot("onnxruntime-node", [
-        { kind: "tree", relative },
-      ]);
+      snapshot = resolvedPackageSnapshot(
+        "onnxruntime-node",
+        [{ kind: "tree", relative }],
+        { entry: createRequire(importer.entry).resolve("onnxruntime-node") },
+      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT")
         throw new Error(
@@ -504,11 +475,23 @@ export const createProductionSoundRuntime = (props: {
         `ONNX Runtime Node native backend is empty for ${props.host.platform}/${props.host.arch}.`,
       );
     return {
-      ...packageSnapshotIdentity(snapshot),
+      snapshot,
       nativeAssets: snapshot.assets.map((asset) => ({
         path: `package:onnxruntime-node/${asset.path}`,
         digest: asset.digest,
       })),
+    };
+  };
+
+  const onnxRuntimeNodeIdentity = (
+    importer: IRuntimePackageSnapshot,
+  ): ReturnType<typeof packageSnapshotIdentity> & {
+    nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+  } => {
+    const runtime = onnxRuntimeNodePackage(importer);
+    return {
+      ...packageSnapshotIdentity(runtime.snapshot),
+      nativeAssets: runtime.nativeAssets,
     };
   };
 
@@ -524,10 +507,14 @@ export const createProductionSoundRuntime = (props: {
       frameSize: 960,
     },
     mux: packageSnapshotIdentity(
-      residentRuntimePackage<typeof import("mp4box")>("mp4box").snapshot,
+      loadResidentRuntimePackage<typeof import("mp4box")>({
+        packageName: "mp4box",
+      }).snapshot,
     ),
     evidencePng: packageSnapshotIdentity(
-      residentRuntimePackage<typeof import("pngjs")>("pngjs").snapshot,
+      loadResidentRuntimePackage<typeof import("pngjs")>({
+        packageName: "pngjs",
+      }).snapshot,
     ),
     tts: (() => {
       if (props.dialogueSelection === null) return null;
@@ -536,7 +523,7 @@ export const createProductionSoundRuntime = (props: {
       return {
         ...packageSnapshotIdentity(kokoro),
         adapter: packageSnapshotIdentity(adapter),
-        backend: onnxRuntimeNodeIdentity(),
+        backend: onnxRuntimeNodeIdentity(adapter),
         dependencies: [
           packageSnapshotIdentity(
             resolvedDependencySnapshot(kokoro, "phonemizer"),
@@ -545,7 +532,9 @@ export const createProductionSoundRuntime = (props: {
             resolvedDependencySnapshot(adapter, "onnxruntime-common"),
           ),
         ],
-        imageCapability: resolvedPackageIdentity("sharp"),
+        imageCapability: packageSnapshotIdentity(
+          resolvedDependencySnapshot(adapter, "sharp"),
+        ),
         ...props.dialogueSelection,
       };
     })(),
@@ -597,8 +586,10 @@ export const createProductionSoundRuntime = (props: {
       "@huggingface/transformers",
     );
     const transformers = packageSnapshotIdentity(transformersSnapshot);
-    const backend = onnxRuntimeNodeIdentity();
-    const imageCapability = resolvedPackageIdentity("sharp");
+    const backend = onnxRuntimeNodeIdentity(transformersSnapshot);
+    const imageCapability = packageSnapshotIdentity(
+      resolvedDependencySnapshot(transformersSnapshot, "sharp"),
+    );
     const phonemizer = packageSnapshotIdentity(
       resolvedDependencySnapshot(kokoro, "phonemizer"),
     );
@@ -635,124 +626,70 @@ export const createProductionSoundRuntime = (props: {
     ];
   };
 
-  interface IKokoroCacheRecord {
-    version: typeof PRODUCTION_DIALOGUE_CACHE_VERSION;
-    cacheKey: AutoMovieContentDigest;
-    model: IAutoMovieDialogueSynthesisSelection["model"];
-    modelRevision: IAutoMovieDialogueSynthesisSelection["modelRevision"];
-    voice: string;
-    generatorProvenance: IAutoMovieDialogueSynthesisSelection["generatorProvenance"];
-    generatedAt: string;
-    sourceSampleRate: number;
-    sourceSamples: number;
-    pcmDigest: AutoMovieContentDigest;
-    phonemes: string;
-    phonemeChunks: IAutoMovieProductionTtsReceipt["phonemeChunks"];
-    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
-  }
-
-  interface IKokoroRuntime {
-    stream(
-      text: IKokoroTextSplitter,
-      options: { voice: string; speed: number },
-    ): AsyncIterable<{
-      text: string;
-      phonemes: string;
-      audio: { audio: Float32Array; sampling_rate: number };
-    }>;
-  }
-
-  interface IKokoroTextSplitter extends AsyncIterable<string> {
-    push(...texts: string[]): void;
-    close(): void;
-  }
-
-  interface IKokoroLoadedRuntime {
-    runtime: IKokoroRuntime;
-    createTextSplitter(): IKokoroTextSplitter;
-    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
-  }
-
-  const validPhonemeChunks = (
-    chunks: unknown,
-    sourceSamples: number,
-  ): chunks is IKokoroCacheRecord["phonemeChunks"] =>
-    Array.isArray(chunks) &&
-    chunks.length > 0 &&
-    chunks.every(
-      (chunk, index) =>
-        typeof chunk === "object" &&
-        chunk !== null &&
-        typeof chunk.phonemes === "string" &&
-        Number.isSafeInteger(chunk.startSample) &&
-        Number.isSafeInteger(chunk.endSample) &&
-        chunk.startSample ===
-          (index === 0 ? 0 : chunks[index - 1]!.endSample) &&
-        chunk.endSample > chunk.startSample,
-    ) &&
-    chunks.at(-1)!.endSample === sourceSamples;
-
-  const validatedDialogueCache = (
-    snapshot: IDialogueCacheSnapshot,
-    cacheKey: AutoMovieContentDigest,
-    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
-    selection: IAutoMovieDialogueSynthesisSelection,
-  ): { record: IKokoroCacheRecord; samples: Float32Array } | undefined => {
-    const record = JSON.parse(
-      Buffer.from(snapshot.receipt).toString("utf8"),
-    ) as IKokoroCacheRecord;
-    const generatedAt = new Date(record.generatedAt);
-    if (
-      record.version !== PRODUCTION_DIALOGUE_CACHE_VERSION ||
-      record.cacheKey !== cacheKey ||
-      record.model !== selection.model ||
-      record.modelRevision !== selection.modelRevision ||
-      record.voice !== selection.voice ||
-      isDeepStrictEqual(
-        record.generatorProvenance,
-        selection.generatorProvenance,
-      ) === false ||
-      isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
-      typeof record.generatedAt !== "string" ||
-      Number.isNaN(generatedAt.getTime()) ||
-      generatedAt.toISOString() !== record.generatedAt ||
-      Number.isSafeInteger(record.sourceSampleRate) === false ||
-      record.sourceSampleRate <= 0 ||
-      Number.isSafeInteger(record.sourceSamples) === false ||
-      record.sourceSamples <= 0 ||
-      typeof record.phonemes !== "string" ||
-      validPhonemeChunks(record.phonemeChunks, record.sourceSamples) ===
-        false ||
-      record.sourceSamples * Float32Array.BYTES_PER_ELEMENT !==
-        snapshot.pcm.length ||
-      record.pcmDigest !== digestAutoMovieBytes(snapshot.pcm)
-    )
-      return undefined;
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: record.generatorProvenance.termsCheckedAt,
-      occurredAt: generatedAt,
-      label: "Kokoro dialogue receipt generatorProvenance",
+  const kokoroGenerationWorkerPackages = (
+    voiceId: string,
+  ): IKokoroGenerationWorkerPackage[] => {
+    const voiceRelative = `voices/${voiceId}.bin`;
+    const kokoroAssets = [{ kind: "file", relative: voiceRelative } as const];
+    const kokoro = resolvedPackageSnapshot("kokoro-js", kokoroAssets);
+    const transformers = resolvedPackageSnapshot("@huggingface/transformers");
+    const onnx = onnxRuntimeNodePackage(transformers);
+    const phonemizer = resolvedDependencySnapshot(kokoro, "phonemizer");
+    const onnxCommon = resolvedDependencySnapshot(
+      transformers,
+      "onnxruntime-common",
+    );
+    const sharp = resolvedDependencySnapshot(transformers, "sharp");
+    const declaration = (
+      snapshot: IRuntimePackageSnapshot,
+      options: Pick<
+        IKokoroGenerationWorkerPackage,
+        "assets" | "packageExports"
+      > = {},
+    ): IKokoroGenerationWorkerPackage => ({
+      ...options,
+      contentFingerprint: snapshot.contentFingerprint,
+      entry: snapshot.entry,
+      fingerprint: snapshot.fingerprint,
+      moduleClosure: true,
+      packageName: snapshot.package,
     });
-    return {
-      record,
-      samples: new Float32Array(Uint8Array.from(snapshot.pcm).buffer),
-    };
+    const nativeRelative = [
+      "bin",
+      "napi-v3",
+      props.host.platform,
+      props.host.arch,
+    ].join("/");
+    return [
+      declaration(kokoro, { assets: kokoroAssets }),
+      declaration(transformers),
+      declaration(onnx.snapshot, {
+        assets: [{ kind: "tree", relative: nativeRelative }],
+      }),
+      declaration(phonemizer, { packageExports: true }),
+      declaration(onnxCommon, { packageExports: true }),
+      declaration(sharp, { packageExports: true }),
+    ];
   };
 
-  const dialogueReceipt = (
-    line: IAutoMovieProductionSoundPlan["dialogue"][number],
-    cached: NonNullable<ReturnType<typeof validatedDialogueCache>>,
-  ): IAutoMovieProductionTtsReceipt => ({
-    ...cached.record,
-    version: 6,
-    line: line.id,
-    visemes: productionPhonemesToVisemes({
-      chunks: cached.record.phonemeChunks,
-      sourceSamples: cached.record.sourceSamples,
-      startFrame: line.startFrame,
-      endFrame: line.endFrame,
-    }),
-  });
+  interface IKokoroLoadedRuntime {
+    runtime: IKokoroGenerationWorker;
+    runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+  }
+
+  const dialogueCacheObservationFailure = (
+    line: string,
+    finding: Exclude<
+      IProductionDialogueCacheFinding,
+      { status: "absent" | "current" }
+    >,
+  ): Error =>
+    new ProductionDialogueCacheObservationError(
+      `Dialogue cache observation failed at stage "cache-read" for line "${line}", target "${finding.identity.path}", generation ${finding.identity.key}: ${
+        finding.status === "integrity-failed" ? finding.reason : finding.status
+      }. Preserve the generation and recover or quarantine it manually.`,
+      "error" in finding ? { cause: finding.error } : undefined,
+    );
 
   const loadPinnedKokoroRuntime = async (
     modelCacheRoot: string,
@@ -770,86 +707,45 @@ export const createProductionSoundRuntime = (props: {
       model: selection.model,
       revision: selection.modelRevision,
     });
-    const [{ KokoroTTS, TextSplitterStream }, { env }] = await Promise.all([
-      import("kokoro-js"),
-      import("@huggingface/transformers"),
-    ]);
-    const previous = { cacheDir: env.cacheDir, fetch: globalThis.fetch };
-    const fetcher = globalThis.fetch.bind(globalThis);
-    const pinnedFetch: typeof globalThis.fetch = async (input, init) => {
-      const source =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url;
-      const marker = `huggingface.co/${selection.model}/resolve/`;
-      const markerIndex = source.indexOf(marker);
-      if (markerIndex < 0) return fetcher(input, init);
-      const suffix = source.slice(markerIndex + marker.length);
-      const separator = suffix.indexOf("/");
-      if (separator < 0)
-        throw new Error(`Kokoro model URL has no asset path: ${source}`);
-      const pinned =
-        source.slice(0, markerIndex + marker.length) +
-        selection.modelRevision +
-        suffix.slice(separator);
-      const request =
-        typeof input === "object" &&
-        input !== null &&
-        "url" in input &&
-        input instanceof Request
-          ? new Request(pinned, input)
-          : pinned;
-      return fetcher(request, init);
-    };
-    return withKokoroRuntimeOverrides(
-      [
-        {
-          resource: "Transformers cache directory",
-          install: () => {
-            env.cacheDir = modelCacheRoot;
-          },
-          restore: () => {
-            env.cacheDir = previous.cacheDir;
-          },
-        },
-        {
-          resource: "global fetch",
-          install: () => {
-            globalThis.fetch = pinnedFetch;
-          },
-          restore: () => {
-            globalThis.fetch = previous.fetch;
-          },
-        },
-      ],
-      async () => {
-        const loaded = await KokoroTTS.from_pretrained(selection.model, {
-          dtype: selection.dtype,
-          device: selection.device,
-        });
-        assertCurrentRuntimePackages();
-        const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
-        const modelAssets = kokoroModelCacheAssets(modelSnapshot);
-        if (modelAssets.length === 0)
-          throw new Error(
-            "Pinned Kokoro load produced no revision-scoped model cache assets.",
-          );
-        props.progress("sound.model.load.complete", {
-          model: selection.model,
-          revision: selection.modelRevision,
-        });
-        const output = {
-          runtime: loaded as unknown as IKokoroRuntime,
-          createTextSplitter: () => new TextSplitterStream(),
-          runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
-        };
-        assertCurrentRuntimePackages();
-        if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
-        return output;
+    const runtime = await createKokoroGenerationWorker({
+      cacheRoot: modelCacheRoot,
+      packages: kokoroGenerationWorkerPackages(selection.voice),
+      selection: {
+        device: selection.device,
+        dtype: selection.dtype,
+        model: selection.model,
+        modelRevision: selection.modelRevision,
       },
-    );
+    });
+    try {
+      assertCurrentRuntimePackages();
+      const modelSnapshot = captureKokoroModelCache(modelCacheRoot);
+      const modelAssets = kokoroModelCacheAssets(modelSnapshot);
+      if (modelAssets.length === 0)
+        throw new Error(
+          "Pinned Kokoro load produced no revision-scoped model cache assets.",
+        );
+      props.progress("sound.model.load.complete", {
+        model: selection.model,
+        revision: selection.modelRevision,
+      });
+      assertCurrentRuntimePackages();
+      if (modelSnapshot !== null) assertCapturedRenderTarget(modelSnapshot);
+      return {
+        runtime,
+        runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+      };
+    } catch (error) {
+      try {
+        await runtime.close();
+      } catch (closeError) {
+        throw new ProductionRuntimeClosureError(
+          [error, closeError],
+          "Kokoro generation worker cleanup failed after model loading failed.",
+        );
+      }
+      throw error;
+    }
   };
 
   const synthesizeProductionDialogue = async (
@@ -884,151 +780,104 @@ export const createProductionSoundRuntime = (props: {
         baseRuntimeAssets,
         selection,
       ));
-    let runtimeAssets = [
-      ...baseRuntimeAssets,
-      ...kokoroModelCacheAssets(captureKokoroModelCache(modelCacheRoot)),
-    ];
-    if (
-      plan.dialogue.length > 0 &&
-      runtimeAssets.length === baseRuntimeAssets.length
-    )
-      runtimeAssets = (await currentRuntime()).runtimeAssets;
-    for (const line of plan.dialogue) {
-      props.progress("sound.dialogue.start", { line: line.id });
-      const cacheIdentity = (
-        assets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
-      ) =>
-        productionDialogueCacheIdentity({
-          cacheRoot,
-          selection,
-          text: line.text,
-          language: line.language,
-          speaker: line.speaker ?? null,
-          runtimeAssets: assets,
-        });
-      const resolved = await resolveProductionDialogueCache({
-        assets: runtimeAssets,
-        identify: cacheIdentity,
-        load: currentRuntime,
-        read: (identity, assets) => {
-          try {
-            const captured = captureExistingDialogueCache(
-              cacheRoot,
-              identity.path,
-            );
-            return captured === null
-              ? undefined
-              : validatedDialogueCache(
-                  captured,
-                  identity.key,
-                  assets,
-                  selection,
-                );
-          } catch {
-            return undefined;
-          }
-        },
-        runtimeAssets: (loaded) => loaded.runtimeAssets,
-      });
-      runtimeAssets = resolved.assets;
-      const identity = resolved.identity;
-      let cached = resolved.cached;
-      let loadedRuntime = resolved.runtime;
-      if (cached === undefined) {
-        loadedRuntime ??= await currentRuntime();
-        const dialogueText = loadedRuntime.createTextSplitter();
-        dialogueText.push(line.text);
-        dialogueText.close();
-        const generatedAt = new Date(props.host.now()).toISOString();
-        assertAutoMovieExternalGeneratorTermsAt({
-          termsCheckedAt: selection.generatorProvenance.termsCheckedAt,
-          occurredAt: generatedAt,
-          label: "Kokoro dialogue generation generatorProvenance",
-        });
-        const chunks: Float32Array[] = [];
-        const phonemes: string[] = [];
-        const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
-        let sourceSampleRate: number | undefined;
-        let sourceOffset = 0;
-        const stream = loadedRuntime.runtime.stream(dialogueText, {
-          voice: selection.voice,
-          speed: selection.speed,
-        });
-        for await (const chunk of stream) {
-          if (
-            Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
-            chunk.audio.sampling_rate <= 0
-          )
-            throw new Error(
-              `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
-            );
-          if (
-            sourceSampleRate !== undefined &&
-            sourceSampleRate !== chunk.audio.sampling_rate
-          )
-            throw new Error(
-              `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
-            );
-          sourceSampleRate = chunk.audio.sampling_rate;
-          const audio = Float32Array.from(chunk.audio.audio);
-          if (audio.length === 0)
-            throw new Error(
-              `Kokoro line "${line.id}" returned an empty PCM chunk.`,
-            );
-          chunks.push(audio);
-          phonemes.push(chunk.phonemes);
-          phonemeChunks.push({
-            phonemes: chunk.phonemes,
-            startSample: sourceOffset,
-            endSample: sourceOffset + audio.length,
+    let failure: { error: unknown } | undefined;
+    try {
+      let runtimeAssets = [
+        ...baseRuntimeAssets,
+        ...kokoroModelCacheAssets(captureKokoroModelCache(modelCacheRoot)),
+      ];
+      if (
+        plan.dialogue.length > 0 &&
+        runtimeAssets.length === baseRuntimeAssets.length
+      )
+        runtimeAssets = (await currentRuntime()).runtimeAssets;
+      for (const line of plan.dialogue) {
+        props.progress("sound.dialogue.start", { line: line.id });
+        const cacheIdentity = (
+          assets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+        ) =>
+          productionDialogueCacheIdentity({
+            cacheRoot,
+            selection,
+            text: line.text,
+            language: line.language,
+            speaker: line.speaker ?? null,
+            runtimeAssets: assets,
           });
-          sourceOffset += audio.length;
-        }
-        if (sourceSampleRate === undefined || chunks.length === 0)
-          throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
-        const samples = concatenateProductionFloat32(chunks);
-        const bytes = new Uint8Array(
-          samples.buffer,
-          samples.byteOffset,
-          samples.byteLength,
-        );
-        const record: IKokoroCacheRecord = {
-          version: PRODUCTION_DIALOGUE_CACHE_VERSION,
-          cacheKey: identity.key,
-          model: selection.model,
-          modelRevision: selection.modelRevision,
-          voice: selection.voice,
-          generatorProvenance: selection.generatorProvenance,
-          generatedAt,
-          sourceSampleRate,
-          sourceSamples: samples.length,
-          pcmDigest: digestAutoMovieBytes(bytes),
-          phonemes: phonemes.join(""),
-          phonemeChunks,
-          runtimeAssets,
-        };
-        const published = publishDialogueCache({
-          base: cacheRoot,
-          pcm: bytes,
-          receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
-          target: identity.path,
+        const resolved = await resolveProductionDialogueCache({
+          assets: runtimeAssets,
+          identify: cacheIdentity,
+          load: currentRuntime,
+          read: (identity, assets) => {
+            const finding = inspectProductionDialogueCache({
+              identity,
+              runtimeAssets: assets,
+              selection,
+              read: () =>
+                captureExistingDialogueCache(cacheRoot, identity.path),
+            });
+            if (finding.status === "current") return finding.cached;
+            if (finding.status === "absent") return undefined;
+            throw dialogueCacheObservationFailure(line.id, finding);
+          },
+          runtimeAssets: (loaded) => loaded.runtimeAssets,
         });
-        cached = validatedDialogueCache(
-          published,
-          identity.key,
-          runtimeAssets,
-          selection,
-        );
-        if (cached === undefined)
-          throw new Error(
-            `Published Kokoro cache generation for line "${line.id}" is invalid.`,
-          );
+        runtimeAssets = resolved.assets;
+        const identity = resolved.identity;
+        let cached = resolved.cached;
+        let loadedRuntime = resolved.runtime;
+        if (cached === undefined) {
+          loadedRuntime ??= await currentRuntime();
+          const generation = await generateProductionDialogueCache({
+            line: line.id,
+            identity,
+            selection,
+            runtimeAssets,
+            generatedAt: new Date(props.host.now()).toISOString(),
+            synthesize: loadedRuntime.runtime.synthesize,
+          });
+          const published = publishDialogueCache({
+            base: cacheRoot,
+            pcm: generation.pcm,
+            receipt: generation.receipt,
+            target: identity.path,
+          });
+          const validation = validateProductionDialogueCache({
+            snapshot: published,
+            identity,
+            runtimeAssets,
+            selection,
+          });
+          if (validation.status !== "current")
+            throw new Error(
+              `Published Kokoro cache generation for line "${line.id}" is invalid.`,
+            );
+          cached = validation.cached;
+        }
+        pcm.set(line.id, cached.samples);
+        receipts.push(projectProductionDialogueReceipt({ line, cached }));
+        props.progress("sound.dialogue.complete", { line: line.id });
       }
-      pcm.set(line.id, cached.samples);
-      receipts.push(dialogueReceipt(line, cached));
-      props.progress("sound.dialogue.complete", { line: line.id });
+      return { pcm, receipts };
+    } catch (error) {
+      failure = { error };
+      throw error;
+    } finally {
+      const loaded =
+        runtime === undefined
+          ? undefined
+          : await runtime.catch(() => undefined);
+      if (loaded !== undefined)
+        try {
+          await loaded.runtime.close();
+        } catch (closeError) {
+          if (failure === undefined) throw closeError;
+          throw new ProductionRuntimeClosureError(
+            [failure.error, closeError],
+            "Kokoro generation worker cleanup failed after dialogue synthesis failed.",
+          );
+        }
     }
-    return { pcm, receipts };
   };
 
   const readProductionCompiledShots = (
@@ -1039,13 +888,12 @@ export const createProductionSoundRuntime = (props: {
       [...new Set(timeline.segments.map((segment) => segment.shot))].map(
         (shot) => [
           shot,
-          JSON.parse(
-            Buffer.from(
-              project.readGeneratedFile(
-                `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-              ),
-            ).toString("utf8"),
-          ) as IAutoMovieCompiledShotSource,
+          parseAutoMovieStructuredJson({
+            record: "compiled-shot",
+            bytes: project.readGeneratedFile(
+              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+            ),
+          }) as IAutoMovieCompiledShotSource,
         ],
       ),
     );
@@ -1150,22 +998,20 @@ export const createProductionSoundRuntime = (props: {
         speaker: line.speaker ?? null,
         runtimeAssets,
       });
-      try {
-        const captured = captureExistingDialogueCache(cacheRoot, identity.path);
-        if (captured === null) return [];
-        const cached = validatedDialogueCache(
-          captured,
-          identity.key,
-          runtimeAssets,
-          selection,
-        );
-        if (cached === undefined) return [];
-        dialogueSnapshots.push(captured);
-        receipts.push(dialogueReceipt(line, cached));
-        return [`audio-cache/kokoro/${identity.key.slice(7)}`];
-      } catch {
-        return [];
-      }
+      const finding = inspectProductionDialogueCache({
+        identity,
+        runtimeAssets,
+        selection,
+        read: () => captureExistingDialogueCache(cacheRoot, identity.path),
+      });
+      if (finding.status === "absent") return [];
+      if (finding.status !== "current")
+        throw dialogueCacheObservationFailure(line.id, finding);
+      dialogueSnapshots.push(finding.snapshot);
+      receipts.push(
+        projectProductionDialogueReceipt({ line, cached: finding.cached }),
+      );
+      return [`audio-cache/kokoro/${identity.key.slice(7)}`];
     });
     const retention: IProductionSoundCacheRetention = {
       assertCurrent: () => {
@@ -1182,7 +1028,7 @@ export const createProductionSoundRuntime = (props: {
         ...retention,
         status: "not-ready",
         correction:
-          "Run a dialogue-producing render action to synthesize every current v5 Kokoro cache generation before verifying this plan.",
+          "Run a dialogue-producing render action to synthesize every current v6 Kokoro cache generation before verifying this plan.",
       };
     const dialogueRuntime = compileProductionDialogueRuntime({
       plan,
@@ -1302,21 +1148,31 @@ export const createProductionSoundRuntime = (props: {
 
 /** Own the production's H.264 and Opus resources for one invocation. */
 export const createProductionRenderEncoderRuntime = (props: {
-  createMp4File: IProductionRenderHost["createMp4File"];
-  h264Module: IProductionRenderHost["h264Module"];
+  h264Generation: IProductionRenderHost["h264Generation"];
+  mp4Generation: IProductionRenderHost["mp4Generation"];
+  pngGeneration: IProductionRenderHost["pngGeneration"];
   preserveCleanup: (
     failure: { error: unknown } | undefined,
     resources: readonly { resource: string; cleanup: () => unknown }[],
   ) => void;
   productionEncoderIdentity: (fps: number) => unknown;
 }): IProductionRenderEncoderRuntime => {
-  const { BoxParser } =
-    residentRuntimePackage<typeof import("mp4box")>("mp4box").module;
-  const { PNG } =
-    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
+  const { BoxParser } = props.mp4Generation.module;
+  const { PNG } = props.pngGeneration.module;
+  const assertRuntimePackagesCurrent = (): void => {
+    props.h264Generation.assertCurrent();
+    props.mp4Generation.assertCurrent();
+    props.pngGeneration.assertCurrent();
+  };
   const assertCurrentEncoder = (
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
+    assertRuntimePackagesCurrent();
+    const frameRate = resolveProductionFrameRate(plan.frameFormat);
+    if (frameRate.denominator !== 1)
+      throw new Error(
+        `The pinned H.264 encoder cannot express exact rational frame rate ${frameRate.numerator}/${frameRate.denominator}. Select a supported integer rate before rendering; rounding or decimal substitution is not permitted.`,
+      );
     if (
       isDeepStrictEqual(
         props.productionEncoderIdentity(plan.frameFormat.fps),
@@ -1329,168 +1185,134 @@ export const createProductionRenderEncoderRuntime = (props: {
   };
   return {
     assertCurrent: assertCurrentEncoder,
-    encodeOpus: async (pcm) => {
-      if (pcm.length === 0 || pcm.length % 2 !== 0)
-        throw new Error(
-          "Opus encoding requires non-empty interleaved stereo PCM.",
-        );
-      const { createEncoder } = await import("libopus-wasm");
-      const encoder = await createEncoder({
-        bitrate: 128_000,
-        complexity: 10,
-        vbr: false,
-      });
-      const sampleFrames = pcm.length / 2;
-      let primingSamples = 0;
-      let codedSampleFrames = 0;
-      const packets: Array<{
-        bytes: Uint8Array<ArrayBuffer>;
-        duration: number;
-        dts: number;
-      }> = [];
-      let failure: { error: unknown } | undefined;
-      try {
-        if (
-          encoder.frameSize !== 960 ||
-          encoder.channels !== 2 ||
-          encoder.sampleRate !== 48_000
-        )
-          throw new Error(
-            "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
-          );
-        primingSamples = encoder.getLookahead();
-        if (
-          Number.isSafeInteger(primingSamples) === false ||
-          primingSamples < 0 ||
-          primingSamples >= encoder.frameSize
-        )
-          throw new Error(
-            "Pinned Opus runtime returned an invalid encoder lookahead.",
-          );
-        codedSampleFrames =
-          Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
-          encoder.frameSize;
-        for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
-          const frame = new Float32Array(encoder.frameSize * encoder.channels);
-          frame.set(
-            pcm.subarray(
-              dts * encoder.channels,
-              Math.min(
-                pcm.length,
-                (dts + encoder.frameSize) * encoder.channels,
-              ),
-            ),
-          );
-          packets.push({
-            bytes: Uint8Array.from(encoder.encodeFloat(frame)),
-            duration: encoder.frameSize,
-            dts,
+    encodeOpus: (pcm) =>
+      runWithProductionRuntimeClosure(
+        assertRuntimePackagesCurrent,
+        async () => {
+          const opus = snapshotRuntimePackage({
+            entry: fileURLToPath(import.meta.resolve("libopus-wasm")),
+            moduleClosure: true,
+            packageName: "libopus-wasm",
           });
-        }
-      } catch (error) {
-        failure = { error };
-      }
-      props.preserveCleanup(failure, [
-        { resource: "Opus encoder", cleanup: (): void => encoder.free() },
-      ]);
-      const description = new BoxParser.box.dOps();
-      description.Version = 0;
-      description.OutputChannelCount = 2;
-      description.PreSkip = primingSamples;
-      description.InputSampleRate = 48_000;
-      description.OutputGain = 0;
-      description.ChannelMappingFamily = 0;
-      description.StreamCount = 1;
-      description.CoupledCount = 1;
-      description.ChannelMapping = [];
-      const file = props.createMp4File();
-      file.init({
-        brands: ["isom", "iso2", "mp41", "Opus"],
-        timescale: 48_000,
-        duration: codedSampleFrames,
-      });
-      const track = file.addTrack({
-        type: "Opus",
-        hdlr: "soun",
-        name: "AutoMovie deterministic Opus mix",
-        timescale: 48_000,
-        media_duration: codedSampleFrames,
-        duration: codedSampleFrames,
-        samplerate: 48_000,
-        channel_count: 2,
-        samplesize: 16,
-        description_boxes: [description],
-      });
-      for (const packet of packets)
-        file.addSample(track, packet.bytes, {
-          duration: packet.duration,
-          dts: packet.dts,
-          cts: packet.dts,
-          is_sync: true,
-        });
-      trimProductionAudioPresentation({
-        file,
-        track,
-        mediaTimescale: 48_000,
-        movieTimescale: 48_000,
-        primingSamples,
-        presentationSamples: sampleFrames,
-      });
-      return new Uint8Array(file.getBuffer().buffer);
-    },
-    encodePngFrames: async (produceFrames, plan) => {
-      assertCurrentEncoder(plan);
-      const module = props.h264Module;
-      const createEncoder =
-        typeof module.createH264MP4Encoder === "function"
-          ? module.createH264MP4Encoder
-          : module.default?.createH264MP4Encoder;
-      if (createEncoder === undefined)
-        throw new Error(
-          "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
-        );
-      const encoder = await createEncoder();
-      let initialized = false;
-      let finalizeAttempted = false;
-      let failure: { error: unknown } | undefined;
-      let output = new Uint8Array();
-      try {
-        encoder.width = plan.frameFormat.width;
-        encoder.height = plan.frameFormat.height;
-        encoder.frameRate = plan.frameFormat.fps;
-        encoder.quantizationParameter =
-          plan.runtimeIdentity.encoder.arguments.quantizationParameter;
-        encoder.speed = plan.runtimeIdentity.encoder.arguments.speed;
-        encoder.groupOfPictures =
-          plan.runtimeIdentity.encoder.arguments.groupOfPictures;
-        encoder.initialize();
-        initialized = true;
-        await produceFrames((frame) => {
-          const png = PNG.sync.read(Buffer.from(frame));
-          encoder.addFrameRgba(new Uint8Array(png.data));
-        });
-        finalizeAttempted = true;
-        encoder.finalize();
-        output = Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
-      } catch (error) {
-        failure = { error };
-      }
-      props.preserveCleanup(failure, [
-        ...(initialized && finalizeAttempted === false
-          ? [
-              {
-                resource: "H.264 encoder finalizer",
-                cleanup: (): void => {
-                  finalizeAttempted = true;
-                  encoder.finalize();
-                },
+          const sampleFrames = pcm.length / 2;
+          const { codedSampleFrames, packets, primingSamples } =
+            await encodeOpusGeneration({
+              package: {
+                contentFingerprint: opus.contentFingerprint,
+                entry: opus.entry,
+                fingerprint: opus.fingerprint,
+                packageName: opus.package,
               },
-            ]
-          : []),
-        { resource: "H.264 encoder", cleanup: (): void => encoder.delete() },
-      ]);
-      return output;
-    },
+              pcm,
+            });
+          assertRuntimePackageSnapshotCurrent(opus);
+          const description = new BoxParser.box.dOps();
+          description.Version = 0;
+          description.OutputChannelCount = 2;
+          description.PreSkip = primingSamples;
+          description.InputSampleRate = 48_000;
+          description.OutputGain = 0;
+          description.ChannelMappingFamily = 0;
+          description.StreamCount = 1;
+          description.CoupledCount = 1;
+          description.ChannelMapping = [];
+          const file = props.mp4Generation.module.createFile();
+          file.init({
+            brands: ["isom", "iso2", "mp41", "Opus"],
+            timescale: 48_000,
+            duration: codedSampleFrames,
+          });
+          const track = file.addTrack({
+            type: "Opus",
+            hdlr: "soun",
+            name: "AutoMovie deterministic Opus mix",
+            timescale: 48_000,
+            media_duration: codedSampleFrames,
+            duration: codedSampleFrames,
+            samplerate: 48_000,
+            channel_count: 2,
+            samplesize: 16,
+            description_boxes: [description],
+          });
+          for (const packet of packets)
+            file.addSample(track, packet.bytes, {
+              duration: packet.duration,
+              dts: packet.dts,
+              cts: packet.dts,
+              is_sync: true,
+            });
+          trimProductionAudioPresentation({
+            file,
+            track,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples,
+            presentationSamples: sampleFrames,
+          });
+          return new Uint8Array(file.getBuffer().buffer);
+        },
+      ),
+    encodePngFrames: (produceFrames, plan) =>
+      runWithProductionRuntimeClosure(
+        () => assertCurrentEncoder(plan),
+        async () => {
+          const module = props.h264Generation.module;
+          const createEncoder =
+            typeof module.createH264MP4Encoder === "function"
+              ? module.createH264MP4Encoder
+              : module.default?.createH264MP4Encoder;
+          if (createEncoder === undefined)
+            throw new Error(
+              "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
+            );
+          const encoder = await createEncoder();
+          let initialized = false;
+          let finalizeAttempted = false;
+          let failure: { error: unknown } | undefined;
+          let output: Uint8Array = new Uint8Array();
+          try {
+            encoder.width = plan.frameFormat.width;
+            encoder.height = plan.frameFormat.height;
+            encoder.frameRate = plan.frameFormat.fps;
+            encoder.quantizationParameter =
+              plan.runtimeIdentity.encoder.arguments.quantizationParameter;
+            encoder.speed = plan.runtimeIdentity.encoder.arguments.speed;
+            encoder.groupOfPictures =
+              plan.runtimeIdentity.encoder.arguments.groupOfPictures;
+            encoder.initialize();
+            initialized = true;
+            await produceFrames((frame) => {
+              const png = PNG.sync.read(Buffer.from(frame));
+              encoder.addFrameRgba(new Uint8Array(png.data));
+            });
+            finalizeAttempted = true;
+            encoder.finalize();
+            output = normalizeProductionH264Mp4(
+              Uint8Array.from(encoder.FS.readFile(encoder.outputFilename)),
+            );
+          } catch (error) {
+            failure = { error };
+          }
+          props.preserveCleanup(failure, [
+            ...(initialized && finalizeAttempted === false
+              ? [
+                  {
+                    resource: "H.264 encoder finalizer",
+                    cleanup: (): void => {
+                      finalizeAttempted = true;
+                      encoder.finalize();
+                    },
+                  },
+                ]
+              : []),
+            {
+              resource: "H.264 encoder",
+              cleanup: (): void => encoder.delete(),
+            },
+          ]);
+          return output;
+        },
+      ),
   };
 };
 
@@ -1590,23 +1412,11 @@ export const encodeProductionSoundRaster = (raster: {
   height: number;
   rgba: Uint8Array;
 }): Uint8Array => {
-  const { PNG } =
-    residentRuntimePackage<typeof import("pngjs")>("pngjs").module;
+  const { PNG } = loadResidentRuntimePackage<typeof import("pngjs")>({
+    packageName: "pngjs",
+  }).module;
   const png = new PNG({ width: raster.width, height: raster.height });
+  png.gamma = 0.45455;
   png.data = Buffer.from(raster.rgba);
   return PNG.sync.write(png);
-};
-
-export const concatenateProductionFloat32 = (
-  chunks: readonly Float32Array[],
-): Float32Array => {
-  const output = new Float32Array(
-    chunks.reduce((total, chunk) => total + chunk.length, 0),
-  );
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return output;
 };

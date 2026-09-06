@@ -1,64 +1,47 @@
-import type { AutoMovieGuidePass } from "@automovie/interface";
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionContext,
   captureAutoMovieProductionFrame,
 } from "@automovie/production";
 
+import { productionEvidence } from "../lint.config";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
+import { readAutoMoviePreviewArguments } from "./commandArguments";
 import { currentAutoMovieProductionId } from "./projectIdentity";
+
+const request = readAutoMoviePreviewArguments(process.argv.slice(2));
 
 /** The production namespace this project declares in its own package manifest. */
 const productionId = currentAutoMovieProductionId();
 
-const args = process.argv.slice(2);
-const options = new Map<string, string>();
-const positional: string[] = [];
-for (let index = 0; index < args.length; ++index) {
-  const argument = args[index]!;
-  if (argument.startsWith("--")) {
-    const value = args[++index];
-    if (value === undefined || value.startsWith("--"))
-      throw new Error(`${argument} requires a value.`);
-    options.set(argument, value);
-  } else positional.push(argument);
-}
-const time = Number(options.get("--time") ?? positional[0] ?? "0");
-const shot = options.get("--shot") ?? positional[1];
-if (shot === undefined || shot.trim() === "")
-  throw new Error("preview requires --shot <authored-shot-id>.");
-const passValue = options.get("--pass") ?? "beauty";
-const passes: readonly AutoMovieGuidePass[] = [
-  "beauty",
-  "depth",
-  "mask",
-  "normal",
-  "outline",
-  "pose",
-];
-if (passes.includes(passValue as AutoMovieGuidePass) === false)
-  throw new Error(
-    `--pass must be one of ${passes.join(", ")}; received "${passValue}".`,
-  );
-const pass = passValue as AutoMovieGuidePass;
-const width =
-  options.get("--width") === undefined
-    ? undefined
-    : Number(options.get("--width"));
-const height =
-  options.get("--height") === undefined
-    ? undefined
-    : Number(options.get("--height"));
+/**
+ * This project's own graph-derived authoring identity, read the way
+ * `compile` reads it. The compile identity includes the reviewed source owner
+ * bindings, so a capture judged without the same declaration would read every
+ * compiled production as stale.
+ */
+const currentAuthoringEvidence = () =>
+  readAutoMovieProductionEvidence({
+    root: productionEvidence.location,
+    productionEvidence,
+  });
+const authoringEvidence = currentAuthoringEvidence();
 const captureRuntime = createProductionFrameCaptureRuntime();
 const dialogueRuntime = createProductionCaptureDialogueRuntime({
   capture: captureRuntime,
   productionId,
   root: process.cwd(),
+  authoringEvidence,
+  currentAuthoringEvidence,
 });
 const context = new AutoMovieProductionContext(
   captureRuntime.capture,
   process.cwd(),
   productionId,
+  undefined,
+  authoringEvidence,
+  currentAuthoringEvidence,
 );
 let captureFailure: { error: unknown } | undefined;
 try {
@@ -67,12 +50,12 @@ try {
     target: {
       kind: "shot",
       productionId,
-      id: shot,
-      time,
-      pass,
+      id: request.shot,
+      time: request.time,
+      pass: request.pass,
     },
-    width,
-    height,
+    width: request.width,
+    height: request.height,
   });
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (output.captured === false) process.exitCode = 1;

@@ -130,9 +130,9 @@ const hdr = (props: {
  * 1. Each accepted container reports its exact media type and its two edges: PNG's
  *    IHDR, a JPEG frame header found by walking the segment chain, WebP's
  *    lossy, lossless and extended bodies, and a Radiance HDR resolution line.
- * 2. A JPEG whose dimensions sit behind fill bytes, restart markers or a
- *    standalone TEM is still located, and one whose only frame-shaped marker is
- *    a Huffman table is not mistaken for a frame.
+ * 2. A JPEG whose dimensions sit behind fill bytes, a declared restart marker,
+ *    or a standalone TEM is still located. A restart without positive DRI and
+ *    a Huffman table that resembles a frame marker are refused.
  * 3. Every truncation, wrong signature, wrong chunk, wrong start code, missing
  *    blank line and non-standard scanline orientation reports "not an image"
  *    rather than a guessed size.
@@ -163,13 +163,17 @@ export const test_validation_image_facts = (): void => {
   );
 
   TestValidator.equals(
-    "a JPEG frame header is found through fill bytes and standalone markers",
+    "a JPEG frame header is found through fill bytes and declared standalone markers",
     [
       readAutoMovieImageFacts(
         jpeg({ width: 8, height: 4, lead: [0xff, 0xff, 0x01] }),
       ),
       readAutoMovieImageFacts(
-        jpeg({ width: 8, height: 4, lead: [0xff, 0xd0] }),
+        jpeg({
+          width: 8,
+          height: 4,
+          lead: [0xff, 0xdd, 0x00, 0x04, 0x00, 0x01, 0xff, 0xd0],
+        }),
       ),
       readAutoMovieImageFacts(
         jpeg({ width: 8, height: 4, lead: [0xff, 0xd8] }),
@@ -236,6 +240,35 @@ export const test_validation_image_facts = (): void => {
         () =>
           readAutoMovieImageFacts(
             bytes(0xff, 0xd8, 0xff, 0xc4, 0x00, 0x04, 0x00, 0x00),
+          ) === null,
+      ],
+      [
+        "jpegRestartWithoutDri",
+        () =>
+          readAutoMovieImageFacts(
+            jpeg({ width: 8, height: 4, lead: [0xff, 0xd0] }),
+          ) === null,
+      ],
+      [
+        "jpegRestartWithZeroDri",
+        () =>
+          readAutoMovieImageFacts(
+            jpeg({
+              width: 8,
+              height: 4,
+              lead: [0xff, 0xdd, 0x00, 0x04, 0x00, 0x00, 0xff, 0xd0],
+            }),
+          ) === null,
+      ],
+      [
+        "jpegMalformedDri",
+        () =>
+          readAutoMovieImageFacts(
+            jpeg({
+              width: 8,
+              height: 4,
+              lead: [0xff, 0xdd, 0x00, 0x03, 0x01],
+            }),
           ) === null,
       ],
       [
@@ -331,6 +364,9 @@ export const test_validation_image_facts = (): void => {
       jpegShortLength: true,
       jpegTruncatedFrame: true,
       jpegHuffmanIsNotAFrame: true,
+      jpegRestartWithoutDri: true,
+      jpegRestartWithZeroDri: true,
+      jpegMalformedDri: true,
       jpegEndOfImage: true,
       webpShort: true,
       webpRiff: true,

@@ -1,5 +1,8 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
-import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
+import type {
+  IAutoMovieProductionRenderFrame,
+  IAutoMovieProductionRenderJobPlan,
+} from "@automovie/production";
 
 import type { IProductionRenderHost } from "./renderHost";
 
@@ -17,7 +20,7 @@ export const productionRenderFrameCaptureInput = (props: {
   shot: string;
   sourceFrame: number;
   sourceFps: number;
-  globalFrame: number;
+  sample: Pick<IAutoMovieProductionRenderFrame, "timelineFrame">;
   pass: AutoMovieGuidePass;
 }): Parameters<IProductionRenderHost["capture"]>[0] => ({
   projectRoot: props.root,
@@ -25,7 +28,7 @@ export const productionRenderFrameCaptureInput = (props: {
   compileFingerprint: props.plan.compileFingerprint,
   target: { kind: "shot", id: props.shot },
   time: props.sourceFrame / props.sourceFps,
-  globalFrame: props.globalFrame,
+  globalFrame: props.sample.timelineFrame,
   pass: props.pass,
   width: props.plan.frameFormat.width,
   height: props.plan.frameFormat.height,

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import fs from "node:fs";
+import type { BigIntStats, Stats } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,6 +9,7 @@ import {
   inspectCommitLock,
   releaseCommitLock,
 } from "../project/commitLock";
+import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 
@@ -180,11 +181,11 @@ const coordinatePath = (
  */
 const ensureCoordinationRoot = (): void => {
   try {
-    fs.mkdirSync(coordinationRoot(), { mode: 0o700 });
+    fileSystem.mkdirSync(coordinationRoot(), { mode: 0o700 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
-  const linked = fs.lstatSync(coordinationRoot());
+  const linked = fileSystem.lstatSync(coordinationRoot());
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
       `AutoMovie root-lock coordination path "${coordinationRoot()}" is not a physical directory.`,
@@ -196,7 +197,7 @@ const ensureCoordinationRoot = (): void => {
   // directories fails this every time, and the only useful thing to say is
   // where to move the root to.
   try {
-    fs.accessSync(coordinationRoot(), fs.constants.W_OK);
+    fileSystem.accessSync(coordinationRoot(), fileSystem.constants.W_OK);
   } catch (error) {
     throw new Error(
       `AutoMovie cannot write the root-lock coordination directory "${coordinationRoot()}", so it cannot fence this project against another process. This is the account's home by default, which a sandbox that admits only its workdir and the temporary directories does not grant. Set ${AUTOMOVIE_COORDINATION_ROOT_VARIABLE} to an absolute directory every process working on this project can write, and set it identically for all of them: two processes fencing against two directories exclude nothing.`,
@@ -275,7 +276,7 @@ const releaseCoordinates = (
 const creationCoordinates = (
   parentReal: string,
   childName: string,
-  parentIdentity: fs.BigIntStats,
+  parentIdentity: BigIntStats,
 ): string[] => {
   return [
     coordinatePath("create-path", path.join(parentReal, childName)),
@@ -290,7 +291,7 @@ const acquireCreationCoordinates = (
   parentReal: string,
   childName: string,
 ): Array<{ path: string; token: string }> => {
-  const parentIdentity = fs.statSync(parentReal, { bigint: true });
+  const parentIdentity = fileSystem.statSync(parentReal, { bigint: true });
   const locks = acquireCoordinates(
     creationCoordinates(parentReal, childName, parentIdentity),
   );
@@ -314,11 +315,11 @@ const acquireCreationCoordinates = (
 const ensureDirectory = (directory: string): string => {
   const linked = lstatOrNull(directory);
   if (linked !== null) {
-    if (fs.statSync(directory).isDirectory() === false)
+    if (fileSystem.statSync(directory).isDirectory() === false)
       throw new Error(
         `Production project parent "${directory}" is not a directory.`,
       );
-    return fs.realpathSync(directory);
+    return fileSystem.realpathSync(directory);
   }
   const parent = path.dirname(directory);
   if (parent === directory)
@@ -333,15 +334,15 @@ const ensureDirectory = (directory: string): string => {
   );
   try {
     const current = lstatOrNull(physical);
-    if (current === null) fs.mkdirSync(physical);
+    if (current === null) fileSystem.mkdirSync(physical);
     else if (
       current.isSymbolicLink() ||
-      fs.statSync(physical).isDirectory() === false
+      fileSystem.statSync(physical).isDirectory() === false
     )
       throw new Error(
         `Production project parent "${directory}" is not a physical directory.`,
       );
-    return fs.realpathSync(physical);
+    return fileSystem.realpathSync(physical);
   } finally {
     releaseCoordinates(locks);
   }
@@ -360,8 +361,8 @@ const acquireExistingRoot = (
     throw new Error(
       `Production project root "${rootDirectory}" is not a physical directory.`,
     );
-  const root = fs.realpathSync(rootDirectory);
-  const identity = fs.statSync(root, { bigint: true });
+  const root = fileSystem.realpathSync(rootDirectory);
+  const identity = fileSystem.statSync(root, { bigint: true });
   const device = identity.dev.toString();
   const inode = identity.ino.toString();
   const locks =
@@ -423,7 +424,7 @@ export const acquireOrCreateProductionRootNamespace = (
   const locks = acquireCreationCoordinates(parentReal, path.basename(root));
   try {
     const current = lstatOrNull(physical);
-    if (current === null) fs.mkdirSync(physical);
+    if (current === null) fileSystem.mkdirSync(physical);
     else if (current.isSymbolicLink() || current.isDirectory() === false)
       throw new Error(
         `Production project root "${root}" is not a physical directory.`,
@@ -504,18 +505,18 @@ const assertRequestedRootIdentity = (
 
 const physicalDirectoryIdentityOrNull = (
   directory: string,
-): fs.BigIntStats | null => {
+): BigIntStats | null => {
   const linked = lstatOrNull(directory);
   return linked === null ||
     linked.isSymbolicLink() ||
     linked.isDirectory() === false
     ? null
-    : fs.statSync(directory, { bigint: true });
+    : fileSystem.statSync(directory, { bigint: true });
 };
 
-const lstatOrNull = (file: string): fs.Stats | null => {
+const lstatOrNull = (file: string): Stats | null => {
   try {
-    return fs.lstatSync(file);
+    return fileSystem.lstatSync(file);
   } catch (error) {
     // `ENOENT` is an absent name; `ENOTDIR` is an absent path, because some
     // ancestor is a file. Both mean nothing is here, and both have to reach

@@ -1,3 +1,9 @@
+import {
+  type AutoMovieLocalProcessOwnerObservation,
+  type IAutoMovieLocalProcessOwner,
+  isAutoMovieLocalProcessOwner,
+  parseAutoMovieStructuredJson,
+} from "@automovie/production";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -5,19 +11,24 @@ import path from "node:path";
 import {
   type IRenderGcTargetSnapshot,
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+  assertCapturedRenderTarget,
   captureRenderGcTarget,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
+import { observeRenderOwnerRecovery } from "./renderOwnerState";
 
 const LEASE_MAX_BYTES = 64 * 1024;
 const SCOPE_PATTERN = /^[0-9a-f]{64}$/u;
+const TOKEN_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 interface IRenderLivenessOwner {
+  version: 2;
   kind: "gc" | "session";
-  pid: number;
+  owner: IAutoMovieLocalProcessOwner;
   tier: "proxy" | "final" | null;
   token: string;
 }
@@ -30,8 +41,10 @@ export interface IRenderLivenessLease {
 
 interface IRenderLivenessProps {
   coordinationRoot: string;
-  pid: number;
-  processAlive: (pid: number) => boolean;
+  observeProcessOwner: (
+    owner: unknown,
+  ) => AutoMovieLocalProcessOwnerObservation;
+  owner: IAutoMovieLocalProcessOwner;
   scope: string;
 }
 
@@ -44,7 +57,7 @@ export const acquireRenderSessionLease = (
   const token = randomUUID();
   const target = path.join(
     props.coordinationRoot,
-    sessionName(props.scope, props.pid, props.tier, token),
+    sessionName(props.scope, props.owner.pid, props.tier, token),
   );
   const lease: IRenderLivenessLease = {
     kind: "session",
@@ -53,8 +66,9 @@ export const acquireRenderSessionLease = (
       props.coordinationRoot,
       target,
       ownerBytes({
+        version: 2,
         kind: "session",
-        pid: props.pid,
+        owner: props.owner,
         tier: props.tier,
         token,
       }),
@@ -82,7 +96,13 @@ export const acquireRenderGcLease = (
       snapshot = createRenderGcFileSnapshot(
         props.coordinationRoot,
         target,
-        ownerBytes({ kind: "gc", pid: props.pid, tier: null, token }),
+        ownerBytes({
+          version: 2,
+          kind: "gc",
+          owner: props.owner,
+          tier: null,
+          token,
+        }),
       );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
@@ -177,21 +197,20 @@ const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
     if (snapshot === null) return;
     const owner = readOwner(snapshot);
     if (
+      isRenderLivenessOwner(owner) === false ||
       owner.kind !== "gc" ||
       owner.tier !== null ||
-      Number.isSafeInteger(owner.pid) === false ||
-      owner.pid <= 0 ||
-      typeof owner.token !== "string" ||
-      owner.token.length === 0
+      TOKEN_PATTERN.test(owner.token) === false
     )
       throw new Error("Render GC guard has no trustworthy owner identity.");
-    if (props.processAlive(owner.pid))
+    const recovery = observeRenderOwnerRecovery({
+      between: () => assertCapturedRenderTarget(snapshot),
+      observe: props.observeProcessOwner,
+      owner: owner.owner,
+    });
+    if (recovery.state !== "reclaimable")
       throw new Error(
-        `Render GC apply ${owner.pid} is active. Wait for it to finish.`,
-      );
-    if (props.processAlive(owner.pid))
-      throw new Error(
-        `Render GC apply ${owner.pid} became active while inspected.`,
+        `Render GC apply ${owner.owner.pid} cannot be reclaimed (${recovery.observation.state}). Wait for it to finish or inspect it on the owning host.`,
       );
     if (
       releaseRenderLivenessLease({
@@ -212,16 +231,20 @@ const removeStaleGcGuard = (props: IRenderLivenessProps): boolean => {
   if (snapshot === null) return true;
   const owner = readOwner(snapshot);
   if (
+    isRenderLivenessOwner(owner) === false ||
     owner.kind !== "gc" ||
     owner.tier !== null ||
-    Number.isSafeInteger(owner.pid) === false ||
-    owner.pid <= 0 ||
-    typeof owner.token !== "string" ||
-    owner.token.length === 0
+    TOKEN_PATTERN.test(owner.token) === false
   )
     throw new Error("Render GC guard has no trustworthy owner identity.");
-  if (props.processAlive(owner.pid)) return false;
-  if (props.processAlive(owner.pid)) return false;
+  if (
+    observeRenderOwnerRecovery({
+      between: () => assertCapturedRenderTarget(snapshot),
+      observe: props.observeProcessOwner,
+      owner: owner.owner,
+    }).state !== "reclaimable"
+  )
+    return false;
   releaseRenderLivenessLease({ kind: "gc", scope: props.scope, snapshot });
   return true;
 };
@@ -242,20 +265,22 @@ const activeRenderSessions = (props: IRenderLivenessProps): string[] => {
     const owner = readOwner(snapshot);
     const pid = Number(match[1]);
     if (
+      isRenderLivenessOwner(owner) === false ||
       owner.kind !== "session" ||
-      owner.pid !== pid ||
+      owner.owner.pid !== pid ||
       owner.tier !== match[2] ||
-      typeof owner.token !== "string" ||
       owner.token !== match[3] ||
+      TOKEN_PATTERN.test(owner.token) === false ||
       Number.isSafeInteger(pid) === false ||
       pid <= 0
     )
       throw new Error(`Render session claim "${name}" changed owner identity.`);
-    if (props.processAlive(pid)) {
-      active.push(`${pid}/${owner.tier}`);
-      continue;
-    }
-    if (props.processAlive(pid)) {
+    const recovery = observeRenderOwnerRecovery({
+      between: () => assertCapturedRenderTarget(snapshot),
+      observe: props.observeProcessOwner,
+      owner: owner.owner,
+    });
+    if (recovery.state !== "reclaimable") {
       active.push(`${pid}/${owner.tier}`);
       continue;
     }
@@ -280,19 +305,43 @@ const captureExisting = (
   }
 };
 
-const readOwner = (snapshot: IRenderGcTargetSnapshot): IRenderLivenessOwner =>
-  JSON.parse(
-    Buffer.from(readCapturedRenderGcFile(snapshot, LEASE_MAX_BYTES)).toString(
-      "utf8",
-    ),
-  ) as IRenderLivenessOwner;
+const readOwner = (snapshot: IRenderGcTargetSnapshot): unknown => {
+  const bytes = readCapturedRenderGcFile(snapshot, LEASE_MAX_BYTES);
+  try {
+    return parseAutoMovieStructuredJson({
+      record: "render-lease-owner",
+      bytes,
+    });
+  } catch {
+    // Malformed or unstable owner bytes authorize nothing and must not leak
+    // their arbitrary payload through the JSON parser's diagnostic.
+    return null;
+  }
+};
+
+const isRenderLivenessOwner = (
+  value: unknown,
+): value is IRenderLivenessOwner => {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const record = value as Partial<IRenderLivenessOwner>;
+  return (
+    Object.keys(record).sort(compare).join(",") ===
+      "kind,owner,tier,token,version" &&
+    record.version === 2 &&
+    (record.kind === "gc" || record.kind === "session") &&
+    isAutoMovieLocalProcessOwner(record.owner) &&
+    typeof record.token === "string" &&
+    TOKEN_PATTERN.test(record.token)
+  );
+};
 
 const ownerBytes = (owner: IRenderLivenessOwner): Uint8Array =>
   Buffer.from(`${JSON.stringify(owner)}\n`);
 
 const assertProps = (props: IRenderLivenessProps): void => {
-  if (Number.isSafeInteger(props.pid) === false || props.pid <= 0)
-    throw new Error(`Render liveness PID "${props.pid}" is invalid.`);
+  if (isAutoMovieLocalProcessOwner(props.owner) === false)
+    throw new Error("Render liveness process owner is invalid.");
   if (SCOPE_PATTERN.test(props.scope) === false)
     throw new Error(`Render liveness scope "${props.scope}" is invalid.`);
 };

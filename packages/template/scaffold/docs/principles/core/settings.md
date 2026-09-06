@@ -16,11 +16,11 @@ Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/
 
 ## Fact status {#fact-status}
 
-Every settings unit distinguishes an externally supported fact, a production invention, an inherited default, a derived value, and an unresolved decision, and states the scope in which that status is valid. Inference and provisional choice do not masquerade as settled external fact.
+Every settings unit distinguishes an externally supported fact, a production invention, an inherited default, a derived value, a contested matter, and an unresolved decision, and states the scope in which that status is valid. Inference, dispute, and provisional choice do not masquerade as settled external fact.
 
-An unresolved fact states what would settle it. A downstream layer may not depend on that answer until it is researched or adopted here.
+A contested matter identifies the competing claims and the authority or production decision that governs while the dispute remains. An unresolved fact states what would settle it. A downstream layer may not depend on an unresolved answer until it is researched or adopted here.
 
-Review question: what authority, derivation, and scope make each stated fact usable downstream?
+Review question: what supported, invented, defaulted, derived, contested, or unresolved status, authority, derivation, and scope make each stated fact usable downstream?
 
 This item classifies the production fact. `common.md#declared-basis` traces a document statement to the basis on which that document may make it, and `source-support` judges external support.
 

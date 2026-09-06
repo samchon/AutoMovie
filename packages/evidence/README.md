@@ -6,7 +6,7 @@ AutoMovie 제작 저작용 증거 계약을 재사용하는 패키지다. 하나
 
 ## 원칙과 의무
 
-Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 한 계층의 primary H2 모집단이 항목의 의미가 요구하는 수만큼 소유자를 나누어 갖는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 산출물의 언어로 다시 충족하지만, H3/H4 모집단마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
+Principle은 선택된 모든 저술 H2/H3/H4가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 한 강한 단위나 파일 앞 주석이 약한 형제를 대신할 수 없다. Obligation은 `docs/accounts/<layer>`의 전용 H2가 한 항목과 해당 계층의 완전한 H2 모집단을 함께 대조하는 무배제 coverage다. 같은 obligation을 여러 계층이 선택하면 각 계층이 자기 모집단을 독립적으로 비교하지만, 저술 단위마다 같은 항목을 반복하지 않는다. TypeScript source 계약은 account H2 대신 해당 family의 선택된 public export 모집단이 coverage를 진다.
 
 진단 방향도 반대다. 답하지 않은 principle은 그 단위가 자기 질문을 하지 않았다는 뜻이므로 그 단위를 고친다. 답하지 않은 obligation은 계층에 그 역할의 소유자가 없다는 뜻이므로 population의 소유 구조를 고친다. 모든 공용 reference는 한 builder에서 `checklist`와 exclusion 허용 여부를 명시해 이 차이를 드러낸다.
 
@@ -16,6 +16,8 @@ Upstream은 실제 부모를 상속하는 design·brief·서사 H2/H3/H4와 sour
 
 Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 아니라 별도 작품 계약 감사면의 file-level coverage다. 모든 활성 Markdown 계층은 `docs/contracts/*.md`에서 `discovery/core/common.md`를 답하고, settings는 settings discovery를, 각 model·space·material·instance·motion·system 분기는 designs와 자기 layer discovery를, treatments·scripts·screenplays는 films와 자기 layer discovery를, brief는 brief discovery를 더한다. Research는 common만 답해 외부 근거 채택과 design boundary 탐색을 합치지 않는다. 결과가 있으면 평면 계약 파일이 가장 이른 의미 소유자와 현재 실현을 증명한다. 결과가 정말 없으면 `docs/contracts/index.md`만 조사한 구체적 입력·위험과 충분한 기존 소유자를 밝힌 계층 단위 제외를 소유한다. 저술 H2/H3/H4는 제작 내용을 기술할 뿐 감사를 증언하지 않는다. 발견 claim은 저술 계층의 draft부터 활성화되고 review에서 현재 fingerprint를 요구한다. Settings discovery는 실제 delivery를 역산하며 settings obligation은 독립적으로 결과를 바꾸는 operative subject를 빠짐없이 분류한다.
 
+Evidence conformance는 저술 host가 자기 annotation을 다시 인증하는 principle이 아니다. 생성 프로젝트의 evidence-graph skill은 구조, freshness, rewrite, repair owner를 하나의 conformance map으로 연결하고, review-verification skill은 fingerprint를 붙이기 전 literal host-target 판정과 두 축의 전체 모집단 감사를 독립 절차로 수행한다. 반복 frame과 target-question 복제 측정은 전체 재독을 여는 alarm이며 semantic verdict가 아니다.
+
 ## 공개 표면
 
 | Export | 역할 |
@@ -24,6 +26,10 @@ Discovery는 저술 unit에 반복하는 checklist나 H2 모집단 coverage가 �
 | `IAutoMovieEvidenceConfigProps` | 제작 종류, 분기 단계, 위치와 추가 claim을 선언한다. |
 | `AutoMovieProductionKind` | 상호 배타적인 `film`, `brief`, `library` 형태를 정의한다. |
 | `AutoMovieEvidenceStage` | `disabled -> draft -> evidence -> review` 생명주기를 정의한다. |
+| `createAutoMoviePopulationAccountClaims` | 계층별 obligation과 완전한 저술 H2 모집단을 묶는 전용 account claim을 만든다. |
+| `inspectAutoMovieEvidenceTopology` | settings와 design foundation의 provider-consumer-status-reason 행렬을 검사한다. |
+| `inspectAutoMovieEvidenceReviewAlarms` | 반복 review frame과 target 질문 복사를 비차단 Self-Review alarm으로 관찰한다. |
+| `readAutoMovieProductionEvidence` | 같은 선언에서 topology와 semantic review alarm, 활성 owner와 authored unit, graph가 선택한 source path/export/target/digest/review edge를 하나의 runtime carrier로 읽는다. |
 | `evidence` | 단일 typed `lint.config.ts`에서 쓸 `@ttsc/evidence` lint plugin을 내보낸다. |
 
 ## 경계

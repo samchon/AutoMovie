@@ -4,7 +4,7 @@ import {
   IAutoMovieDiagnosticReference,
 } from "@automovie/interface";
 
-const CATALOG_REVISION = 1;
+const CATALOG_REVISION = 2;
 
 interface IDiagnosticFamilyContract {
   path: IAutoMovieDiagnosticReference["path"];
@@ -41,7 +41,7 @@ export interface IAutoMovieDiagnosticCatalogEntry {
 
 const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   acceptance: {
-    path: ".agents/skills/production/contract-targets.md#shared-form",
+    path: ".agents/skills/evidence-graph/contract-targets.md#shared-form",
     invariant:
       "Acceptance outcomes must be derived from current, addressable criteria and current compiled observations.",
     correction:
@@ -50,7 +50,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Compile the same scope again and re-evaluate the named criterion.",
   },
   asset: {
-    path: ".agents/skills/production/models-and-motions.md#model-decisions",
+    path: ".agents/skills/source-authoring/models-and-motions.md#model-decisions",
     invariant:
       "Every adopted asset must resolve to declared bytes, interpretation metadata, provenance, permission, and a supported consumer representation.",
     correction:
@@ -58,7 +58,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Inspect the adopted bytes again and compile the same scope.",
   },
   blocking: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Authored blocking must lower to valid deterministic stage relations for the registered shot contract.",
     correction:
@@ -66,7 +66,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Execute the shot source and compile the affected shot again.",
   },
   builder: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "A shot builder must execute successfully inside the deterministic source boundary.",
     correction:
@@ -74,7 +74,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Execute the same source registration and compile scope again.",
   },
   capture: {
-    path: ".agents/skills/production/evidence/capture.md#request",
+    path: ".agents/skills/review-verification/capture.md#request",
     invariant:
       "A review capture must reopen as current host-produced pixels bound to the exact production, target, renderer, and compile fingerprint.",
     correction:
@@ -83,7 +83,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Retry the same capture request after recompiling any changed source.",
   },
   compile: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Compilation consumes one current, stable input closure and publishes derived state only after the requested scope succeeds.",
     correction:
@@ -91,7 +91,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run the same compile scope against one unchanged input revision.",
   },
   content: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Compiler input must remain inside the declared deterministic and security boundary.",
     correction:
@@ -99,7 +99,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run the same source or compile validation again.",
   },
   contract: {
-    path: ".agents/skills/production/contract-targets.md#shared-form",
+    path: ".agents/skills/evidence-graph/contract-targets.md#shared-form",
     invariant:
       "The registered shot and its realized source must agree with one exact authored contract.",
     correction:
@@ -108,7 +108,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Compile the affected shot and re-evaluate all contract realizations.",
   },
   design: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Tracked design must be complete, internally consistent, addressable, and supported before downstream compilation can consume it.",
     correction:
@@ -117,7 +117,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Validate design scope first, then repeat every invalidated downstream scope.",
   },
   derived: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Every derived artifact must have one current, portable, project-owned generator, dependency closure, ledger record, and exact output before source execution.",
     correction:
@@ -126,7 +126,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Inspect the derived-artifact ledger again, then compile the same scope without changing its input closure.",
   },
   engine: {
-    path: ".agents/skills/production/evidence/debugging.md#triage-order",
+    path: ".agents/skills/review-verification/debugging.md#triage-order",
     invariant:
       "Engine validation must succeed before its output can be accepted as compiled production state.",
     correction:
@@ -134,7 +134,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run engine validation and then the same compile scope.",
   },
   environment: {
-    path: ".agents/skills/production/design-branches.md#design-branches",
+    path: ".agents/skills/source-authoring/design-branches.md#design-branches",
     invariant:
       "Environment context must name valid authored spatial owners and may not derive physical facts from labels or appearance.",
     correction:
@@ -143,7 +143,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Validate the environment and repeat the consuming compile operation.",
   },
   film: {
-    path: ".agents/skills/production/craft/editing.md#choose-the-cut",
+    path: ".agents/skills/source-authoring/editing.md#choose-the-cut",
     invariant:
       "The compiled film must account for every selected shot, transition, cue, clock join, and deliverable interval on one exact timeline.",
     correction:
@@ -151,7 +151,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Compile the film again and revalidate its complete timeline.",
   },
   generated: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Compiler-owned generated output must exactly match the current source closure and its manifest.",
     correction:
@@ -159,7 +159,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run the owning compile or read-only lint operation again.",
   },
   geometry: {
-    path: ".agents/skills/production/craft/rigging.md#silhouette-first-recipe",
+    path: ".agents/skills/source-authoring/rigging.md#silhouette-first-recipe",
     invariant:
       "Geometry queries must use supported selectors that resolve inside the current compiled production.",
     correction:
@@ -167,7 +167,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Repeat the same geometry query against current compiled state.",
   },
   grammar: {
-    path: ".agents/skills/production/screenplays.md#gate",
+    path: ".agents/skills/production-lifecycle/screenplays.md#gate",
     invariant:
       "Authored style intent must account for deliberate film-grammar departures observed in the compiled result.",
     correction:
@@ -175,7 +175,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Compile and review the affected shot and film relation again.",
   },
   legacy: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Legacy import must preserve source, disclose every default or reconstruction, and refuse facts that cannot be recovered.",
     correction:
@@ -184,7 +184,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Repeat import, reopen the project, and compile the affected scopes.",
   },
   model: {
-    path: ".agents/skills/production/models-and-motions.md#model-decisions",
+    path: ".agents/skills/source-authoring/models-and-motions.md#model-decisions",
     invariant:
       "A model recipe must use a registered archetype and supported, bounded parameter contract.",
     correction:
@@ -192,7 +192,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Validate design and materialize the model again.",
   },
   performance: {
-    path: ".agents/skills/production/craft/motion.md#define-the-action",
+    path: ".agents/skills/source-authoring/motion.md#define-the-action",
     invariant:
       "Authored performance must lower to supported deterministic pose, motion, expression, and timing state.",
     correction:
@@ -200,7 +200,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Execute the performance and compile the affected shot again.",
   },
   pipeline: {
-    path: ".agents/skills/production/evidence/debugging.md#triage-order",
+    path: ".agents/skills/review-verification/debugging.md#triage-order",
     invariant:
       "The deterministic source-to-film pipeline must complete before its result can be accepted.",
     correction:
@@ -208,7 +208,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run the same pipeline and compile scope again.",
   },
   preview: {
-    path: ".agents/skills/production/evidence/capture.md#request",
+    path: ".agents/skills/review-verification/capture.md#request",
     invariant:
       "Preview may render only a valid, current, registered target under the host capture contract.",
     correction:
@@ -216,7 +216,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Repeat the same preview or capture request.",
   },
   production: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Every operation must remain bound to one registered production namespace and its current addressable state.",
     correction:
@@ -224,7 +224,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Reopen the named production and retry the same operation.",
   },
   registration: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Source registration must bind the declared production, shot, and export identities exactly once.",
     correction:
@@ -232,7 +232,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Load the source and compile its registered target again.",
   },
   render: {
-    path: ".agents/skills/production/source/compilation.md#a-clean-compile-is-not-a-look",
+    path: ".agents/skills/source-authoring/compilation.md#a-clean-compile-is-not-a-look",
     invariant:
       "Rendered delivery must be complete, current, byte-verified, media-verified, and owned by its exact production input.",
     correction:
@@ -240,7 +240,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Render again if required, then run the same final verification.",
   },
   repaint: {
-    path: ".agents/skills/production/evidence/capture.md#request",
+    path: ".agents/skills/review-verification/capture.md#request",
     invariant:
       "Optional repaint may consume only current reviewed source pixels, declared controls, references, provider facts, and immutable receipts.",
     correction:
@@ -249,7 +249,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Repeat the same repaint request after its declared prerequisites are current.",
   },
   review: {
-    path: ".agents/skills/production/review.md#evidence-review",
+    path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
       "A reviewed target must hold the evidence its own contract declares, captured at the target's current identity.",
     correction:
@@ -257,7 +257,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Compile the same scope again and confirm the occurrence is gone.",
   },
   screenplay: {
-    path: ".agents/skills/production/screenplays.md#gate",
+    path: ".agents/skills/production-lifecycle/screenplays.md#gate",
     invariant:
       "The screenplay ladder must preserve unique identities, ordered coverage, evidence ownership, locks, and explicit omissions from intent to scene.",
     correction:
@@ -266,7 +266,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Run screenplay lint and compile every affected scene relation again.",
   },
   source: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Tracked source must export the registered deterministic contract and stay inside the compiler sandbox and ownership boundary.",
     correction:
@@ -274,7 +274,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run source lint and the same compile scope again.",
   },
   stage: {
-    path: ".agents/skills/production/source/ownership.md#source-ownership",
+    path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
       "Authored stage state must remain valid, bounded, and consumable by the deterministic pipeline.",
     correction:
@@ -286,8 +286,17 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
 const CODE_CONTRACTS: Readonly<
   Partial<Record<AutoMovieDiagnosticCode, IDiagnosticFamilyContract>>
 > = {
+  "repaint-claim-refused": {
+    path: ".agents/skills/review-verification/capture.md#request",
+    invariant:
+      "One immutable repaint request prefix dispatches to the provider at most once at a time: an unsettled or unknown-outcome claim closes that prefix until its owner settles, and a moved journal or claim generation is replanned rather than dispatched.",
+    correction:
+      "Read the refusal's cause. Wait for an active owner to settle; after an unknown provider outcome reconcile the provider side and author a new request identity instead of retrying this one; after a moved prefix rerun the same repaint so it plans against the current journal.",
+    recheck:
+      "Run the repaint again and confirm the request either dispatches or names a different, current cause.",
+  },
   "source-scene-coverage-incomplete": {
-    path: ".agents/skills/production/design-branches.md#design-branches",
+    path: ".agents/skills/source-authoring/design-branches.md#design-branches",
     invariant:
       "Authored scene content must cover what it claims to cover: a declared region owes its membrane, its fall and a drain the fall reaches, and a declared opening owes a run that uses it.",
     correction:
@@ -296,7 +305,7 @@ const CODE_CONTRACTS: Readonly<
       "Compile the same shot again and read the named record's findings.",
   },
   "source-scene-physics-invalid": {
-    path: ".agents/skills/production/design-branches.md#design-branches",
+    path: ".agents/skills/source-authoring/design-branches.md#design-branches",
     invariant:
       "Authored scene content must be physically possible in the space it is placed in: two bodies may not occupy one volume, and nothing may stand in the access a maintainable thing declares it needs.",
     correction:
@@ -305,7 +314,7 @@ const CODE_CONTRACTS: Readonly<
       "Compile the same shot again and confirm the named pair no longer shares a volume.",
   },
   "review-outcome-artifact-malformed": {
-    path: ".agents/skills/production/review.md#evidence-review",
+    path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
       "A current compiler-owned acceptance artifact must remain readable, digest-matched UTF-8 JSON before review can derive an outcome from it.",
     correction:
@@ -314,7 +323,7 @@ const CODE_CONTRACTS: Readonly<
       "Prepare the same review again and confirm the named artifact reads under its current manifest digest.",
   },
   "review-outcome-artifact-missing": {
-    path: ".agents/skills/production/review.md#evidence-review",
+    path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
       "Every manifest-owned acceptance artifact required by a current compile must be resident before review derives an outcome.",
     correction:
@@ -323,7 +332,7 @@ const CODE_CONTRACTS: Readonly<
       "Prepare the same review again and confirm the named artifact is resident under the current generated manifest.",
   },
   "review-outcome-contract-mismatch": {
-    path: ".agents/skills/production/review.md#evidence-review",
+    path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
       "The compiler writer and review reader shipped in one revision must agree on the exact schema and identity of every acceptance artifact.",
     correction:

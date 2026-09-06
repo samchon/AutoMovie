@@ -40,6 +40,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import {
   AUTOMOVIE_REGISTERED_ARCHETYPES,
   AutoMovieModelArchetypeRegistry,
@@ -623,6 +624,7 @@ export const materializeCompiledInstanceSet = (
  *
  * Anonymous identities remain derived from formation id and slot index and
  * never become a large scene-node array.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Materializes each compiled shot's models, hero nodes and formations into a reviewable runtime form whose proxies stay marked as proxies.
  */
 export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;
@@ -768,12 +770,20 @@ export const materializeCompiledShot = (props: {
 /**
  * Materialize shot-local cues into compiler-owned deterministic streams.
  */
-export const materializeCompiledEffects = (props: {
-  contract: IAutoMovieShotContract;
-  world?: IAutoMovieWorldDesign;
-  fps?: number;
-  cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
-}): IAutoMovieCompiledEffect[] => {
+export const materializeCompiledEffects = (
+  props: {
+    world?: IAutoMovieWorldDesign;
+    fps?: number;
+    fixedStepSeconds?: number;
+    cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
+  } & (
+    | { contract: IAutoMovieShotContract; seedOwner?: never }
+    | {
+        contract?: never;
+        seedOwner: { production: string; film: string };
+      }
+  ),
+): IAutoMovieCompiledEffect[] => {
   if (props.world === undefined) return [];
   const recipes = new Map(
     props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
@@ -786,13 +796,23 @@ export const materializeCompiledEffects = (props: {
       const recipe = zone === undefined ? undefined : recipes.get(zone.recipe);
       if (zone === undefined || recipe === undefined) return [];
       const seedDigest = digestAutoMovieBytes(
-        canonicalAutoMovieJsonBytes({
-          protocol: "automovie.effect-stream.v1",
-          shot: props.contract.id,
-          cue: cue.id,
-          recipeSeed: recipe.seed,
-          zoneSeed: zone.seed,
-        }),
+        canonicalAutoMovieJsonBytes(
+          props.seedOwner === undefined
+            ? {
+                protocol: "automovie.effect-stream.v1",
+                shot: props.contract!.id,
+                cue: cue.id,
+                recipeSeed: recipe.seed,
+                zoneSeed: zone.seed,
+              }
+            : {
+                protocol: "automovie.film-effect-seed.v1",
+                owner: props.seedOwner,
+                cue: cue.id,
+                recipe,
+                zone,
+              },
+        ),
       );
       const core = {
         version: 1 as const,
@@ -806,7 +826,7 @@ export const materializeCompiledEffects = (props: {
         end: cue.end,
         intensity: structuredClone(cue.intensity),
         ...(cue.event === undefined ? {} : { event: cue.event }),
-        fixedStepSeconds: 1 / (props.fps ?? 24),
+        fixedStepSeconds: props.fixedStepSeconds ?? 1 / (props.fps ?? 24),
       };
       return [
         {
@@ -1056,9 +1076,10 @@ const materializedLibraryReader = <T>(props: {
   const published = new Map<string, string[]>();
   try {
     const index = typia.validateEquals<IAutoMovieMaterializedLibrary>(
-      JSON.parse(
-        Buffer.from(props.read(AUTOMOVIE_LIBRARY_INDEX_PATH)).toString("utf8"),
-      ) as unknown,
+      parseAutoMovieStructuredJson({
+        record: "library-index",
+        bytes: props.read(AUTOMOVIE_LIBRARY_INDEX_PATH),
+      }),
     );
     if (index.success === true)
       for (const owner of index.data.owners)
@@ -1085,7 +1106,10 @@ const materializedLibraryReader = <T>(props: {
     for (const id of ids)
       try {
         const validation = props.validate(
-          JSON.parse(Buffer.from(props.read(props.file(id))).toString("utf8")),
+          parseAutoMovieStructuredJson({
+            record: "library-record",
+            bytes: props.read(props.file(id)),
+          }),
         );
         if (validation.success === true) found.push(validation.data);
       } catch {

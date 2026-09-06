@@ -1,7 +1,9 @@
 import type {
   AutoMovieDiagnosticCode,
+  AutoMovieScreenplayParticipantMode,
   IAutoMovieDiagnostic,
   IAutoMovieScreenplayIndex,
+  IAutoMovieScreenplayParticipant,
 } from "@automovie/interface";
 
 /**
@@ -11,14 +13,84 @@ import type {
  * line until the next heading, which is what says whether a scene has prose at
  * all or only a promise of one.
  */
-interface IMarkdownScene {
+export interface IAutoMovieParsedScreenplayAuthority {
+  /** Authored location line of the authority block. */
+  location: string;
+  /** Authored story-time line of the authority block. */
+  storyTime: string;
+  /** Participants named in the authority block, with their roles. */
+  participants: IAutoMovieScreenplayParticipant[];
+  /** Beat lines in authored order. */
+  beats: string[];
+}
+
+/**
+ * One timing phrase found in a scene body, with the selector it names.
+ */
+export interface IAutoMovieParsedScreenplayTimingOccurrence {
+  /** Authored timing phrase as written. */
+  text: string;
+  /** Seconds the phrase denotes; `NaN` when no number could be read from it. */
+  seconds: number;
+  /** Shot or event selector attached to the phrase, or null when it names none. */
+  selector: string | null;
+}
+
+/**
+ * One parsed scene: its heading identity, body, authority block and timing phrases.
+ */
+export interface IAutoMovieParsedScreenplayScene {
+  /** Scene identifier read from the heading. */
   id: string;
+  /** Heading text after the identifier and its separator. */
   title: string;
+  /** Every line until the next heading. */
   body: string;
+  /** Parsed authority block, or null when the scene carries none. */
+  authority: IAutoMovieParsedScreenplayAuthority | null;
+  /** Authority lines that failed to parse, verbatim. */
+  authorityErrors: string[];
+  /** Timing phrases found in the body, in order of appearance. */
+  timing: IAutoMovieParsedScreenplayTimingOccurrence[];
 }
 
 const HEADING =
   /^#{1,6}[ \t]+(SCN-[A-Za-z0-9-]+)[ \t]+(?:—|-|:)[ \t]+(.+?)[ \t]*$/u;
+
+const AUTHORITY_START = "@automovie-scene";
+const AUTHORITY_END = "@end-automovie-scene";
+const PARTICIPANT_MODES = new Set<AutoMovieScreenplayParticipantMode>([
+  "on-screen",
+  "off-screen",
+  "crowd",
+  "object",
+  "environmental",
+  "referenced",
+]);
+
+const TIMING_WORDS: Readonly<Record<string, number>> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  quarter: 0.25,
+  "a quarter": 0.25,
+  half: 0.5,
+  "three quarters": 0.75,
+};
+
+const TIMING_OCCURRENCE =
+  /(^|[^\w.-])((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters))(?:[ \t]*-[ \t]*|[ \t]+)seconds?\b(?:[ \t]*\{@timing[ \t]+([^}\r\n]+)\})?/giu;
+const TIMING_RANGE_START =
+  /(^|[^\w.-])((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters))[ \t]*(?:and|to|-)[ \t]*(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a[ \t]+quarter|quarter|half|three[ \t]+quarters)(?:[ \t]*-[ \t]*|[ \t]+)seconds?\b/giu;
 
 /**
  * Markdown lines that can make an audience-facing prose claim.
@@ -29,7 +101,7 @@ const HEADING =
  * number in an example look like a timing promise. Comment removal preserves
  * line breaks so the remaining heading and body boundaries stay unchanged.
  */
-const authoredMarkdownLines = (content: string): string[] => {
+export const authoredScreenplayMarkdownLines = (content: string): string[] => {
   const lines: string[] = [];
   let fence: string | undefined;
   let fenceLength = 0;
@@ -104,6 +176,120 @@ const authoredMarkdownLines = (content: string): string[] => {
 const comparableProse = (value: string): string =>
   value.split(/\s+/u).filter(Boolean).join(" ");
 
+const compareCodeUnits = (left: string, right: string): number =>
+  Number(left > right) - Number(left < right);
+
+const timingSeconds = (value: string): number => {
+  const normalized = value.toLowerCase().replace(/[ \t]+/gu, " ");
+  return TIMING_WORDS[normalized] ?? Number(normalized);
+};
+
+/**
+ * Find every timing phrase in one scene body together with its selector.
+ *
+ * Emphasis markup is stripped first so an italicized duration still counts;
+ * a phrase whose number cannot be read keeps `NaN` seconds so the timing
+ * check reports it rather than silently skipping it.
+ */
+export const parseScreenplayTimingOccurrences = (
+  body: string,
+): IAutoMovieParsedScreenplayTimingOccurrence[] => {
+  const prose = body.replace(/[*_`]/gu, "");
+  return [
+    ...[...prose.matchAll(TIMING_OCCURRENCE)].map((match) => ({
+      text: match[2]!,
+      seconds: timingSeconds(match[2]!),
+      selector: match[3]?.trim() ?? null,
+    })),
+    ...[...prose.matchAll(TIMING_RANGE_START)].map((match) => ({
+      text: match[2]!,
+      seconds: timingSeconds(match[2]!),
+      selector: null,
+    })),
+  ];
+};
+
+const parseAuthority = (
+  lines: string[],
+): {
+  authority: IAutoMovieParsedScreenplayAuthority | null;
+  errors: string[];
+  body: string;
+} => {
+  const first = lines.findIndex((line) => line.trim().length !== 0);
+  if (first === -1 || lines[first]!.trim() !== AUTHORITY_START)
+    return { authority: null, errors: [], body: lines.join("\n") };
+  const end = lines.findIndex(
+    (line, index) => index > first && line.trim() === AUTHORITY_END,
+  );
+  if (end === -1)
+    return {
+      authority: null,
+      errors: [`${AUTHORITY_START} has no ${AUTHORITY_END}`],
+      body: lines.join("\n"),
+    };
+  const errors: string[] = [];
+  let location: string | undefined;
+  let storyTime: string | undefined;
+  const participants: IAutoMovieScreenplayParticipant[] = [];
+  const beats: string[] = [];
+  for (const source of lines.slice(first + 1, end)) {
+    const line = source.trim();
+    if (line.length === 0) continue;
+    const separator = line.indexOf(":");
+    if (separator === -1) {
+      errors.push(`authority line "${line}" has no field separator`);
+      continue;
+    }
+    const key = line.slice(0, separator).trim();
+    const value = line.slice(separator + 1).trim();
+    if (key === "location") {
+      if (location !== undefined) errors.push("location is declared twice");
+      else location = value;
+    } else if (key === "story-time") {
+      if (storyTime !== undefined) errors.push("story-time is declared twice");
+      else storyTime = value;
+    } else if (key === "participant") {
+      const split = value.lastIndexOf(" ");
+      const id = split === -1 ? "" : value.slice(0, split).trim();
+      const mode = split === -1 ? "" : value.slice(split + 1).trim();
+      if (
+        id.length === 0 ||
+        PARTICIPANT_MODES.has(mode as AutoMovieScreenplayParticipantMode) ===
+          false
+      )
+        errors.push(`participant "${value}" has no valid identity and mode`);
+      else
+        participants.push({
+          id,
+          mode: mode as AutoMovieScreenplayParticipantMode,
+        });
+    } else if (key === "beat") {
+      if (value.length === 0) errors.push("beat identity is blank");
+      else beats.push(value);
+    } else errors.push(`authority field "${key}" is not supported`);
+  }
+  if (location === undefined || location.length === 0)
+    errors.push("location is absent or blank");
+  if (storyTime === undefined || storyTime.length === 0)
+    errors.push("story-time is absent or blank");
+  const participantKeys = participants.map(
+    (participant) => `${participant.id}\u0000${participant.mode}`,
+  );
+  if (new Set(participantKeys).size !== participantKeys.length)
+    errors.push("a participant identity and mode pair is repeated");
+  if (new Set(beats).size !== beats.length)
+    errors.push("a beat identity is repeated");
+  return {
+    authority:
+      location === undefined || storyTime === undefined
+        ? null
+        : { location, storyTime, participants, beats },
+    errors,
+    body: [...lines.slice(0, first), ...lines.slice(end + 1)].join("\n"),
+  };
+};
+
 /**
  * Collect the `SCN` headings a document declares, ignoring fenced code.
  *
@@ -111,25 +297,45 @@ const comparableProse = (value: string): string =>
  * inside one would let a guide that shows the heading format be mistaken for a
  * screenplay that declares the scene.
  */
-export const parseScreenplayProse = (content: string): IMarkdownScene[] => {
-  const scenes: IMarkdownScene[] = [];
-  let current: IMarkdownScene | undefined;
-  for (const line of authoredMarkdownLines(content)) {
+export const parseScreenplayProse = (
+  content: string,
+): IAutoMovieParsedScreenplayScene[] => {
+  const scenes: IAutoMovieParsedScreenplayScene[] = [];
+  let current:
+    | {
+        id: string;
+        title: string;
+        lines: string[];
+      }
+    | undefined;
+  const push = (): void => {
+    if (current === undefined) return;
+    const parsed = parseAuthority(current.lines);
+    scenes.push({
+      id: current.id,
+      title: current.title,
+      body: parsed.body,
+      authority: parsed.authority,
+      authorityErrors: parsed.errors,
+      timing: parseScreenplayTimingOccurrences(parsed.body),
+    });
+  };
+  for (const line of authoredScreenplayMarkdownLines(content)) {
     const match = HEADING.exec(line);
     if (match !== null) {
-      if (current !== undefined) scenes.push(current);
+      push();
       current = {
         id: match[1]!,
         // An explicit Markdown id stabilizes evidence citations; it is
         // metadata on the heading, not part of the screenplay scene title.
         title: match[2]!.replace(/[ \t]+\{#[^{}\s]+\}[ \t]*$/u, "").trim(),
-        body: "",
+        lines: [],
       };
       continue;
     }
-    if (current !== undefined) current.body += `${line}\n`;
+    if (current !== undefined) current.lines.push(line);
   }
-  if (current !== undefined) scenes.push(current);
+  push();
   return scenes;
 };
 
@@ -192,7 +398,7 @@ export const screenplayProseDiagnostics = (props: {
     const content = read(documentPath);
     if (content === null) continue;
     const comparable = comparableProse(
-      authoredMarkdownLines(content).join("\n"),
+      authoredScreenplayMarkdownLines(content).join("\n"),
     );
     for (const beat of sequence.beats)
       if (
@@ -211,7 +417,7 @@ export const screenplayProseDiagnostics = (props: {
   for (const scene of screenplay.screenplay.scenes)
     if (scene.path !== undefined && scene.path.trim().length !== 0)
       owned.set(scene.id, scene.path);
-  const headings = new Map<string, IMarkdownScene[]>();
+  const headings = new Map<string, IAutoMovieParsedScreenplayScene[]>();
   const headingPath = new Map<string, string>();
   const collect = (documentPath: string, only?: string): void => {
     const content = read(documentPath);
@@ -270,6 +476,74 @@ export const screenplayProseDiagnostics = (props: {
       refuse(
         "screenplay-scene-unwritten",
         `Active scene "${scene.id}" has a heading in "${documentPath}" and no prose beneath it. A heading-only ledger entry cannot satisfy authored dramatic work. Write the scene and compile again.`,
+        documentPath,
+      );
+    if (entry.authorityErrors.length !== 0)
+      refuse(
+        "screenplay-scene-authority-invalid",
+        `Scene "${scene.id}" has an invalid ${AUTHORITY_START} carrier in "${documentPath}": ${entry.authorityErrors.join("; ")}. Correct the bounded carrier rather than asking the compiler to infer action prose, then compile again.`,
+        documentPath,
+      );
+    if (scene.status === "OMITTED") {
+      if (entry.authority !== null)
+        refuse(
+          "screenplay-scene-authority-unexpected",
+          `OMITTED scene "${scene.id}" still declares an active authority carrier in "${documentPath}". A permanent tombstone has identity but no live place, time, participant or beat claim. Remove the carrier or reactivate the scene, then compile again.`,
+          documentPath,
+        );
+      continue;
+    }
+    if (entry.authority === null) {
+      refuse(
+        "screenplay-scene-authority-absent",
+        `Active scene "${scene.id}" has no complete ${AUTHORITY_START} carrier immediately below its heading in "${documentPath}". Declare location, story-time, participants and beat identities there so prose and index have one deterministic join, then compile again.`,
+        documentPath,
+      );
+      continue;
+    }
+    if (entry.authority.location !== scene.location)
+      refuse(
+        "screenplay-scene-location-conflict",
+        `Scene "${scene.id}" names location "${scene.location}" in the index and "${entry.authority.location}" in authoritative prose. Stable ids compare exactly; repair the record that is wrong, then compile again.`,
+        documentPath,
+      );
+    if (entry.authority.storyTime !== scene.storyTime)
+      refuse(
+        "screenplay-scene-story-time-conflict",
+        `Scene "${scene.id}" names story time "${scene.storyTime}" in the index and "${entry.authority.storyTime}" in authoritative prose. Explicit unknown matches only explicit unknown, so repair the record that is wrong, then compile again.`,
+        documentPath,
+      );
+    const participantKey = (
+      participant: IAutoMovieScreenplayParticipant,
+    ): string => `${participant.id}\u0000${participant.mode}`;
+    const indexedParticipants = scene.participants
+      .map(participantKey)
+      .sort(compareCodeUnits);
+    const proseParticipants = entry.authority.participants
+      .map(participantKey)
+      .sort(compareCodeUnits);
+    if (
+      indexedParticipants.length !== proseParticipants.length ||
+      indexedParticipants.some(
+        (participant, index) => participant !== proseParticipants[index],
+      )
+    )
+      refuse(
+        "screenplay-scene-participant-conflict",
+        `Scene "${scene.id}" participants differ between index [${indexedParticipants.join(", ")}] and authoritative prose [${proseParticipants.join(", ")}]. Compare each stable identity and mode inside this scene, then compile again.`,
+        documentPath,
+      );
+    const indexedBeats = scene.covers
+      .map((coverage) => coverage.id)
+      .sort(compareCodeUnits);
+    const proseBeats = [...entry.authority.beats].sort(compareCodeUnits);
+    if (
+      indexedBeats.length !== proseBeats.length ||
+      indexedBeats.some((beat, index) => beat !== proseBeats[index])
+    )
+      refuse(
+        "screenplay-scene-beat-conflict",
+        `Scene "${scene.id}" beat identities differ between index [${indexedBeats.join(", ")}] and authoritative prose [${proseBeats.join(", ")}]. A same sentence in another scene cannot discharge this join. Correct the exact scene carrier, then compile again.`,
         documentPath,
       );
   }

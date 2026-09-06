@@ -3,17 +3,28 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const ROOT = path.resolve(__dirname, "..");
+import {
+  AUTOMOVIE_PACKAGE_INVENTORY,
+  type IWorkspacePackage,
+  type IWorkspacePackageManifest,
+  planWorkspacePackageInventory,
+} from "./workspacePackageInventory";
 
-export interface IWorkspacePackage {
-  readonly key: string;
-  readonly directory: string;
-  readonly name: string;
-}
+export {
+  AUTOMOVIE_PACKAGE_INVENTORY,
+  planWorkspacePackageInventory,
+} from "./workspacePackageInventory";
+export type {
+  IWorkspacePackage,
+  IWorkspacePackageManifest,
+} from "./workspacePackageInventory";
+
+const ROOT = path.resolve(__dirname, "..");
 
 export interface IPackWorkspaceDependencies {
   readonly remove: (directory: string) => void;
   readonly makeDirectory: (directory: string) => void;
+  readonly makeTemporaryDirectory: (prefix: string) => string;
   readonly pack: (
     directory: string,
     destination: string,
@@ -47,6 +58,7 @@ export const shellArgument = (value: string, shell: boolean): string =>
 export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
   remove: (directory) => fs.rmSync(directory, { recursive: true, force: true }),
   makeDirectory: (directory) => fs.mkdirSync(directory, { recursive: true }),
+  makeTemporaryDirectory: (prefix) => fs.mkdtempSync(prefix),
   pack: (directory, destination) => {
     const shell = process.platform === "win32";
     const result = spawnSync(
@@ -67,6 +79,58 @@ export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
   write: (message) => process.stdout.write(message),
 };
 
+/** Read every direct `packages/*` manifest before archive planning. */
+const workspacePackageManifests = (): IWorkspacePackageManifest[] =>
+  fs
+    .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const manifestPath = path.join(
+        ROOT,
+        "packages",
+        entry.name,
+        "package.json",
+      );
+      if (fs.existsSync(manifestPath) === false) return [];
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
+        name?: unknown;
+        private?: unknown;
+        dependencies?: unknown;
+        optionalDependencies?: unknown;
+        peerDependencies?: unknown;
+      };
+      return [
+        {
+          directory: entry.name,
+          name: typeof manifest.name === "string" ? manifest.name : "",
+          private: manifest.private === true,
+          dependencies: [
+            manifest.dependencies,
+            manifest.optionalDependencies,
+            manifest.peerDependencies,
+          ].flatMap((section) =>
+            typeof section === "object" && section !== null
+              ? Object.keys(section)
+              : [],
+          ),
+        },
+      ];
+    });
+
+/** The declared archive population reconciled with every `packages/*` manifest. */
+export const WORKSPACE_PACKAGE_INVENTORY_PLAN = planWorkspacePackageInventory({
+  declarations: AUTOMOVIE_PACKAGE_INVENTORY,
+  manifests: workspacePackageManifests(),
+});
+
+if (WORKSPACE_PACKAGE_INVENTORY_PLAN.diagnostics.length !== 0)
+  throw new Error(
+    `Workspace package inventory refused:\n${WORKSPACE_PACKAGE_INVENTORY_PLAN.diagnostics
+      .map(({ code, subject }) => `${code}: ${subject}`)
+      .join("\n")}`,
+  );
+
 /**
  * The workspace packages a sandbox installs, dependencies before consumers.
  *
@@ -76,28 +140,29 @@ export const packWorkspaceDependencies: IPackWorkspaceDependencies = {
  * because the two stopped agreeing: the command-line package lives in
  * `packages/cli` and publishes as `automovie`. Deriving one from the other
  * looked for a tarball nobody produces and pinned a dependency nobody
- * publishes. The closure matters because `pnpm pack` rewrites a `workspace:^` range
- * to a plain semver one: any member left unpacked would be resolved from the
- * public registry at a version this monorepo has never published.
+ * publishes. The closure matters because `pnpm pack` rewrites a `workspace:^`
+ * range to a plain semver one: any member left unpacked would be resolved from
+ * the public registry at a version this monorepo has never published.
  */
 export const PACKAGES: readonly IWorkspacePackage[] = Object.freeze([
-  { key: "interface", directory: "interface", name: "@automovie/interface" },
-  { key: "engine", directory: "engine", name: "@automovie/engine" },
-  { key: "archetypes", directory: "archetypes", name: "@automovie/archetypes" },
-  { key: "evidence", directory: "evidence", name: "@automovie/evidence" },
-  { key: "render", directory: "render", name: "@automovie/render" },
-  { key: "ingest", directory: "ingest", name: "@automovie/ingest" },
-  { key: "viewer", directory: "viewer", name: "@automovie/viewer" },
-  { key: "production", directory: "production", name: "@automovie/production" },
-  { key: "template", directory: "template", name: "@automovie/template" },
-  { key: "cli", directory: "cli", name: "automovie" },
+  ...WORKSPACE_PACKAGE_INVENTORY_PLAN.packages,
 ]);
 
-/** Where a sandbox keeps the tarballs it installs from. */
-const TARBALL_DIR = ".tarballs";
+/** One immutable workspace package generation ready for a consumer to pin. */
+export interface IPackWorkspaceResult {
+  readonly directory: string;
+  readonly generation: string;
+  readonly specifiers: Readonly<Record<string, string>>;
+}
+
+const TARBALL_GENERATION_PREFIX = ".tarballs-";
+const TARBALL_STAGING_PREFIX = ".tarballs-stage-";
+
+const digestBytes = (value: Buffer): string =>
+  createHash("sha256").update(value).digest("hex");
 
 /**
- * Pack every workspace package into `<target>/.tarballs`, returning each
+ * Pack every workspace package into one immutable generation, returning each
  * package's `file:` specifier.
  *
  * Packing rather than linking is the whole design. `pnpm pack` runs each
@@ -127,57 +192,100 @@ const TARBALL_DIR = ".tarballs";
 export const packWorkspace = (
   target: string,
   dependencies: IPackWorkspaceDependencies = packWorkspaceDependencies,
-): Record<string, string> => {
-  const directory = path.join(target, TARBALL_DIR);
-  dependencies.remove(directory);
-  dependencies.makeDirectory(directory);
+  packages: readonly IWorkspacePackage[] = PACKAGES,
+): IPackWorkspaceResult => {
+  dependencies.makeDirectory(target);
+  const staging = dependencies.makeTemporaryDirectory(
+    path.join(target, TARBALL_STAGING_PREFIX),
+  );
 
-  const specifiers: Record<string, string> = {};
-  for (const { key, directory: folder, name } of PACKAGES) {
-    dependencies.write(`Packing ${name}\n`);
-    const packed = dependencies.pack(
-      path.join(ROOT, "packages", folder),
-      directory,
-    );
-    if (packed.status !== 0) throw new Error(`pnpm pack failed for ${name}`);
-    // Take the path pack reports rather than guessing the filename. The
-    // command-line package publishes as `automovie`, so every scoped sibling
-    // packs to `automovie-<member>-<version>.tgz` and a prefix match on its
-    // own name claims all ten.
-    const produced = packed.stdout
-      .split(/\r?\n/u)
-      .map((line) => line.trim())
-      .filter((line) => line.endsWith(".tgz"));
-    if (produced.length !== 1)
-      throw new Error(
-        `pnpm pack named ${produced.length} tarballs for ${name}; expected one.`,
+  try {
+    const packedFiles: Array<{
+      digest: string;
+      file: string;
+      key: string;
+      name: string;
+    }> = [];
+    for (const { key, directory: folder, name } of packages) {
+      dependencies.write(`Packing ${name}\n`);
+      const packed = dependencies.pack(
+        path.join(ROOT, "packages", folder),
+        staging,
       );
-    const original = produced[0];
-    if (!dependencies.exists(original))
-      throw new Error(`pnpm pack reported a missing tarball for ${name}`);
-    const digest = createHash("sha256")
-      .update(dependencies.read(original))
+      if (packed.status !== 0) throw new Error(`pnpm pack failed for ${name}`);
+      // Take the path pack reports rather than guessing the filename. The
+      // command-line package publishes as `automovie`, so every scoped sibling
+      // packs to `automovie-<member>-<version>.tgz` and a prefix match on its
+      // own name claims all ten.
+      const produced = packed.stdout
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line.endsWith(".tgz"));
+      if (produced.length !== 1)
+        throw new Error(
+          `pnpm pack named ${produced.length} tarballs for ${name}; expected one.`,
+        );
+      const original = produced[0];
+      if (!dependencies.exists(original))
+        throw new Error(`pnpm pack reported a missing tarball for ${name}`);
+      const digest = digestBytes(dependencies.read(original));
+      const file = path
+        .basename(original)
+        .replace(/\.tgz$/u, `-${digest.slice(0, 12)}.tgz`);
+      dependencies.rename(original, path.join(staging, file));
+      packedFiles.push({ digest, file, key, name });
+    }
+
+    const generation = createHash("sha256")
+      .update(
+        JSON.stringify(
+          packedFiles.map(({ digest, key, name }) => ({ digest, key, name })),
+        ),
+      )
       .digest("hex")
       .slice(0, 12);
-    const final = path.basename(original).replace(/\.tgz$/u, `-${digest}.tgz`);
-    dependencies.rename(original, path.join(directory, final));
-    specifiers[key] = `file:./${TARBALL_DIR}/${final}`;
+    const relativeDirectory = `${TARBALL_GENERATION_PREFIX}${generation}`;
+    const directory = path.join(target, relativeDirectory);
+    const specifiers = Object.fromEntries(
+      packedFiles.map(({ file, key }) => [
+        key,
+        `file:./${relativeDirectory}/${file}`,
+      ]),
+    );
+
+    if (dependencies.exists(directory)) {
+      const invalid = packedFiles.find(({ digest, file }) => {
+        const existing = path.join(directory, file);
+        return (
+          !dependencies.exists(existing) ||
+          digestBytes(dependencies.read(existing)) !== digest
+        );
+      });
+      if (invalid !== undefined)
+        throw new Error(
+          `workspace package generation ${generation} cannot be reused: ${invalid.file} is missing or has different bytes`,
+        );
+      dependencies.remove(staging);
+    } else dependencies.rename(staging, directory);
+
+    return { directory, generation, specifiers };
+  } catch (error) {
+    if (dependencies.exists(staging)) dependencies.remove(staging);
+    throw error;
   }
-  return specifiers;
 };
 
 /** Build the complete local package tarball set into the repository cache. */
 export const buildTgz = (
   root: string = ROOT,
-  pack: (target: string) => Record<string, string> = packWorkspace,
+  pack: (target: string) => IPackWorkspaceResult = packWorkspace,
   write: (message: string) => unknown = (message) =>
     process.stdout.write(message),
 ): string => {
   const target = path.join(root, "node_modules", ".cache", "automovie-tgz");
-  pack(target);
-  const output = path.join(target, TARBALL_DIR);
-  write(`TGZ packages built under ${output}\n`);
-  return output;
+  const result = pack(target);
+  write(`TGZ packages built under ${result.directory}\n`);
+  return result.directory;
 };
 
 /**
@@ -194,7 +302,14 @@ export const buildTgz = (
 export const isProcessEntry = (
   entry: string | undefined,
   file: string,
-): boolean => entry !== undefined && path.resolve(entry) === path.resolve(file);
+): boolean => {
+  if (entry === undefined) return false;
+  const actual = path.resolve(entry);
+  const expected = path.resolve(file);
+  return process.platform === "win32"
+    ? actual.toLowerCase() === expected.toLowerCase()
+    : actual === expected;
+};
 
 /** Pack the workspace only when this module is the process entry. */
 export const buildTgzCli = (entry: boolean, run: () => unknown): void => {

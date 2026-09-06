@@ -1,33 +1,56 @@
+import { resolveProductionFrameRate } from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
+  IAutoMovieProductionPublicationIdentity,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenditionDelivery,
   IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintSequenceObservation,
+  IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieProductionSemanticMaskReceipt,
+  type IAutoMovieVisualDeliveryLane,
   assembleProductionChunkVideoMp4,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionRenderDialogueRuntimeIdentity,
+  assertProductionVideoProfile,
+  autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
-  conformProductionRenditionVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
+  createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
+  digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
   muxProductionFeatureMp4,
-  openAutoMovieProduction,
+  normalizeAutoMovieVisualDeliveryLanes,
+  planAutoMovieVisualDelivery,
   probeProductionMedia,
+  productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
+  productionRenderPublicationIdentity,
+  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
   sampleProductionRenderFrame,
+  verifyAutoMovieProductionSemanticMaskReceipt,
+  verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import { assertProxyPublicationCandidate } from "./assertProxyBundle";
 import {
   type IAutoMovieProductionRepaintSelection,
   assertProductionRepaintReceiptAdoption,
@@ -35,12 +58,20 @@ import {
 } from "./productionConfiguration";
 import { assertProductionSoundRenderClock } from "./productionRuntime";
 import {
-  type ICurrentRenderChunkPublication,
+  captureRenderChunkPublicationFromPointer,
   consumeCurrentRenderChunkFrames,
+  readRenderChunkPublicationFile,
 } from "./renderChunkSnapshot";
 import { productionRenderFrameCaptureInput } from "./renderFrameCaptureInput";
 import type { IProductionRenderHost } from "./renderHost";
-import type { createProductionRenderPlanningRuntime } from "./renderPlanningRuntime";
+import {
+  assertRenderPlanHead,
+  captureExistingRenderPlan,
+} from "./renderPlanSnapshot";
+import type {
+  IProductionRenderChunkInspection,
+  createProductionRenderPlanningRuntime,
+} from "./renderPlanningRuntime";
 import {
   type IProductionRenderEncoderRuntime,
   type IProductionSoundBundle,
@@ -53,29 +84,7 @@ import {
 export const productionRenderPublicationFingerprint = (
   plan: IAutoMovieProductionRenderJobPlan,
 ): AutoMovieContentDigest =>
-  digestAutoMovieBytes(
-    Buffer.from(
-      JSON.stringify({
-        protocol: "automovie.production-publication.v2",
-        productionId: plan.productionId,
-        compileFingerprint: plan.compileFingerprint,
-        editFingerprint: plan.editFingerprint,
-        runtimeIdentity: plan.runtimeIdentity,
-        tier: plan.tier,
-        sourceFrameFormat: plan.sourceFrameFormat,
-        frameFormat: plan.frameFormat,
-        totalFrames: plan.totalFrames,
-        chunkFrames: plan.chunkFrames,
-        chunks: plan.chunks.map((chunk) => ({
-          slot: chunk.slot,
-          id: chunk.id,
-          pass: chunk.pass,
-        })),
-        tracks: plan.tracks,
-      }),
-      "utf8",
-    ),
-  );
+  productionRenderPublicationIdentity(plan).fingerprint;
 
 export interface IProductionRenderPublicationRuntime {
   assembleChunkVideo: (
@@ -102,29 +111,30 @@ export interface IProductionRenderPublicationRuntime {
 /** Own immutable proxy publication and current chunk assembly. */
 export const createProductionRenderPublicationRuntime = (props: {
   assertCurrentEncoder: (plan: IAutoMovieProductionRenderJobPlan) => void;
-  currentChunk: (
+  inspectChunk: (
     plan: IAutoMovieProductionRenderJobPlan,
     chunk: IAutoMovieProductionRenderChunk,
-  ) => ICurrentRenderChunkPublication | null;
+  ) => IProductionRenderChunkInspection;
   ensureDirectory: (root: string, relative: string) => string;
   filesystem: Pick<typeof import("node:fs"), "existsSync" | "readdirSync">;
-  inspectProxy: (
-    renderRoot: string,
-    target: string,
-  ) => {
+  inspectProxy: (props: {
+    plan: IAutoMovieProductionRenderJobPlan;
+    renderRoot: string;
+    target: string;
+  }) => {
     compileFingerprint: string;
     editFingerprint: string;
+    publicationIdentity: IAutoMovieProductionPublicationIdentity;
     sourceFrameFormat: unknown;
   };
   publicationFingerprint: (plan: IAutoMovieProductionRenderJobPlan) => string;
   publishProxyBundle: (props: {
     expected: ReadonlyMap<string, Uint8Array>;
     parent: string;
-    processAlive: (pid: number) => boolean;
+    preflight: () => void;
     renderRoot: string;
     target: string;
   }) => { reused: boolean };
-  processAlive: (pid: number) => boolean;
 }): IProductionRenderPublicationRuntime => ({
   assembleChunkVideo: (plan, chunks) => {
     if (chunks.length === 0) throw new Error("No current chunks to encode.");
@@ -135,12 +145,10 @@ export const createProductionRenderPublicationRuntime = (props: {
     return assembleProductionChunkVideoMp4({
       chunks: (function* () {
         for (const chunk of ordered) {
-          const current = props.currentChunk(plan, chunk);
-          if (current === null)
-            throw new Error(
-              `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
-            );
-          yield current.encoded;
+          const inspection = props.inspectChunk(plan, chunk);
+          if (inspection.current === null)
+            throw new Error(inspection.finding.reason);
+          yield inspection.current.encoded;
         }
       })(),
       frameFormat: plan.frameFormat,
@@ -148,52 +156,82 @@ export const createProductionRenderPublicationRuntime = (props: {
     });
   },
   assertMatchingProxy: (project, plan) => {
-    const proxyRoot = path.join(project.renderRoot(), "deliverables", "proxy");
-    if (props.filesystem.existsSync(proxyRoot) === false)
+    const proxyStateRoot = path.join(
+      project.root,
+      "automovie",
+      "productions",
+      encodeAutoMoviePathSegment(project.productionId),
+      "render-job",
+      "proxy",
+    );
+    const proxyPlanSnapshot = props.filesystem.existsSync(proxyStateRoot)
+      ? captureExistingRenderPlan(
+          proxyStateRoot,
+          path.join(proxyStateRoot, "plan.json"),
+        )
+      : null;
+    if (proxyPlanSnapshot === null)
       throw new Error(
-        "Final publication requires one immutable proxy publication of the same compiler-owned EDL. Finalize the proxy tier, review it, then finalize this plan.",
+        "Final publication requires the current proxy render-plan generation. Plan and finalize the proxy tier before final conform.",
       );
-    const matched = props.filesystem
-      .readdirSync(proxyRoot, { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isSymbolicLink() === false &&
-          (entry.isFile() || entry.isDirectory()) &&
-          /^[0-9a-f]{64}$/u.test(entry.name),
-      )
-      .some((entry) => {
-        try {
-          const receipt = props.inspectProxy(
-            project.renderRoot(),
-            path.join(proxyRoot, entry.name),
-          );
-          return (
-            receipt.compileFingerprint === plan.compileFingerprint &&
-            receipt.editFingerprint === plan.editFingerprint &&
-            isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat)
-          );
-        } catch {
-          return false;
-        }
-      });
-    if (matched === false)
+    const proxyPlan = proxyPlanSnapshot.plan;
+    const proxyIdentity = productionRenderPublicationIdentity(proxyPlan);
+    const target = path.join(
+      project.renderRoot(),
+      "deliverables",
+      "proxy",
+      proxyIdentity.fingerprint.slice(7),
+    );
+    if (props.filesystem.existsSync(target) === false)
       throw new Error(
-        "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
+        "Final publication requires the publication of the current proxy render plan, and none exists. Finalize the proxy tier, review it, then finalize this plan.",
       );
+    // The seam binds the publication to the proxy plan itself: its structured
+    // identity must equal that plan and every resident file, semantic sidecar
+    // included, must reopen against the mask frame that plan schedules.
+    const receipt = props.inspectProxy({
+      plan: proxyPlan,
+      renderRoot: project.renderRoot(),
+      target,
+    });
+    if (
+      receipt.compileFingerprint !== plan.compileFingerprint ||
+      receipt.editFingerprint !== plan.editFingerprint ||
+      isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat) ===
+        false
+    )
+      throw new Error(
+        "The current proxy publication does not match this final plan's compiler-owned EDL and source frame format. Replan and finalize both tiers.",
+      );
+    try {
+      assertRenderPlanHead(
+        proxyStateRoot,
+        path.join(proxyStateRoot, "plan.json"),
+        proxyPlanSnapshot,
+      );
+    } catch {
+      throw new Error(
+        "The current proxy render-plan generation changed during final admission. Retry finalization.",
+      );
+    }
   },
   publishProxy: (plan, publication, manifest, project) => {
     const renderRoot = project.renderRoot();
     const fingerprint = props.publicationFingerprint(plan);
+    const publicationIdentity = productionRenderPublicationIdentity(plan);
+    if (fingerprint !== publicationIdentity.fingerprint)
+      throw new Error(
+        "Proxy publication fingerprint differs from the canonical render-plan identity.",
+      );
     const publicationSegment = fingerprint.slice(7);
     const bundle = ["deliverables", "proxy", publicationSegment].join("/");
-    const parent = props.ensureDirectory(renderRoot, "deliverables/proxy");
-    const target = path.join(parent, publicationSegment);
     const manifestBytes = Buffer.from(
       `${JSON.stringify(
         {
           version: 1,
           tier: plan.tier,
           publicationFingerprint: fingerprint,
+          publicationIdentity,
           compileFingerprint: plan.compileFingerprint,
           editFingerprint: plan.editFingerprint,
           frameFormat: plan.frameFormat,
@@ -206,6 +244,8 @@ export const createProductionRenderPublicationRuntime = (props: {
       )}\n`,
       "utf8",
     );
+    const parent = props.ensureDirectory(renderRoot, "deliverables/proxy");
+    const target = path.join(parent, publicationSegment);
     const files = new Map<string, Uint8Array>([
       ["publication.json", manifestBytes],
     ]);
@@ -219,7 +259,13 @@ export const createProductionRenderPublicationRuntime = (props: {
     const published = props.publishProxyBundle({
       expected: files,
       parent,
-      processAlive: props.processAlive,
+      preflight: () =>
+        assertProxyPublicationCandidate({
+          bundle,
+          expected: publication,
+          plan,
+          receipt: manifestBytes,
+        }),
       renderRoot,
       target,
     });
@@ -241,6 +287,10 @@ export const createProductionRenderFinalizationRuntime = (props: {
   ) => void;
   publication: IProductionRenderPublicationRuntime;
   repaintSelection: () => IAutoMovieProductionRepaintSelection | null;
+  repaintSequenceBaseline: () =>
+    | IAutoMovieRepaintSequenceObservation["baseline"]
+    | null;
+  repaintSequenceObservation: () => IAutoMovieRepaintSequenceObservation | null;
   root: string;
   sound: IProductionSoundRuntime;
 }) => {
@@ -248,19 +298,13 @@ export const createProductionRenderFinalizationRuntime = (props: {
   const planningRuntime = props.planning;
   const productionId = props.productionId;
   const productionRepaintSelection = props.repaintSelection;
+  const productionRepaintSequenceBaseline = props.repaintSequenceBaseline;
+  const productionRepaintSequenceObservation = props.repaintSequenceObservation;
   const publicationRuntime = props.publication;
   const renderHost = props.host;
   const renderProgress = props.progress;
   const root = props.root;
   const soundRuntime = props.sound;
-
-  const productionServices = () =>
-    openAutoMovieProduction({
-      projectRoot: root,
-      productionId,
-      capture: renderHost.capture,
-      authoringEvidence: props.authoringEvidence,
-    });
 
   const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     renderProgress("finalize.start", { tier: plan.tier.kind });
@@ -268,11 +312,18 @@ export const createProductionRenderFinalizationRuntime = (props: {
     // than on a stored review ledger. A film that has not answered its
     // contracts at review stage has not been reviewed, whatever a ledger would
     // have said about it.
+    //
+    // This is the review-scope gate, deliberately. The final scope adds the
+    // aggregate delivery ledger, which is what this very run is about to
+    // create, so asking for it here refuses every first final publication as
+    // "no render manifest". The ledger is judged where it exists: the staged
+    // final gate inside the terminal commit and the final compile after it,
+    // both against the exact plan being published.
     if (plan.tier.kind === "final") {
       const gate = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.openReadOnly(root, productionId),
         props.authoringEvidence,
-      ).lint({ scope: "final" });
+      ).lint({ scope: "review" });
       if (gate.success === false)
         // Carry each diagnostic's own message, not just its code and target. A
         // refusal here names the exact frames a shot or a staged model still
@@ -302,8 +353,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     if (plan.tier.kind === "final")
       publicationRuntime.assertMatchingProxy(project, plan);
     const timeline =
-      plan.tier.kind === "final" &&
-      graph.production.visualDelivery === "repainted"
+      plan.tier.kind === "final"
         ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
         : null;
     const selectedRepaint =
@@ -317,21 +367,50 @@ export const createProductionRenderFinalizationRuntime = (props: {
                 ? []
                 : [
                     ...new Set(
-                      timeline.segments.map((segment) => segment.shot),
+                      timeline.segments.flatMap((segment, index) => {
+                        const lane =
+                          graph.production!.visualDelivery === "mixed"
+                            ? graph.production!.visualDeliveryLanes?.find(
+                                (candidate) =>
+                                  candidate.occurrence ===
+                                  productionVisualDeliveryOccurrence(
+                                    segment,
+                                    index,
+                                  ),
+                              )?.lane
+                            : graph.production!.visualDelivery;
+                        return lane === "repainted" ? [segment.shot] : [];
+                      }),
                     ),
                   ],
           })
         : configuredRepaint;
-    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
+    const renditionSelections =
       timeline === null
         ? new Map()
         : new Map(
             project
-              .verifiedRepaintRenditions([
-                ...new Set(timeline.segments.map((segment) => segment.shot)),
-              ])
-              .map((receipt) => [receipt.shot, receipt] as const),
+              .verifiedRepaintSelections(
+                timeline.segments.flatMap((segment, index) => {
+                  const lane =
+                    graph.production!.visualDelivery === "mixed"
+                      ? graph.production!.visualDeliveryLanes?.find(
+                          (candidate) =>
+                            candidate.occurrence ===
+                            productionVisualDeliveryOccurrence(segment, index),
+                        )?.lane
+                      : graph.production!.visualDelivery;
+                  return lane === "repainted" ? [segment.shot] : [];
+                }),
+              )
+              .map((selection) => [selection.receipt.shot, selection] as const),
           );
+    const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> = new Map(
+      [...renditionSelections].map(([shot, selection]) => [
+        shot,
+        selection.receipt,
+      ]),
+    );
     if (plan.tier.kind === "final" && selectedRepaint !== null)
       assertProductionRepaintReceiptAdoption({
         selected: selectedRepaint,
@@ -347,16 +426,20 @@ export const createProductionRenderFinalizationRuntime = (props: {
         )
         .map((deliverable) => deliverable.id),
     );
-    if (
-      status.some(
-        (item) =>
-          requiredVideo.has(
-            plan.chunks.find((chunk) => chunk.slot === item.slot)!.deliverable,
-          ) && item.status !== "complete",
-      )
-    )
+    const blockingStatus = status.filter(
+      (item) =>
+        requiredVideo.has(
+          plan.chunks.find((chunk) => chunk.slot === item.slot)!.deliverable,
+        ) && item.status !== "complete",
+    );
+    if (blockingStatus.length !== 0)
       throw new Error(
-        "Final publication requires every required current chunk complete. Run render status and run first.",
+        [
+          "Final publication requires every required current chunk complete:",
+          ...blockingStatus.map(
+            (item) => `  ${item.slot}: ${item.artifact.reason}`,
+          ),
+        ].join("\n"),
       );
     const completeSlots = new Set(
       status
@@ -365,8 +448,9 @@ export const createProductionRenderFinalizationRuntime = (props: {
     );
     const publication = new Map<string, Uint8Array>();
     const manifest: IAutoMovieProductionRenderManifest = {
-      version: 1,
+      version: 2,
       compileFingerprint: plan.compileFingerprint,
+      publication: productionRenderPublicationIdentity(plan),
       deliverables: [],
     };
     let soundPromise: Promise<IProductionSoundBundle> | undefined;
@@ -388,8 +472,20 @@ export const createProductionRenderFinalizationRuntime = (props: {
       })());
     const publicationSegment =
       productionRenderPublicationFingerprint(plan).slice(7);
+    const publicationFrameRate = resolveProductionFrameRate(plan.frameFormat);
     for (const deliverable of graph.production.deliverables) {
       const owned = new Map<string, Uint8Array>();
+      // Semantic sidecars a mask guide carries beside its frames, keyed by the
+      // owned name their bytes are published under. The chunk receipt that
+      // produced each one is kept so the publication record can be re-bound to
+      // the new path against the exact same shot, frame, palette, and coverage.
+      const semantics = new Map<
+        string,
+        {
+          receipt: IAutoMovieProductionSemanticMaskReceipt;
+          mask: IAutoMovieSemanticMask;
+        }
+      >();
       const deliverableChunks = plan.chunks.filter(
         (chunk) => chunk.deliverable === deliverable.id,
       );
@@ -409,25 +505,206 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.encode.start", {
           deliverable: deliverable.id,
         });
-        const video =
-          timeline === null
-            ? publicationRuntime.assembleChunkVideo(plan, deliverableChunks)
-            : conformProductionRenditionVideoMp4({
-                timeline,
-                clips: new Map(
-                  timeline.segments.map((segment) => {
-                    const receipt = renditionReceipts.get(segment.shot);
-                    if (receipt === undefined)
-                      throw new Error(
-                        `Repainted feature delivery is missing current receipt-bound output for shot "${segment.shot}".`,
-                      );
-                    return [
-                      segment.shot,
-                      project.readRenderFile(receipt.output.path),
-                    ] as const;
+        const deterministicVideo = publicationRuntime.assembleChunkVideo(
+          plan,
+          deliverableChunks,
+        );
+        let video = deterministicVideo;
+        if (timeline !== null) {
+          const timelineOccurrences = timeline.segments.map(
+            (segment, index) => ({
+              occurrence: productionVisualDeliveryOccurrence(segment, index),
+              shot: segment.shot,
+            }),
+          );
+          const lanes: IAutoMovieVisualDeliveryLane[] =
+            graph.production.visualDelivery === "mixed"
+              ? (graph.production.visualDeliveryLanes ?? []).map((lane) => {
+                  if (lane.lane === "deterministic")
+                    return {
+                      ...lane,
+                      lane: "deterministic" as const,
+                      deterministic: {
+                        path: `generated/deterministic/${encodeAutoMoviePathSegment(lane.occurrence)}`,
+                        digest: productionDeterministicVisualSourceDigest({
+                          compileFingerprint: plan.compileFingerprint,
+                          occurrence: lane.occurrence,
+                        }),
+                      },
+                      repaint: null,
+                    };
+                  const selection = renditionSelections.get(lane.shot);
+                  if (selection === undefined)
+                    throw new Error(
+                      `Repaint occurrence "${lane.occurrence}" has no current verified selection.`,
+                    );
+                  return {
+                    ...lane,
+                    lane: "repainted" as const,
+                    deterministic: null,
+                    repaint: {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    },
+                  };
+                })
+              : normalizeAutoMovieVisualDeliveryLanes({
+                  timeline: timelineOccurrences,
+                  visualDelivery: graph.production.visualDelivery,
+                  deterministic: (occurrence) => ({
+                    path: `generated/deterministic/${encodeAutoMoviePathSegment(occurrence.occurrence)}`,
+                    digest: productionDeterministicVisualSourceDigest({
+                      compileFingerprint: plan.compileFingerprint,
+                      occurrence: occurrence.occurrence,
+                    }),
                   }),
+                  repaint: (occurrence) => {
+                    const selection = renditionSelections.get(occurrence.shot);
+                    if (selection === undefined)
+                      throw new Error(
+                        `Repaint occurrence "${occurrence.occurrence}" has no current verified selection.`,
+                      );
+                    return {
+                      path: selection.receipt.output.path,
+                      digest: selection.receipt.output.digest,
+                      receiptDigest: digestAutoMovieBytes(
+                        canonicalAutoMovieJsonBytes(selection.receipt),
+                      ),
+                      selectionDigest: selection.selectionDigest,
+                    };
+                  },
+                });
+          const members = lanes.map((lane) => {
+            if (lane.lane === "deterministic")
+              return {
+                occurrence: lane.occurrence,
+                shot: lane.shot,
+                lane: "deterministic" as const,
+                sourceDigest: lane.deterministic.digest,
+              };
+            const selection = renditionSelections.get(lane.shot)!;
+            return {
+              occurrence: lane.occurrence,
+              shot: lane.shot,
+              lane: "repainted" as const,
+              requestId: selection.receipt.requestId!,
+              attemptId: selection.receipt.attemptId,
+              outputDigest: selection.receipt.output.digest,
+              candidateReceiptDigest: lane.repaint.receiptDigest,
+              selectionId: selection.selectionId,
+              selectionDigest: selection.selectionDigest,
+            };
+          });
+          const baseline = productionRepaintSequenceBaseline();
+          const observation = productionRepaintSequenceObservation();
+          let observationArtifactDigest: AutoMovieContentDigest | null = null;
+          if (observation !== null)
+            try {
+              observationArtifactDigest = digestAutoMovieBytes(
+                project.readRenderFile(observation.artifact.path),
+              );
+            } catch {
+              observationArtifactDigest = null;
+            }
+          const observationDigest =
+            observation === null
+              ? null
+              : digestAutoMovieBytes(canonicalAutoMovieJsonBytes(observation));
+          if (
+            lanes.some((lane) => lane.lane === "repainted") &&
+            (baseline === null ||
+              observation === null ||
+              autoMovieRepaintSequenceObservationDiagnostics({
+                observation,
+                productionId,
+                compileFingerprint: plan.compileFingerprint,
+                timelineFingerprint: digestAutoMovieBytes(
+                  canonicalAutoMovieJsonBytes(timeline),
                 ),
-              });
+                baseline,
+                members,
+                artifactDigest: observationArtifactDigest,
+              }).length !== 0)
+          )
+            throw new Error(
+              "Final visual delivery requires one current completed five-pass aggregate sequence observation.",
+            );
+          if (
+            lanes.every((lane) => lane.lane === "deterministic") &&
+            baseline !== null
+          )
+            throw new Error(
+              "All-deterministic visual delivery must not invent a repaint sequence baseline.",
+            );
+          const deliveryPlan = planAutoMovieVisualDelivery({
+            timeline: timelineOccurrences,
+            lanes,
+            policy:
+              graph.production.visualDelivery === "mixed"
+                ? (graph.production.mixedVisualDeliveryPolicy ?? null)
+                : null,
+            currentObservationDigest: observationDigest,
+          });
+          if (deliveryPlan.diagnostics.length !== 0)
+            throw new Error(
+              `Visual delivery plan was refused: ${deliveryPlan.diagnostics.join(", ")}.`,
+            );
+          if (
+            deliveryPlan.segments.some(
+              (segment) => segment.lane === "repainted",
+            )
+          )
+            video = conformProductionVisualDeliveryVideoMp4({
+              timeline,
+              sources: deliveryPlan.segments.map((segment) => ({
+                occurrence: segment.occurrence,
+                lane: segment.lane,
+                bytes:
+                  segment.lane === "deterministic"
+                    ? deterministicVideo
+                    : project.readRenderFile(segment.repaint.path),
+              })),
+            });
+          rendition = {
+            version: 2,
+            kind: "visual-lanes",
+            memberSetDigest: digestAutoMovieRepaintObservationMembers(members),
+            observationDigest,
+            observation:
+              observation === null ? null : structuredClone(observation),
+            shots: deliveryPlan.segments.map((segment) => {
+              if (segment.lane === "deterministic")
+                return {
+                  occurrence: segment.occurrence,
+                  shot: segment.shot,
+                  lane: "deterministic" as const,
+                  path: segment.deterministic.path,
+                  digest: segment.deterministic.digest,
+                  sourceDigest: segment.deterministic.digest,
+                  receiptDigest: null,
+                  selectionDigest: null,
+                };
+              const selection = renditionSelections.get(segment.shot)!;
+              return {
+                occurrence: segment.occurrence,
+                shot: segment.shot,
+                lane: "repainted" as const,
+                path: segment.repaint.path,
+                digest: segment.repaint.digest,
+                sourceDigest: segment.repaint.digest,
+                receiptDigest: segment.repaint.receiptDigest,
+                selectionDigest: segment.repaint.selectionDigest,
+                selectionId: selection.selectionId,
+                requestId: selection.receipt.requestId!,
+                attemptId: selection.receipt.attemptId,
+              };
+            }),
+          };
+        }
         renderProgress("video.feature.encode.complete", {
           deliverable: deliverable.id,
         });
@@ -445,29 +722,6 @@ export const createProductionRenderFinalizationRuntime = (props: {
         renderProgress("video.feature.mux.complete", {
           deliverable: deliverable.id,
         });
-        if (timeline !== null) {
-          const shots = [
-            ...new Set(timeline.segments.map((segment) => segment.shot)),
-          ];
-          rendition = {
-            kind: "repainted",
-            shots: shots.map((shot) => {
-              const receipt = renditionReceipts.get(shot);
-              if (receipt === undefined)
-                throw new Error(
-                  `Repainted feature delivery requires a current verified repaint receipt for shot "${shot}".`,
-                );
-              return {
-                shot,
-                path: receipt.output.path,
-                digest: receipt.output.digest,
-                receiptDigest: digestAutoMovieBytes(
-                  canonicalAutoMovieJsonBytes(receipt),
-                ),
-              };
-            }),
-          };
-        }
       } else if (deliverable.kind === "guide-pass") {
         const passes = [
           ...new Set(deliverableChunks.map((chunk) => chunk.pass)),
@@ -490,12 +744,13 @@ export const createProductionRenderFinalizationRuntime = (props: {
         for (const chunk of [...deliverableChunks].sort(
           (left, right) => left.frameStart - right.frameStart,
         )) {
-          const current = await planningRuntime.currentChunk(plan, chunk);
-          if (current === null)
-            throw new Error(
-              `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
-            );
-          consumeCurrentRenderChunkFrames(current, (frame) =>
+          const inspection = planningRuntime.inspectChunkPublication(
+            plan,
+            chunk,
+          );
+          if (inspection.current === null)
+            throw new Error(inspection.finding.reason);
+          consumeCurrentRenderChunkFrames(inspection.current, (frame) =>
             owned.set(
               `frames/${passes[0]}/frame_${String(
                 frame.receipt.globalFrame,
@@ -503,6 +758,53 @@ export const createProductionRenderFinalizationRuntime = (props: {
               frame.bytes,
             ),
           );
+          // A mask frame is unreadable without the palette that names its
+          // colours, so the chunk's semantic sidecars are published beside the
+          // frames as exact bytes. The pointer the inspection judged current is
+          // the only publication read, and every sidecar is reopened against
+          // the chunk receipt that sealed it before it is carried anywhere.
+          if (passes[0] === "mask") {
+            const chunkPublication = captureRenderChunkPublicationFromPointer(
+              inspection.pointer!,
+            );
+            for (const semantic of inspection.current.receipt.semanticMasks) {
+              const bytes = readRenderChunkPublicationFile(
+                chunkPublication,
+                semantic.sidecar.path,
+              );
+              const probe = probeProductionMedia({
+                kind: "guide-pass",
+                mediaType: AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
+                bytes,
+              });
+              if (probe.kind !== "semantic-mask")
+                throw new Error(
+                  `Chunk "${chunk.slot}" sidecar "${semantic.sidecar.path}" did not probe as a semantic-mask sidecar.`,
+                );
+              verifyAutoMovieProductionSemanticMaskReceipt({
+                receipt: semantic,
+                expectedFrame: semantic.frame,
+                expectedShot: semantic.shot,
+                evidence: {
+                  version: 1,
+                  shot: semantic.shot,
+                  mask: probe.mask,
+                  coverage: semantic.coverage,
+                },
+                resident: { path: semantic.sidecar.path, bytes },
+              });
+              const name = `frames/mask/frame_${String(semantic.frame).padStart(
+                8,
+                "0",
+              )}.semantic.json`;
+              if (owned.has(name))
+                throw new Error(
+                  `Guide deliverable "${deliverable.id}" publishes two semantic sidecars for frame ${semantic.frame}.`,
+                );
+              owned.set(name, bytes);
+              semantics.set(name, { receipt: semantic, mask: probe.mask });
+            }
+          }
         }
       } else if (deliverable.kind === "captions") {
         if (plan.tracks.captions.split("-->").length < 2) {
@@ -512,31 +814,46 @@ export const createProductionRenderFinalizationRuntime = (props: {
           owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
       } else if (deliverable.kind === "audio-mix") {
         const sound = await currentSound();
+        const audioEvidence = {
+          version: 2 as const,
+          plan: sound.plan,
+          analysis: sound.analysis,
+          tts: sound.tts,
+          audio: {
+            path: "audio.mp4",
+            mediaType: "audio/mp4" as const,
+            bytes: sound.audio.byteLength,
+            digest: digestAutoMovieBytes(sound.audio),
+          },
+          measurement: {
+            source: "pre-encode-pcm" as const,
+            algorithm: "automovie-production-sound-analysis-v1" as const,
+          },
+        };
+        verifyProductionNonVideoDeliverables({
+          caption: null,
+          sound: {
+            expectedPlan: sound.plan,
+            expectedAnalysis: sound.analysis,
+            expectedTts: sound.tts,
+            expectedAudio: audioEvidence.audio,
+            evidence: audioEvidence,
+          },
+        });
         owned.set("audio.mp4", sound.audio);
         owned.set("waveform.png", sound.waveform);
         owned.set("spectrogram.png", sound.spectrogram);
         owned.set(
           "evidence.json",
-          Buffer.from(
-            `${JSON.stringify(
-              {
-                version: 1,
-                plan: sound.plan,
-                analysis: sound.analysis,
-                tts: sound.tts,
-              },
-              null,
-              2,
-            )}\n`,
-            "utf8",
-          ),
+          Buffer.from(`${JSON.stringify(audioEvidence, null, 2)}\n`, "utf8"),
         );
       } else {
         const timeline = readAutoMovieFilmTimeline(
           project,
           plan.compileFingerprint,
         );
-        const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
+        const sample = sampleProductionRenderFrame(timeline, 0);
+        const frame = sample.layers.at(-1)!;
         const captured = await renderHost.capture(
           productionRenderFrameCaptureInput({
             root,
@@ -545,10 +862,15 @@ export const createProductionRenderFinalizationRuntime = (props: {
             shot: frame.shot,
             sourceFrame: frame.sourceFrame,
             sourceFps: timeline.fps,
-            globalFrame: 0,
+            sample,
             pass: "beauty",
           }),
         );
+        assertProductionRenderDialogueRuntimeIdentity({
+          boundary: `final preview ${deliverable.id}`,
+          expected: plan.runtimeIdentity.dialogueRuntimeIdentity,
+          observed: captured.dialogueRuntimeIdentity,
+        });
         if (
           canonicalAutoMovieCaptureRuntimeIdentity(captured.runtimeIdentity) !==
           canonicalAutoMovieCaptureRuntimeIdentity(plan.runtimeIdentity.capture)
@@ -570,6 +892,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         digest: AutoMovieContentDigest;
         bytes: number;
         mediaType: string;
+        semanticMask?: IAutoMovieProductionSemanticMaskReceipt;
         probe: ReturnType<typeof probeProductionMedia>;
       }> = [];
       for (const [name, bytes] of owned) {
@@ -580,40 +903,71 @@ export const createProductionRenderFinalizationRuntime = (props: {
           encodeAutoMoviePathSegment(deliverable.id),
           name,
         ].join("/");
+        const chunkSemantic = semantics.get(name);
         const mediaType =
           deliverable.kind === "captions"
             ? "text/vtt"
-            : name.endsWith(".json")
-              ? "application/json"
-              : deliverable.kind === "preview" || name.endsWith(".png")
-                ? "image/png"
-                : deliverable.kind === "audio-mix"
-                  ? "audio/mp4"
-                  : "video/mp4";
+            : chunkSemantic !== undefined
+              ? AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE
+              : name.endsWith(".json")
+                ? "application/json"
+                : deliverable.kind === "preview" || name.endsWith(".png")
+                  ? "image/png"
+                  : deliverable.kind === "audio-mix"
+                    ? "audio/mp4"
+                    : "video/mp4";
         const probe = probeProductionMedia({
           kind: deliverable.kind,
           mediaType,
           bytes,
         });
-        assertDeliverableProbe(deliverable.kind, probe, plan);
+        assertDeliverableProbe(deliverable.kind, name, bytes, probe, plan);
         publication.set(relative, bytes);
         files.push({
           path: relative,
           digest: digestAutoMovieBytes(bytes),
           bytes: bytes.length,
           mediaType,
+          // The publication record names the sidecar at its delivered path
+          // while keeping the chunk receipt's shot, frame, palette digest, and
+          // coverage; the palette is the one the chunk's own bytes reopened as.
+          ...(chunkSemantic === undefined
+            ? {}
+            : {
+                semanticMask: createAutoMovieProductionSemanticMaskReceipt({
+                  frame: chunkSemantic.receipt.frame,
+                  expectedShot: chunkSemantic.receipt.shot,
+                  evidence: {
+                    version: 1,
+                    shot: chunkSemantic.receipt.shot,
+                    mask: chunkSemantic.mask,
+                    coverage: chunkSemantic.receipt.coverage,
+                  },
+                  sidecar: { path: relative, bytes },
+                }),
+              }),
           probe,
         });
       }
-      const video = files.find((file) => file.probe.kind === "video")?.probe;
-      const audio = files.find((file) => file.probe.kind === "audio")?.probe;
+      const feature = files.find(
+        (file) => file.probe.kind === "feature",
+      )?.probe;
+      const video =
+        feature?.kind === "feature"
+          ? feature.video
+          : files.find((file) => file.probe.kind === "video")?.probe;
+      const audio =
+        feature?.kind === "feature"
+          ? feature.audio
+          : files.find((file) => file.probe.kind === "audio")?.probe;
       manifest.deliverables.push({
         id: deliverable.id,
         kind: deliverable.kind,
         files: files.map(({ probe: _probe, ...file }) => file),
         runtimeSeconds:
           deliverable.kind === "captions"
-            ? plan.totalFrames / plan.frameFormat.fps
+            ? (plan.totalFrames * publicationFrameRate.denominator) /
+              publicationFrameRate.numerator
             : video?.kind === "video"
               ? video.runtimeSeconds
               : audio?.kind === "audio"
@@ -646,6 +1000,11 @@ export const createProductionRenderFinalizationRuntime = (props: {
     const revision = project.commitProductionPublication({
       files: publication,
       manifest,
+      plan,
+      planCurrent: () => {
+        planningRuntime.assertPlanCurrent(plan);
+        return true;
+      },
       inputCurrent: () =>
         productionPublicationInputFingerprint(
           AutoMovieProductionProject.openReadOnly(root, productionId),
@@ -654,6 +1013,8 @@ export const createProductionRenderFinalizationRuntime = (props: {
         const staged = new AutoMovieProductionCompiler(
           AutoMovieProductionProject.openReadOnly(root, productionId),
           props.authoringEvidence,
+          undefined,
+          plan,
         ).lint({ scope: "final" });
         if (staged.success === false)
           throw new Error(
@@ -664,7 +1025,12 @@ export const createProductionRenderFinalizationRuntime = (props: {
       },
       expectedRevision: project.revision(),
     });
-    const final = productionServices().compiler.compile({ scope: "final" });
+    const final = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.openReadOnly(root, productionId),
+      props.authoringEvidence,
+      undefined,
+      plan,
+    ).compile({ scope: "final" });
     if (final.success === false)
       throw new Error(
         `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,
@@ -676,67 +1042,105 @@ export const createProductionRenderFinalizationRuntime = (props: {
 
   const assertDeliverableProbe = (
     kind: IAutoMovieProductionDeliverable["kind"],
+    name: string,
+    bytes: Uint8Array,
     probe: IAutoMovieProductionMediaProbe,
     plan: IAutoMovieProductionRenderJobPlan,
   ): void => {
-    const runtimeSeconds = plan.totalFrames / plan.frameFormat.fps;
     if (kind === "feature" || kind === "guide-pass") {
+      if (kind === "guide-pass" && probe.kind === "semantic-mask") return;
       if (kind === "guide-pass" && probe.kind === "png") {
-        if (
-          probe.width !== plan.frameFormat.width ||
-          probe.height !== plan.frameFormat.height
-        )
-          throw new Error(
-            "Published guide frame does not match the tier raster.",
-          );
+        assertProductionPngPicture({
+          profile: resolveProductionPngProfile({
+            role: "guide-frame",
+            width: plan.frameFormat.width,
+            height: plan.frameFormat.height,
+          }),
+          actual: probe.picture,
+        });
         return;
       }
-      if (
-        probe.kind !== "video" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height ||
-        probe.frameCount !== plan.totalFrames ||
-        Math.abs(probe.fps - plan.frameFormat.fps) > 1e-9 ||
-        Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-      )
+      const video =
+        kind === "feature" && probe.kind === "feature"
+          ? probe.video
+          : kind === "guide-pass" && probe.kind === "video"
+            ? probe
+            : null;
+      if (video === null || video.frameCount !== plan.totalFrames)
         throw new Error(
           `${kind} output does not match the exact production raster, frame count, frame clock, and runtime.`,
         );
+      assertProductionVideoProfile({
+        expected: resolveProductionVideoProfile({
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+          frameRate: resolveProductionFrameRate(plan.frameFormat),
+        }),
+        actual: video,
+      });
+      if (probe.kind === "feature") assertProductionOpusProfile(probe.audio);
       return;
     }
     if (kind === "preview") {
-      if (
-        probe.kind !== "png" ||
-        probe.width !== plan.frameFormat.width ||
-        probe.height !== plan.frameFormat.height
-      )
+      if (probe.kind !== "png")
         throw new Error("Preview output does not match the production raster.");
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({
+          role: "preview",
+          width: plan.frameFormat.width,
+          height: plan.frameFormat.height,
+        }),
+        actual: probe.picture,
+      });
       return;
     }
     if (kind === "captions") {
-      if (probe.kind !== "webvtt" || probe.lastCueSeconds > runtimeSeconds)
+      if (probe.kind !== "webvtt")
         throw new Error(
           "Caption output is empty, malformed, unordered, or outside the production timeline.",
         );
+      verifyProductionNonVideoDeliverables({
+        caption: {
+          required: true,
+          expected: plan.tracks.captions,
+          actual: bytes,
+        },
+        sound: null,
+      });
       return;
     }
-    if (probe.kind === "png" || probe.kind === "sound-evidence") {
+    if (probe.kind === "png") {
+      const role =
+        name === "waveform.png"
+          ? "waveform"
+          : name === "spectrogram.png"
+            ? "spectrogram"
+            : null;
+      if (role === null)
+        throw new Error(`Audio evidence contains unexpected PNG "${name}".`);
+      assertProductionPngPicture({
+        profile: resolveProductionPngProfile({ role }),
+        actual: probe.picture,
+      });
+      return;
+    }
+    if (probe.kind === "sound-evidence") {
       if (
-        probe.kind === "sound-evidence" &&
-        (probe.clippingSamples !== 0 || probe.eventAlignmentPassed === false)
+        probe.evidence.analysis.clippingSamples !== 0 ||
+        probe.evidence.analysis.eventAlignment.some(
+          (event) => event.passed === false,
+        )
       )
         throw new Error(
           "Sound evidence reports clipping or a semantic event outside its frame gate.",
         );
       return;
     }
-    if (
-      probe.kind !== "audio" ||
-      Math.abs(probe.runtimeSeconds - runtimeSeconds) > 1e-9
-    )
+    if (probe.kind !== "audio")
       throw new Error(
         "Audio output does not contain one exact-runtime parser-verified track.",
       );
+    assertProductionOpusProfile(probe);
   };
 
   return { finalize };

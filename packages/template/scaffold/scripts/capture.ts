@@ -2,6 +2,7 @@ import type {
   AutoMovieProductionFrameCapture,
   IAutoMovieRenderSpec,
   IAutoMovieSemanticMask,
+  IAutoMovieSemanticMaskEvidence,
 } from "@automovie/interface";
 import path from "node:path";
 import type { Page } from "playwright";
@@ -433,7 +434,7 @@ const captureProductionFrame = async (
     session.assertRuntimeCurrent();
     let renderEvidence: Pick<
       Awaited<ReturnType<AutoMovieProductionFrameCapture>>,
-      "maskSidecar" | "observation"
+      "semanticMask" | "observation"
     >;
     try {
       ++state.metrics.seeks;
@@ -459,18 +460,24 @@ const captureProductionFrame = async (
         const maskSidecar = hook.sidecar();
         const reason =
           "the selected capture page stages no compiled shot, so it has no shot render observation or semantic mask palette";
+        const semanticMask =
+          observation === null || maskSidecar === null
+            ? { status: "not-run" as const, reason }
+            : {
+                status: "available" as const,
+                value: {
+                  version: 1 as const,
+                  shot: observation.shot,
+                  mask: JSON.parse(maskSidecar) as IAutoMovieSemanticMask,
+                  coverage: observation.coverage,
+                } satisfies IAutoMovieSemanticMaskEvidence,
+              };
         return {
           observation:
             observation === null
               ? { status: "not-run" as const, reason }
               : { status: "available" as const, value: observation.observed },
-          maskSidecar:
-            maskSidecar === null
-              ? { status: "not-run" as const, reason }
-              : {
-                  status: "available" as const,
-                  value: JSON.parse(maskSidecar) as IAutoMovieSemanticMask,
-                },
+          semanticMask,
         };
       });
     } catch (error) {

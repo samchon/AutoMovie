@@ -1,3 +1,7 @@
+import type {
+  IAutoMovieProductionMediaProbe,
+  IAutoMovieProductionSoundEvidence,
+} from "@automovie/interface";
 import {
   muxProductionFeatureMp4,
   probeProductionMedia,
@@ -33,6 +37,16 @@ const boxTypeOffset = (bytes: Uint8Array, type: string): number => {
   return offset;
 };
 
+const summarizeWebVtt = (probe: IAutoMovieProductionMediaProbe) => {
+  if (probe.kind !== "webvtt") throw new Error("Expected a WebVTT probe.");
+  return {
+    kind: probe.kind,
+    cueCount: probe.cueCount,
+    firstCueSeconds: probe.firstCueSeconds,
+    lastCueSeconds: probe.lastCueSeconds,
+  };
+};
+
 /** Production receipts are decoded from actual raster, text and MP4 bytes. */
 export const test_production_media_probe = async (): Promise<void> => {
   const png = productionPng(16, 8);
@@ -43,7 +57,22 @@ export const test_production_media_probe = async (): Promise<void> => {
       mediaType: "image/png",
       bytes: png,
     }),
-    { kind: "png", width: 16, height: 8 },
+    {
+      kind: "png",
+      width: 16,
+      height: 8,
+      picture: {
+        width: 16,
+        height: 8,
+        bitDepth: 8,
+        color: "rgba",
+        alpha: "straight",
+        interlace: "none",
+        colorSpace: "srgb",
+        pixelAspect: { kind: "square" },
+        orientation: "upright",
+      },
+    },
   );
   TestValidator.predicate(
     "a preview cannot relabel PNG bytes",
@@ -58,7 +87,7 @@ export const test_production_media_probe = async (): Promise<void> => {
     ),
   );
   TestValidator.predicate(
-    "a malformed PNG is rejected by the decoder",
+    "a malformed PNG is refused by name before any decoder speaks",
     refused(
       () =>
         probeProductionMedia({
@@ -66,37 +95,58 @@ export const test_production_media_probe = async (): Promise<void> => {
           mediaType: "image/png",
           bytes: Buffer.from("not a png"),
         }),
-      "unrecognised content",
+      "PNG datastream lacks the required signature",
     ),
   );
-  const soundEvidence = Buffer.from(
-    JSON.stringify({
+  const soundEvidenceValue: IAutoMovieProductionSoundEvidence = {
+    version: 2,
+    plan: {
       version: 1,
-      plan: { events: [{ id: "volley" }] },
-      analysis: {
-        clippingSamples: 0,
-        eventAlignment: [{ passed: true }],
-      },
-      tts: [{ line: "captain" }],
-    }),
-  );
+      inputFingerprint: `sha256:${"1".repeat(64)}`,
+      fps: 24,
+      frameRate: { numerator: 24, denominator: 1 },
+      totalFrames: 24,
+      sampleRate: 48_000,
+      channels: 2,
+      events: [],
+      cues: [],
+      dialogue: [],
+    },
+    analysis: {
+      version: 1,
+      sampleRate: 48_000,
+      sampleFrames: 48_000,
+      runtimeSeconds: 1,
+      integratedLoudness: null,
+      samplePeak: 0,
+      clippingSamples: 0,
+      longestSilenceSeconds: 1,
+      eventAlignment: [],
+    },
+    tts: [],
+    audio: {
+      path: "audio.mp4",
+      mediaType: "audio/mp4",
+      bytes: 128,
+      digest: `sha256:${"2".repeat(64)}`,
+    },
+    measurement: {
+      source: "pre-encode-pcm",
+      algorithm: "automovie-production-sound-analysis-v1",
+    },
+  };
+  const soundEvidence = Buffer.from(JSON.stringify(soundEvidenceValue));
   TestValidator.equals(
-    "sound evidence derives event, dialogue, clipping and alignment facts",
+    "sound evidence preserves the complete current version-2 identity",
     probeProductionMedia({
       kind: "audio-mix",
       mediaType: "application/json",
       bytes: soundEvidence,
     }),
-    {
-      kind: "sound-evidence",
-      eventCount: 1,
-      dialogueCount: 1,
-      clippingSamples: 0,
-      eventAlignmentPassed: true,
-    },
+    { kind: "sound-evidence", evidence: soundEvidenceValue },
   );
   TestValidator.equals(
-    "sound evidence must be UTF-8 JSON with complete event analysis",
+    "sound evidence must be UTF-8 JSON in the complete current schema",
     namedFacts([
       [
         "refusedProbeProductionMediaKind",
@@ -128,7 +178,7 @@ export const test_production_media_probe = async (): Promise<void> => {
                   }),
                 ),
               }),
-            "does not cover",
+            "complete version-2",
           ),
       ],
       [
@@ -141,7 +191,7 @@ export const test_production_media_probe = async (): Promise<void> => {
                 mediaType: "application/json",
                 bytes: Buffer.from("{}"),
               }),
-            "lacks a versioned plan",
+            "complete version-2",
           ),
       ],
     ]),
@@ -158,17 +208,34 @@ export const test_production_media_probe = async (): Promise<void> => {
       mediaType: "image/png",
       bytes: png,
     }),
-    { kind: "png", width: 16, height: 8 },
+    {
+      kind: "png",
+      width: 16,
+      height: 8,
+      picture: {
+        width: 16,
+        height: 8,
+        bitDepth: 8,
+        color: "rgba",
+        alpha: "straight",
+        interlace: "none",
+        colorSpace: "srgb",
+        pixelAspect: { kind: "square" },
+        orientation: "upright",
+      },
+    },
   );
 
   const vtt = productionWebVtt();
   TestValidator.equals(
     "the WebVTT probe counts observable cues",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: vtt,
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: vtt,
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 2,
@@ -178,13 +245,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT metadata blocks are ignored before observable cues are counted",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\nNOTE production metadata\nnot a cue\n\n00:00:00.000 --> 00:00:00.100\nVisible.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\nNOTE production metadata\nnot a cue\n\n00:00:00.000 --> 00:00:00.100\nVisible.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -289,13 +358,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT accepts the standard timestamp form without an hour field",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\n00:00.000 --> 00:00.250\nShort timestamp.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\n00:00.000 --> 00:00.250\nShort timestamp.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -305,13 +376,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT accepts one cue identifier before observable payload",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\nopening-line\n00:00.000 --> 00:00.250\nSignal.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\nopening-line\n00:00.000 --> 00:00.250\nSignal.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -321,13 +394,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT settings preserve legal Unicode line-separator characters",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\n00:00.000 --> 00:00.250 region:zone\u2028\u2029\nSignal.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\n00:00.000 --> 00:00.250 region:zone\u2028\u2029\nSignal.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -337,13 +412,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT preserves whitespace-only payload lines inside one cue",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\n00:00.000 --> 00:00.250\nFirst.\n \nSecond.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\n00:00.000 --> 00:00.250\nFirst.\n \nSecond.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -353,13 +430,15 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT metadata tokens remain legal timed cue identifiers",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from(
-        "WEBVTT\n\nNOTE\n00:00.000 --> 00:00.100\nFirst.\n\nSTYLE intro\n00:00.100 --> 00:00.200\nSecond.\n\nREGION intro\n00:00.200 --> 00:00.300\nThird.\n",
-      ),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from(
+          "WEBVTT\n\nNOTE\n00:00.000 --> 00:00.100\nFirst.\n\nSTYLE intro\n00:00.100 --> 00:00.200\nSecond.\n\nREGION intro\n00:00.200 --> 00:00.300\nThird.\n",
+        ),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 3,
@@ -369,11 +448,13 @@ export const test_production_media_probe = async (): Promise<void> => {
   );
   TestValidator.equals(
     "WebVTT treats a whitespace-only separator as a cue boundary",
-    probeProductionMedia({
-      kind: "captions",
-      mediaType: "text/vtt",
-      bytes: Buffer.from("WEBVTT\n \n00:00.000 --> 00:00.250\nSignal.\n"),
-    }),
+    summarizeWebVtt(
+      probeProductionMedia({
+        kind: "captions",
+        mediaType: "text/vtt",
+        bytes: Buffer.from("WEBVTT\n \n00:00.000 --> 00:00.250\nSignal.\n"),
+      }),
+    ),
     {
       kind: "webvtt",
       cueCount: 1,
@@ -451,24 +532,32 @@ export const test_production_media_probe = async (): Promise<void> => {
   TestValidator.equals(
     "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
     namedFacts([
-      ["featureKindVideo", () => feature.kind === "video"],
+      ["featureKindFeature", () => feature.kind === "feature"],
       [
         "featureFrameCount",
-        () => feature.kind === "video" && feature.frameCount === 4,
+        () => feature.kind === "feature" && feature.video.frameCount === 4,
       ],
-      ["featureFps", () => feature.kind === "video" && feature.fps === 24],
+      [
+        "featureFps",
+        () => feature.kind === "feature" && feature.video.fps === 24,
+      ],
       [
         "MathAbsFeature",
         () =>
-          feature.kind === "video" &&
-          Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
+          feature.kind === "feature" &&
+          Math.abs(feature.video.runtimeSeconds - 4 / 24) < 1e-9,
+      ],
+      [
+        "featureAudioOpus",
+        () => feature.kind === "feature" && feature.audio.codec === "opus",
       ],
     ]),
     {
-      featureKindVideo: true,
+      featureKindFeature: true,
       featureFrameCount: true,
       featureFps: true,
       MathAbsFeature: true,
+      featureAudioOpus: true,
     },
   );
   TestValidator.predicate(
@@ -529,7 +618,7 @@ export const test_production_media_probe = async (): Promise<void> => {
           video,
           audio: productionOpusMp4(8_000, 1),
         }),
-      "48 kHz stereo",
+      "unsupported-audio-profile.channels",
     ),
   );
   const editFile = createFile();
@@ -783,11 +872,16 @@ export const test_production_media_probe = async (): Promise<void> => {
       "MP4",
     ),
   );
+  // The normalized fixture is fragmented: its movie-level sample tables are
+  // empty and every sample offset comes from the fragment run, so the escape
+  // is staged on the run's data offset rather than on an empty `stco`.
   const escapedSamples = Buffer.from(video);
-  const chunkOffsetBox = escapedSamples.indexOf("stco");
-  if (chunkOffsetBox < 0)
-    throw new Error("H.264 fixture has no stco sample-offset table to mutate.");
-  escapedSamples.writeUInt32BE(0xffffffff, chunkOffsetBox + 12);
+  const trackRunBox = escapedSamples.indexOf("trun");
+  if (trackRunBox < 0)
+    throw new Error("H.264 fixture has no trun sample-offset table to mutate.");
+  if ((escapedSamples.readUInt32BE(trackRunBox + 4) & 0x1) === 0)
+    throw new Error("H.264 fixture trun carries no data offset to mutate.");
+  escapedSamples.writeInt32BE(0x7fffffff, trackRunBox + 12);
   TestValidator.predicate(
     "a sample table cannot point outside resident container bytes",
     refused(
@@ -815,9 +909,14 @@ export const test_production_media_probe = async (): Promise<void> => {
       "positive dimensions",
     ),
   );
+  // Fragmented samples carry their durations in the track run, so the zero
+  // duration is staged on the run's first sample rather than on the empty
+  // movie-level time-to-sample table.
   const zeroSampleDuration = Buffer.from(video);
-  const timeToSample = boxTypeOffset(zeroSampleDuration, "stts");
-  zeroSampleDuration.writeUInt32BE(0, timeToSample + 16);
+  const trackRun = boxTypeOffset(zeroSampleDuration, "trun");
+  if ((zeroSampleDuration.readUInt32BE(trackRun + 4) & 0x100) === 0)
+    throw new Error("H.264 fixture trun carries no per-sample durations.");
+  zeroSampleDuration.writeUInt32BE(0, trackRun + 16);
   TestValidator.predicate(
     "video frames require a positive constant sample duration",
     refused(
@@ -830,9 +929,37 @@ export const test_production_media_probe = async (): Promise<void> => {
       "constant deterministic frame duration",
     ),
   );
+  // Fragmented samples carry their sync flag per sample in each track run
+  // (bit 16 set means "not a sync sample"), so every run's sample flags are
+  // rewritten rather than an empty movie-level sync table.
   const noSyncSample = Buffer.from(productionInterframeH264Mp4());
-  const syncSamples = boxTypeOffset(noSyncSample, "stss");
-  noSyncSample.writeUInt32BE(0, syncSamples + 8);
+  let trackRunCursor = noSyncSample.indexOf("trun");
+  if (trackRunCursor < 0)
+    throw new Error("H.264 fixture has no trun sample table to mutate.");
+  while (trackRunCursor >= 0) {
+    const flags = noSyncSample.readUInt32BE(trackRunCursor + 4) & 0xffffff;
+    if ((flags & 0x400) === 0)
+      throw new Error("H.264 fixture trun carries no per-sample flags.");
+    const sampleCount = noSyncSample.readUInt32BE(trackRunCursor + 8);
+    const entryStart =
+      trackRunCursor +
+      12 +
+      ((flags & 0x1) !== 0 ? 4 : 0) +
+      ((flags & 0x4) !== 0 ? 4 : 0);
+    const entrySize =
+      ((flags & 0x100) !== 0 ? 4 : 0) +
+      ((flags & 0x200) !== 0 ? 4 : 0) +
+      4 +
+      ((flags & 0x800) !== 0 ? 4 : 0);
+    const flagOffset =
+      ((flags & 0x100) !== 0 ? 4 : 0) + ((flags & 0x200) !== 0 ? 4 : 0);
+    for (let index = 0; index < sampleCount; ++index)
+      noSyncSample.writeUInt32BE(
+        0x01010000,
+        entryStart + index * entrySize + flagOffset,
+      );
+    trackRunCursor = noSyncSample.indexOf("trun", trackRunCursor + 4);
+  }
   TestValidator.predicate(
     "a deterministic video requires at least one sync sample",
     refused(
@@ -938,7 +1065,7 @@ export const test_production_media_probe = async (): Promise<void> => {
           mediaType: "audio/mp4",
           bytes: productionAudioMp4(),
         }),
-      "48 kHz stereo",
+      "expected Opus",
     ),
   );
   const zeroAudioClock = Buffer.from(audio);

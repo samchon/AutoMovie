@@ -315,8 +315,10 @@ export const test_film_production_sound = (): void => {
     Buffer.from(first.pcm.buffer),
     Buffer.from(second.pcm.buffer),
   );
+  // The largest offset whose eight-frame trim still fits the ten-frame source:
+  // an offset that left the declared source would be refused, not rephased.
   const offsetTimeline = timeline();
-  offsetTimeline.tracks.audio[0]!.sourceOffsetFrame = 5;
+  offsetTimeline.tracks.audio[0]!.sourceOffsetFrame = 2;
   const offsetPlan = deriveProductionSoundPlan({
     timeline: offsetTimeline,
     contracts: new Map([["sound-shot", contract()]]),
@@ -335,7 +337,7 @@ export const test_film_production_sound = (): void => {
       ],
       [
         "offsetPlanCuesSourceOffsetFrame",
-        () => offsetPlan.cues[0]!.sourceOffsetFrame === 5,
+        () => offsetPlan.cues[0]!.sourceOffsetFrame === 2,
       ],
       [
         "BufferFromRenderProductionSound",

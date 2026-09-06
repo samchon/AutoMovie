@@ -1,6 +1,16 @@
+import {
+  type AutoMovieProductionLanguage,
+  createBlankAutoMovieProductionEvidence,
+} from "@automovie/evidence";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import {
+  AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+  renderAutoMovieContractBaseline,
+} from "./productionMaintenance";
+import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
+import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
@@ -9,10 +19,10 @@ import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
  * `.npmrc` files from a published package, so the assets ship without dots and
  * the rendered keys restore them.
  */
-const RENAME: Record<string, string> = {
-  gitignore: ".gitignore",
-  npmrc: ".npmrc",
-};
+const RENAME = new Map<string, string>([
+  ["gitignore", ".gitignore"],
+  ["npmrc", ".npmrc"],
+]);
 
 /**
  * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
@@ -29,6 +39,36 @@ export interface IAutoMovieScaffoldProps {
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the project identity an explicit source input to scaffold derivation.
    */
   name: string;
+  /** Exact language contract installed into `docs/language`. */
+  language: AutoMovieProductionLanguage;
+}
+
+/**
+ * One authored scaffold input before its path and bytes are rendered.
+ *
+ * Keeping the source-relative identity until the complete candidate is
+ * validated lets the renderer name both owners of a colliding output instead
+ * of silently retaining whichever one happened to be assigned last.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps every authored scaffold source distinct until its portable output identity is proved.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Carries source identity beside the bytes and path derived from that source.
+ * @author Samchon
+ */
+export interface IAutoMovieScaffoldSourceEntry {
+  /**
+   * Text bytes before line-ending normalization and template rendering.
+   *
+   * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Makes the authored scaffold text an explicit portable input.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Supplies the exact source text to deterministic derivation.
+   */
+  content: string;
+  /**
+   * Scaffold-root-relative source path before stand-in renaming and rendering.
+   *
+   * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Preserves the project-relative owner of every rendered file.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Retains source identity until output injectivity is validated.
+   */
+  relative: string;
 }
 
 /**
@@ -57,7 +97,7 @@ const renderKey = (
   variables: Readonly<Record<string, string>>,
 ): string => {
   const dir = path.dirname(relative);
-  const base = RENAME[path.basename(relative)] ?? path.basename(relative);
+  const base = RENAME.get(path.basename(relative)) ?? path.basename(relative);
   return renderTemplate(
     toPosix(dir === "." ? base : path.join(dir, base)),
     variables,
@@ -127,6 +167,58 @@ const listFiles = (root: string): string[] => {
   };
   walk(root);
   return out;
+};
+
+/**
+ * Render an explicit source inventory only after proving that every source has
+ * one distinct output path.
+ *
+ * The returned object has no prototype, so names such as `__proto__` remain
+ * ordinary enumerable file identities. Exact output collisions are reported
+ * from sorted source identities, making the refusal independent of traversal
+ * order.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Produces one deterministic portable file identity for every authored scaffold source.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Rejects a derivation that would merge two distinct source identities into one output.
+ * @author Samchon
+ */
+export const renderScaffoldEntries = (
+  entries: readonly IAutoMovieScaffoldSourceEntry[],
+  variables: Readonly<Record<string, string>>,
+): Record<string, string> => {
+  const rendered = entries.map((entry) => ({
+    content: renderTemplate(normalizeLineEndings(entry.content), variables),
+    relative: renderKey(entry.relative, variables),
+    source: toPosix(entry.relative),
+  }));
+  const ordered = [...rendered].sort((left, right) =>
+    left.relative < right.relative
+      ? -1
+      : left.relative > right.relative
+        ? 1
+        : left.source < right.source
+          ? -1
+          : left.source > right.source
+            ? 1
+            : 0,
+  );
+  for (let index = 1; index < ordered.length; index++) {
+    const previous = ordered[index - 1]!;
+    const current = ordered[index]!;
+    if (previous.relative === current.relative)
+      throw new Error(
+        `scaffold sources collide at rendered path "${current.relative}": "${previous.source}", "${current.source}"`,
+      );
+  }
+  const files = Object.create(null) as Record<string, string>;
+  for (const entry of rendered)
+    Object.defineProperty(files, entry.relative, {
+      configurable: true,
+      enumerable: true,
+      value: entry.content,
+      writable: true,
+    });
+  return files;
 };
 
 /**
@@ -209,7 +301,6 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Scaffold materialization does not implement the agent ordinary code authoring requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/agent-authoring/source-owned-loop.md#agent-reviewable-source-change Scaffold materialization does not implement the agent reviewable source change requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Scaffold materialization does not implement the agent source result link requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/product/authorability.md#product-discoverable-control Scaffold materialization does not implement the product discoverable control requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/product/authorability.md#product-explicit-control Scaffold materialization does not implement the product explicit control requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/product/authorability.md#product-hidden-inference-refusal Scaffold materialization does not implement the product hidden inference refusal requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/product/charter.md#product-author-owned-film Scaffold materialization does not implement the product author owned film requirement; it only publishes reusable project-owned authoring capability.
@@ -250,7 +341,6 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Scaffold materialization does not implement the spec authoring knowledge request output system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Scaffold materialization does not implement the spec authoring tool authoring invariant system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility Scaffold materialization does not implement the spec authoring tool boundary compatibility system responsibility; it only derives the portable editable scaffold.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Scaffold materialization does not implement the spec authoring tool choice discovery system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Scaffold materialization does not implement the spec authoring tool content side effect invariant system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Scaffold materialization does not implement the spec authoring tool diagnostic failure system responsibility; it only derives the portable editable scaffold.
  * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-atomic-invariant Scaffold materialization does not implement the spec authoring partial atomic invariant system responsibility; it only derives the portable editable scaffold.
@@ -300,16 +390,61 @@ export const renderScaffold = (
     throw new Error(
       `scaffold project name "${name}" must be one portable directory segment`,
     );
-  const variables: Record<string, string> = { name };
+  const variables: Record<string, string> = { name, language: props.language };
   for (const [key, value] of Object.entries(AUTOMOVIE_TEMPLATE_VERSIONS))
     variables[`version:${key}`] = value;
 
   const root = scaffoldAssetDirectory();
-  const files: Record<string, string> = {};
-  for (const relative of listFiles(root))
-    files[renderKey(relative, variables)] = renderTemplate(
-      normalizeLineEndings(fs.readFileSync(path.join(root, relative), "utf8")),
-      variables,
-    );
+  const languageEntries = Object.entries(
+    renderAutoMovieLanguageContracts({ language: props.language }),
+  ).map(([relative, content]) => ({ content, relative }));
+  const files = renderScaffoldEntries(
+    [
+      ...listFiles(root).map((relative) => ({
+        content: fs.readFileSync(path.join(root, relative), "utf8"),
+        relative,
+      })),
+      ...languageEntries,
+    ],
+    variables,
+  );
+  const manifest = JSON.parse(files["package.json"]!) as {
+    name: string;
+    description: string;
+  };
+  const blank = createBlankAutoMovieProductionEvidence(root, props.language);
+  const instructions = renderAutoMovieProductionInstructionCandidate({
+    evidence: {
+      packageName: manifest.name,
+      description: manifest.description.trim(),
+      manifest: {
+        kind: blank.kind,
+        language: blank.language,
+        populationScope: blank.populationScope,
+        branches: [],
+        bindings: [],
+      },
+      designOwners: [],
+      contracts: [],
+    },
+    sources: files,
+  });
+  for (const [relative, content] of Object.entries(instructions))
+    Object.defineProperty(files, relative, {
+      configurable: true,
+      enumerable: true,
+      value: content,
+      writable: true,
+    });
+  Object.defineProperty(files, AUTO_MOVIE_CONTRACT_BASELINE_PATH, {
+    configurable: true,
+    enumerable: true,
+    value: renderAutoMovieContractBaseline({
+      files,
+      language: props.language,
+      version: AUTOMOVIE_TEMPLATE_VERSIONS.template!.replace(/^[~^]/u, ""),
+    }),
+    writable: true,
+  });
   return files;
 };

@@ -14,6 +14,8 @@
 
 ### 발견 가능한 제어 {#product-discoverable-control}
 
+각 production kind의 공개 capability는 owner, serializer 또는 emitter, compiler/runtime consumer와 저작 route를 하나의 조회 가능한 matrix로 제공해야 한다. 적용되지 않는 capability는 빈 경로가 아니라 구체적인 inapplicable reason을 가져야 한다.
+
 공개 능력은 저자 에이전트가 현재 project에서 찾을 수 있는 문서, 계약, 사용 예와 진단을 가져야 한다. 구현에 존재하지만 저자가 발견하거나 검증할 수 없는 경로는 제품 능력으로 주장하지 않는다.
 
 ### 숨은 추정의 거부 {#product-hidden-inference-refusal}

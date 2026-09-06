@@ -34,25 +34,28 @@ export interface IAutoMovieLibraryBuildContext {
  * the compiled topology the required observation population is derived from, a
  * model becomes the compiled recipe a canonical turntable is judged against,
  * and an adopted environment context becomes the world a map owner is measured
- * against. A domain with nothing to publish still returns the arrays empty and
- * is still executed, because running the module is what proves it is
- * deterministic, resolvable and current.
+ * against. Completion is branch-specific: a map owner returns at least one
+ * context, a model owner at least one model, and a space owner at least one
+ * environment, without borrowing another branch's carrier. Material, instance,
+ * motion, and system sources remain valid authoring populations, but cannot be
+ * materialized as standalone library results until their own public carrier
+ * exists.
  *
  * `contexts` is optional where the other two are required, and the asymmetry is
  * the upgrade rather than a preference: every library source written before it
  * existed returns the two, and a project that has not been touched since is not
  * in error. An absent list and an empty one say the same thing here -- this
- * owner adopted no world -- because a map owner that adopted one has no reason
- * to omit it.
+ * owner adopted no world at the DTO boundary. The compiler nevertheless
+ * refuses an empty map-owner completion, because absence is not delivery.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Fixes the exact result a library source revision is allowed to produce.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types the derived library state one executed source revision is allowed to produce.
  * @author Samchon
  */
 export interface IAutoMovieLibraryContribution {
-  /** Structured built environments this owner publishes, in author order. */
+  /** Structured built environments a `spaces` owner publishes, in author order. */
   environments: IAutoMovieBuiltEnvironment[];
-  /** Reusable models this owner publishes, in author order. */
+  /** Reusable models a `models` owner publishes, in author order. */
   models: IAutoMovieModel[];
   /**
    * Adopted environment contexts this owner publishes, in author order.
@@ -64,12 +67,13 @@ export interface IAutoMovieLibraryContribution {
    * contributed it, so no map owner could be measured against anything: the
    * derived population was empty and an empty population passes every check
    * that compares against it.
+   * Only a `maps` owner may use this carrier as its completed result.
    */
   contexts?: IAutoMovieEnvironmentContext[];
 }
 
 /**
- * One named export a library source module registers as a design owner.
+ * One named export a library source module registers as an authored owner.
  *
  * The registration names the reviewed H2 it realizes, which is what lets a
  * compiled artifact be attributed to a design decision without a second table
@@ -85,9 +89,10 @@ export interface IAutoMovieLibrarySourceOwner {
    * Exact `docs/<branch>/<document>.md#<anchor>` address this export realizes.
    *
    * The address is the registration. A spelling that is not an active design
-   * owner unit is refused by name rather than ignored, because a module that
-   * builds a building nobody asked for publishes an artifact no review owes an
-   * observation on.
+   * owner unit or reviewed production-settings delivery is refused by name
+   * rather than ignored. Production settings use the same registration with
+   * an empty semantic contribution so their executed revision is attributable
+   * without pretending settings own a model, environment, or context.
    */
   design: string;
   /** Build this owner's contribution deterministically from its own address. */

@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
-import os from "node:os";
+import type { BigIntStats } from "node:fs";
 import path from "node:path";
+
+import { autoMovieFileSystem as fileSystem } from "./fileSystem";
+import {
+  type IAutoMovieLocalProcessOwner,
+  currentAutoMovieLocalProcessOwner,
+  currentAutoMovieLocalProcessQuery,
+  isAutoMovieLocalProcessOwner,
+  observeAutoMovieLocalProcessOwner,
+} from "./localProcessOwner";
 
 /**
  * A short-lived, owner-identified commit lock guarding the project store's
@@ -24,13 +32,13 @@ import path from "node:path";
  *   process waits out its own timeout and reports itself as the contender. The
  *   cross-session law is untouched: a foreign token is still never stolen, and
  *   the file is removed only when the outermost release runs.
- * - **A dead owner is proven, never assumed.** The token records the host and
- *   the process id that took the lock. An id nothing holds on this host cannot
- *   belong to a running owner, because a live process always occupies its own
- *   id, so that one case authorizes reclaiming the lock. Every other case is
- *   refused and named: an id that *is* held proves nothing, since ids are
- *   reused, and a lock written on another host says nothing about this host's
- *   process table at all. Age still authorizes nothing.
+ * - **A dead owner is proven, never assumed.** The token records the host,
+ *   process id, and process generation that took the lock. An id nothing holds
+ *   on this host cannot belong to a running owner, so two observations of that
+ *   one case authorize reclaim. Every other case is refused and named: an id
+ *   that *is* held proves nothing, since ids are reused, and a lock written on
+ *   another host says nothing about this host's process table at all. Age still
+ *   authorizes nothing.
  * - **Denial is not contention.** A lock the filesystem refuses to let this
  *   process create is refused at once, naming the path, rather than waiting out
  *   a deadline for a file it may never be allowed to make and then reporting an
@@ -95,7 +103,7 @@ const closeCommitLockDescriptor = (
   lockPath: string,
 ): void => {
   try {
-    fs.closeSync(descriptor);
+    fileSystem.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new CommitLockDescriptorCleanupError(
@@ -110,32 +118,34 @@ const closeCommitLockDescriptor = (
   }
 };
 
-const lockIdentity = (status: fs.BigIntStats): string =>
+const lockIdentity = (status: BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
 
 const readCommitLockSnapshot = (
   lockPath: string,
 ): ICommitLockSnapshot | null => {
-  const linked = fs.lstatSync(lockPath, { bigint: true });
+  const linked = fileSystem.lstatSync(lockPath, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false) return null;
   const linkedIdentity = lockIdentity(linked);
-  const descriptor = fs.openSync(lockPath, "r");
+  const descriptor = fileSystem.openSync(lockPath, "r");
   let failure: ICommitLockDescriptorFailure | undefined;
   try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
+    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false) return null;
-    const token = fs.readFileSync(descriptor, "utf8");
-    const resident = fs.lstatSync(lockPath, { bigint: true });
+    const token = fileSystem.readFileSync(descriptor, "utf8");
+    const resident = fileSystem.lstatSync(lockPath, { bigint: true });
     if (
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
       lockIdentity(resident) !== linkedIdentity
     )
       return null;
-    const residentDescriptor = fs.openSync(lockPath, "r");
+    const residentDescriptor = fileSystem.openSync(lockPath, "r");
     let residentFailure: ICommitLockDescriptorFailure | undefined;
     try {
-      const current = fs.fstatSync(residentDescriptor, { bigint: true });
+      const current = fileSystem.fstatSync(residentDescriptor, {
+        bigint: true,
+      });
       if (
         current.isFile() === false ||
         lockIdentity(current) !== lockIdentity(opened)
@@ -158,17 +168,21 @@ const readCommitLockSnapshot = (
 
 const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
   try {
-    fs.linkSync(quarantine, lockPath);
+    fileSystem.linkSync(quarantine, lockPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
     try {
-      fs.copyFileSync(quarantine, lockPath, fs.constants.COPYFILE_EXCL);
+      fileSystem.copyFileSync(
+        quarantine,
+        lockPath,
+        fileSystem.constants.COPYFILE_EXCL,
+      );
     } catch {
       return;
     }
   }
   try {
-    fs.rmSync(quarantine, { force: true });
+    fileSystem.rmSync(quarantine, { force: true });
   } catch {
     // The canonical foreign lock is restored; an extra hard link or backup
     // is fail-closed evidence and must not endanger the resident owner.
@@ -187,7 +201,7 @@ const reclaimCommitLock = (lockPath: string, token: string): void => {
   try {
     const resident = readCommitLockSnapshot(lockPath);
     if (resident !== null && resident.token === token)
-      held.set(lockPath, { token, depth: 1 });
+      held.set(lockPath, { token, depth: 0 });
   } catch {
     // nothing resident to reclaim
   }
@@ -196,6 +210,9 @@ const reclaimCommitLock = (lockPath: string, token: string): void => {
 /**
  * Take the commit lock, returning the owner token to pass to
  * {@link releaseCommitLock}. Throws after ~2 s if the lock never frees.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Reclaims only an unchanged lock whose local owner is proved absent twice.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-stale-claim-recovery Keeps malformed, remote-host, occupied-or-reused, and unavailable owner observations fail-closed.
  */
 export const acquireCommitLock = (lockPath: string): string => {
   const current = held.get(lockPath);
@@ -212,7 +229,7 @@ export const acquireCommitLock = (lockPath: string): string => {
       // Exclusive create admits only one owner. The token is fully written
       // before this acquire returns, and contenders never read it to decide
       // whether they may proceed -- only to say who is in the way.
-      fs.writeFileSync(lockPath, token, { flag: "wx" });
+      fileSystem.writeFileSync(lockPath, token, { flag: "wx" });
       held.set(lockPath, { token, depth: 1 });
       return token;
     } catch (error) {
@@ -259,6 +276,9 @@ export const acquireCommitLock = (lockPath: string): string => {
  * removed the complete lock namespace; this invalidates every matching nesting
  * level and always returns without resident-path I/O because none can still own
  * the deleted physical lock.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Removes only a lock that still carries this session's token, so no release ever takes another owner's claim away.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Verifies the exact file identity again after quarantine so a successor written between the read and the move is restored, never deleted.
  */
 export const releaseCommitLock = (
   lockPath: string,
@@ -268,7 +288,10 @@ export const releaseCommitLock = (
   const current = held.get(lockPath);
   let owned = false;
   if (current !== undefined && current.token === token) {
-    if (options.retire !== true && --current.depth !== 0) return;
+    if (options.retire !== true && current.depth > 1) {
+      --current.depth;
+      return;
+    }
     held.delete(lockPath);
     owned = true;
   }
@@ -281,7 +304,7 @@ export const releaseCommitLock = (
       `.automovie-lock-release-${process.pid}-${randomUUID()}`,
     );
     try {
-      fs.renameSync(lockPath, quarantine);
+      fileSystem.renameSync(lockPath, quarantine);
     } catch {
       // The ownership entry is already gone and the resident lock still holds
       // this session's token, so returning here leaves the file with no owner
@@ -299,21 +322,26 @@ export const releaseCommitLock = (
         moved.identity === observed.identity &&
         moved.token === token
       )
-        fs.rmSync(quarantine, { force: true });
+        fileSystem.rmSync(quarantine, { force: true });
       else restoreQuarantinedLock(quarantine, lockPath);
     } catch {
       restoreQuarantinedLock(quarantine, lockPath);
       if (owned) reclaimCommitLock(lockPath, token);
     }
   } catch {
-    // already gone, nothing of ours to release
+    // A read failure proves neither absence nor replacement. Recover the
+    // process-local entry only if a fresh exact read still finds our token.
+    if (owned) reclaimCommitLock(lockPath, token);
   }
 };
 
 /**
  * What a lock file records about the session that took it.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Records the complete local process generation and acquisition time behind the claim.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Makes PID reuse distinguishable from exact same-process ownership.
  */
-export interface IAutoMovieCommitLockOwner {
+export interface IAutoMovieCommitLockOwner extends IAutoMovieLocalProcessOwner {
   /**
    * Host the owner ran on.
    *
@@ -321,9 +349,6 @@ export interface IAutoMovieCommitLockOwner {
    * or network home is reachable from more than one machine, so a process id
    * read here is only meaningful beside the host it was drawn on.
    */
-  host: string;
-  /** Process id the owner held on {@link host}. */
-  pid: number;
   /** When the lock was taken, in epoch milliseconds. */
   at: number;
 }
@@ -333,16 +358,20 @@ export interface IAutoMovieCommitLockOwner {
  *
  * Only `absent` authorizes anything, and it is proof rather than inference: a
  * live process always occupies its own id, so an id nothing holds cannot belong
- * to a running owner. `present` is deliberately not read as "alive" -- ids are
- * reused, and on a machine running more than one workload the id may now belong
- * to something entirely unrelated. `elsewhere` is the shared-home case, where
+ * to a running owner. `occupied-or-reused` is deliberately not read as
+ * "alive" -- ids are reused, and on a machine running more than one workload
+ * the id may now belong to something entirely unrelated. `elsewhere` is the shared-home case, where
  * this host's process table answers a question about a different host.
  * `unknown` is a lock this version cannot read, including one written by an
  * older build, and it is refused like every other unproven case.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery Separates affirmative absence from every state that cannot authorize takeover.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-stale-claim-recovery Preserves generation-aware recovery observations without collapsing them to PID liveness.
  */
 export type AutoMovieCommitLockOwnerState =
+  | "same-owner"
   | "absent"
-  | "present"
+  | "occupied-or-reused"
   | "elsewhere"
   | "unknown";
 
@@ -354,6 +383,9 @@ export type AutoMovieCommitLockOwnerState =
  * cannot read is exactly the `unknown` case, and every other state was reached
  * by reading one. Stating that in the type is what keeps a reader from writing
  * a branch that cannot run.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Makes the observed owner and its recovery-authorizing state queryable.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Returns a typed, sanitized owner observation for operator diagnostics.
  */
 export type IAutoMovieCommitLockHolder =
   | {
@@ -367,10 +399,15 @@ export type IAutoMovieCommitLockHolder =
   | {
       /** The lock file inspected. */
       path: string;
-      /** No owner this build can read. */
-      owner: null;
+      /** Validated owner when only its process observation failed. */
+      owner: IAutoMovieCommitLockOwner | null;
       /** Nothing can be proven, so nothing is authorized. */
       state: "unknown";
+      /** Sanitized failure class for a target-safe refusal. */
+      reason:
+        | "invalid-owner"
+        | "lock-read-unavailable"
+        | "process-query-unavailable";
     };
 
 const OWNER_PREFIX = "automovie-commit-lock:";
@@ -383,13 +420,14 @@ const OWNER_PREFIX = "automovie-commit-lock:";
  * file is one exclusive create and a second file would not be written under the
  * same guarantee.
  */
-const commitLockToken = (): string =>
-  `${OWNER_PREFIX}${JSON.stringify({
-    host: os.hostname(),
-    pid: process.pid,
+const commitLockToken = (): string => {
+  const owner = currentAutoMovieLocalProcessOwner();
+  return `${OWNER_PREFIX}${JSON.stringify({
+    ...owner,
     at: Date.now(),
     nonce: (lockNonce++).toString(36),
   })}`;
+};
 
 const readCommitLockOwner = (
   token: string,
@@ -398,12 +436,12 @@ const readCommitLockOwner = (
   try {
     const value: unknown = JSON.parse(token.slice(OWNER_PREFIX.length));
     if (typeof value !== "object" || value === null) return null;
-    const { host, pid, at } = value as Record<string, unknown>;
-    if (typeof host !== "string" || host.length === 0) return null;
-    if (typeof pid !== "number" || Number.isSafeInteger(pid) === false)
+    const { host, pid, generation, at } = value as Record<string, unknown>;
+    if (typeof at !== "number" || Number.isSafeInteger(at) === false || at < 0)
       return null;
-    if (typeof at !== "number" || Number.isFinite(at) === false) return null;
-    return { host, pid, at };
+    const owner = { host, pid, generation };
+    if (isAutoMovieLocalProcessOwner(owner) === false) return null;
+    return { ...owner, at };
   } catch {
     return null;
   }
@@ -411,19 +449,76 @@ const readCommitLockOwner = (
 
 const commitLockOwnerState = (
   owner: IAutoMovieCommitLockOwner,
-): Exclude<AutoMovieCommitLockOwnerState, "unknown"> => {
-  if (owner.host !== os.hostname()) return "elsewhere";
+): ReturnType<typeof observeAutoMovieLocalProcessOwner> =>
+  observeAutoMovieLocalProcessOwner({
+    owner,
+    current: currentAutoMovieLocalProcessOwner(),
+    query: currentAutoMovieLocalProcessQuery(),
+  });
+
+interface ICommitLockInspection {
+  holder: IAutoMovieCommitLockHolder;
+  snapshot: ICommitLockSnapshot | null;
+}
+
+const inspectCommitLockSnapshot = (
+  lockPath: string,
+): ICommitLockInspection | null => {
+  let resident: ICommitLockSnapshot | null;
   try {
-    // Signal 0 asks whether the id is held without delivering anything.
-    process.kill(owner.pid, 0);
-    return "present";
+    resident = readCommitLockSnapshot(lockPath);
   } catch (error) {
-    // `EPERM` is a process this session may not signal, which is still a
-    // process. Only `ESRCH` says the id is held by nobody.
-    return (error as NodeJS.ErrnoException).code === "ESRCH"
-      ? "absent"
-      : "present";
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    return {
+      holder: {
+        path: lockPath,
+        owner: null,
+        state: "unknown",
+        reason: "lock-read-unavailable",
+      },
+      snapshot: null,
+    };
   }
+  if (resident === null) {
+    try {
+      fileSystem.lstatSync(lockPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    }
+    return {
+      holder: {
+        path: lockPath,
+        owner: null,
+        state: "unknown",
+        reason: "lock-read-unavailable",
+      },
+      snapshot: null,
+    };
+  }
+  const owner = readCommitLockOwner(resident.token);
+  if (owner === null)
+    return {
+      holder: {
+        path: lockPath,
+        owner: null,
+        state: "unknown",
+        reason: "invalid-owner",
+      },
+      snapshot: resident,
+    };
+  const observation = commitLockOwnerState(owner);
+  return {
+    holder:
+      observation.state === "unknown"
+        ? {
+            path: lockPath,
+            owner,
+            state: "unknown",
+            reason: observation.reason,
+          }
+        : { path: lockPath, owner, state: observation.state },
+    snapshot: resident,
+  };
 };
 
 /**
@@ -433,21 +528,14 @@ const commitLockOwnerState = (
  * it is standing behind. Clearing the one lock an error happens to name does
  * not clear the condition when a single dead session left three, and a caller
  * that learns them one refusal at a time pays a full timeout for each.
+ *
+ * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Exposes the full owner generation and observation behind a commit refusal.
+ * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Keeps absent storage distinct from unreadable or malformed claim state.
  */
 export const inspectCommitLock = (
   lockPath: string,
-): IAutoMovieCommitLockHolder | null => {
-  try {
-    const resident = readCommitLockSnapshot(lockPath);
-    if (resident === null) return null;
-    const owner = readCommitLockOwner(resident.token);
-    return owner === null
-      ? { path: lockPath, owner: null, state: "unknown" }
-      : { path: lockPath, owner, state: commitLockOwnerState(owner) };
-  } catch {
-    return null;
-  }
-};
+): IAutoMovieCommitLockHolder | null =>
+  inspectCommitLockSnapshot(lockPath)?.holder ?? null;
 
 /**
  * One sentence describing a lock's holder, in the words its reader can act on.
@@ -456,16 +544,20 @@ export const describeCommitLockHolder = (
   holder: IAutoMovieCommitLockHolder,
 ): string => {
   if (holder.state === "unknown")
-    return `"${holder.path}" records no owner this build can read, so it cannot be attributed to a session at all`;
+    return holder.owner === null
+      ? `"${holder.path}" has no trustworthy owner observation (${holder.reason})`
+      : `"${holder.path}" records process ${holder.owner.pid} on this host, but its owner state is unknown (${holder.reason})`;
   const owner = holder.owner;
   const taken = ` taken ${Math.max(0, Math.round((Date.now() - owner.at) / 1000))}s ago`;
   switch (holder.state) {
-    case "present":
-      return `"${holder.path}" is held by process ${owner.pid} on this host${taken}, which is still running; another AutoMovie commit is most likely in flight`;
+    case "same-owner":
+      return `"${holder.path}" is held by this process generation${taken}`;
+    case "occupied-or-reused":
+      return `"${holder.path}" records process ${owner.pid} on this host${taken}; that id is occupied, but the process table cannot prove it is the recorded generation`;
     case "absent":
       return `"${holder.path}" is held by process ${owner.pid} on this host${taken}, and no process holds that id, so the session that took it is gone`;
     case "elsewhere":
-      return `"${holder.path}" is held by process ${owner.pid} on host "${owner.host}"${taken}; this host's process table cannot say whether that session is still running`;
+      return `"${holder.path}" is held by process ${owner.pid} on host ${JSON.stringify(owner.host)}${taken}; this host's process table cannot say whether that session is still running`;
   }
 };
 
@@ -526,7 +618,9 @@ const contendedCommitLockError = (lockPath: string): Error => {
  * product used to decline to consult.
  */
 const COMMIT_LOCK_ADVICE: Record<AutoMovieCommitLockOwnerState, string> = {
-  present: "retry shortly",
+  "same-owner": "retry after this process finishes its owning operation",
+  "occupied-or-reused":
+    "retry shortly; PID occupancy does not authorize reclaim",
   absent:
     "it should have been reclaimed automatically, so if this repeats, remove that file",
   elsewhere:
@@ -553,30 +647,36 @@ const COMMIT_LOCK_ADVICE: Record<AutoMovieCommitLockOwnerState, string> = {
  * refusal, which now names the coordinate, rather than to a wrong reclaim.
  */
 const reclaimDeadCommitLock = (lockPath: string, token: string): boolean => {
-  const observed = inspectCommitLock(lockPath);
-  if (observed === null || observed.state !== "absent") return false;
+  const observed = inspectCommitLockSnapshot(lockPath);
+  if (
+    observed === null ||
+    observed.snapshot === null ||
+    observed.holder.state !== "absent"
+  )
+    return false;
   const staging = `${lockPath}.reclaim`;
   try {
-    fs.writeFileSync(staging, token, { flag: "wx" });
+    fileSystem.writeFileSync(staging, token, { flag: "wx" });
   } catch {
     return false;
   }
   try {
-    const resident = inspectCommitLock(lockPath);
+    const resident = inspectCommitLockSnapshot(lockPath);
     if (
       resident === null ||
-      resident.state !== "absent" ||
-      resident.owner?.pid !== observed.owner?.pid ||
-      resident.owner?.at !== observed.owner?.at
+      resident.snapshot === null ||
+      resident.holder.state !== "absent" ||
+      resident.snapshot.identity !== observed.snapshot.identity ||
+      resident.snapshot.token !== observed.snapshot.token
     ) {
-      fs.rmSync(staging, { force: true });
+      fileSystem.rmSync(staging, { force: true });
       return false;
     }
-    fs.renameSync(staging, lockPath);
+    fileSystem.renameSync(staging, lockPath);
     return true;
   } catch {
     try {
-      fs.rmSync(staging, { force: true });
+      fileSystem.rmSync(staging, { force: true });
     } catch {
       // The resident lock is untouched either way; a staging file left behind
       // costs a later reclaim, not correctness.

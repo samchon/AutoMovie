@@ -1,77 +1,91 @@
-import {
+import type {
   IAutoMovieDiagnostic,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotContract,
 } from "@automovie/interface";
 
-import { parseScreenplayProse } from "./screenplayProseDiagnostics";
+import {
+  type IAutoMovieParsedScreenplayTimingOccurrence,
+  authoredScreenplayMarkdownLines,
+  parseScreenplayProse,
+  parseScreenplayTimingOccurrences,
+} from "./screenplayProseDiagnostics";
 
-/** Compare two authored durations at the precision a script states them in. */
+/** Compare authored seconds at the precision of the portable JSON contract. */
 const SAME_SECOND = 1e-6;
 
 /**
- * A duration is a number the prose attaches its unit to.
- *
- * Scanning a sentence that merely says "second" reads an ordinal as a
- * measurement: "the second row holds 4 figures" offered `4` as a duration and
- * would have refused honest prose. So the number must carry the unit itself,
- * and the one gap that leaves — the first figure of a range — is closed by
- * reading the pair.
- *
- * The leading boundary is a captured group rather than a lookbehind, and that
- * is not a style choice. `(?<![\w.-])` compiled here, reported the source and
- * flags it was given, kept `lastIndex` at zero, and matched **nothing** through
- * this project's transpiled path while matching correctly under plain `node`.
- * A silent zero is the worst failure a scanner can have, because every scene
- * passes. Keep the boundary explicit.
+ * Which realized quantity a screenplay timing phrase measures: a shot's
+ * duration, or the offset of an event boundary within a shot.
  */
-const DURATION =
-  /(^|[^\w.-])(\d+(?:\.\d+)?)(?:\s*(?:and|to|-)\s*(\d+(?:\.\d+)?))?\s*seconds?/giu;
-
-/** Every duration in seconds a scene's prose states. */
-const statedSeconds = (body: string): number[] => {
-  const found: number[] = [];
-  for (const match of body.replace(/[*_`]/gu, "").matchAll(DURATION))
-    for (const group of [match[2], match[3]])
-      if (group !== undefined) found.push(Number(group));
-  return found;
-};
-
-/** Every duration in seconds a shot contract actually carries. */
-const carriedSeconds = (contract: IAutoMovieShotContract): number[] => [
-  0,
-  contract.durationSeconds,
-  ...(contract.events ?? []).flatMap((event) => [
-    event.window.from,
-    event.window.to,
-  ]),
-  ...contract.reviewFrames.map((frame) => frame.time),
-];
+export type IAutoMovieScreenplayTimingSelector =
+  | { kind: "duration"; shot: string }
+  | {
+      kind: "event";
+      shot: string;
+      event: string;
+      boundary: "from" | "to";
+    }
+  | { kind: "review"; shot: string; frame: string };
 
 /**
- * A duration a scene states in prose must be one its shots actually carry.
+ * Parse the exact owner selector attached to one screenplay timing occurrence.
  *
- * This closes the last open joint between the screenplay and the motion under
- * it. The ledger checks that a shot cites a scene the index declares, the
- * coverage gate checks that every active scene has a realizing shot, and the
- * engine checks a shot's own predicates against the motion it compiled. None of
- * them reads the scene's prose, so a sentence like "the hand holds for 1.2
- * seconds" sat in the shipped starter next to shots whose cue window closed at
- * 3.0 of a 6.0 second scene, and every gate stayed green.
+ * The grammar is deliberately closed. A target that is almost right is not
+ * silently redirected to a different clock field.
+ */
+export const parseScreenplayTimingSelector = (
+  value: string,
+): IAutoMovieScreenplayTimingSelector | null => {
+  const duration = /^shot:([^/\s]+)\/duration$/u.exec(value);
+  if (duration !== null) return { kind: "duration", shot: duration[1]! };
+  const event = /^shot:([^/\s]+)\/event:([^/\s]+)\/(from|to)$/u.exec(value);
+  if (event !== null)
+    return {
+      kind: "event",
+      shot: event[1]!,
+      event: event[2]!,
+      boundary: event[3] as "from" | "to",
+    };
+  const review = /^shot:([^/\s]+)\/review:([^/\s]+)$/u.exec(value);
+  return review === null
+    ? null
+    : { kind: "review", shot: review[1]!, frame: review[2]! };
+};
+
+const ownedValue = (
+  contract: IAutoMovieShotContract,
+  selector: IAutoMovieScreenplayTimingSelector,
+): number | null => {
+  if (selector.kind === "duration") return contract.durationSeconds;
+  if (selector.kind === "event") {
+    const event = contract.events.find((entry) => entry.id === selector.event);
+    return event === undefined ? null : event.window[selector.boundary];
+  }
+  return (
+    contract.reviewFrames.find((frame) => frame.id === selector.frame)?.time ??
+    null
+  );
+};
+
+const screenplayPreambleTiming = (
+  content: string,
+): IAutoMovieParsedScreenplayTimingOccurrence[] => {
+  const preamble: string[] = [];
+  for (const line of authoredScreenplayMarkdownLines(content)) {
+    if (/^#{1,6}[ \t]+SCN-[A-Za-z0-9-]+[ \t]+(?:—|-|:)/u.test(line)) break;
+    preamble.push(line);
+  }
+  return parseScreenplayTimingOccurrences(preamble.join("\n"));
+};
+
+/**
+ * Validate every prose timing claim against its explicit local owner.
  *
- * The scan is deliberately narrow. Only a sentence that says "second" is read,
- * only standalone decimal tokens inside it are taken, and a number is satisfied
- * by shot-local zero, the shot's `durationSeconds`, either bound of an event
- * window, or a declared review-frame time. So a scene that quotes a figure the
- * contract holds passes, and one that quotes a figure nobody holds is named
- * with what the shot does carry.
- *
- * Severity follows `screenplay-scene-unrealized`: a warning while authoring,
- * because prose legitimately runs ahead of the shot that will realize it, and
- * an error at review and final, because a film presented as deliverable is
- * claiming its script describes it.
- *
- * A scene nothing realizes yet is skipped here; the coverage gate owns that.
+ * Numeric equality is never authority. The inline selector must name a shot
+ * that cites this scene and the exact duration, event boundary or review frame
+ * whose value the prose states. Word and fraction spellings are normalized by
+ * the shared prose parser before this join.
  */
 export const screenplayTimingDiagnostics = (props: {
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
@@ -81,58 +95,106 @@ export const screenplayTimingDiagnostics = (props: {
 }): IAutoMovieDiagnostic[] => {
   const screenplay = props.screenplay;
   if (screenplay === null) return [];
-  const byScene = new Map<string, IAutoMovieShotContract[]>();
-  for (const contract of props.contracts.values())
-    for (const evidence of contract.evidence ?? [])
-      byScene.set(evidence.scene, [
-        ...(byScene.get(evidence.scene) ?? []),
-        contract,
-      ]);
-
   const diagnostics: IAutoMovieDiagnostic[] = [];
+  const category =
+    props.scope === "review" || props.scope === "final" ? "error" : "warning";
+  const documents = new Map<string, string | null>();
+  const read = (path: string): string | null => {
+    if (documents.has(path)) return documents.get(path)!;
+    const content = props.read(path);
+    documents.set(path, content);
+    return content;
+  };
+  const refuse = (
+    code:
+      | "screenplay-timing-unowned"
+      | "screenplay-timing-reference-invalid"
+      | "screenplay-timing-owner-absent"
+      | "screenplay-timing-value-mismatch",
+    message: string,
+    path: string,
+  ): void => {
+    diagnostics.push({
+      code,
+      category,
+      phase: "compile",
+      target: "screenplay",
+      path,
+      message,
+    });
+  };
+  const screenplayDocument = read(screenplay.screenplay.path);
+  if (screenplayDocument !== null)
+    for (const occurrence of screenplayPreambleTiming(screenplayDocument))
+      refuse(
+        "screenplay-timing-unowned",
+        `Screenplay prose outside an indexed scene states "${occurrence.text} seconds". A sequence heading or preamble has no shot-local timing owner. Move the claim into its scene with an exact {@timing ...} selector, then compile again.`,
+        screenplay.screenplay.path,
+      );
+
   for (const scene of screenplay.screenplay.scenes) {
-    if (scene.status !== "active" || scene.disposition?.phase === "production")
+    // A scene the screenplay omits has no prose to own, and a scene this
+    // production deliberately leaves unrealized has no shot to own it; only an
+    // edit-phase omission still compiles the shot whose fields the prose quotes.
+    if (
+      scene.status !== "active" ||
+      scene.disposition?.phase === "screenplay" ||
+      scene.disposition?.phase === "production"
+    )
       continue;
-    const realizing = byScene.get(scene.id) ?? [];
-    if (realizing.length === 0) continue;
     const documentPath = scene.path ?? screenplay.screenplay.path;
-    const content = props.read(documentPath);
+    const content = read(documentPath);
     if (content === null) continue;
     const parsed = parseScreenplayProse(content).find(
       (entry) => entry.id === scene.id,
     );
     if (parsed === undefined) continue;
-    const carried = realizing.flatMap(carriedSeconds);
-    const unrealized = [
-      ...new Set(
-        statedSeconds(parsed.body).filter(
-          (stated) =>
-            carried.some((value) => Math.abs(value - stated) <= SAME_SECOND) ===
-            false,
-        ),
-      ),
-    ];
-    if (unrealized.length === 0) continue;
-    diagnostics.push({
-      code: "screenplay-scene-timing-unrealized",
-      category:
-        props.scope === "review" || props.scope === "final"
-          ? "error"
-          : "warning",
-      phase: "compile",
-      target: "screenplay",
-      path: documentPath,
-      message: `Scene "${scene.id}" states ${unrealized.length === 1 ? "a duration" : "durations"} ${unrealized
-        .map((value) => `${value}s`)
-        .join(", ")} that no shot realizing it carries; those shots carry ${[
-        ...new Set(carried),
-      ]
-        .sort((a, b) => a - b)
-        .map((value) => `${value}s`)
-        .join(
-          ", ",
-        )}. A number in scene prose reads as a measurement of the film, so one nothing implements is a promise the shot never made. Quote a duration the contract holds, or change the contract to the duration the scene asks for, then compile again.`,
-    });
+    for (const occurrence of parsed.timing) {
+      if (occurrence.selector === null) {
+        refuse(
+          "screenplay-timing-unowned",
+          `Scene "${scene.id}" states "${occurrence.text} seconds" without an inline {@timing ...} owner. Numeric coincidence elsewhere in the production is not traceability. Name the exact shot field, then compile again.`,
+          documentPath,
+        );
+        continue;
+      }
+      const selector = parseScreenplayTimingSelector(occurrence.selector);
+      if (selector === null) {
+        refuse(
+          "screenplay-timing-reference-invalid",
+          `Scene "${scene.id}" uses unsupported timing selector "${occurrence.selector}". Use shot:<id>/duration, shot:<id>/event:<id>/from, shot:<id>/event:<id>/to or shot:<id>/review:<id>, then compile again.`,
+          documentPath,
+        );
+        continue;
+      }
+      const contract = props.contracts.get(selector.shot);
+      const realizesScene = contract?.evidence?.some(
+        (evidence) => evidence.scene === scene.id,
+      );
+      if (contract === undefined || realizesScene !== true) {
+        refuse(
+          "screenplay-timing-owner-absent",
+          `Scene "${scene.id}" assigns "${occurrence.text} seconds" to shot "${selector.shot}", but that shot does not exist or does not cite this scene. An equal value in another shot cannot own this occurrence. Correct the selector or the shot evidence, then compile again.`,
+          documentPath,
+        );
+        continue;
+      }
+      const expected = ownedValue(contract, selector);
+      if (expected === null) {
+        refuse(
+          "screenplay-timing-owner-absent",
+          `Scene "${scene.id}" timing selector "${occurrence.selector}" names no field in its shot contract. Correct the event, boundary or review-frame identity, then compile again.`,
+          documentPath,
+        );
+        continue;
+      }
+      if (Math.abs(expected - occurrence.seconds) > SAME_SECOND)
+        refuse(
+          "screenplay-timing-value-mismatch",
+          `Scene "${scene.id}" states ${occurrence.seconds}s for "${occurrence.selector}", whose authoritative contract value is ${expected}s. Correct the prose or the owning field instead of borrowing an equal value elsewhere, then compile again.`,
+          documentPath,
+        );
+    }
   }
   return diagnostics;
 };

@@ -10,7 +10,8 @@
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "experimental": "ttsx -P config/tsconfig.json --no-plugins --types node build/experimental.ts --",
     "format": "prettier --write \"**/*.{ts,cts,mts}\"",
-    "format:check": "prettier --check \"**/*.{ts,cts,mts}\""
+    "format:check": "prettier --check \"**/*.{ts,cts,mts}\"",
+    "lint:voice": "ttsx -P config/tsconfig.json --no-plugins --types node build/proseVoice-cli.ts"
   },
   "keywords": [
     "coding-agent",

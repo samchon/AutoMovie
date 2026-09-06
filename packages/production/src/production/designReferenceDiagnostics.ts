@@ -10,7 +10,12 @@ import {
 } from "@automovie/interface";
 
 import { digestAutoMovieBytes } from "./contentIdentity";
-import { inspectDesignReferenceAsset } from "./inspectDesignReferenceAsset";
+import { AutoMovieDesignReferenceContainerError } from "./designReferenceContainer";
+import {
+  IAutoMovieInspectedDesignReference,
+  inspectDesignReferenceAsset,
+} from "./inspectDesignReferenceAsset";
+import { AutoMovieUtf8Error } from "./strictUtf8";
 
 /** Containers that carry exactly one page, so no frame may cite a second. */
 const SINGLE_PAGE_MEDIA = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
@@ -45,6 +50,7 @@ const SINGLE_PAGE_MEDIA = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
  * scale. An unmeasurable container (a PDF page, a DXF drawing) simply leaves
  * the frame unverified instead of being approximated into agreement, because a
  * gate that invents the number it is checking is not a gate.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-result-states Names the member, rule and consequence of each design-reference finding as distinct diagnostics instead of one accepted or rejected verdict.
  */
 export const designReferenceDiagnostics = (props: {
   /** Project-relative ledger path reported as each diagnostic's file. */
@@ -129,20 +135,18 @@ export const designReferenceDiagnostics = (props: {
       continue;
     }
 
-    let inspected;
+    let inspected: IAutoMovieInspectedDesignReference;
     try {
-      inspected = inspectDesignReferenceAsset({
-        path: reference.asset,
-        bytes,
-      });
+      inspected = inspectDesignReferenceAsset({ path: reference.asset, bytes });
     } catch (error) {
-      // Precondition rather than a defensive branch: every throw site in
-      // `inspectDesignReferenceAsset` is `new Error(...)`, so widening this to
-      // `error instanceof Error ? ... : String(error)` would add an arm no
-      // input can reach and no test could ever pin.
       diagnostic(
-        "design-reference-media-unsupported",
+        error instanceof AutoMovieUtf8Error
+          ? "design-reference-encoding-invalid"
+          : error instanceof AutoMovieDesignReferenceContainerError
+            ? "design-reference-container-invalid"
+            : "design-reference-media-unsupported",
         reference.id,
+        // The asset inspector throws nothing but Error refusals.
         `${(error as Error).message} Convert the reference to a registrable container before citing it.`,
       );
       continue;

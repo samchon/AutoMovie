@@ -35,7 +35,14 @@ Frame capture resolves only ids present in the current compiler-owned `manifests
 
 Repaint is unavailable unless the caller passes an `AutoMovieProductionShotRepaint`. Accepted MP4 output is parsed and committed with a receipt binding compiler, source-render, control, reference, adapter and model, parameter, and output identities. Rerolling replaces the active pointer only; unchanged deterministic truth keeps its own receipts.
 
-Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew. The scaffold ships one at `scripts/inspectSubject.ts`.
+Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew.
+The scaffold ships one at `scripts/inspectSubject.ts`.
+Its versioned plan and observation records bind production, exact target, compile, ordered plan, resolved pose, artifact bytes, actual browser-and-graphics runtime, terminal pass, and the non-delivery boundary.
+Readers reopen those records through duplicate-aware strict UTF-8 JSON admission and count only an exact current join; failed, unsupported, not-run, and runtime-unidentified attempts remain history.
+
+## Film effects
+
+A film's effect track has two owners that must never overlap on one world zone: a shot-local cue realized inside that shot, and a film-global cue on the compiler-owned timeline. `materializeProductionFilmEffects` joins the normalized film cues to the current world recipes and zones and refuses a film cue that overlaps a shot cue, or another film cue, on the same zone, naming both cue ids and the overlapping frames. `projectProductionShotEffectFilmIntervals` supplies the shot-owner intervals for that check by the exact rational frame boundary rather than a rounded `seconds * fps` product. `sampleProductionFilmEffects` reconstructs any film-global `timelineFrame` from the persisted runtime alone, so a proxy tier's output index is never mistaken for the film clock and repeated or reordered seeks return the same sample. `readAutoMovieFilmEffects` reopens the persisted runtime beside the timeline it was compiled with and `verifyProductionFilmEffectPopulation` refuses a population that drops, adds, retimes, re-zones, or re-weights any accepted cue. `productionFilmFrameForShotTime` gives a shot page the one film frame that owns a shot-local second, or null when the edit realizes that second never or more than once.
 
 A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
 
@@ -50,8 +57,19 @@ they are not test-only helpers.
 | `listAutoMovieDiagnosticCatalog` | Lists the stable diagnostic catalog used by offline project tooling. |
 | `findAutoMovieDiagnosticCatalogEntry` | Resolves one diagnostic code to its remediation contract. |
 | `assertProductionFeatureUsesRenditionVideo` | Refuses production features that bypass the canonical rendition video. |
+| `assertProductionRenderDialogueRuntimeIdentity` | Refuses a capture whose final-byte dialogue generation differs from the versioned render plan. |
+| `productionRenderPublicationIdentity` | Projects an exact final or proxy render plan into a structured, independently recomputable publication identity. |
+| `parseProductionRenderPublicationIdentity` | Strictly parses and recomputes stored publication provenance before reuse. |
+| `assertProductionRenderPublicationCurrent` | Compares stored provenance with the current same-tier render plan. |
+| `parseProductionRenderManifestBytes` / `parseProductionRenderReceiptBytes` | Admit the persisted render manifest and renderer receipt through strict structured JSON ingress and their versioned schemas. |
+| `assertProductionRenderManifestRecord` / `assertProductionRenderReceiptRecord` | Admit an already materialized manifest or receipt value, naming only schema paths in a refusal. |
+| `captureProductionPayloadSnapshot` | Captures exact retained or terminal payload bytes for guarded publication. |
+| `isProductionPayloadSnapshotCurrent` | Detects deletion, replacement, or in-place byte mutation across a publication transaction. |
 | `readAutoMovieSubjectInspection` | Reads and validates one committed subject-inspection receipt. |
 | `compareAutoMovieVisualRevisions` | Compares two visual-revision receipts for review tooling. |
+| `decodeAutoMovieProjectRevision` / `advanceAutoMovieProjectRevision` | Validate the one non-negative safe-integer revision domain and compute an exact successor before mutation. |
+| `currentAutoMovieLocalProcessOwner` / `observeAutoMovieLocalProcessOwner` | Persist a per-process generation and distinguish absence from PID occupancy, reuse, remote hosts, and unavailable observations. |
+| `planProductionRenderGc` | Produces deterministic retain, remove, quarantine, and manual-adjudication sets without treating an unreadable render generation as absent or stale. |
 
 ## Migration
 

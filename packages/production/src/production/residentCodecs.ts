@@ -43,6 +43,8 @@ let png: IPngModule | undefined;
 export const residentMp4Box = (): IMp4BoxModule =>
   (mp4 ??= load("mp4box") as IMp4BoxModule);
 
-/** The `pngjs` module, loaded once and kept. */
+/** The `pngjs` module, loaded once and kept.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-font-decoder-closure Fixes the resident decoder the media probes depend on so a host codec cannot silently change what a probe reads.
+ */
 export const residentPngJs = (): IPngModule =>
   (png ??= load("pngjs") as IPngModule);

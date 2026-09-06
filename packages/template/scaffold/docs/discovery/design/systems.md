@@ -10,4 +10,4 @@ A positive acknowledgement identifies the current authored owners and contract w
 
 Review question: which coupled-process condition is specific to these domains, budgets, or failure modes and absent from the reusable system contract?
 
-Sources: [NASA systems engineering requirements on design boundaries, interfaces, timing, capacities, and technical performance measures](https://nodis3.gsfc.nasa.gov/displayAll.cfm?Internal_ID=N_PR_7123_001A_&page_name=all); [NASA software verification guidance on operational constraints, interfaces, worst cases, recovery, and resource measurements](https://swehb.nasa.gov/spaces/SWEHBVB/pages/32604539/SWE-067%2B-%2BVerify%2BImplementation)
+Sources: [NASA systems engineering handbook on design boundaries, interfaces, timing, capacities, and technical performance measures](https://www.nasa.gov/reference/systems-engineering-handbook/); [NASA software verification guidance on operational constraints, interfaces, worst cases, recovery, and resource measurements](https://swehb.nasa.gov/spaces/SWEHBVB/pages/32604539/SWE-067%2B-%2BVerify%2BImplementation)

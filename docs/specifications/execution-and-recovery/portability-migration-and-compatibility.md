@@ -25,6 +25,8 @@ Compatibility evaluator는 checkpoint schema and semantics, job contract, depend
 
 Migration input은 immutable source record, source and target protocol, migration policy와 authority다. Output은 new identity, source reference, transformed and preserved fields, loss report, validation과 compatibility result를 가지며 source generation을 수정하거나 sole recovery point를 target validation 전에 교체하지 않는다.
 
+Scaffold contract migration은 이전 generation의 path, digest와 anchor inventory, 설치된 목표 bytes, 현재 project bytes를 입력으로 고정한다. Planner는 add, write와 unambiguous rename을 exact source digest에 묶고 authored divergence, removed anchor or contract, missing source, rename ambiguity와 target collision을 conflict로 출력하며 apply는 그 source identity가 변하지 않은 경우에만 동일 plan을 실행한다.
+
 ### Semantic Change와 New Identity {#execution-semantic-change-identity}
 
 <!-- @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-semantic-change-new-identity Default, validation, dependency와 deterministic semantics 변화가 새 job identity를 만들게 한다. -->

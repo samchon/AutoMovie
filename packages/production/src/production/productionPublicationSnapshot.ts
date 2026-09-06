@@ -14,6 +14,7 @@ import {
  * and unowned-output diagnostics. The explicit state fields close the remaining
  * adapter boundary: cached manifest semantics, exact manifest and incarnation
  * bytes, and compiler-owned bytes.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change Recomputes the publication input fingerprint from the current inputs so a changed source or tool never inherits an earlier approval.
  */
 export const productionPublicationInputFingerprint = (
   project: AutoMovieProductionProject,

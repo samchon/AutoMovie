@@ -18,7 +18,6 @@ import { AutoMovieContentDigest } from "../production/IAutoMovieProductionDesign
  *
  * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Exposes `IAutoMovieRenderTarget` as the portable data boundary for the rendering compile render distinction requirement.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Types `IAutoMovieRenderTarget` for the spec render artifact lifecycle system contract.
- * @evidencePart specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle::portable-artifact-state
  * @author Samchon
  */
 export interface IAutoMovieRenderTarget {

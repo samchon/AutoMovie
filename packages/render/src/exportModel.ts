@@ -241,6 +241,7 @@ import type { Document, Material, Node } from "@gltf-transform/core";
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @author Samchon
+ * @evidenceExclude specifications/authoring-and-authority/production-language.md#spec-authoring-production-language-module The render package schedules frames and plans captions from compiled artifacts; the production language module and the delivery index are generated-project authoring contracts owned by the evidence and template packages.
  */
 export const exportModelToGLB = async (
   model: IAutoMovieModel,

@@ -2,6 +2,7 @@ import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import {
   canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -187,7 +188,10 @@ const snapshotPackageGraph = (
       throw new Error(
         `Installed capture package "${current.package}" has no captured manifest.`,
       );
-    const parsed = JSON.parse(manifest.bytes.toString("utf8")) as {
+    const parsed = parseAutoMovieStructuredJson({
+      record: "capture-package-manifest",
+      bytes: manifest.bytes,
+    }) as {
       dependencies?: Record<string, unknown>;
       optionalDependencies?: Record<string, unknown>;
     };

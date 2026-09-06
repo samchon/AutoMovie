@@ -274,6 +274,16 @@ export const test_production_library_observation_receipt = (): void => {
           }),
         ],
       }).length,
+      specialMeasurementName: run({
+        required: [threshold],
+        receipts: [
+          receipt({
+            measurements: Object.fromEntries([["__proto__", 0.92]]),
+            observation: threshold.id,
+            space: "hall/main",
+          }),
+        ],
+      }).length,
     },
     {
       refused: true,
@@ -281,6 +291,7 @@ export const test_production_library_observation_receipt = (): void => {
       measured: 0,
       notRun: 0,
       invalidMeasurementName: 1,
+      specialMeasurementName: 0,
     },
   );
 };

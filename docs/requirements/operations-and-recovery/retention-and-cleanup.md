@@ -12,9 +12,13 @@ Active job, resume 가능한 checkpoint, current publication, provenance, eviden
 
 Operator는 cleanup 전에 대상 identity, 분류, 크기, 마지막 사용, 참조 관계, 삭제 근거와 예상 회수량을 확인할 수 있어야 하며 범위가 불명확한 wildcard 삭제를 요구하지 않아야 한다.
 
+Render cleanup preview는 current와 absent, verified stale, integrity failure, unsafe locator 또는 foreign generation, unavailable read와 observation conflict를 구분하고 각 exact target을 retain, remove, quarantine 또는 manual-adjudication 중 하나에 reason과 함께 배치해야 한다. Automatic apply는 captured generation에 대해 증명된 remove 또는 quarantine만 수행해야 한다.
+
 ### 동시 실행 보호 {#operations-cleanup-concurrency-safety}
 
 Cleanup은 active writer, reader, transfer와 publication이 사용하는 대상을 건너뛰거나 안전하게 조정하고, liveness를 확인할 수 없으면 삭제보다 보존을 선택해야 한다.
+
+Local process가 소유한 session, chunk, attempt와 temporary tree는 complete host·PID·process generation으로 식별하고, 같은 descriptor를 두 번 관찰하여 모두 absent임을 증명하기 전에는 reclaim하지 않아야 한다. PID가 점유되었거나 재사용되었을 수 있는 상태, 다른 host, malformed owner와 조회 오류는 cleanup 대상이 아니라 retained conflict다.
 
 ### 삭제 결과와 Tombstone {#operations-cleanup-deletion-record}
 

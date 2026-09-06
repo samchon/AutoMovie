@@ -1,3 +1,4 @@
+import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -43,6 +44,10 @@ export const createProductionCaptureDialogueRuntime = (props: {
   capture: IProductionFrameCaptureRuntime;
   productionId: string;
   root: string;
+  /** The authoring declaration the current compile was judged against. */
+  authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Fresh reader of that declaration for atomic currentness confirmation. */
+  currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
   progress?: (
     stage: string,
     details?: Readonly<Record<string, number | string>>,
@@ -78,9 +83,11 @@ export const createProductionCaptureDialogueRuntime = (props: {
         root,
         props.productionId,
       );
-      const current = new AutoMovieProductionCompiler(project).lint({
-        scope: "source",
-      });
+      const current = new AutoMovieProductionCompiler(
+        project,
+        props.authoringEvidence,
+        props.currentAuthoringEvidence,
+      ).lint({ scope: "source" });
       if (current.success === false)
         throw new Error(
           `Dialogue capture requires a current source compile: ${JSON.stringify(

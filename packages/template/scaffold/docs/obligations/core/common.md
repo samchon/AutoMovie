@@ -14,24 +14,6 @@ This item asks why a file as a whole is needed. Specialist addressability obliga
 
 Sources: [Jakobson on the dominant that orders the functions of other elements](https://archive.org/details/readingsinrussia0000mate); [Burton and Poster on the distinct work done by beginnings, endings, tension, and pace](https://www.cambridge.org/core/books/abs/book-you-need-to-read-to-write-the-book-you-want-to-write/beginnings-and-endings-tension-and-pace/7B84CB546C696FD1B6A8AB753522B42C)
 
-## Population variety {#population-variety}
-
-Across the complete population, the units do not all perform the same move at the same position. Name the move each unit makes where they are comparable -- how a treatment event exits, what state a script unit hands on, which face a model presents first, how a space is entered, what a shot leaves on screen, which reading an observation opens with -- and state how many units share each move.
-
-One move dominating the population is the finding, and it is a finding **no unit can produce**. A unit that arrives at the population's one shared move is correct read alone; the repetition exists only when the set is read together, so every item answered unit by unit passes while the population says nothing. Where the production has chosen a formal repetition, say so from settings and say what the repetition does; a dominant move nobody chose is the default surface arriving at the one position every unit shares.
-
-The same collapse reaches evidence. A layer whose citations all state their reason in one frame has answered its targets and disclosed nothing about its hosts, and the exchange test in the evidence-graph skill is how a single reason is caught. This item is how the population is.
-
-The commonest cause is that the production gave some material nowhere else to go: an explanation, a disclosure, a limit that every unit ends up carrying because no layer owns it. Settle where that material lives before the units absorb it.
-
-Review question: which move does this population make most often at each comparable position, how many units share it, and was that chosen?
-
-When this obligation fails, do not retag the units. Decide which moves the production wants at which positions, rewrite the ones that arrived by default, and where the cause is a missing owner, establish it in the earliest owning layer and propagate.
-
-This item asks only how the units of one population differ from one another. Purpose fit governs whether a file is needed at all, proportionate development governs how much space a unit receives, and the common machine-default principle governs a single unit whose surface nobody decided.
-
-Sources: [Richardson on the distinction between ending and closure](https://academic.oup.com/edited-volume/61883/chapter-abstract/547759132); [Padmakumar and He on the measured loss of lexical and content diversity in text a model co-wrote](https://arxiv.org/abs/2309.05196); [Purdue OWL on monotony produced by repeated structure](https://owl.purdue.edu/owl/general_writing/academic_writing/sentence_variety/similar_sentence_patterns_or_rhythms.html)
-
 ## Layer boundary {#layer-boundary}
 
 Each authored file declares one document role and contains only decisions recognized by that role's specialist principle or obligation family. A mixed-role file is split, and a missing decision begins in the layer whose contracts own it before being carried downward. This common obligation owns routing and single-role composition; the specialist contracts define the content of each role.

@@ -42,13 +42,14 @@ cd <dir>
 npm install
 npm run capture:install
 npm run capture:doctor
-npm run build
-npm test
+npm run lint:source
+npm run design
+npm run compile
 npm run preview -- --shot opening --time 2 --pass beauty
-npm run review:status
+npm run lint -- --scope review
 ```
 
-The generated README explains the complete tracked-authoring, compile, capture, review, render, and verification loop. Review-bound commands intentionally stop when evidence is missing or stale. The local viewer renders compiler-owned output; an arbitrary screenshot cannot satisfy a review.
+The generated [scaffold README](./packages/template/scaffold/README.md#canonical-command-routes) owns the complete command routes for tracked authoring, compilation, capture, review, rendering, migration, and verification. Review-bound commands intentionally stop when evidence is missing or stale. The local viewer renders compiler-owned output; an arbitrary screenshot cannot satisfy a review.
 
 ## Packages
 

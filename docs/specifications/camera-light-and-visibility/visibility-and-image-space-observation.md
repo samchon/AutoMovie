@@ -19,15 +19,6 @@ Visibility는 source가 존재하거나 frustum과 교차한다는 사실, image
 <!-- @evidence requirements/camera/framing-and-shot-size.md#camera-framing-delivery-gate Delivery raster와 별개인 crop window를 실제 framing 판정 경계로 사용한다. -->
 Clipping evaluation은 camera projection convention, positive ordered near·far distance, optional clipping planes, delivery crop와 current geometry bounds를 사용한다. Boundary inclusion과 tolerance를 선언하고 required subject·environment 범위와 depth precision constraint를 함께 보고한다.
 
-<!-- @evidenceObligation projection-convention Optical axis, transform order, vertical FOV와 aspect가 만드는 camera-local half-space convention. -->
-<!-- @evidenceObligation near-far-range Positive ordered near·far distance를 depth 판정에 적용한다. -->
-<!-- @evidenceObligation clipping-planes Optional clipping plane 집합을 bound에 대해 평가한다. -->
-<!-- @evidenceObligation delivery-raster-extent Delivery raster의 width·height가 고정하는 image-space side bound. -->
-<!-- @evidenceObligation delivery-crop-region Delivery raster보다 좁은 crop region을 clipping 판정에 적용한다. -->
-<!-- @evidenceObligation geometry-bounds Clip을 취하는 current resolved geometry bound. -->
-<!-- @evidenceObligation boundary-inclusion-tolerance Boundary inclusion과 tolerance를 선언한 대로 판정한다. -->
-<!-- @evidenceObligation depth-precision-constraint Required subject·environment 범위와 depth precision constraint를 보고한다. -->
-
 Depth precision은 standard fixed-point perspective projection에서 camera-space metre를 측정한다. `L = 2^bits - 1`, `q(z) = (1/near - 1/z) / (1/near - 1/far)`, `upper = ceil(clamp(q(requiredFar), 0, 1) * L)`, `lower = max(0, upper - 1)`, `z(k) = 1 / (1/near - (k/L) * (1/near - 1/far))`로 두고 `z(upper) - z(lower)`를 required interval의 최대 adjacent depth step으로 보고한다. Perspective spacing은 far 쪽으로 단조 증가하므로 이 far-end cell이 closed interval의 worst step이며, measured step이 authored maximum 이하이면 exact equality를 포함해 통과한다.
 
 각 addressed shot sample은 `requiredSubjects`가 명명한 모든 subject와 environment scene node의 current resolved world bound 여덟 corner를 그 sample의 resolved camera space로 변환해 `requiredNear`와 `requiredFar`를 도출한다. Report는 camera identity, sample time, near·far, required interval, minimum depth bits, maximum step, code pair, measured metre step과 status를 함께 가진다. Interval이 clip 범위를 벗어나거나 operand가 유한하지 않으면 통과시키지 않는다. Viewer는 source와 realized near·far의 exact parity, standard projection mode와 해당 pass에 currently bound인 draw framebuffer의 actual `DEPTH_BITS >= minimumDepthBits`를 draw 전에 검사하며 logarithmic 또는 reversed depth는 다른 metric으로 거부한다.
@@ -39,8 +30,6 @@ Optional clipping plane은 평면 위의 한 점과 제거되는 쪽 unit normal
 저작된 delivery camera는 plane을 선언하지 않으므로 delivery clipping evaluation의 plane 집합은 항상 비어 있고, required subject의 acceptance는 near·far와 frame bound만으로 결정된다. Plane 집합이 비어 있지 않은 evaluation은 검사 표면의 결과이며 delivery evidence로 계상하지 않는다.
 
 Clearance evaluation은 camera point가 아니라 camera body와 parent rig의 swept volume을 wall, ceiling, floor, furniture, terrain, vehicle, moving subject, opening과 support geometry의 같은 sample state와 비교한다. Discrete sample 사이의 penetration 가능성은 continuous bound, segment crossing 또는 추가 sample로 해소한다.
-
-<!-- @evidenceObligation camera-clearance-swept-volume Camera body와 parent rig의 swept volume을 같은 sample state의 scene geometry와 비교한다. -->
 
 ### Occlusion와 Image-space Metric {#clv-occlusion-image-metrics}
 

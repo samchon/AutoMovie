@@ -318,7 +318,6 @@ export interface IAutoMovieViewerSubjectView {
    *
    * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership `deliveryEvidence` marks a subject observation as something that cannot be offered as delivery evidence.
    * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan `deliveryEvidence` keeps subject observations out of the delivery evidence population the specification separates.
-   * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::delivery-evidence-separation
    */
   deliveryEvidence: false;
 }
@@ -499,7 +498,6 @@ const SUBJECT_KINDS: ReadonlySet<string> = new Set<AutoMovieViewerSubjectKind>([
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-coverage `autoMovieViewerTurntableViewpoints` declares the planned viewpoint population of one subject inspection so observed coverage can be counted against it.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan `autoMovieViewerTurntableViewpoints` implements the deterministic viewpoint selection rule, producing the same identities and order for the same inputs.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::viewpoint-plan-record
  * @author Samchon
  */
 export const autoMovieViewerTurntableViewpoints = (
@@ -697,7 +695,6 @@ export const applyAutoMovieViewerSubjectPose = (
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach `captureAutoMovieViewerSubjectView` answers a named subject and a stated viewpoint with an observation artifact, which is what makes the instrument usable by a party that cannot look at a screen.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Resolves a stable subject and viewpoint request into the actual viewer observation artifact.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::subject-inspection-reach
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence `captureAutoMovieViewerSubjectView` produces one subject observation carrying the observed identity, the viewpoint it was taken from, and the artifact it produced.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership `captureAutoMovieViewerSubjectView` renders through the inspection's own pose and marks the result as something no delivery review may consume.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation `captureAutoMovieViewerSubjectView` emits the subject observation record the inspection surface accumulates.

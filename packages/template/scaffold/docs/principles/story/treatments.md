@@ -14,7 +14,7 @@ This item owns treatment information order inside the current unit. The narrativ
 
 Sources: [Purdue OWL on developing a paragraph from a controlling statement into specific support](https://owl.purdue.edu/owl/resources/teaching_resources/documents/the-writing-process-20250724.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
 
-## Narrative development {#causal-turn}
+## Treatment causal turn {#causal-turn}
 
 Every treatment unit develops a specific event, relationship, process, observation, or formal operation from an initiating condition into a changed or accumulated result. Where agency operates, identify consequential choices, genuine alternatives or resistance, and reactions. Observational, procedural, or non-human films do not invent conflict; they state the ordered process and effect that makes the unit narrative rather than a ledger.
 

@@ -20,7 +20,7 @@ Review question: by what specific relation does this unit arrive from its predec
 
 This item owns the relation between narrative units. `state-continuity` owns the correctness of inherited facts, and `treatments.md#information-design` owns production-wide disclosure order.
 
-Sources: [Trabasso and van den Broek on causal networks and recall](https://doi.org/10.1016/0749-596X%2885%2990049-X); [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Wisconsin Writing Center on cohesion beyond simple causation](https://writing.wisc.edu/handbook/style/connectingideas/)
+Sources: [Trabasso and van den Broek on causal networks and recall](https://doi.org/10.1016/0749-596X%2885%2990049-X); [Zwaan, Langston, and Graesser on event-indexing dimensions](https://doi.org/10.1111/j.1467-9280.1995.tb00513.x); [Harvard Writing Center on transitions as relations between ideas](https://writingcenter.fas.harvard.edu/transitions)
 
 ## State continuity {#horizontal-state-continuity}
 
@@ -80,9 +80,29 @@ Selected events, actions, images, sounds, and details arise from this production
 
 Review question: which choice could be transplanted unchanged into an unrelated film, and what production-owned fact should determine it instead?
 
-This item owns production-specific selection. The common machine-default principle owns whether the writing was decided at all, and screenplay audiovisual selection owns which final perceptible details reach the audience.
+This item owns production-specific selection. The composition-safe defaults own whether each local rhetorical choice performs literal work, and screenplay audiovisual selection owns which final perceptible details reach the audience.
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
+
+## Closing-line contribution {#closing-line-contribution}
+
+```contract-rule
+{
+  "id": "sh-closing-line-contribution",
+  "status": "active",
+  "safeApplication": "composition-safe",
+  "timing": "during narrative-unit composition and unit review",
+  "sourceIdentity": "campaign-2363-b25@8b03cf3b80d205f71d2ba1f5c52c90a02c050b5b"
+}
+```
+
+The final sentence or audiovisual beat of a narrative unit changes what the audience carries forward through an action, image, utterance, question, decision, disclosed limit, altered state, or purposeful formal return. A line that merely restates the unit's proposition or announces its importance contributes no closing action.
+
+Review question: what changes if the closing line is removed, and is that change established by its literal content rather than by its position?
+
+This principle judges one unit's close. `obligations/story/narratives.md#pacing-arrangement` judges allocation across the population, and `obligations/core/defaults.md#recurrent-frame-distribution` judges repeated closing frames only after the selected population is complete.
+
+Sources: [Richardson on ending and closure](https://academic.oup.com/edited-volume/61883/chapter-abstract/547759132); [Furneaux on provisional serial closure](https://www.cambridge.org/core/books/virtual-play-and-the-victorian-novel/continuation-attachment-and-william-makepeace-thackeray/85BD61006C84A23DF2563A6993771323)
 
 ## Parent differentiation {#parent-differentiation}
 

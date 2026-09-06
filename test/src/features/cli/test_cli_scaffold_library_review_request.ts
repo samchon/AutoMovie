@@ -26,6 +26,8 @@ const request = loadSourceModule<{
  * 2. A complete pose and named measurements round-trip without defaults.
  * 3. Malformed JSON, missing vectors, non-finite axes, blank space names, and
  *    non-numeric measurements are refused at the argument boundary.
+ * 4. Prototype-shaped measurement names remain exact own enumerable data
+ *    properties through enumeration and JSON serialization.
  */
 export const test_cli_scaffold_library_review_request = (): void => {
   const pose = {
@@ -62,6 +64,38 @@ export const test_cli_scaffold_library_review_request = (): void => {
               JSON.stringify({ clearWidth: 0.9, clearHeight: 2.1 }),
             ),
           ) === JSON.stringify({ clearWidth: 0.9, clearHeight: 2.1 }),
+      ],
+      [
+        "prototypeMeasurementIsOwnData",
+        () => {
+          const measurements =
+            request.readAutoMovieObservationMeasurements('{"__proto__":1}');
+          const descriptor = Object.getOwnPropertyDescriptor(
+            measurements,
+            "__proto__",
+          );
+          return (
+            Object.hasOwn(measurements, "__proto__") &&
+            descriptor?.enumerable === true &&
+            descriptor.writable === true &&
+            descriptor.value === 1 &&
+            JSON.stringify(measurements) === '{"__proto__":1}'
+          );
+        },
+      ],
+      [
+        "inheritedNamesPreservePopulationAndOrder",
+        () => {
+          const measurements = request.readAutoMovieObservationMeasurements(
+            '{"clearWidth":0.9,"constructor":2,"toString":3,"__proto__":4}',
+          );
+          return (
+            JSON.stringify(Object.entries(measurements)) ===
+              '[["clearWidth",0.9],["constructor",2],["toString",3],["__proto__",4]]' &&
+            typeof measurements["constructor"] === "number" &&
+            typeof measurements["toString"] === "number"
+          );
+        },
       ],
       [
         "malformedPoseIsRefused",
@@ -119,6 +153,17 @@ export const test_cli_scaffold_library_review_request = (): void => {
           ),
       ],
       [
+        "overflowMeasurementIsRefusedWithoutPartialResult",
+        () =>
+          throwsError(
+            () =>
+              request.readAutoMovieObservationMeasurements(
+                '{"clearWidth":0.9,"overflow":1e400}',
+              ),
+            "--measurements overflow must be",
+          ),
+      ],
+      [
         "malformedMeasurementObjectIsRefused",
         () =>
           throwsError(
@@ -147,11 +192,14 @@ export const test_cli_scaffold_library_review_request = (): void => {
       omittedMeasurementsAreEmpty: true,
       completePoseRoundTrips: true,
       finiteMeasurementsRoundTrip: true,
+      prototypeMeasurementIsOwnData: true,
+      inheritedNamesPreservePopulationAndOrder: true,
       malformedPoseIsRefused: true,
       missingVectorIsRefused: true,
       nonFiniteAxisIsRefused: true,
       blankSpaceIsRefused: true,
       nonNumericMeasurementIsRefused: true,
+      overflowMeasurementIsRefusedWithoutPartialResult: true,
       malformedMeasurementObjectIsRefused: true,
       blankMeasurementNameIsRefused: true,
     },

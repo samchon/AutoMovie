@@ -6,7 +6,9 @@ import {
   assembleProductionChunkVideoMp4,
   assertProductionFeatureUsesRenditionVideo,
   conformProductionRenditionVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
   probeProductionVideoMp4,
+  productionVisualDeliveryOccurrence,
 } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
@@ -151,6 +153,30 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
     ),
   });
   const probe = probeProductionVideoMp4(assembled);
+  const timeline = rangeTimeline();
+  const mixed = conformProductionVisualDeliveryVideoMp4({
+    timeline,
+    sources: timeline.segments.map((segment, index) => ({
+      occurrence: productionVisualDeliveryOccurrence(segment, index),
+      lane: index === 1 ? ("repainted" as const) : ("deterministic" as const),
+      bytes: index === 1 ? chunks[index]! : assembled,
+    })),
+  });
+  const mixedClockRefusal = throwsError(() => {
+    const changedTimeline = {
+      ...rangeTimeline(),
+      fps: 2.000001,
+      frameRate: { numerator: 2_000_001, denominator: 1_000_000 },
+    };
+    conformProductionVisualDeliveryVideoMp4({
+      timeline: changedTimeline,
+      sources: changedTimeline.segments.map((segment, index) => ({
+        occurrence: productionVisualDeliveryOccurrence(segment, index),
+        lane: index === 1 ? ("repainted" as const) : ("deterministic" as const),
+        bytes: index === 1 ? chunks[index]! : assembled,
+      })),
+    });
+  }, "unsupported-video-profile.frameRate");
   TestValidator.equals(
     "a many-chunk assembly carries every source sample onto one continuous clock",
     namedFacts([
@@ -176,6 +202,17 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
         "theAssemblyIsNotOneChunkVerbatim",
         () => Buffer.from(assembled).equals(Buffer.from(chunks[0]!)) === false,
       ],
+      [
+        "explicitMixedLanesPreserveTheSameSamples",
+        () => {
+          assertProductionFeatureUsesRenditionVideo({
+            feature: mixed,
+            renditionVideo: assembled,
+          });
+          return true;
+        },
+      ],
+      ["mixedLanesRequireTheExactRationalClock", () => mixedClockRefusal],
     ]),
     {
       theAssemblyCoversEveryFrame: true,
@@ -185,6 +222,8 @@ export const test_production_chunk_video_assembly = async (): Promise<void> => {
       theAssemblyRunsTheWholeFilm: true,
       theAssemblyIsSampleIdenticalToTheSameRangesConformed: true,
       theAssemblyIsNotOneChunkVerbatim: true,
+      explicitMixedLanesPreserveTheSameSamples: true,
+      mixedLanesRequireTheExactRationalClock: true,
     },
   );
 

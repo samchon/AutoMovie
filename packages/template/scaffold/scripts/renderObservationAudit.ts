@@ -1,3 +1,4 @@
+import { renderAutoMovieSemanticMaskSidecar } from "@automovie/engine";
 import type {
   AutoMovieCaptureObservation,
   AutoMovieContentDigest,
@@ -6,9 +7,10 @@ import type {
   IAutoMovieRenderObservation,
   IAutoMovieRenderObservationBreach,
   IAutoMovieRenderReport,
-  IAutoMovieSemanticMask,
+  IAutoMovieSemanticMaskEvidence,
 } from "@automovie/interface";
 import {
+  classifyAutoMovieProductionSemanticMaskEvidence,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "@automovie/production";
@@ -149,14 +151,14 @@ export const summarizeProductionRenderObservations = (
 
 /** Serialize one available semantic palette for publication beside mask pixels. */
 export const renderProductionMaskSidecar = (
-  sidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMask>,
+  sidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMaskEvidence>,
 ): AutoMovieCaptureObservation<Uint8Array> =>
   sidecar.status === "not-run"
     ? sidecar
     : {
         status: "available",
         value: Buffer.from(
-          `${JSON.stringify(sidecar.value, null, 2)}\n`,
+          renderAutoMovieSemanticMaskSidecar(sidecar.value.mask),
           "utf8",
         ),
       };
@@ -171,14 +173,24 @@ export const renderProductionMaskSidecar = (
 export const publishProductionMaskSidecar = (props: {
   chunk: AutoMovieContentDigest;
   shot: string;
-  sidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMask>;
+  semanticMask: AutoMovieCaptureObservation<IAutoMovieSemanticMaskEvidence>;
   stateRoot: string;
 }): AutoMovieCaptureObservation<IProductionMaskSidecarPublication> => {
   if (CONTENT_DIGEST_PATTERN.test(props.chunk) === false)
     throw new Error(
       "Render observation chunk identity is not a SHA-256 digest.",
     );
-  const rendered = renderProductionMaskSidecar(props.sidecar);
+  const status = classifyAutoMovieProductionSemanticMaskEvidence({
+    observation: props.semanticMask,
+    expectedShot: props.shot,
+  });
+  if (
+    status.status !== "complete" &&
+    status.status !== "incomplete" &&
+    status.status !== "not-run"
+  )
+    throw new Error(status.reason);
+  const rendered = renderProductionMaskSidecar(props.semanticMask);
   if (rendered.status === "not-run") return rendered;
   const directory = ensureRenderPhysicalDirectory(
     props.stateRoot,

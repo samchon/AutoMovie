@@ -1,5 +1,7 @@
 # Production-specific contract
 
+When a child exposes a missing or false parent rule while applying a production-specific contract, follow [upstream revision](../production-lifecycle/upstream-revision.md) and repair the earliest owner before resuming the child. The local target records the adopted rule; it does not absorb corrective history or authorize downstream compensation.
+
 Run this pass before bulk settings authorship and whenever research or later production work reveals a new production rule. This pass discovers and classifies the contract. Each adopted rule lives in its semantic owner, not in this document or a status note.
 
 ## Inputs and authority

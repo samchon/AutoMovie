@@ -1,4 +1,5 @@
 import {
+  AutoMovieContentDigest,
   IAutoMovieSubjectArtifact,
   IAutoMovieSubjectReviewCoverage,
   IAutoMovieSubjectReviewObservation,
@@ -87,9 +88,11 @@ const formationDescription = (
  */
 export const foldAutoMovieSubjectReviewCoverage = (
   unit: IAutoMovieSubjectReviewUnit,
+  current: IAutoMovieSubjectReviewCurrentContext,
   viewpoints: readonly IAutoMovieSubjectReviewViewpoint[],
   observations: readonly unknown[],
 ): IAutoMovieSubjectReviewCoverage => {
+  validateCurrentContext(unit, current);
   validateViewpointPlan(viewpoints);
   const planned = viewpoints.map((viewpoint) => viewpoint.id);
   const plannedSet = new Set(planned);
@@ -100,19 +103,22 @@ export const foldAutoMovieSubjectReviewCoverage = (
   let duplicates = 0;
   for (const candidate of observations) {
     if (
-      !isSubjectObservation(candidate) ||
-      candidate.subject !== unit.description.id
+      !isCurrentSubjectObservation(candidate) ||
+      candidate.productionId !== current.productionId ||
+      candidate.subject !== unit.description.id ||
+      candidate.target.shot !== current.target.shot ||
+      candidate.target.subject !== current.target.subject
     ) {
       ++foreign;
       continue;
     }
     if (!plannedSet.has(candidate.viewpoint)) {
-      if (candidate.revision === unit.description.revision)
+      if (isCurrentObservationContext(candidate, current))
         unplannedSet.add(candidate.viewpoint);
       else ++foreign;
       continue;
     }
-    if (candidate.revision !== unit.description.revision) {
+    if (!isCurrentObservationContext(candidate, current)) {
       staleSet.add(candidate.viewpoint);
       continue;
     }
@@ -145,6 +151,66 @@ export const foldAutoMovieSubjectReviewCoverage = (
   };
 };
 
+const validateCurrentContext = (
+  unit: IAutoMovieSubjectReviewUnit,
+  current: IAutoMovieSubjectReviewCurrentContext,
+): void => {
+  if (
+    current.productionId.trim().length === 0 ||
+    current.target.shot.trim().length === 0 ||
+    current.target.subject !== unit.description.id ||
+    current.target.shot !== unit.target.shot ||
+    current.revision !== unit.description.revision ||
+    /^sha256:[0-9a-f]{64}$/u.test(current.compileFingerprint) === false ||
+    /^sha256:[0-9a-f]{64}$/u.test(current.planIdentity) === false ||
+    current.captureRuntimeIdentity.trim().length === 0
+  )
+    throw new Error(
+      "Subject review current context must exactly name the resolved unit, current compile, ordered plan, and canonical runtime.",
+    );
+};
+
+/**
+ * Exact current context against which verified subject observations are folded.
+ *
+ * Runtime identity is the canonical capture-runtime JSON, not a weaker local
+ * fingerprint. Production owns its schema validation and hands the fold only a
+ * receipt whose artifact, pose and runtime have already been reopened.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds coverage to the production, target, compile, plan and current runtime that produced the reopened artifact.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Makes every changed current-context member stale rather than silently current.
+ */
+export interface IAutoMovieSubjectReviewCurrentContext {
+  /** Production namespace that owns the inspection. */
+  productionId: string;
+  /** Exact artifact-qualified subject target. */
+  target: IAutoMovieSubjectReviewTarget;
+  /** Exact compiled subject revision. */
+  revision: string;
+  /** Current source compile identity. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Canonical ordered whole-plan identity. */
+  planIdentity: AutoMovieContentDigest;
+  /** Canonical complete capture-runtime identity JSON. */
+  captureRuntimeIdentity: string;
+}
+
+/**
+ * Production-verified observation admitted at the engine boundary.
+ *
+ * The production verifier creates this projection only after checking the
+ * exact persisted schema, pose, owned artifact bytes and terminal verdict.
+ */
+export interface IAutoMovieCurrentSubjectReviewObservation
+  extends
+    IAutoMovieSubjectReviewObservation,
+    IAutoMovieSubjectReviewCurrentContext {
+  /** Exact target repeated on the receipt for an independent context join. */
+  target: IAutoMovieSubjectReviewTarget;
+  /** Only a terminal pass can enter the coverage numerator. */
+  verdict: "passed";
+}
+
 const validateViewpointPlan = (
   viewpoints: readonly IAutoMovieSubjectReviewViewpoint[],
 ): void => {
@@ -170,9 +236,9 @@ const validateViewpointPlan = (
   }
 };
 
-const isSubjectObservation = (
+const isCurrentSubjectObservation = (
   value: unknown,
-): value is IAutoMovieSubjectReviewObservation => {
+): value is IAutoMovieCurrentSubjectReviewObservation => {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return false;
   const record = value as Record<string, unknown>;
@@ -182,12 +248,41 @@ const isSubjectObservation = (
     nonBlank(record.revision) &&
     nonBlank(record.viewpoint) &&
     nonBlank(record.artifact) &&
-    nonBlank(record.digest)
+    nonBlank(record.digest) &&
+    nonBlank(record.productionId) &&
+    isTarget(record.target) &&
+    nonBlank(record.compileFingerprint) &&
+    nonBlank(record.planIdentity) &&
+    nonBlank(record.captureRuntimeIdentity) &&
+    isRecord(record.pose) &&
+    isRecord(record.runtimeIdentity) &&
+    record.verdict === "passed" &&
+    record.deliveryEvidence === false &&
+    (record.target as IAutoMovieSubjectReviewTarget).subject === record.subject
   );
+};
+
+const isCurrentObservationContext = (
+  observation: IAutoMovieCurrentSubjectReviewObservation,
+  current: IAutoMovieSubjectReviewCurrentContext,
+): boolean =>
+  observation.revision === current.revision &&
+  observation.compileFingerprint === current.compileFingerprint &&
+  observation.planIdentity === current.planIdentity &&
+  observation.captureRuntimeIdentity === current.captureRuntimeIdentity;
+
+const isTarget = (value: unknown): value is IAutoMovieSubjectReviewTarget => {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const record = value as Record<string, unknown>;
+  return nonBlank(record.shot) && nonBlank(record.subject);
 };
 
 const nonBlank = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length !== 0;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && Array.isArray(value) === false;
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

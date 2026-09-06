@@ -33,3 +33,4 @@ export * from "./stageScene";
 export * from "./subjectExtent";
 export * from "./storyClock";
 export * from "./productionLighting";
+export * from "./productionTimebase";

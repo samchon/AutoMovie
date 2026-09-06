@@ -90,10 +90,6 @@ const LAYERS: ReadonlySet<string> = new Set(AUTHORED_DOCUMENT_LAYERS);
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Emits the selected authored inventory as its declared human-readable Markdown view without changing its source.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Derives one deterministic document view with an explicit source family, format, and output identity.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-deliverable-inventory Produces the complete source-authoritative deliverable inventory, including a deterministic final handoff view.
- * @evidenceExclude specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-story-representation A reader-edition binder does not choose story representation or budget scope.
- * @evidenceExclude specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-measurement-worst-case Binding tracked Markdown performs no resource measurement or worst-case analysis.
- * @evidenceExclude specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-aggregate-variant The binder preserves the selected authored inventory and does not aggregate runtime budget variants.
- * @evidenceExclude specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-feasibility-verdict Deliverable formatting cannot decide whether a production is feasible.
  */
 export class AutoMovieProductionBinder {
   /** Absolute generated-project root this binder reads. */

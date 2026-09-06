@@ -10,7 +10,7 @@
   "scripts": {
     "prepare": "pnpm run build:versions",
     "build:versions": "ttsx -P tsconfig.json --no-plugins build/resolveTemplateVersions.ts",
-    "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
+    "build": "pnpm run build:versions && rimraf lib && ttsc",
     "prepack": "pnpm run build"
   },
   "keywords": [
@@ -28,6 +28,7 @@
     "build",
     "lib",
     "README.md",
+    "language-contracts",
     "scaffold",
     "src",
     "package.json",
@@ -46,7 +47,9 @@
     }
   },
   "dependencies": {
-    "@automovie/evidence": "workspace:^"
+    "@automovie/evidence": "workspace:^",
+    "koffi": "^3.2.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@automovie/archetypes": "workspace:^",

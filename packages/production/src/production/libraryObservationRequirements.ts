@@ -466,7 +466,6 @@ const refuse = (props: {
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Refuses a plan that removes a derived viewpoint or excuses one without an addressed ground.
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Closes the derived population against the finite plan the owner declares.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Enforces that a caller may add to the derived population and never shrink it.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan::population-non-shrinkable
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Contributes the derived-population refusals to the library review gate.
  * @author Samchon
  */

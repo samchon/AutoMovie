@@ -10,6 +10,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  parseAutoMovieStructuredJson,
 } from "@automovie/production";
 import {
   type IAutoMovieRenderBudgetAssessment,
@@ -39,13 +40,12 @@ export const readCompiledShotSource = (
   project: AutoMovieProductionProject,
   shot: string,
 ): IAutoMovieCompiledShotSource =>
-  JSON.parse(
-    Buffer.from(
-      project.readGeneratedFile(
-        `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-      ),
-    ).toString("utf8"),
-  ) as IAutoMovieCompiledShotSource;
+  parseAutoMovieStructuredJson({
+    record: "compiled-shot",
+    bytes: project.readGeneratedFile(
+      `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+    ),
+  }) as IAutoMovieCompiledShotSource;
 
 /**
  * Every byte a drawn frame depends on, as the render target fingerprints them.

@@ -3,6 +3,7 @@ import typia from "typia";
 
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { digestAutoMovieBytes } from "./contentIdentity";
+import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 
 /**
  * Read and authenticate the current compiler-owned evidence target registry.
@@ -28,7 +29,7 @@ export const readAutoMovieProductionRegistry = (
       "Compiler target registry bytes differ from generated ownership. Recompile before producing evidence.",
     );
   const validation = typia.validateEquals<IAutoMovieProductionRegistryManifest>(
-    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+    parseAutoMovieStructuredJson({ record: "target-registry", bytes }),
   );
   if (
     validation.success === false ||
