@@ -3,6 +3,7 @@ import chalk from "chalk";
 import path from "node:path";
 import process from "node:process";
 
+import { assessScenarioExecution } from "./scenarioExecution";
 import { prepareScenarioFilter } from "./scenarioSelection";
 
 async function main(): Promise<void> {
@@ -23,11 +24,11 @@ async function main(): Promise<void> {
   const report = await DynamicExecutor.validate({
     ...discovery,
     onComplete: (exec) => {
-      const elapsed =
-        new Date(exec.completed_at).getTime() -
-        new Date(exec.started_at).getTime();
-      const mark = exec.error === null ? chalk.green("  ✓") : chalk.red("  ✗");
-      console.log(`${mark} ${exec.name} ${chalk.gray(`(${elapsed} ms)`)}`);
+      const result = assessScenarioExecution(exec);
+      const mark = result.passed ? chalk.green("  ✓") : chalk.red("  ✗");
+      console.log(
+        `${mark} ${exec.name} ${chalk.gray(`(${result.timingLabel})`)}`,
+      );
     },
     filter,
   });
@@ -35,7 +36,9 @@ async function main(): Promise<void> {
   if (report.executions.length === 0)
     throw new Error("The scenario selection matched nothing.");
 
-  const failures = report.executions.filter((e) => e.error !== null);
+  const failures = report.executions
+    .map(assessScenarioExecution)
+    .filter((result) => result.passed === false);
   const passed = report.executions.length - failures.length;
   console.log("---------------------------------------------------");
   console.log(
@@ -45,8 +48,11 @@ async function main(): Promise<void> {
   if (failures.length !== 0) {
     console.log(chalk.red(`\n${failures.length} FAILED:`));
     for (const f of failures) {
-      console.log(chalk.red(`\n● ${f.name}`));
-      console.log(f.error);
+      console.log(chalk.red(`\n● ${f.execution.name}`));
+      console.log({
+        assertion: f.execution.error,
+        timing: f.timingFailure,
+      });
     }
     process.exit(1);
   }
