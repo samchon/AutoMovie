@@ -23,6 +23,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  assertCurrentLibraryReview,
+  readCurrentLibraryReview,
+  readLibraryReviewAuthoring,
+} from "./libraryReviewCurrentness";
+import {
   readAutoMovieObservationMeasurements,
   readAutoMovieObservationPose,
 } from "./libraryReviewRequest";
@@ -243,14 +248,11 @@ export const runLibraryReviewCommand = (props: {
   output?: (value: unknown) => void;
 }): unknown => {
   const root = path.resolve(props.root);
-  const authoring = props.read({
-    root,
-    productionEvidence: props.evidence,
-  });
-  if (authoring.manifest.kind !== "library")
-    throw new Error(
-      `Library review commands require production kind "library", not ${JSON.stringify(authoring.manifest.kind)}.`,
+  const currentAuthoringEvidence = () =>
+    readLibraryReviewAuthoring(() =>
+      props.read({ root, productionEvidence: props.evidence }),
     );
+  const authoring = currentAuthoringEvidence();
   const action = props.argv[0] ?? "inspect";
   if (action !== "inspect" && action !== "plan" && action !== "record")
     throw new Error(
@@ -343,31 +345,43 @@ export const runLibraryReviewCommand = (props: {
     root,
     props.productionId,
   );
-  const checked = new AutoMovieProductionCompiler(project, authoring).lint({
-    scope: "source",
-  });
-  const population = readAutoMovieLibraryReviewRequirements({
-    authoring,
-    project,
-    compileFingerprint: checked.compiler.inputFingerprint,
-    // The buildings this project's last compile published. Without them this
-    // command would report an owner as owing only what its author already
-    // wrote down, while the compiler charges it every facade, corner and room
-    // its topology derives, and the two answers would disagree at review.
-    environments: autoMovieMaterializedLibraryEnvironments({
-      read: (relative) => project.readGeneratedFile(relative),
-    }),
-    // And the worlds it adopted. A map owner publishes no building at all, so
-    // without these it would be reported as owing only what its author already
-    // wrote down, which is what "an empty population passes every check that
-    // compares against it" looks like from the author's side.
-    contexts: autoMovieMaterializedLibraryContexts({
-      read: (relative) => project.readGeneratedFile(relative),
-    }),
-  });
+  const readCurrent = () =>
+    readCurrentLibraryReview({
+      readAuthoring: currentAuthoringEvidence,
+      compile: (evidence, currentEvidence) =>
+        new AutoMovieProductionCompiler(
+          AutoMovieProductionProject.openReadOnly(root, props.productionId),
+          evidence,
+          currentEvidence,
+        ).lint({ scope: "source" }),
+      population: (evidence, compileFingerprint) =>
+        readAutoMovieLibraryReviewRequirements({
+          authoring: evidence,
+          project,
+          compileFingerprint,
+          // The buildings this project's last compile published. Without them this
+          // command would report an owner as owing only what its author already
+          // wrote down, while the compiler charges it every facade, corner and room
+          // its topology derives, and the two answers would disagree at review.
+          environments: autoMovieMaterializedLibraryEnvironments({
+            read: (relative) => project.readGeneratedFile(relative),
+          }),
+          // And the worlds it adopted. A map owner publishes no building at all, so
+          // without these it would be reported as owing only what its author already
+          // wrote down, which is what "an empty population passes every check that
+          // compares against it" looks like from the author's side.
+          contexts: autoMovieMaterializedLibraryContexts({
+            read: (relative) => project.readGeneratedFile(relative),
+          }),
+        }),
+    });
+  const snapshot = readCurrent();
+  const { population } = snapshot;
   if (action === "inspect") {
-    props.output?.(population);
-    return population;
+    assertCurrentLibraryReview({ expected: snapshot, read: readCurrent });
+    const result = { ...population, compilation: snapshot.compilation };
+    props.output?.(result);
+    return result;
   }
   if (population.diagnostics.length !== 0)
     throw new Error(
@@ -442,6 +456,7 @@ export const runLibraryReviewCommand = (props: {
       verdict,
     },
   ];
+  assertCurrentLibraryReview({ expected: snapshot, read: readCurrent });
   writePlan({ root, relative, plan });
   const result = {
     action,

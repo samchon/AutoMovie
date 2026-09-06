@@ -44,6 +44,7 @@ import { inspectCurrentCaptureRuntimeClosure } from "./capture-browser";
 import { readAutoMovieHostCaptureBrowser } from "./hostBoundary";
 import { productionDialogueRuntimeIdentity } from "./productionRuntime";
 import { listRenderAttempts } from "./renderAttemptSnapshot";
+import { captureCurrentRenderSource } from "./renderAuthoringCurrentness";
 import {
   assessProductionRenderBudget,
   publishRenderBudgetEvidence,
@@ -141,8 +142,8 @@ export const checkProductionDeliveryTone = (props: {
 
 /** Own planning inputs, runtime identity, status, verification, and budget evidence. */
 export const createProductionRenderPlanningRuntime = (props: {
-  /** One invocation-wide snapshot from the tracked authoring declaration. */
-  authoringEvidence?: IAutoMovieProductionEvidence;
+  /** Reopen authoring targets and their reviewed source bindings at each gate. */
+  currentAuthoringEvidence: () => IAutoMovieProductionEvidence;
   captureCurrentChunkPointer: (
     chunk: IAutoMovieProductionRenderChunk,
   ) => IRenderGcTargetSnapshot | null;
@@ -180,7 +181,8 @@ export const createProductionRenderPlanningRuntime = (props: {
   const sourceFingerprint = (): AutoMovieContentDigest => {
     const checked = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.openReadOnly(root, productionId),
-      props.authoringEvidence,
+      props.currentAuthoringEvidence(),
+      props.currentAuthoringEvidence,
     ).lint({ scope: "source" });
     if (checked.success === false)
       throw new Error(
@@ -625,7 +627,8 @@ export const createProductionRenderPlanningRuntime = (props: {
       root,
       productionId,
       undefined,
-      props.authoringEvidence,
+      props.currentAuthoringEvidence(),
+      props.currentAuthoringEvidence,
     );
 
   const productionServices = () =>
@@ -633,7 +636,8 @@ export const createProductionRenderPlanningRuntime = (props: {
       projectRoot: root,
       productionId,
       capture: renderHost.capture,
-      authoringEvidence: props.authoringEvidence,
+      authoringEvidence: props.currentAuthoringEvidence(),
+      currentAuthoringEvidence: props.currentAuthoringEvidence,
     });
 
   const observedPlanGenerations = new WeakMap<
@@ -847,16 +851,21 @@ export const createProductionRenderPlanningRuntime = (props: {
       compileFingerprint: props.compileFingerprint,
       timeline: props.timeline,
     });
-    const preflight = await renderHost.capture({
-      projectRoot: root,
-      productionId,
-      compileFingerprint: props.compileFingerprint,
-      target: { kind: "shot", id: props.first.shot },
-      time: props.first.sourceFrame / props.timeline.fps,
-      globalFrame: 0,
-      pass: "beauty",
-      width: props.width,
-      height: props.height,
+    const preflight = await captureCurrentRenderSource({
+      expected: props.compileFingerprint,
+      current: sourceFingerprint,
+      capture: () =>
+        renderHost.capture({
+          projectRoot: root,
+          productionId,
+          compileFingerprint: props.compileFingerprint,
+          target: { kind: "shot", id: props.first.shot },
+          time: props.first.sourceFrame / props.timeline.fps,
+          globalFrame: 0,
+          pass: "beauty",
+          width: props.width,
+          height: props.height,
+        }),
     });
     const dialogueRuntimeIdentity =
       preparedSound.plan.dialogue.length === 0

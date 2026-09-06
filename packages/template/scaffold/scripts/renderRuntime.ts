@@ -81,10 +81,12 @@ const executeProductionRenderCommand = async (
 ): Promise<void> => {
   const root = renderHost.root;
   const productionId = readAutoMovieProjectProductionId(root);
-  const authoringEvidence = readAutoMovieProductionEvidence({
-    root,
-    productionEvidence,
-  });
+  const currentAuthoringEvidence = () =>
+    readAutoMovieProductionEvidence({
+      root,
+      productionEvidence,
+    });
+  currentAuthoringEvidence();
   /** Every delivery decision this render obeys, read from its own design. */
   const design = AutoMovieProductionProject.productionDesign(
     root,
@@ -311,7 +313,7 @@ const executeProductionRenderCommand = async (
     stateRoot,
   });
   const planningRuntime = createProductionRenderPlanningRuntime({
-    authoringEvidence,
+    currentAuthoringEvidence,
     captureCurrentChunkPointer: gcRuntime.captureCurrentChunkPointer,
     currentChunkPointerLocatorState: gcRuntime.currentChunkPointerLocatorState,
     compareCodeUnits,
@@ -341,9 +343,10 @@ const executeProductionRenderCommand = async (
     inspectProxy: inspectCurrentProxyPublication,
     publicationFingerprint: productionRenderPublicationFingerprint,
     publishProxyBundle,
+    sourceFingerprint: planningRuntime.sourceFingerprint,
   });
   const finalizationRuntime = createProductionRenderFinalizationRuntime({
-    authoringEvidence,
+    currentAuthoringEvidence,
     encoder: encoderRuntime,
     host: renderHost,
     planning: planningRuntime,
