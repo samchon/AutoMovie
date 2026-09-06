@@ -51,8 +51,10 @@
     "@automovie/evidence": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
+    "@automovie/mcp": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/template": "workspace:^",
+    "koffi": "^3.2.1",
     "typia": "catalog:samchon"
   },
   "devDependencies": {
