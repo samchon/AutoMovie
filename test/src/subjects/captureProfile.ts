@@ -20,7 +20,10 @@ export const portraitCaptureProfile = {
     { name: "back", yaw: 180 },
   ],
   cycles: {
-    samples: 48,
+    // Preserve subpixel strands during geometry inspection. Sampling noise is
+    // visible evidence; denoising must not erase a feature being judged.
+    denoising: false,
+    samples: 256,
     exposure: -1.5,
     world: { color: [0.7, 0.75, 0.8], strength: 0.35 },
     background: { color: [0.035, 0.042, 0.055], strength: 0.7 },

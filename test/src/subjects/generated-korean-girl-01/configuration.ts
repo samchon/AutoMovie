@@ -6,6 +6,7 @@ import {
   createPortraitCheekLayer,
 } from "./cheeks";
 import { referenceControlNet } from "./controlNet";
+import { portraitEyebrowProfile } from "./eyebrows";
 import {
   type IPortraitEyeShape,
   type IPortraitEyeSocket,
@@ -54,7 +55,7 @@ export const portraitEyeShape: IPortraitEyeShape = {
   widthScale: 1.04,
   openingScale: 1.04,
   outerCornerLift: 0,
-  socketLift: 5,
+  socketLift: 0,
   blendReach: 18,
   foldWidth: 3.1,
   foldDepth: 0.8,
@@ -74,6 +75,7 @@ export const portraitEyeShape: IPortraitEyeShape = {
   irisRadius: 6.4,
   pupilRadius: 2.55,
   browFibres: 420,
+  browProfile: { ...portraitEyebrowProfile },
   upperLashes: 24,
   sampling: { eyeColumns: 80, eyeRows: 28, irisColumns: 84, irisRows: 20 },
 };

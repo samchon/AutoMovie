@@ -10,7 +10,7 @@ import {
   portraitSpline,
   portraitTube,
 } from "../../subjects/geometry";
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 /**
  * Portrait construction must preserve metric scale, winding and shared normals.
@@ -23,7 +23,8 @@ import { nclose } from "../internal/predicates";
  * 3. Region extraction removes unused vertices without changing triangle order
  *    or the parent normal field, including the empty-region boundary.
  * 4. A straight spline clamps both ends and interpolates its midpoint; a swept
- *    vertical path keeps its declared radius at both ends.
+ *    Y-directed path keeps its declared radius at both ends. Zero, nonfinite
+ *    and Z-parallel strand tangents refuse because the section guide is Z.
  */
 export const test_subject_mesh_geometry = (): void => {
   const p = portraitPoint;
@@ -108,4 +109,13 @@ export const test_subject_mesh_geometry = (): void => {
         nclose(Math.hypot(value, values[i + 2]), 1 + values[i + 1] / 10),
     ),
   );
+  for (const curve of [
+    (t: number) => p(0, 0, t),
+    () => p(0, 0, 0),
+    (t: number) => p(NaN, t, 0),
+  ])
+    TestValidator.predicate(
+      "unsupported strand tangent refuses",
+      throwsError(() => portraitTube(curve, () => 0.1, 2), "tangent"),
+    );
 };

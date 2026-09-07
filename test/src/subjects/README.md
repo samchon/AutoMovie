@@ -12,7 +12,8 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 | `generated-korean-girl-01/configuration.ts` | Subject-owned sockets, numerical component dimensions and the assembly used by export |
 | `generated-korean-girl-01/model.ts` | Assemble the independently inspectable anatomical builders |
 | `generated-korean-girl-01/head.ts` | Join facial openings, nasal lining, lid margins and the inferred cranium before subdivision |
-| `generated-korean-girl-01/eyes.ts` | Shared lid boundary, fold, sclera, gaze intersection, iris, lashes and brows |
+| `generated-korean-girl-01/eyes.ts` | Shared lid boundary, fold, sclera, gaze intersection, iris, lashes and brow assembly |
+| `generated-korean-girl-01/eyebrows.ts` | Replaceable fibre dimensions and attachment to the actual refined forehead surface |
 | `generated-korean-girl-01/nose.ts` | Provisional alar/tip depth and geometric nasal cavities |
 | `generated-korean-girl-01/mouth.ts` | Replaceable lips, shared boundary topology, oral cavity and individual dental crowns |
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
@@ -28,7 +29,7 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 | `portraitDocument.ts` | Static GLTF conversion preserving resident buffers and supported material factors |
 | `captureProfile.ts` | Fixed camera, crop and area-light conditions for inspection |
 
-Construction coordinates are millimetres, with +Y up and +Z in front of the face. Anatomical left is +X. `portraitPart` is the single conversion to the interface's metres. Skin, lips and nasal lining share the same refined cage and normal field; material regions retain only their referenced vertices. Eye geometry reads the refined lid boundary, so it cannot independently invent a second aperture.
+Construction coordinates are millimetres, with +Y up and +Z in front of the face. Anatomical left is +X. `portraitPart` converts completed meshes into metre-valued model parts. Transient surface-deformation commands also use engine metres; their adapter returns displacements to construction millimetres before model parts are created. Skin, lips and nasal lining share the same refined cage and normal field; material regions retain only their referenced vertices. Eye geometry reads the refined lid boundary, so it cannot independently invent a second aperture.
 
 Read `configuration.ts`, `model.ts`, then `head.ts` to follow the running assembly. `controlNet.ts` preserves observed landmark identities; individual component files define what their controls mean. Keep subject-specific vertex IDs in socket bindings. Measurements, inferred anatomy and authored control values have different confidence and must remain distinguishable.
 
@@ -77,6 +78,8 @@ const model = buildReferencePortrait({
 
 Eye controls include aperture width/opening, outer-corner lift, orbital depth, lid fold, iris/pupil radius and spherical surface curvature. Nose controls include overall width, tip/alar projection, aperture dimensions, aperture rise/tilt and cavity dimensions. Mouth controls include width, opening, corner elevation, upper/lower lip projection, individual crown dimensions, dental-row placement and tooth spacing. Tessellation is explicit. Factories copy their inputs, so editing one preset does not mutate an existing component. A fourth argument to `portraitComponentsFor` replaces the mouth shape; omission selects this subject's current smile.
 
+Each eye accepts a separate `browProfile` containing fibre radius, radius variation, taper, surface clearance, arch, outward bend and longitudinal sampling. `browFibres` is an integer from zero through 4096; zero disables that brow. The socket's upper/lower brow boundaries supply its planar distribution. Every fibre sample queries the front envelope of the final skin and offsets along its estimated normal, so changing the orbital or forehead surface moves its attachment with that surface. Length controls use millimetres; they are authored values rather than measurements of this person's hair. A path outside the supporting skin refuses. The shared strand sweep also refuses zero, nonfinite or Z-parallel tangents because its cross-section guide is Z.
+
 Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek settings in `assembly.surfaceLayers`. Each region has transverse, vertical and depth support radii plus anterior projection and upward lift, all in millimetres. The nasolabial groove has separate width, depth and depth-support controls. Its field spacing follows the support metric and its endpoint fade follows physical path distance. Preserve the rest of `portraitAssembly` when changing one component so its other anatomical layers remain selected.
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
@@ -108,6 +111,8 @@ Run `test/scripts/face-review/preview.ps1` from PowerShell to export and publish
 The Blender executable is `C:/Program Files/Blender Foundation/Blender 5.1/blender.exe`. The comparison step uses the Playwright Chromium installation available to `test`; install that browser with `pnpm --filter @automovie/test exec playwright install chromium` if it is absent. Progress and process failures are written to `.shots/face-experiment/preview.log`. The publisher owns an exclusive `preview.lock`; wait for its process to finish before starting another capture.
 
 `comparison.png` places the source photograph beside an actual GLTF render. `reference.png` is also a render, in the estimated source-camera pose. `views.png` contains six yaw views and `clay-views.png` contains three views without the colour finishes. The receipts inside `preview/` identify the exact model, configuration, profile and frame bytes. Read those files for artifact identity; a source edit may be newer than the last successfully published capture.
+
+`captureProfile.ts` owns Cycles sampling and its explicit denoising switch. Current inspection uses 256 samples with denoising disabled so the judged strands remain in the unfiltered render. This setting can retain sampling noise, particularly behind the transparent cornea. Compare the capture profile as well as the GLB digest when assessing an appearance change.
 
 The review points to the fixed preview path and records the exact inspected GLB digest. A new preview does not automatically renew that review or its evidence comments. Renderer differences must not be credited as geometry improvements. Import-only changes, private module state and external renderer-script changes also require a new manual inspection even when a public-declaration fingerprint does not change.
 

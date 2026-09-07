@@ -24,6 +24,12 @@ import {
   portraitEyeSphereIntersection,
 } from "../portraitEyeSphere";
 import type { IControlMesh } from "../subdivideControlMesh";
+import {
+  type IPortraitEyebrowProfile,
+  assertPortraitEyebrowProfile,
+  buildPortraitEyebrow,
+  portraitEyebrowProfile,
+} from "./eyebrows";
 
 type Point = IAutoMovieVector3;
 const pi = Math.PI,
@@ -91,8 +97,10 @@ export interface IPortraitEyeShape {
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
   pupilRadius: number;
-  /** Number of independently generated brow fibres. */
+  /** Number of independently generated brow fibres, in [0,4096]; zero disables them. */
   browFibres: number;
+  /** Optional fibre dimensions and skin clearance; omission uses the declared brow profile. */
+  browProfile?: IPortraitEyebrowProfile;
   /** Number of upper lashes. */
   upperLashes: number;
   /** Tessellation controls, separate from the anatomical shape. */
@@ -121,9 +129,9 @@ const lidRows = (
   const right = Math.max(...loop.map((id) => source[id][0]));
   return loop.map((id, index) => {
     const point = source[id];
-    // The rim expands along its own planar normal. Using the iris centre here
-    // made gaze changes reshape the surrounding skin, coupling two independent
-    // controls. The counterclockwise loop gives this outward normal directly.
+    // The rim expands along its own planar normal, independently of gaze.
+    // Counterclockwise boundary order gives the outward normal directly; the
+    // iris marker does not participate in the surrounding skin's shape.
     const before = source[loop[(index + loop.length - 1) % loop.length]];
     const after = source[loop[(index + 1) % loop.length]];
     const nx = after[1] - before[1];
@@ -137,8 +145,8 @@ const lidRows = (
       point[1] + (offset * ny) / distance,
       point[2] + depth,
     ];
-    // The supratarsal crease needs two nearby support rows. A lone recessed
-    // row averaged into the ridge and outer skin during Loop subdivision.
+    // Two nearby support rows delimit the supratarsal crease through common
+    // Loop subdivision and retain its depth between the tarsal ridge and hood.
     // The hood sits above the recessed fold and produces a real cast shadow.
     // Weight fades the fold at both canthi and leaves the lower lid uncreased.
     const fold = shape.foldWidth * weight;
@@ -197,7 +205,12 @@ export function createPortraitEyeComponent(
     browTop: [...inputSocket.browTop],
     browBottom: [...inputSocket.browBottom],
   };
-  const shape = { ...inputShape, sampling: { ...inputShape.sampling } };
+  const shape = {
+    ...inputShape,
+    sampling: { ...inputShape.sampling },
+    browProfile: { ...(inputShape.browProfile ?? portraitEyebrowProfile) },
+  };
+  assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
   const positive = [
     shape.widthScale,
     shape.openingScale,
@@ -217,11 +230,7 @@ export function createPortraitEyeComponent(
     shape.lowerLidVolume,
     shape.lidThickness,
   ];
-  const counts = [
-    shape.browFibres,
-    shape.upperLashes,
-    ...Object.values(shape.sampling),
-  ];
+  const counts = [shape.upperLashes, ...Object.values(shape.sampling)];
   if (
     positive.some((v) => !Number.isFinite(v) || v <= 0) ||
     nonnegative.some((v) => !Number.isFinite(v) || v < 0) ||
@@ -439,9 +448,8 @@ export function buildPortraitEye(
         mix(samples[i].z, samples[i + 1].z, t - i),
       );
     };
-    // A sine dome tied curvature to aperture height: narrowing the lid also
-    // sharpened the eyeball and its reflections. A sphere keeps curvature
-    // isotropic while the fitted lid alone determines the visible opening.
+    // Spherical curvature is independent of aperture height and gaze. The
+    // fitted lid alone determines how much of that surface remains visible.
     const eyeZ = (x: number, y: number): number =>
       portraitEyeSphereHeight(sphere, x, y);
     add(
@@ -591,33 +599,14 @@ export function buildPortraitEye(
         brow,
       );
     }
-    const top = eye.browTop.map(landmark),
-      bottom = eye.browBottom.map(landmark);
-    // Fibre count sets coverage across the two skin-bound brow curves. The
-    // deterministic stagger varies roots and tips without a texture or RNG.
-    for (let i = 0; i < shape.browFibres; i++) {
-      const u = (i + 0.5) / shape.browFibres;
-      const a = interpolate(bottom, u),
-        b = interpolate(top, u);
-      const start = 0.3 * ((i * 0.61803398875) % 1);
-      const end = 0.5 + 0.45 * ((i * 0.41421356237) % 1);
-      add(
-        `${eye.name}-brow-hair-${i}`,
-        tube(
-          (t) => {
-            const v = mix(start, end, t);
-            return p(
-              mix(a.x, b.x, v) + outward * 1.2 * t * t,
-              mix(a.y, b.y, v),
-              mix(a.z, b.z, v) + 0.25 + 0.15 * Math.sin(pi * t),
-            );
-          },
-          (t) => (0.07 + (i % 3) * 0.02) * (1 - 0.8 * t),
-          5,
-        ),
-        brow,
-      );
-    }
+    parts.push(
+      ...buildPortraitEyebrow(
+        refined,
+        { side: eye.name, upper: eye.browTop, lower: eye.browBottom },
+        shape.browFibres,
+        shape.browProfile,
+      ),
+    );
   }
   return parts;
 }

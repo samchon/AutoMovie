@@ -226,7 +226,8 @@ export const portraitSpline = (points: Point[], progress: number): Point => {
 /**
  * An eight-sided swept strand in the same frame as its guiding curve.
  * The Z guide is suitable for this study's eyelash and eyebrow paths, whose
- * tangents are never parallel to Z. Width is radius, in millimetres.
+ * tangents are never parallel to Z. Zero, nonfinite and Z-parallel tangents
+ * refuse before a collapsed ring can enter the model. Width is radius, in mm.
  */
 export const portraitTube = (
   curve: (t: number) => Point,
@@ -244,6 +245,13 @@ export const portraitTube = (
         curve(Math.max(0, v - 0.0001)),
       ),
     );
+    if (
+      ![tangent.x, tangent.y, tangent.z].every(Number.isFinite) ||
+      (tangent.x === 0 && tangent.y === 0)
+    )
+      throw new Error(
+        "Portrait strand tangents must be finite, nonzero and transverse to Z.",
+      );
     const right = Vector3.normalize(Vector3.cross(p(0, 0, 1), tangent)),
       up = Vector3.cross(tangent, right),
       radius = width(v);

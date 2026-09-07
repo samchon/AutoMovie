@@ -31,6 +31,11 @@ export const test_subject_component_parameters = (): void => {
     lidThickness: 0,
     blendReach: 0,
     pupilRadius: 0.001,
+    browFibres: 0,
+  });
+  createPortraitEyeComponent(portraitEyeSockets[0], {
+    ...portraitEyeShape,
+    browProfile: undefined,
   });
   for (const override of [
     { widthScale: 0 },
@@ -39,7 +44,7 @@ export const test_subject_component_parameters = (): void => {
     { foldWidth: -1 },
     { foldDepth: Infinity },
     { surfaceRadius: 0 },
-    { browFibres: 0 },
+    { browFibres: -1 },
     { upperLashes: 0.5 },
     { socketLift: Infinity },
     { outerCornerLift: NaN },
