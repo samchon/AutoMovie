@@ -58,6 +58,7 @@ const { buildTgz, packWorkspace } = loadSourceModule<{
     target: string,
     dependencies: IPackWorkspaceDependencies,
     packages: readonly IWorkspacePackage[],
+    assertCurrent?: () => void,
   ) => IPackWorkspaceResult;
 }>(path.resolve(__dirname, "../../../../build/tgz.ts"));
 
@@ -176,6 +177,63 @@ const virtualPackWorkspace = (failPackage?: string): IVirtualPackWorkspace => {
 const digest = (value: string): string =>
   createHash("sha256").update(value).digest("hex").slice(0, 12);
 
+/** Every local pack effect is preceded by the caller's original authority. */
+const verifyCurrentness = (): void => {
+  const target = path.resolve("virtual", "guarded-pack");
+  const success = virtualPackWorkspace();
+  let count = 0;
+  packWorkspace(target, success.dependencies, PACKAGES, () => {
+    count++;
+  });
+  TestValidator.predicate("all pack boundaries admitted", count > 10);
+  for (let failAt = 1; failAt <= count; failAt++) {
+    const state = virtualPackWorkspace();
+    let current = 0;
+    const failure = new Error(`changed at ${failAt}`);
+    let observed: unknown;
+    try {
+      packWorkspace(target, state.dependencies, PACKAGES, () => {
+        if (++current >= failAt) throw failure;
+      });
+    } catch (error) {
+      observed = error;
+    }
+    TestValidator.predicate(
+      "same original refusal retained",
+      observed === failure,
+    );
+    TestValidator.equals(
+      "stale cleanup is not performed",
+      state.removed.length,
+      0,
+    );
+  }
+  const failed = virtualPackWorkspace("runtime");
+  const cleanup = new Error("cleanup refusal");
+  let result: unknown;
+  try {
+    packWorkspace(
+      target,
+      {
+        ...failed.dependencies,
+        remove: () => {
+          throw cleanup;
+        },
+      },
+      PACKAGES,
+    );
+  } catch (error) {
+    result = error;
+  }
+  TestValidator.predicate(
+    "primary and cleanup causes retained",
+    result instanceof AggregateError &&
+      result.errors[0] instanceof Error &&
+      result.errors[0].message.includes("pnpm pack failed") &&
+      result.errors[1] === cleanup,
+  );
+};
+
 const baseline = (language: ProductionLanguage): string =>
   JSON.stringify({
     files: [],
@@ -208,6 +266,7 @@ const baseline = (language: ProductionLanguage): string =>
  *    workspace package dependency it intentionally changes.
  */
 export const test_workspace_experimental_package_generation = (): void => {
+  verifyCurrentness();
   const target = path.resolve("virtual", "experiment");
   const predecessor = path.join(target, ".tarballs-predecessor");
   const predecessorFile = path.join(predecessor, "runtime-old.tgz");

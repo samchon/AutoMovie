@@ -1,23 +1,13 @@
+import {
+  AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS,
+  type AutoMovieAuthoredDocumentLayer as EvidenceAuthoredDocumentLayer,
+} from "@automovie/evidence";
 import { randomUUID } from "node:crypto";
 import type { Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-const AUTHORED_DOCUMENT_LAYERS = [
-  "briefs",
-  "instances",
-  "maps",
-  "materials",
-  "models",
-  "motions",
-  "research",
-  "screenplays",
-  "scripts",
-  "settings",
-  "spaces",
-  "systems",
-  "treatments",
-] as const;
+const AUTHORED_DOCUMENT_LAYERS = AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS;
 
 /** Narrative layers that carry the release partition a reader receives. */
 const GROUPED_DOCUMENT_LAYERS: ReadonlySet<AutoMovieAuthoredDocumentLayer> =
@@ -33,8 +23,7 @@ const GROUPED_DOCUMENT_LAYERS: ReadonlySet<AutoMovieAuthoredDocumentLayer> =
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Makes every authored document family eligible for an explicit human-readable view.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Represents the authored document family selected for one deterministic deliverable item.
  */
-export type AutoMovieAuthoredDocumentLayer =
-  (typeof AUTHORED_DOCUMENT_LAYERS)[number];
+export type AutoMovieAuthoredDocumentLayer = EvidenceAuthoredDocumentLayer;
 
 /**
  * Input to one authored-layer reader edition.

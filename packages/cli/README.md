@@ -25,9 +25,11 @@ Each invocation is one closed request. Help and version flags are standalone. Un
 
 Render `all` and `run` accept `--chunk-frames <positive-integer>`, `--deliverable <id>`, `--tier <proxy|final>`, and `--workers <positive-integer>`. `plan` accepts `--chunk-frames` and `--tier`; `status`, `verify`, and `finalize` accept `--tier`; `gc` accepts only the valueless `--apply`.
 
-`sync` replaces the ignored generated instruction surface from the installed template and the current tracked evidence declaration. It does not overwrite tracked production documents or static READMEs; the generated scaffold's [static-document policy](../template/scaffold/README.md#static-document-updates) owns that boundary.
+`start` and `sync` synchronize the owned `automovie_reference` entries in ignored project-local `.mcp.json` and `.codex/config.toml`. They use the installed package and absolute production root, preserve unrelated settings, and refuse ownership conflicts; client trust is never granted automatically. `sync` also replaces the generated instruction surface from the installed template and the current tracked evidence declaration. It does not overwrite tracked production documents or static READMEs; the generated scaffold's [static-document policy](../template/scaffold/README.md#static-document-updates) owns that boundary.
 
 `contracts migrate --dry-run` compares the recorded and installed shared-contract generations without writing. Plain `contracts migrate` applies only conflict-free target changes and preserves local edits, removed anchors, ambiguous renames, and collisions for adjudication. `toc --check` reports stale script or screenplay indexes; plain `toc` updates only their managed link blocks.
+
+Contract and TOC publication retain exact predecessor bytes and generations in a durable archive and pending journal. The current pathname may be absent between preserving its predecessor and installing its successor; this is not a whole-tree atomic swap. A pending attempt refuses graph admission and observation-only maintenance. Rerun the same explicit mutating command to attempt recovery, preserving every competitor and the named archive if adjudication is required. Reference-client registration uses a separate ignored archive because complete client settings may contain private values; that Git exclusion does not grant additional OS permissions or isolate the files from other local users. See [Interrupted maintenance](../template/scaffold/.agents/skills/production-lifecycle/index.md#interrupted-maintenance).
 
 `migrate --dry-run` validates legacy state from a temporary copy. Plain `migrate` adds the tracked migration result without rewriting legacy creative source, while `--rollback` removes that result only while its recorded baseline is unchanged.
 
@@ -50,7 +52,7 @@ The blank scaffold intentionally refuses downstream compile, review, and render 
 
 ## API
 
-The package exports the CLI runner and read-only project-state helpers. Require current state before using a compiled snapshot for an offline measurement:
+The package exports the CLI runner, read-only project-state helpers, explicit maintenance publication capabilities, and `synchronizeAutoMovieReferenceClients`. The reference provider itself lives in `@automovie/mcp`; registering its clients is a separate intentional write. Require current state before using a compiled snapshot for an offline measurement:
 
 ```ts
 import {

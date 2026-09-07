@@ -25,6 +25,7 @@
     "lint:source": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p tsconfig.json",
     "inspect": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/inspect.ts",
     "library:review": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/library-review-cli.ts",
+    "reference": "ttsx --no-plugins --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/reference.ts",
     "preview": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/preview.ts",
     "render": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/render.ts",
     "routes": "automovie routes",
@@ -57,6 +58,7 @@
   },
   "devDependencies": {
     "@automovie/evidence": "{{version:evidence}}",
+    "@automovie/mcp": "{{version:mcp}}",
     "@automovie/template": "{{version:template}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",

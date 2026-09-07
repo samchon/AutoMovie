@@ -281,9 +281,9 @@ export const isAutoMovieExternalModelIngestProfile = (
  * Parse and validate exact external model bytes before compilation.
  *
  * The inspector accepts glTF 2.0 JSON, GLB 2.0, and VRM 0.x/1.x GLB containers,
- * validates referenced indices and structural profile promises, and returns
- * every sidecar URI the compiler must bind to manifest-owned bytes. It never
- * guesses a profile or repairs malformed input.
+ * validates scene forests, referenced indices and structural profile promises,
+ * and returns every sidecar URI the compiler must bind to manifest-owned bytes.
+ * It never guesses a profile or repairs malformed input.
  *
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Provides the bounded external model and motion inspection capability.
  * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Applies shared external-input validation to resident glTF-family bytes.
@@ -427,7 +427,9 @@ export const isAutoMovieExternalModelIngestProfile = (
  * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-fidelity-semantic-boundary Reports structural and semantic mapping facts without claiming visual fidelity.
  * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-support-regression-compatibility Uses explicit versioned profiles so support changes cannot masquerade as the same interpretation.
  * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-content-facts Compares resident payload lengths and accessor values with declared facts.
- * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Validates graph indices, accessor shapes, animation arity, and humanoid mappings.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Rejects cyclic or multiply parented node forests and invalid scene roots before validating accessor shapes, animation arity, and humanoid mappings.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Accepts distinct scene roots and separate nodes reusing one mesh without flattening their hierarchy.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Checks unique parentage, acyclic node forests, scene-root identity, and default-scene references for every ingest profile.
  * @evidenceExclude requirements/external-inputs/validation-and-quarantine.md#external-validation-active-content The supported glTF subset contains no executable script or active document payload.
  * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-adoption-gate A thrown inspection prevents malformed bytes from reaching adoption.
  * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-result-states Success returns facts and every failure throws a specific diagnostic.
@@ -512,13 +514,26 @@ export const inspectAutoMovieExternalModelBytes = (props: {
     integerIndex(node.skin, skins.length, `nodes[${index}].skin`);
     integerIndices(node.children, nodes.length, `nodes[${index}].children`);
   });
-  scenes.forEach((value, index) =>
-    integerIndices(
-      object(value, `scenes[${index}]`).nodes,
-      nodes.length,
-      `scenes[${index}].nodes`,
-    ),
-  );
+  const parentByIndex = inspectExternalModelHierarchy(nodes);
+  scenes.forEach((value, index) => {
+    const path = `scenes[${index}].nodes`;
+    const roots = object(value, `scenes[${index}]`).nodes;
+    integerIndices(roots, nodes.length, path);
+    const seen = new Set<number>();
+    optionalArray(roots, path).forEach((entry, rootIndex) => {
+      const nodeIndex = entry as number;
+      if (seen.has(nodeIndex))
+        throw new Error(
+          `${path}[${rootIndex}] repeats root node ${nodeIndex}.`,
+        );
+      if (parentByIndex[nodeIndex] !== undefined)
+        throw new Error(
+          `${path}[${rootIndex}] references non-root node ${nodeIndex}.`,
+        );
+      seen.add(nodeIndex);
+    });
+  });
+  integerIndex(document.scene, scenes.length, "scene");
   buffers.forEach((value, index) => {
     const buffer = object(value, `buffers[${index}]`);
     positiveInteger(buffer.byteLength, `buffers[${index}].byteLength`);
@@ -646,6 +661,7 @@ export const inspectAutoMovieExternalModelBytes = (props: {
           byteLength: props.bytes.byteLength,
           animations,
           nodes,
+          parentByIndex,
           accessors,
           bufferViews,
           payloads,
@@ -726,12 +742,13 @@ const inspectExternalMotion = (props: {
   byteLength: number;
   animations: unknown[];
   nodes: unknown[];
+  parentByIndex: readonly (number | undefined)[];
   accessors: unknown[];
   bufferViews: unknown[];
   payloads: Uint8Array[];
 }): IAutoMovieExternalMotionInspection | undefined => {
   if (props.animations.length === 0) return undefined;
-  const nodes = inspectExternalMotionNodes(props.nodes);
+  const nodes = inspectExternalMotionNodes(props.nodes, props.parentByIndex);
   const nodeIds = nodes.map((node) => node.id);
   const takes = props.animations.map((value, animationIndex) => {
     const animation = object(value, `animations[${animationIndex}]`);
@@ -858,9 +875,13 @@ const inspectExternalMotion = (props: {
   };
 };
 
-const inspectExternalMotionNodes = (
+/**
+ * Check the index-validated node forest before any profile-specific inspection.
+ * Parent walks are iterative so source depth never becomes call-stack depth.
+ */
+const inspectExternalModelHierarchy = (
   values: unknown[],
-): IAutoMovieExternalMotionNodeInspection[] => {
+): Array<number | undefined> => {
   const parentByIndex: Array<number | undefined> = new Array(values.length);
   values.forEach((value, parentIndex) => {
     const node = object(value, `nodes[${parentIndex}]`);
@@ -868,6 +889,10 @@ const inspectExternalMotionNodes = (
       (entry) => {
         const childIndex = entry as number;
         const previous = parentByIndex[childIndex];
+        if (previous === parentIndex)
+          throw new Error(
+            `nodes[${parentIndex}].children repeats node ${childIndex}.`,
+          );
         if (previous !== undefined)
           throw new Error(
             `nodes[${childIndex}] has multiple parents ${previous} and ${parentIndex}.`,
@@ -891,8 +916,14 @@ const inspectExternalMotionNodes = (
       throw new Error(`nodes[${index}] belongs to a parent cycle.`);
     path.forEach((entry) => (state[entry] = 2));
   });
+  return parentByIndex;
+};
 
-  return values.map((value, index) => {
+const inspectExternalMotionNodes = (
+  values: unknown[],
+  parentByIndex: readonly (number | undefined)[],
+): IAutoMovieExternalMotionNodeInspection[] =>
+  values.map((value, index) => {
     const node = object(value, `nodes[${index}]`);
     if (node.matrix !== undefined)
       throw new Error(
@@ -945,7 +976,6 @@ const inspectExternalMotionNodes = (
       },
     };
   });
-};
 
 const finiteTuple = (
   value: unknown,

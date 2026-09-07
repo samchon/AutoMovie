@@ -78,6 +78,8 @@ const evidence = (
     populationScope: { mode: "complete-production" },
     branches: [],
     bindings: [],
+    localBindings: [],
+    localAudits: [],
   },
   designOwners: [],
   contracts: [],
@@ -390,6 +392,8 @@ export const test_cli_scaffold_skill_router_links = (): void => {
       kind: "library",
       language: "english",
       populationScope: { mode: "complete-production" },
+      localBindings: [],
+      localAudits: [],
       branches: [
         { name: "models", stage: "review" },
         { name: "modelSources", stage: "draft" },

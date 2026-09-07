@@ -19,6 +19,7 @@
     "@automovie/engine": "workspace:^",
     "@automovie/face": "workspace:^",
     "@automovie/ingest": "workspace:^",
+    "@automovie/mcp": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/render": "workspace:^",

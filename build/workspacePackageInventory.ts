@@ -96,6 +96,12 @@ export const AUTOMOVIE_PACKAGE_INVENTORY = Object.freeze([
     disposition: "pack",
   },
   {
+    key: "mcp",
+    directory: "mcp",
+    name: "@automovie/mcp",
+    disposition: "pack",
+  },
+  {
     key: "ingest",
     directory: "ingest",
     name: "@automovie/ingest",

@@ -3,7 +3,7 @@ import { AutoMovieLegacyImporter } from "@automovie/production";
 import {
   AUTO_MOVIE_AUTHORING_REACHABILITY,
   AUTO_MOVIE_CONTRACT_BASELINE_PATH,
-  type IAutoMovieContractBaseline,
+  type IScaffoldPhysicalDirectory,
   ScaffoldPublicationError,
   applyAutoMovieContractMigrationPlan,
   autoMovieContractTargetSources,
@@ -23,7 +23,28 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { dispatchAutoMovieCommandArguments } from "./commandArguments";
+import {
+  type IAutoMovieMaintenanceObservation,
+  assertAutoMovieMaintenanceGeneration,
+  assertAutoMovieMaintenanceObservation,
+  observeAutoMovieMaintenanceFiles,
+} from "./contractMaintenanceFileSystem";
+import {
+  createAutoMovieMaintenanceTransactionIO,
+  readAutoMoviePendingMaintenance,
+} from "./contractMaintenanceRuntime";
+import { type IAutoMovieMaintenanceJournal } from "./contractMaintenanceTransaction";
 import { inspectAutoMovieExternalProjectBytes } from "./externalInspection";
+import {
+  publishAutoMovieProjectMaintenance,
+  recoverAutoMovieProjectMaintenance,
+} from "./publishAutoMovieProjectMaintenance";
+import {
+  assertAutoMovieMaintenanceMarkdownInventory,
+  readAutoMovieMaintenanceMarkdownPaths,
+} from "./readAutoMovieMaintenanceMarkdownPaths";
+import { renderAutoMovieScaffoldNextSteps } from "./scaffoldNextSteps";
+import { synchronizeAutoMovieReferenceClients } from "./synchronizeAutoMovieReferenceClients";
 
 const USAGE = `automovie: scaffold an automovie project
 
@@ -558,6 +579,8 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Project creation and render dispatch are intentional writes rather than read-only knowledge or evidence requests.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant No knowledge or evidence request reaches this executable, so it owns neither content response nor external-execution authorization for such a request.
  * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure CLI usage and delegated-process failures are not knowledge-host refusals for stale evidence or unsupported authoring capability.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary The installed CLI does not create or refresh repository experiment sandboxes; the build launcher owns their direct-child and prepack approval boundary.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership Repository sandbox packing and package-manager admission belong to the build launcher, not this installed project dispatcher.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report The change-impact report is produced by the generated project's compiler, not by the command that creates the project.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Output lineage is recorded by the compiler over authored source; scaffolding writes template bytes and records none.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant The invariant binds a source change to its downstream impact inside a production, which exists only after this command has finished.
@@ -639,22 +662,46 @@ export const run = (argv: readonly string[]): number => {
 
       if (command.command === "toc") {
         const root = process.cwd();
-        const files = readMarkdownFiles(path.join(root, "docs"), root);
+        const physical = recoverProjectMaintenance(root, "toc", !command.check);
+        const paths = [
+          ...readAutoMovieMaintenanceMarkdownPaths(physical, "docs/scripts"),
+          ...readAutoMovieMaintenanceMarkdownPaths(
+            physical,
+            "docs/screenplays",
+          ),
+        ];
+        const observation = observeAutoMovieMaintenanceFiles({
+          root: physical,
+          paths,
+        });
         const plan = planAutoMovieProjectDeliveryTocs({
           check: command.check,
-          files,
+          files: observation.sources,
         });
         if (plan.diagnostics.length !== 0)
           throw new Error(plan.diagnostics.join("\n"));
-        const observed = readMarkdownFiles(path.join(root, "docs"), root);
-        publishProjectCandidate(
-          root,
-          planAutoMovieDeliveryTocPublication({
-            current: files,
-            observed,
-            planned: plan.files,
-          }),
-        );
+        assertAutoMovieMaintenanceMarkdownInventory(paths, [
+          ...readAutoMovieMaintenanceMarkdownPaths(physical, "docs/scripts"),
+          ...readAutoMovieMaintenanceMarkdownPaths(
+            physical,
+            "docs/screenplays",
+          ),
+        ]);
+        const current = assertAutoMovieMaintenanceObservation(observation);
+        const writes = planAutoMovieDeliveryTocPublication({
+          current: observation.sources,
+          observed: current.sources,
+          planned: plan.files,
+        });
+        if (!command.check && Object.keys(writes).length !== 0)
+          publishAutoMovieProjectMaintenance({
+            observation,
+            kind: "toc",
+            successors: plan.files,
+            baselinePath: null,
+            receipts: [],
+            io: createAutoMovieMaintenanceTransactionIO(observation, "toc"),
+          });
         process.stdout.write(
           `${command.check ? "Checked" : "Updated"} delivery table of contents.\n`,
         );
@@ -663,14 +710,22 @@ export const run = (argv: readonly string[]): number => {
 
       if (command.command === "contracts") {
         const root = process.cwd();
-        const baselineFile = path.join(root, AUTO_MOVIE_CONTRACT_BASELINE_PATH);
-        const baselineSource = readProjectTextFile(
+        const physical = recoverProjectMaintenance(
           root,
+          "contracts",
+          !command.dryRun,
+        );
+        const metadata = observeAutoMovieMaintenanceFiles({
+          root: physical,
+          paths: [AUTO_MOVIE_CONTRACT_BASELINE_PATH, "package.json"],
+        });
+        const baselineSource = requireMaintenanceSource(
+          metadata,
           AUTO_MOVIE_CONTRACT_BASELINE_PATH,
         );
         const from = parseAutoMovieContractBaseline(baselineSource);
         const manifest = JSON.parse(
-          fs.readFileSync(path.join(root, "package.json"), "utf8"),
+          requireMaintenanceSource(metadata, "package.json"),
         ) as { name?: string };
         const targetFiles = renderScaffold({
           language: from.language,
@@ -679,103 +734,72 @@ export const run = (argv: readonly string[]): number => {
         const to = parseAutoMovieContractBaseline(
           targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!,
         );
-        const targetSources = autoMovieContractTargetSources(targetFiles);
-        const current = readContractFiles(root, from, to);
+        const admittedMetadata =
+          assertAutoMovieMaintenanceObservation(metadata);
+        const observation = observeAutoMovieMaintenanceFiles({
+          root: physical,
+          paths: [
+            AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+            "package.json",
+            ...from.files.map((file) => file.path),
+            ...to.files.map((file) => file.path),
+          ],
+        });
+        assertAutoMovieMaintenanceGeneration(admittedMetadata, observation);
+        const current = autoMovieContractTargetSources(observation.sources);
         const plan = planAutoMovieContractMigration({
           current,
           from,
-          targetSources,
+          targetSources: autoMovieContractTargetSources(targetFiles),
           to,
         });
         process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
         if (command.dryRun) return plan.conflicts.length === 0 ? 0 : 1;
         if (plan.conflicts.length !== 0)
           throw new Error("Contract migration has unresolved conflicts.");
-        applyAutoMovieContractMigrationPlan(plan, current);
-        const observed = readContractFiles(root, from, to);
-        const publication = planAutoMovieContractMigrationPublication({
+        const successorSources = applyAutoMovieContractMigrationPlan(
+          plan,
           current,
-          observed,
-          plan,
-        });
-        publishProjectCandidate(root, publication.creations, "create");
-        publishProjectCandidate(root, publication.replacements, "replace");
-        for (const removal of publication.removals) {
-          const source = resolveProjectFile(root, removal.path);
-          const status = fs.lstatSync(source, { bigint: true });
-          if (
-            status.isSymbolicLink() ||
-            !status.isFile() ||
-            status.nlink !== 1n ||
-            fs.readFileSync(source, "utf8") !== removal.before
-          )
-            throw new Error(
-              `Contract migration rename source changed before retirement: ${removal.path}.`,
-            );
-          if (readProjectTextFile(root, removal.target) !== removal.after)
-            throw new Error(
-              `Contract migration rename target changed before retirement: ${removal.target}.`,
-            );
-          fs.unlinkSync(source);
-        }
-        // Every planned target is re-read and judged after publication, and
-        // the predecessor baseline plus the append-only receipt are preserved
-        // before the baseline pointer advances, so a run stopped between those
-        // two writes leaves a complete record of what landed.
-        const outcomes = observeAutoMovieContractMigrationOutcomes({
-          plan,
-          published: readContractFiles(root, from, to),
-        });
-        const unpublished = outcomes.filter(
-          (outcome) => outcome.status !== "published",
         );
-        if (unpublished.length !== 0)
-          throw new Error(
-            `Contract migration targets did not publish exactly: ${unpublished
-              .map((outcome) => `${outcome.path} ${outcome.status}`)
-              .join(", ")}.`,
-          );
+        const fresh = assertAutoMovieMaintenanceObservation(observation);
+        planAutoMovieContractMigrationPublication({
+          current,
+          observed: autoMovieContractTargetSources(fresh.sources),
+          plan,
+        });
+        if (
+          plan.actions.length === 0 &&
+          baselineSource === targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]
+        )
+          return 0;
         const artifacts = createAutoMovieContractMigrationReceiptArtifacts({
           from,
           observed: current,
-          outcomes,
+          outcomes: observeAutoMovieContractMigrationOutcomes({
+            plan,
+            published: successorSources,
+          }),
           plan,
           to,
         });
-        for (const artifact of [artifacts.predecessor, artifacts.receipt]) {
-          const resident = resolveProjectFile(root, artifact.path);
-          if (fs.existsSync(resident)) {
-            // The same plan reproduces the same record; a resident record with
-            // other bytes is not this migration's and is never overwritten.
-            if (fs.readFileSync(resident, "utf8") !== artifact.source)
-              throw new Error(
-                `Contract migration record differs from its resident predecessor: ${artifact.path}.`,
-              );
-          } else
-            publishProjectCandidate(
-              root,
-              { [artifact.path]: artifact.source },
-              "create",
-            );
-        }
-        if (
-          readProjectTextFile(root, AUTO_MOVIE_CONTRACT_BASELINE_PATH) !==
-          baselineSource
-        )
-          throw new Error(
-            "Contract migration baseline changed before publication.",
-          );
-        publishProjectCandidate(root, {
-          [AUTO_MOVIE_CONTRACT_BASELINE_PATH]:
-            targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!,
+        const successors = Object.fromEntries(
+          Object.keys(observation.files).map((relative) => [
+            relative,
+            relative === AUTO_MOVIE_CONTRACT_BASELINE_PATH
+              ? targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]!
+              : relative === "package.json"
+                ? observation.sources[relative]!
+                : (successorSources[relative] ?? null),
+          ]),
+        );
+        publishAutoMovieProjectMaintenance({
+          observation,
+          kind: "contracts",
+          successors,
+          baselinePath: AUTO_MOVIE_CONTRACT_BASELINE_PATH,
+          receipts: [artifacts.predecessor, artifacts.receipt],
+          io: createAutoMovieMaintenanceTransactionIO(observation, "contracts"),
         });
-        if (
-          fs.readFileSync(baselineFile, "utf8") !==
-          targetFiles[AUTO_MOVIE_CONTRACT_BASELINE_PATH]
-        )
-          throw new Error(
-            "Contract migration baseline changed after publication.",
-          );
         return 0;
       }
 
@@ -798,15 +822,20 @@ export const run = (argv: readonly string[]): number => {
       const receipt = publishFiles(targetDir, files, { force: command.force });
       if (receipt.status !== "completed")
         throw new ScaffoldPublicationError(receipt);
+      synchronizeAutoMovieReferenceClients({
+        path: targetDir,
+        real: targetDir,
+        identity: receipt.completed.find(
+          ({ entry }) => entry.relative === "package.json",
+        )!.parentIdentity,
+      });
       const written = receipt.completed.map(({ entry }) => entry.target);
       process.stdout.write(
         `Scaffolded ${written.length} files into ${targetDir}\n\n` +
           written
             .map((file) => `  ${path.relative(targetDir, file) || "."}`)
             .join("\n") +
-          `\n\nNext:\n  cd ${command.directory}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint:source\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
-          `Open http://127.0.0.1:5173 after the viewer starts.\n\n` +
-          `README.md explains source ownership, evidence gates, and the local viewer.\n`,
+          renderAutoMovieScaffoldNextSteps(targetDir),
       );
       return 0;
     });
@@ -839,83 +868,34 @@ const readProjectRegularFile = (
   }
 };
 
-const readMarkdownFiles = (
-  directory: string,
+const requireMaintenanceSource = (
+  observation: IAutoMovieMaintenanceObservation,
+  relative: string,
+): string => {
+  const source = observation.sources[relative];
+  if (source === undefined)
+    throw new Error(`Project maintenance input is missing: ${relative}.`);
+  return source;
+};
+
+const recoverProjectMaintenance = (
   root: string,
-): Record<string, string> => {
-  if (!fs.existsSync(directory)) return {};
-  const files: Record<string, string> = {};
-  for (const entry of fs
-    .readdirSync(directory, { withFileTypes: true })
-    .sort((left, right) =>
-      left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
-    )) {
-    const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory())
-      Object.assign(files, readMarkdownFiles(absolute, root));
-    else if (entry.isFile() && entry.name.endsWith(".md"))
-      files[path.relative(root, absolute).split(path.sep).join("/")] =
-        fs.readFileSync(absolute, "utf8");
-  }
-  return files;
-};
-
-const readContractFiles = (
-  root: string,
-  from: IAutoMovieContractBaseline,
-  to: IAutoMovieContractBaseline,
-): Record<string, string> => {
-  const files: Record<string, string> = {};
-  for (const relative of new Set([
-    ...from.files.map((file) => file.path),
-    ...to.files.map((file) => file.path),
-  ])) {
-    const file = resolveProjectFile(root, relative);
-    if (fs.existsSync(file))
-      files[relative] = readProjectTextFile(root, relative);
-  }
-  return files;
-};
-
-const resolveProjectFile = (root: string, relative: string): string => {
-  const target = path.resolve(root, relative);
-  const inside = path.relative(root, target);
-  if (
-    inside.length === 0 ||
-    inside === ".." ||
-    inside.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(inside)
-  )
-    throw new Error(`Project maintenance path escapes its root: ${relative}.`);
-  return target;
-};
-
-const readProjectTextFile = (root: string, relative: string): string => {
-  const target = resolveProjectFile(root, relative);
-  const status = fs.lstatSync(target, { bigint: true });
-  if (status.isSymbolicLink() || !status.isFile() || status.nlink !== 1n)
+  kind: IAutoMovieMaintenanceJournal["kind"],
+  mutate: boolean,
+): IScaffoldPhysicalDirectory => {
+  const observation = observeAutoMovieMaintenanceFiles({ root, paths: [] });
+  const io = createAutoMovieMaintenanceTransactionIO(observation, kind);
+  if (io.read("automovie/reference-client-maintenance.pending.json") !== null)
     throw new Error(
-      `Project maintenance input is not one physical file: ${relative}.`,
+      "Recover pending reference-client maintenance with sync before contract or TOC maintenance.",
     );
-  return fs.readFileSync(target, "utf8");
-};
-
-const publishProjectCandidate = (
-  root: string,
-  files: Readonly<Record<string, string>>,
-  authority: "create" | "replace" = "replace",
-): void => {
-  if (Object.keys(files).length === 0) return;
-  const receipt = publishFiles(
-    root,
-    { ...files },
-    {
-      allowExistingRoot: true,
-      overwriteExistingFiles: authority === "replace",
-    },
-  );
-  if (receipt.status !== "completed")
-    throw new ScaffoldPublicationError(receipt);
+  recoverAutoMovieProjectMaintenance({
+    pending: readAutoMoviePendingMaintenance(io, kind),
+    kind,
+    mutate,
+    io,
+  });
+  return observation.root;
 };
 
 const runProjectScript = (

@@ -12,7 +12,7 @@ catalogs:
     typia: &typia ^13.2.0
     "@nestia/e2e": ^12.1.0
   typescript:
-    ttsc: &ttsc ^0.28.1
+    ttsc: &ttsc ^0.29.0
     "@ttsc/evidence": *ttsc
     "@ttsc/lint": *ttsc
     typescript: ^7.0.2
@@ -44,6 +44,13 @@ catalogs:
     c8: ^10.1.3
     chalk: 4.1.2
     rimraf: ^6.0.1
+  reference:
+    "@modelcontextprotocol/sdk": ^1.30.0
+    "@types/mdast": ^4.0.4
+    htmlparser2: ^12.0.0
+    mdast-util-from-markdown: ^2.0.3
+    smol-toml: ^1.8.0
+    zod: ^4.5.4
 useNodeVersion: 22.15.0
 
 onlyBuiltDependencies:

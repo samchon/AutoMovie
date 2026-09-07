@@ -18,7 +18,7 @@ The generated scaffold's [static-document policy](./scaffold/README.md#static-do
 
 Generated graph evaluation never resolves evidence targets from `node_modules/@automovie/template`. The package ships the scaffold bytes that become project-owned inputs; `@automovie/evidence` supplies the reusable graph mechanics that validate those local inputs.
 
-The scaffold deliberately contains no production content and no provider-specific hook.
+The scaffold deliberately contains no production content and no provider-specific hook. Its installed `reference` script and lifecycle guide route the four read-only Markdown operations; the CLI's explicit create/sync operation owns local Claude/Codex registration, not `renderScaffold` or a reference read.
 
 ## Public API
 

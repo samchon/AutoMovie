@@ -27,3 +27,7 @@ Project는 문서화된 toolchain과 공개 contract만으로 새 checkout에서
 ### 소유권 불명확성의 거부 {#agent-ambiguous-ownership-refusal}
 
 Asset이나 생성 결과의 source, license, digest 또는 consumer가 불명확하면 이를 production input으로 확정하지 않는다.
+
+### 샌드박스 쓰기 경계 {#agent-sandbox-write-boundary}
+
+샌드박스 생성과 refresh는 명시한 실험 루트의 직접 자식만 변경하며, linked directory나 symlink/hardlink manifest를 작업 대상으로 채택하지 않는다. 승인한 root, target과 manifest의 identity가 후속 mutation 전에 달라지면 작업을 거부하고 기존 production과 immutable package generation을 보존한다.

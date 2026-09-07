@@ -30,6 +30,8 @@ import {
 import path from "node:path";
 import typia from "typia";
 
+import { closeAutoMovieProjectState } from "./closeAutoMovieProjectState";
+
 /**
  * Input for loading one active production from an initialized project.
  *
@@ -138,10 +140,12 @@ export interface IAutoMovieProjectStateFreshness {
    */
   currentFingerprint: AutoMovieContentDigest | null;
   /**
-   * Current read-only source-lint diagnostics.
+   * First-observed union of initial and closing read-only source-lint
+   * diagnostics. Identical records appear once; a later success does not erase
+   * an earlier cause for refusing the snapshot.
    *
-   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Preserves current source findings separately from generated-state problems.
-   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Reports findings against the exact current source revision.
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Retains observed source findings separately from generated-state problems.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Keeps findings from each source-lint pass without replacing earlier input evidence.
    */
   diagnostics: readonly IAutoMovieDiagnostic[];
   /**
@@ -572,14 +576,6 @@ export const loadAutoMovieProjectState = (
       message: messageOf(error),
     });
   }
-  if (compileStatus?.success === false)
-    problems.push({
-      code: "current-compile-invalid",
-      path: null,
-      message:
-        "Current design, source, declared content, or generated ownership does not pass read-only source compilation. Inspect freshness.diagnostics and run the scaffold compile command after correction.",
-    });
-
   let manifest: IAutoMovieGeneratedManifest | null = null;
   let manifestReadFailed = false;
   try {
@@ -886,80 +882,32 @@ export const loadAutoMovieProjectState = (
       message:
         "Generated state lacks a digest-verified compiler registry, production contract, or world contract. Recompile before querying it.",
     });
-  if (
-    manifest !== null &&
-    compileStatus !== null &&
-    manifest.inputFingerprint !== compileStatus.compiler.inputFingerprint
-  )
-    problems.push({
-      code: "compile-fingerprint-stale",
-      path: null,
-      message: `Loaded compile fingerprint ${manifest.inputFingerprint} is stale against current fingerprint ${compileStatus.compiler.inputFingerprint}.`,
-    });
-
-  let endingCompileStatus: IAutoMovieCompileProjectOutput | null = null;
-  let endingDesign: IAutoMovieProductionDesignGraph = design;
-  try {
-    const endingRevisionBefore = project.revision();
-    const endingCompileStatusBefore = new AutoMovieProductionCompiler(
-      project,
-      authoringEvidence,
-      input.currentAuthoringEvidence,
-    ).lint({
-      scope: "source",
-    });
-    endingDesign = project.graph();
-    endingCompileStatus = new AutoMovieProductionCompiler(
-      project,
-      authoringEvidence,
-      input.currentAuthoringEvidence,
-    ).lint({ scope: "source" });
-    const endingManifest = project.generatedManifest();
-    const endingRevisionAfter = project.revision();
-    if (
-      endingRevisionBefore !== revision ||
-      endingRevisionAfter !== revision ||
-      JSON.stringify(endingManifest) !== JSON.stringify(manifest) ||
-      endingCompileStatusBefore.compiler.inputFingerprint !==
-        endingCompileStatus.compiler.inputFingerprint ||
-      endingCompileStatus.compiler.inputFingerprint !==
-        compileStatus?.compiler.inputFingerprint
-    )
-      problems.push({
-        code: "project-state-changed",
-        path: null,
-        message:
-          "Project revision or generated ownership changed while state was loading. Retry against one stable repository snapshot.",
-      });
-  } catch (error) {
-    problems.push({
-      code: "project-state-changed",
-      path: null,
-      message: messageOf(error),
-    });
-  }
+  const closing = closeAutoMovieProjectState({
+    revision,
+    manifest,
+    manifestReadFailed,
+    compileStatus,
+    problems,
+    design,
+    read: {
+      revision: () => project.revision(),
+      compile: () =>
+        new AutoMovieProductionCompiler(
+          project,
+          authoringEvidence,
+          input.currentAuthoringEvidence,
+        ).lint({ scope: "source" }),
+      design: () => project.graph(),
+      manifest: () => project.generatedManifest(),
+    },
+  });
 
   return {
     root,
     productionId: project.productionId,
     revision,
-    freshness: {
-      status:
-        manifest === null && manifestReadFailed === false
-          ? "missing"
-          : problems.length === 0
-            ? "current"
-            : "stale",
-      compileFingerprint: manifest?.inputFingerprint ?? null,
-      currentFingerprint:
-        endingCompileStatus?.compiler.inputFingerprint ??
-        compileStatus?.compiler.inputFingerprint ??
-        null,
-      diagnostics:
-        endingCompileStatus?.diagnostics ?? compileStatus?.diagnostics ?? [],
-      problems,
-    },
-    design: endingDesign,
+    freshness: closing.freshness,
+    design: closing.design,
     generated: {
       kind,
       manifest,

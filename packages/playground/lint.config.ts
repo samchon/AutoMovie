@@ -8,13 +8,11 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * prototype units this application actually renders and explicitly declines
  * the downstream-fidelity units that remain outside a local viewer demo.
  *
- * One of the twenty-five selected modules does that paying. The other
- * twenty-four answer nothing, and that is recorded as debt rather than read as
- * a smaller surface earning a smaller duty -- the evidence-graph skill answers
- * that reading directly: "Neither a removed transport boundary nor an
- * application's smaller surface excuses its public exports from requirement and
- * specification traceability." The count is pinned in `ACCEPTED_UNPAID_HOSTS`
- * and refused if it rises; #2171 owns paying it down.
+ * Native evidence lint evaluates the two declared relationships. Self-Review
+ * follows the repository evidence-graph skill to compare each changed public
+ * export with the requirement and specification it actually implements and
+ * to require truthful direct citations. This configuration does not record a
+ * current unpaid-host count.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [

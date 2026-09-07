@@ -1,2 +1,12 @@
 export { run } from "./bin";
 export * from "./loadAutoMovieProjectState";
+export * from "./closeAutoMovieProjectState";
+export * from "./contractMaintenanceFileSystem";
+export * from "./contractMaintenanceTransaction";
+export * from "./contractMaintenanceRuntime";
+export * from "./contractMaintenanceNative";
+export * from "./contractMaintenanceNativeWindows";
+export * from "./scaffoldNextSteps";
+export * from "./publishAutoMovieProjectMaintenance";
+export * from "./readAutoMovieMaintenanceMarkdownPaths";
+export * from "./synchronizeAutoMovieReferenceClients";

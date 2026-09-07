@@ -13,7 +13,13 @@ type AutoMovieProductionRouterEvidence = Pick<
 > & {
   manifest: Pick<
     IAutoMovieProductionEvidence["manifest"],
-    "bindings" | "branches" | "kind" | "language" | "populationScope"
+    | "bindings"
+    | "branches"
+    | "kind"
+    | "language"
+    | "populationScope"
+    | "localBindings"
+    | "localAudits"
   >;
 };
 
@@ -52,6 +58,14 @@ export const renderAutoMovieProductionRouter = (
           "- No shared contract route is active before a production kind is selected.",
         ]
       : evidence.manifest.bindings.map(renderManifestBinding);
+  const localBindingLines = [
+    ...evidence.manifest.localBindings.map((binding) =>
+      renderLocalBinding(binding, "binding"),
+    ),
+    ...evidence.manifest.localAudits.map((binding) =>
+      renderLocalBinding(binding, "inapplicable audit"),
+    ),
+  ];
   const localContractLines =
     evidence.contracts.length === 0
       ? ["- This production owns no local contract document yet."]
@@ -114,6 +128,7 @@ ${bindingLines.join("\n")}
 Project-local contracts are flat files under \`docs/contracts\`; every item below is read from that tracked directory.
 
 ${localContractLines.join("\n")}
+${localBindingLines.join("\n")}
 
 Add a local contract only after [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`lint.config.ts\`, and run \`npm run sync\` so this router lists it.
 
@@ -123,7 +138,8 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 ## Commands
 
-- \`npm run sync\` overwrites this router and the five shipped skills from the installed template while preserving every tracked production fact.
+- \`npm run sync\` overwrites this router and the five shipped skills, and synchronizes the owned local reference-client entries while preserving unrelated client settings and tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) for client trust, conflicts, and interrupted maintenance.
+- \`npm run reference -- --request '<JSON>'\` uses the same read-only Markdown provider as the local MCP server: \`get_index_of_layer\`, \`get_index_of_file\`, \`read_section_without_annotations\`, and \`read_file_without_annotations\`. These tools navigate authored content; they do not edit files, execute production commands, inspect TypeScript, or replace full evidence review.
 - \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
 - \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run compile\` is the only command that may update compiler-owned output.
@@ -193,6 +209,24 @@ const assertInstructionPath = (value: string): string => {
   return value;
 };
 
+/** Render the local obligation's complete contract and compared population. */
+const renderLocalBinding = (
+  binding: IAutoMovieProductionEvidence["manifest"]["localBindings"][number],
+  disposition: "binding" | "inapplicable audit",
+): string => {
+  const targets = binding.targets
+    .map(
+      (target) =>
+        `root ${inlineCode(target.root)}, files ${codeList(target.files)}, symbols ${codeList(target.symbols)}`,
+    )
+    .join("; ");
+  const population =
+    binding.population === undefined
+      ? ""
+      : `; compared population root ${inlineCode(binding.population.root)}, files ${codeList(binding.population.files)}, symbols ${codeList(binding.population.symbols)}`;
+  return `- Local ${disposition} ${inlineCode(binding.claim)}: branch ${inlineCode(binding.layer)} (${inlineCode(binding.stage)}, ${binding.enforced ? "enforced" : "not enforced"}), ${inlineCode(binding.relationship)}; host root ${inlineCode(binding.host.root)}, files ${codeList(binding.host.files)}, symbols ${codeList(binding.host.symbols)}; contract targets ${targets}${population}.`;
+};
+
 /** Render one complete factory-derived host-to-target relationship. */
 const renderManifestBinding = (
   binding: AutoMovieProductionRouterEvidence["manifest"]["bindings"][number],
@@ -218,7 +252,7 @@ const renderManifestBinding = (
     binding.host.root,
   )}, files ${codeList(binding.host.files)}, symbols ${codeList(
     binding.host.symbols,
-  )} -> ${target}; claim ${inlineCode(binding.claim)}.`;
+  )} -> ${target}; claim ${inlineCode(binding.claim)}; severity ${inlineCode(String(binding.severity ?? "inherited error"))}, review ${binding.requireReview === undefined ? "inherited" : binding.requireReview ? "required" : "not required"}.`;
 };
 
 /** Render one safe Markdown inline-code value from manifest-owned text. */
