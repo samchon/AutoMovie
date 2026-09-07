@@ -147,7 +147,11 @@ export const portraitNoseShape: IPortraitNoseShape = {
   nostrilTilt: 0,
   cavityContraction: 0.6,
   rimSupport: 0.1,
-  rimRoundness: 0,
+  // Blend the sparse cut boundary towards its own fitted ellipse. The shared
+  // skin and lining receive that same rim; orientation, centroid and connectivity
+  // remain owned by the original opening. Exterior alar volume is a separate
+  // named support in portraitNasalRelief, rather than a larger black aperture.
+  rimRoundness: 0.55,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };

@@ -4,6 +4,9 @@ import type { IPortraitReliefRegion } from "../portraitRelief";
  * Nasal subunit supports on this subject's connected skin. The measured dorsal
  * path and the resized nasal openings remain the base; these local envelopes
  * supply the paired tip domes, alar lobules, alar-facial separation and columella.
+ * The domes overlap across the midline rather than forming a pointed single
+ * peak. Broader alar support and a shallow lateral boundary establish a rounded
+ * wing together; the aperture alone must not stand in for that exterior volume.
  * They deform both exterior skin and attached lining continuously. Values are
  * authored millimetre fits, not recovered cartilage or soft-tissue measurements.
  */
@@ -11,51 +14,51 @@ export const portraitNasalRelief: IPortraitReliefRegion[] = [
   {
     name: "right-tip-dome",
     anchor: 4,
-    offset: [-3.8, -1.5, 0],
-    radius: [8, 8, 12],
-    displacement: [-0.1, 0, 0.35],
+    offset: [-4.2, -1.5, 0],
+    radius: [9, 9, 16],
+    displacement: [-0.25, 0, 1.4],
   },
   {
     name: "left-tip-dome",
     anchor: 4,
-    offset: [3.8, -1.5, 0],
-    radius: [8, 8, 12],
-    displacement: [0.1, 0, 0.35],
+    offset: [4.2, -1.5, 0],
+    radius: [9, 9, 16],
+    displacement: [0.25, 0, 1.4],
   },
   {
     name: "lower-dorsum",
     anchor: 5,
     offset: [0, 0, 0],
     radius: [12, 17, 20],
-    displacement: [0, 0, 0.4],
+    displacement: [0, 0, 0.2],
   },
   {
     name: "right-alar-lobule",
     anchor: 49,
     offset: [0, -2, 0],
     radius: [11, 13, 17],
-    displacement: [-0.25, 0, 1.2],
+    displacement: [-0.45, 0, 2.6],
   },
   {
     name: "left-alar-lobule",
     anchor: 279,
     offset: [0, -2, 0],
     radius: [11, 13, 17],
-    displacement: [0.25, 0, 1.2],
+    displacement: [0.45, 0, 2.6],
   },
   {
     name: "right-alar-facial-groove",
     anchor: 129,
     offset: [-0.5, 0, 4],
     radius: [5, 11, 14],
-    displacement: [0, 0, -0.2],
+    displacement: [0, 0, -0.55],
   },
   {
     name: "left-alar-facial-groove",
     anchor: 358,
     offset: [0.5, 0, 4],
     radius: [5, 11, 14],
-    displacement: [0, 0, -0.2],
+    displacement: [0, 0, -0.55],
   },
   {
     name: "columellar-support",

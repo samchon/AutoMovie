@@ -1,51 +1,51 @@
 # Reference face inspection {#reference-face-inspection}
 
-**Overall regression; likeness remains rejected.** This is the actually opened complete capture from source `204ff1ec98851907ce1bec279d87fd42609be41e`, not an acceptance of newer construction. GLB `f01dbf343250ad76ca1be5067ab709f3531fc8f4475c51c93258f2879cb26962`; profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. All nine views, comparison, three clay views and calibration were opened. Blender 5.1.2 rendered the actual GLTF with Cycles CPU, 64 denoised samples. The independent cube has a cast shadow; this does not establish matching photographic lighting.
+**Recovered component foundation; likeness remains unaccepted.** This records the actual complete capture from source `0ddbb66b`, GLB `e94cf6ffe1adcdaae44bbe9332b6ee7fbd079c7762a86ffc63ca990a0bb132ce`, profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. Intermediate front/profile images and the full comparison, nine-view sheet, three clay views and mesh-landmark overlay were opened. Blender 5.1.2 imported the actual GLTF and rendered 64 denoised Cycles CPU samples. New construction may be newer than this frozen observation.
 
 ## Front {#front}
 
-The cap is oversized and hooding shadows obscure the brow/upper orbital area. Eye apertures remain narrow and the lower lid is insufficiently defined. The nasal region lacks the source's stronger alar/tip volume. Teeth span the smile more regularly, but the row looks exposed and the lower lip hangs beneath it. Angular neck ridges remain clearly visible. No overall likeness improvement is accepted.
+The eyes have distinct upper folds and larger readable apertures. The grouped row stays within the smile, with its gingival ends behind the upper lip. Nasal apertures remain overly angular and the tip/alar skin lacks the reference's rounded subunit transitions. The continuous neck no longer has repeated sharp notches. Brow/skin/iris finish remains synthetic.
 
 ## Anatomical left oblique {#left-oblique}
 
-The connected ear is readable. The mouth profile exposes dentition anterior to its supporting lips; even spacing has not solved the oral placement. The cheek and chin are broadly continuous but their proportion and smile relief remain unaccepted. The neck retains sharp repeated notches. The large hair cap obscures a considerable part of the forehead.
+Nasal projection, raised cheek and smile depression are visible. The dental row follows one coherent arc and is recessed behind the upper lip. The simplified ear, broad mandibular transition and cervical shading remain inferred. Cheek-to-mouth depth is present but not accepted as the source's distribution.
 
 ## Anatomical right oblique {#right-oblique}
 
-The curtain hides much of the far side. The visible teeth/lip outline repeats the protrusion, and the nose and eye hood remain simplified. Hair coverage cannot establish the correctness of hidden facial or neck anatomy.
+The opposite eye is partly occluded by the nose. The exposed nasal/lip/chin silhouette is continuous and the row remains within the mouth. The curtain hides the far-side cheek and posterior neck, so those surfaces are not judged from this frame alone.
 
 ## Anatomical left profile {#left-profile}
 
-The upper dental row projects conspicuously ahead of the lower lip. The lip-to-chin contour does not reproduce a convincing oral support relationship. The native-to-procedural neck transition remains angular. The cap occupies an excessive portion of the profile and does not resemble the photograph's coarse hairstyle mass.
+The intermediate profile was opened before further editing. The neck is continuous rather than serrated. Nose, lip and chin projection remain authored estimates; the grouped row is behind the upper lip. The ear is a simplified shell and the broad lateral neck plane remains visible. One source photograph does not determine a unique profile.
 
 ## Anatomical right profile {#right-profile}
 
-The visible face repeats the projecting row and heavy lower lip. The large cap/curtain hides the posterior anatomy. No opposing-view evidence cancels the oral and neck failures.
+The opposite profile repeats the smooth jaw/neck outline and the recessed row. Hair hides much of the posterior anatomy. The visible nose-to-lip relationship remains unaccepted as this person's hidden profile.
 
 ## Back {#back}
 
-The prior exposed scalp patches are absent in the rendered frame. The enlarged cap and curtain make one simple shell, with no accepted hairstyle structure. This view verifies the observed enclosure improvement only; it does not accept hair size or cranial proportions.
+The coarse cap and continuous curtain enclose the head. The hidden posterior skin is not established by coverage. Hair remains a coarse silhouette proxy, with neither a detailed groom nor accepted target hairstyle.
 
 ## Top {#top}
 
-The scalp is covered, but the cap is oversized and reaches the frame boundary. The hair obscures the underlying vault; clay supplies the separate skin inspection. Coarse coverage and an appropriate haircut silhouette remain different obligations.
+The cap and projecting nasal region are visible. The face/forehead edge is a deliberate opening in the proxy. Hair hides the cranial skin and the geometry beneath it remains inferred.
 
 ## Bottom {#bottom}
 
-The intentional open neck crop is visible. Above it, deep longitudinal ridges and the angular neck taper remain unacceptable. The teeth are anterior to the surrounding oral support, and nasal cavity geometry remains schematic. The open crop does not implement a torso attachment.
+The nasal cavities, submental surface and intentional open neck crop are visible. The repeated angular neck ridges are absent. The broad taper remains simplified and is not a completed torso connection. The dental row is occluded appropriately from below by the mouth surfaces; this does not prove exact contact clearance.
 
 ## Rear oblique {#rear-oblique}
 
-The cap encloses the scalp in this view. The curtain remains a broad cylindrical panel and hides most of the posterior neck. It supplies context only and is not accepted as the reference hairstyle.
+The curtain, cap and ear silhouette are continuous enough for coarse context. The ear remains a separate simplified attachment and the hidden cranium remains an estimate.
 
 ## Recorded source pose {#reference}
 
-The source comparison makes the narrow/hooded eyes, weak alar/tip form, differently distributed cheek support, heavy lower lip, excessive dental display and serrated neck obvious. The cap adds an oversized silhouette and large shadows. The reference has a youthful, coherent face; these captures do not establish that quality. The source pose estimate and unobserved depth remain uncertain, but neither excuses the visible attachment failures.
+The comparison shows recovered feature definition and neck continuity, while clearly retaining differences in eye shape, nasal wings/tip, cheek/perioral volume, lip contour and dental appearance. The right ear in the photograph remains exposed. The skin's uniform colour and the coarse hair are visibly synthetic. No exact-image match or complete youthful likeness is claimed.
 
 ## Clay reference, front and oblique {#clay}
 
-All three were opened. Hair is hidden, leaving the smooth prior skull, connected ears and facial surface visible. Lid hooding, oral protrusion, lip mass and neck ridges remain. The eyes become opaque under diagnostic material replacement. Clay establishes that the major failures involve geometry; it is not a finished optical render.
+All three were opened. Nasal cavities, cheek-to-mouth relief, eyelid rolls and lip mass remain visible without colour, confirming the geometric nature of the remaining form differences. The neck is continuous. Transparent eye surfaces become opaque under the diagnostic override, so their blank appearance is not the finished optical material.
 
 ## Component replacement {#component-replacement}
 
-The active foundation is the fitted CC0 anatomical prior. Its fine anatomical controls remain incomplete. The captured row still places individual crowns against a lip-derived guide; its profile fails despite spacing tests. A shared upper arch and one rigid attachment frame are the next independently rendered stage. Numerical component and rigid-transform checks do not accept the current likeness.
+The active assembly uses the shared eye/nose/mouth protocol and a separate upper-dental interior. The mouth disables its legacy crowns; the dental component introduces no skin cuts and reads actual refined oral anchors after the skin is complete. A translated-refined-host oracle verifies group attachment; the arch and rigid-frame oracles verify internal arrangement. Alternate eye/nose/mouth assemblies still need their own current visual review. Numerical checks and nearby projected landmarks do not accept likeness.
