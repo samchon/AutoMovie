@@ -65,12 +65,16 @@ export const portraitEyeShape: IPortraitEyeShape = {
   outerCornerLift: 0,
   socketLift: 0,
   blendReach: 18,
-  foldWidth: 3.1,
-  foldDepth: 0.28,
-  upperLidVolume: 0.2,
-  lowerLidWidth: 5.5,
-  lowerLidVolume: 0.15,
-  lidThickness: 0.22,
+  // Keep the upper crease near the measured aperture. The lower roll belongs
+  // immediately below its margin; a separate infraorbital layer supplies the
+  // broader transition into the cheek. These millimetre dimensions are authored
+  // image-guided fits, not population averages or clinical measurements.
+  foldWidth: 1.6,
+  foldDepth: 0.22,
+  upperLidVolume: 0.18,
+  lowerLidWidth: 3.2,
+  lowerLidVolume: 0.85,
+  lidThickness: 0.18,
   surfaceRadius: 18,
   // Schematic-eye optical dimensions, not measurements recovered from this
   // photo. The curvature, axial thickness and refractive index follow the

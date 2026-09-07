@@ -80,14 +80,14 @@ export const portraitOrbitalRelief: IPortraitReliefRegion[] = [
     anchor: 145,
     offset: [0, -5, 0],
     radius: [22, 12, 20],
-    displacement: [0, 0, 2.1],
+    displacement: [0, 0, 1.4],
   },
   {
     name: "left-infraorbital-support",
     anchor: 374,
     offset: [0, -5, 0],
     radius: [22, 12, 20],
-    displacement: [0, 0, 2.1],
+    displacement: [0, 0, 1.4],
   },
   {
     name: "right-medial-tear-trough",
