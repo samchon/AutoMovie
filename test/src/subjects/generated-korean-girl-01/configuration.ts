@@ -278,11 +278,22 @@ export const portraitCheekSockets: IPortraitCheekSocket[] = [
  */
 export const portraitCheekShape: IPortraitCheekShape = {
   malar: { width: 30, height: 35, reach: 40, projection: 3.7, lift: 0 },
-  medial: { width: 29, height: 33, reach: 40, projection: 3.8, lift: 0 },
-  buccal: { width: 28, height: 33, reach: 35, projection: 2.5, lift: 0 },
+  // This bound vertex lies lateral/inferior to the desired medial prominence.
+  // Move the envelope inward/up relative to its live anchor; the cheek builder
+  // mirrors the outward axis automatically. Keep lower cheek support smaller
+  // so the smile's high medial mass does not become an enlarged lower cheek.
+  medial: {
+    offset: [-7, 6, 0],
+    width: 29,
+    height: 27,
+    reach: 40,
+    projection: 4.2,
+    lift: 0,
+  },
+  buccal: { width: 28, height: 33, reach: 35, projection: 1.4, lift: 0 },
   modiolus: { width: 12, height: 14, reach: 24, projection: 0.2, lift: 0 },
   foldWidth: 5,
-  foldDepth: 0,
+  foldDepth: 0.45,
   foldReach: 30,
 };
 

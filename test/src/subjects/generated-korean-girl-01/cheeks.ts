@@ -33,6 +33,12 @@ export interface IPortraitCheekSocket {
  * @author Samchon
  */
 export interface IPortraitCheekVolume {
+  /**
+   * Optional support-centre shift [outward, up, forward] from the bound skin
+   * anchor, in mm. Outward is mirrored by the anatomical side; a negative first
+   * coordinate moves both cheeks towards the nose. Omission retains the anchor.
+   */
+  offset?: [number, number, number];
   /** Positive transverse support radius in the head frame. */
   width: number;
   /** Positive vertical support radius in the head frame. */
@@ -108,6 +114,9 @@ export function createPortraitCheekLayer(
     names.some((name) => {
       const volume = shape[name];
       return (
+        (volume.offset !== undefined &&
+          (volume.offset.length !== 3 ||
+            !volume.offset.every(Number.isFinite))) ||
         ![
           volume.width,
           volume.height,
@@ -168,15 +177,29 @@ export function createPortraitCheekLayer(
       };
       for (const name of names) {
         const volume = shape[name];
-        if (volume.projection !== 0 || volume.lift !== 0)
+        if (volume.projection !== 0 || volume.lift !== 0) {
+          // The attachment follows the actual refined host. A separate local
+          // offset positions the tissue envelope without moving the attachment
+          // identity or baking another person's absolute coordinates into it.
+          const offset = volume.offset ?? [0, 0, 0];
+          const center = host.positions[socket[name]].map(
+            (v, axis) =>
+              v +
+              offset[axis] * (axis === 0 && socket.side === "right" ? -1 : 1),
+          );
+          if (!center.every(Number.isFinite))
+            throw new Error(
+              "Cheek support centre exceeds its representable range.",
+            );
           field(
-            host.positions[socket[name]],
+            center,
             volume.width,
             volume.height,
             volume.reach,
             volume.projection,
             volume.lift,
           );
+        }
       }
       if (shape.foldDepth === 0) return fields;
       const path = socket.nasolabial.map((id) => {
