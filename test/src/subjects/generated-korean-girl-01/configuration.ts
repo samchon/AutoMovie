@@ -1,4 +1,10 @@
 import type { IPortraitComponent } from "../portraitComponents";
+import type { IPortraitSurfaceLayer } from "../portraitSurface";
+import {
+  type IPortraitCheekShape,
+  type IPortraitCheekSocket,
+  createPortraitCheekLayer,
+} from "./cheeks";
 import { referenceControlNet } from "./controlNet";
 import {
   type IPortraitEyeShape,
@@ -188,6 +194,59 @@ export const portraitMouthShape: IPortraitMouthShape = {
   ],
 };
 
+/**
+ * Retained skin identities for the paired cheek masses and nasolabial paths.
+ * The path begins beside the nasal wing and ends lateral to the mouth corner.
+ * These bindings identify anatomy on this measured host; the layer factory
+ * reads their final refined coordinates after eye, nose and mouth fitting.
+ */
+export const portraitCheekSockets: IPortraitCheekSocket[] = [
+  {
+    side: "right",
+    malar: 118,
+    medial: 205,
+    buccal: 187,
+    modiolus: 57,
+    nasolabial: [98, 92, 186, 57],
+  },
+  {
+    side: "left",
+    malar: 347,
+    medial: 425,
+    buccal: 411,
+    modiolus: 287,
+    nasolabial: [327, 322, 410, 287],
+  },
+];
+
+/**
+ * Added soft-tissue relief in millimetres, fitted against the supplied smile.
+ * Broad overlapping support gives the cheek a continuous envelope. The narrow
+ * groove controls the transition into the lower perioral surface independently.
+ * These are authored estimates; no measured fat thickness is claimed. Lift is
+ * zero because the host already contains the photographed smile.
+ */
+export const portraitCheekShape: IPortraitCheekShape = {
+  malar: { width: 24, height: 27, reach: 34, projection: 2.2, lift: 0 },
+  medial: { width: 22, height: 25, reach: 32, projection: 3.6, lift: 0 },
+  buccal: { width: 18, height: 20, reach: 30, projection: 0.8, lift: 0 },
+  modiolus: { width: 9, height: 10, reach: 24, projection: 0.7, lift: 0 },
+  foldWidth: 3.6,
+  foldDepth: 0.8,
+  foldReach: 30,
+};
+
+/** Select each cheek's shape independently while retaining subject-owned attachments. */
+export function portraitCheekLayersFor(
+  right: IPortraitCheekShape,
+  left: IPortraitCheekShape,
+): IPortraitSurfaceLayer[] {
+  return [
+    createPortraitCheekLayer(portraitCheekSockets[0], right),
+    createPortraitCheekLayer(portraitCheekSockets[1], left),
+  ];
+}
+
 /** Assemble independently selectable eyes, nose and mouth against this subject's sockets. */
 export function portraitComponentsFor(
   rightEye: IPortraitEyeShape,
@@ -211,4 +270,5 @@ export const portraitAssembly = {
     portraitNoseShape,
   ),
   subdivisionRounds: 3,
+  surfaceLayers: portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
 };

@@ -16,13 +16,14 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 | `generated-korean-girl-01/nose.ts` | Provisional alar/tip depth and geometric nasal cavities |
 | `generated-korean-girl-01/mouth.ts` | Replaceable lips, shared boundary topology, oral cavity and individual dental crowns |
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
+| `generated-korean-girl-01/cheeks.ts` | Skin-bound malar, medial/buccal cheek and mouth-corner relief, with a separately controlled nasolabial groove |
 | `portraitEyeSphere.ts` | Socket-oriented spherical curvature and camera-ray contact fitting, independent of gaze |
 | `portraitCornea.ts` | Closed transparent optical shell with independently controlled curvature and axial thickness |
 | `generated-korean-girl-01/ears.ts` | Inferred helix, antihelix, concha and pinna attachment |
 | `generated-korean-girl-01/cranium.ts` | Shared cranial continuation, posterior cap and cropped neck; hidden anatomy is inferred |
 | `portraitComponents.ts` | Fit, shared attachment and refined-interior protocol for replaceable parts |
 | `blendPortraitSkin.ts` and `portraitSkinTopology.ts` | Geodesic skin adaptation and explicit opening/stitch validation |
-| `portraitSurface.ts` | Optional deformation layers on the refined skin; no cheek or fold layer is configured yet |
+| `portraitSurface.ts` | Compose anatomical deformation layers on refined skin while preserving its open attachment rims |
 | `geometry.ts` and `subdivideControlMesh.ts` | Sampling, interpolation, subdivision, shared normals and metric conversion |
 | `portraitDocument.ts` | Static GLTF conversion preserving resident buffers and supported material factors |
 | `captureProfile.ts` | Fixed camera, crop and area-light conditions for inspection |
@@ -49,7 +50,7 @@ The order is part of the attachment contract:
 4. Evaluate optional surface layers against the same refined host. Their engine fields use metres; the adapter returns millimetres and fades displacement at open rims.
 5. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface.
 
-The surface-layer hook is available, but the current `portraitAssembly` supplies no layers. Separate cheek compartments, nasolabial folds, tear troughs and perioral masses remain implementation work. The ear roots are embedded separate shells; they are not welded to the skin.
+The current `portraitAssembly` supplies paired cheek layers. Each side controls upper, medial and lower cheek relief, mouth-corner support, and the adjacent nasolabial groove. These are compact surface envelopes, not reconstructed internal fat compartments or a muscle simulation. Tear troughs, the philtrum/chin transition and finer wrinkles remain implementation work. The ear roots are embedded separate shells; they are not welded to the skin.
 
 This prototype currently exposes replaceable procedural eyes, noses and mouths. Ears, cranium and neck remain subject builders. Numerical controls do not establish anatomical correctness.
 
@@ -57,12 +58,14 @@ This prototype currently exposes replaceable procedural eyes, noses and mouths. 
 import {
   alternatePortraitEye,
   alternatePortraitNose,
+  portraitAssembly,
   portraitComponentsFor,
   portraitEyeShape,
 } from "./generated-korean-girl-01/configuration";
 import { buildReferencePortrait } from "./generated-korean-girl-01/model";
 
 const model = buildReferencePortrait({
+  ...portraitAssembly,
   components: portraitComponentsFor(
     portraitEyeShape,       // anatomical right eye
     alternatePortraitEye,  // independently replaced left eye
@@ -73,6 +76,8 @@ const model = buildReferencePortrait({
 ```
 
 Eye controls include aperture width/opening, outer-corner lift, orbital depth, lid fold, iris/pupil radius and spherical surface curvature. Nose controls include overall width, tip/alar projection, aperture dimensions, aperture rise/tilt and cavity dimensions. Mouth controls include width, opening, corner elevation, upper/lower lip projection, individual crown dimensions, dental-row placement and tooth spacing. Tessellation is explicit. Factories copy their inputs, so editing one preset does not mutate an existing component. A fourth argument to `portraitComponentsFor` replaces the mouth shape; omission selects this subject's current smile.
+
+Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek settings in `assembly.surfaceLayers`. Each region has transverse, vertical and depth support radii plus anterior projection and upward lift, all in millimetres. The nasolabial groove has separate width, depth and depth-support controls. Its field spacing follows the support metric and its endpoint fade follows physical path distance. Preserve the rest of `portraitAssembly` when changing one component so its other anatomical layers remain selected.
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
 

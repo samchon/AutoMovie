@@ -27,8 +27,8 @@ import { appendPortraitCranium, appendPortraitNeck } from "./cranium";
  *
  * Surface layers run after subdivision and before normals and interior parts.
  * This order lets a narrow surface feature use the refined resolution and lets
- * dependent interiors read its final rim. The current subject configures no
- * such layers; the hook alone does not implement cheek or perioral anatomy.
+ * dependent interiors read its final rim. The subject supplies its anatomical
+ * layers explicitly; this assembler owns their placement in the pipeline.
  */
 export function buildPortraitHead(
   host: IPortraitComponentHost,

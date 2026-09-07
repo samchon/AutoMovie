@@ -38,6 +38,7 @@ async function main(): Promise<void> {
     referenceControlNet,
     portraitAssembly.components,
     portraitAssembly.subdivisionRounds,
+    portraitAssembly.surfaceLayers,
   );
   const {
     rotation: r,
@@ -51,7 +52,9 @@ async function main(): Promise<void> {
       -(r[3] * q[0] + r[4] * q[1] + r[5] * q[2]) / s - origin[1],
     ];
   };
-  const records = [1, 4, 5, 6, 168, 98, 327, 13, 14, 152].map((id) => ({
+  const records = [
+    1, 4, 5, 6, 168, 98, 327, 13, 14, 152, 61, 291, 92, 322, 186, 410, 57, 287,
+  ].map((id) => ({
     id,
     reference: project(referenceControlNet.positions[id]),
     current: project(head.refined.positions[id]),

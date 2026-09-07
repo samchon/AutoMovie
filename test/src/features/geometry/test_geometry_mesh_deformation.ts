@@ -18,6 +18,8 @@ import { nclose, throwsError } from "../internal/predicates";
  *    inputs and geometry connectivity/UV/skin metadata are retained.
  * 3. Invalid field vectors/radii, local reflection/singularity and nonfinite
  *    accumulated geometry are refused, with a nearby positive Jacobian allowed.
+ * 4. All six support faces and diagonals outside the ellipsoid retain their
+ *    coordinates, including points inside its bounding box but outside its field.
  */
 export const test_geometry_mesh_deformation = (): void => {
   const zero = { x: 0, y: 0, z: 0 };
@@ -53,6 +55,21 @@ export const test_geometry_mesh_deformation = (): void => {
       nclose(result.normals![5], 1 / length),
   );
   TestValidator.equals("input geometry retained", mesh, before);
+  const boundaries = [
+    2, 0, 0, -2, 0, 0, 0, 2, 0, 0, -2, 0, 0, 0, 2, 0, 0, -2, 1.6, 1.6, 0, 1.6,
+    0, 1.6, 0, 1.6, 1.6,
+  ];
+  TestValidator.equals(
+    "support faces and exterior diagonals remain unchanged",
+    apply({
+      ...mesh,
+      positions: boundaries,
+      normals: null,
+      indices: null,
+      uvs: null,
+    }).positions,
+    boundaries,
+  );
   TestValidator.predicate(
     "attribute ownership retained",
     result.indices === mesh.indices &&

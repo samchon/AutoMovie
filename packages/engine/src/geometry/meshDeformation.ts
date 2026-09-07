@@ -50,7 +50,19 @@ export function createAutoMovieMeshDeformer(
       const target = [...point];
       const jacobian = [1, 0, 0, 0, 1, 0, 0, 0, 1];
       for (const field of packed) {
-        const delta = point.map((value, axis) => value - field.center[axis]);
+        const dx = point[0] - field.center[0],
+          dy = point[1] - field.center[1],
+          dz = point[2] - field.center[2];
+        // A compact field and its derivative are zero outside its support.
+        // Reject the bounding box before allocating vectors or evaluating the
+        // ellipsoid, since local anatomy affects only a small part of a mesh.
+        if (
+          Math.abs(dx) >= field.radius[0] ||
+          Math.abs(dy) >= field.radius[1] ||
+          Math.abs(dz) >= field.radius[2]
+        )
+          continue;
+        const delta = [dx, dy, dz];
         const squared = delta.reduce(
           (sum, value, axis) => sum + (value / field.radius[axis]) ** 2,
           0,

@@ -6,6 +6,8 @@ import fs from "node:fs/promises";
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
   portraitAssembly,
+  portraitCheekShape,
+  portraitCheekSockets,
   portraitEyeShape,
   portraitMouthShape,
   portraitNoseShape,
@@ -59,6 +61,11 @@ async function main() {
       mouth: portraitMouthShape,
       neck: portraitNeckShape,
       ears: portraitEarShape,
+      cheeks: {
+        right: portraitCheekShape,
+        left: portraitCheekShape,
+        sockets: portraitCheekSockets,
+      },
       subdivisionRounds: portraitAssembly.subdivisionRounds,
     },
     null,

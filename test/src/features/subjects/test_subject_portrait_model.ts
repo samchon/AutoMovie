@@ -1,6 +1,8 @@
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  portraitCheekLayersFor,
+  portraitCheekShape,
   portraitComponentsFor,
   portraitEyeShape,
   portraitNoseShape,
@@ -12,7 +14,8 @@ import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/
  * This is a buffer/assembly test, not a likeness judgment.
  *
  * Scenarios:
- * 1. Construct a coarse preview through every anatomical builder and confirm its
+ * 1. Construct a coarse preview through every anatomical builder, including the
+ *    paired cheek relief on the connected skin, and confirm its
  *    static generated identity and complete material bindings.
  * 2. Every mesh has aligned finite positions/normals, integral resident triangle
  *    indices and no skeletal data. The metre-scale bounds reject unit mistakes.
@@ -27,6 +30,10 @@ export const test_subject_portrait_model = (): void => {
   const model = buildReferencePortrait({
     components: portraitComponentsFor(eye, eye, portraitNoseShape),
     subdivisionRounds: 1,
+    surfaceLayers: portraitCheekLayersFor(
+      portraitCheekShape,
+      portraitCheekShape,
+    ),
   });
   TestValidator.equals(
     "static generated model",
