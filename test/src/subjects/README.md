@@ -6,9 +6,9 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 
 ## Construction
 
-The active export uses `portraitAssembly.foundation: "anatomical"`. Read `configuration.ts`, `fittedModel.ts`, then `reference-anatomy/model.ts` for that path. The continuous head/ear/lid/nasal/oral surface and sparse shape targets are attributed CC0 MakeHuman/MPFB assets; see [their provenance](reference-anatomy/README.md). Catmull-Clark refinement and the neck attachment precede a subject-specific XY deformation. `surfaceFit.json` records 150 observed correspondences, fixed posterior anchors and fit receipts. The fit preserves the anatomical prior's depth and the source photograph's estimated projection. Its small correspondence residual does not establish likeness or recover unobserved anatomy. Globes remain rigid; coarse brows attach to the fitted skin, and separate crowns and coarse hair complete the assembly.
+The active `portraitAssembly` uses the measured component surface with a grouped upper dentition. Read `configuration.ts`, `model.ts`, `head.ts`, then `dentalComponent.ts`. The original image measurements own the facial identities; each eye/nose/mouth component supplies shared-skin attachments. The dental component supplies no skin cut and reads the final refined oral anchors after the mouth has constructed its opening. The mouth's legacy crowns are disabled in this assembly, giving dentition exactly one owner.
 
-The procedural component experiment below remains available as `measuredPortraitAssembly`. Its eye/nose/cheek skin controls apply to that assembly; they do not modify the active anatomical foundation. The anatomical foundation still needs a reusable component parameter interface before extraction into `human`.
+`measuredPortraitAssembly` retains the independent baseline with the original dental placement for controlled comparisons. The attributed CC0 [anatomical reference study](reference-anatomy/README.md) and recorded `fittedModel.ts` remain separate experiments. Their target fit does not establish likeness and is not the active export. No source photograph is projected onto either model as a texture.
 
 | Source | Responsibility |
 | --- | --- |
@@ -48,7 +48,7 @@ The corneal curvature radius of 7.8 mm, axial thickness of 0.55 mm and refractiv
 
 ## Grouped dentition
 
-The active fitted portrait uses three owners: `dentalCrown.ts` builds individual enamel profiles; `dentalRow.ts` composes those crowns along one local arch and gingival plane; `attachPortraitDentalRow` applies one rigid oral frame to the merged group. `portraitDentalRow` owns arch half-width/depth, arc-length gap and ordered crown profiles. `portraitDentalSocket` identifies three oral anchors, while `portraitDentalPlacement` moves the whole upper row by lift and recess in millimetres. A profile edit recomputes the group; no tooth independently samples a lip landmark. These authored settings require intermediate front/profile/clay renders and do not establish anatomical or visual acceptance.
+The active portrait uses three owners: `dentalCrown.ts` builds individual enamel profiles; `dentalRow.ts` composes those crowns along one local arch and gingival plane; `attachPortraitDentalRow` applies one rigid oral frame to the merged group. `dentalComponent.ts` supplies that frame from the actual refined mouth through the shared component protocol. `portraitDentalRow` owns arch half-width/depth, arc-length gap and ordered crown profiles. `portraitDentalSocket` identifies three oral anchors, while `portraitDentalPlacement` moves the whole upper row by lift and recess in millimetres. A profile edit recomputes the group; no tooth independently samples a lip landmark. These authored settings require intermediate front/profile/clay renders and do not establish anatomical or visual acceptance.
 
 ## Replace an anatomical component
 

@@ -5,20 +5,29 @@ import fs from "node:fs/promises";
 
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
+  portraitNasalRelief,
+  portraitOrbitalRelief,
+  portraitPerioralRelief,
+} from "../../src/subjects/generated-korean-girl-01/anatomy";
+import {
   portraitAssembly,
+  portraitCheekShape,
+  portraitCheekSockets,
   portraitDentalPlacement,
   portraitDentalRow,
   portraitDentalSocket,
+  portraitEyeShape,
+  portraitMouthShape,
+  portraitNoseShape,
 } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
 import { portraitNeckShape } from "../../src/subjects/generated-korean-girl-01/cranium";
+import { portraitEarShape } from "../../src/subjects/generated-korean-girl-01/ears";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
-import surfaceFit from "../../src/subjects/generated-korean-girl-01/surfaceFit.json";
 import {
   portraitDocument,
   portraitGltfExtensions,
 } from "../../src/subjects/portraitDocument";
-import { anatomicalStudyShape } from "../../src/subjects/reference-anatomy/model";
 
 async function main() {
   await fs.mkdir(".shots/face-experiment", { recursive: true });
@@ -54,9 +63,20 @@ async function main() {
     createHash("sha256").update(bytes).digest("hex");
   const configuration = JSON.stringify(
     {
-      foundation: portraitAssembly.foundation,
-      anatomicalShape: anatomicalStudyShape,
-      surfaceFit,
+      foundation: "measured",
+      rightEye: portraitEyeShape,
+      leftEye: portraitEyeShape,
+      nose: portraitNoseShape,
+      mouth: { ...portraitMouthShape, crowns: [] },
+      ears: portraitEarShape,
+      nasalRelief: portraitNasalRelief,
+      orbitalRelief: portraitOrbitalRelief,
+      perioralRelief: portraitPerioralRelief,
+      cheeks: {
+        right: portraitCheekShape,
+        left: portraitCheekShape,
+        sockets: portraitCheekSockets,
+      },
       hairProxy: true,
       dental: {
         row: portraitDentalRow,

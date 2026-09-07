@@ -12,6 +12,7 @@ import {
   createPortraitCheekLayer,
 } from "./cheeks";
 import { referenceControlNet } from "./controlNet";
+import { createPortraitDentalComponent } from "./dentalComponent";
 import type { IPortraitDentalRow } from "./dentalRow";
 import { portraitEyebrowProfile } from "./eyebrows";
 import {
@@ -320,8 +321,28 @@ export const measuredPortraitAssembly = {
   ],
 };
 
-/** Current target uses the fitted connected surface; legacy component knobs are separate. */
+/**
+ * Active measured-surface assembly with a grouped dental interior. The skin
+ * components own openings; the dental component attaches after shared skin
+ * refinement. Disable the mouth's legacy crowns so the row has exactly one
+ * owner. The separate anatomical-prior study is not the active target surface.
+ */
 export const portraitAssembly = {
-  foundation: "anatomical" as const,
-  subdivisionRounds: 1,
+  ...measuredPortraitAssembly,
+  components: [
+    ...portraitComponentsFor(
+      portraitEyeShape,
+      portraitEyeShape,
+      portraitNoseShape,
+      {
+        ...portraitMouthShape,
+        crowns: [],
+      },
+    ),
+    createPortraitDentalComponent(
+      portraitDentalSocket,
+      portraitDentalRow,
+      portraitDentalPlacement,
+    ),
+  ],
 };
