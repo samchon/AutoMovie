@@ -1901,11 +1901,9 @@ const bridgeIsClear = (
 /**
  * Cut ears off one counter-clockwise ring until three corners are left.
  *
- * The loop counts down from the ring's own size rather than testing for
- * failure, because the two-ears theorem gives a validated simple ring an ear at
- * every step: the polygon reaching here has been refused if it crosses itself,
- * touches another ring, or carries a hole outside the region, and a guard here
- * would be a second answer to a question already settled.
+ * Each cut retains every remaining boundary vertex, including a straight-edge
+ * subdivision. Input validation does not prove that a floating-point ear search
+ * succeeded; a failed search must refuse before an invalid index is emitted.
  */
 const earClip = (
   points: readonly IAutoMovieProfilePoint[],
@@ -1918,6 +1916,8 @@ const earClip = (
     const at = working.findIndex((_corner, index) =>
       isEar(points, working, index),
     );
+    if (at === -1)
+      throw new Error("polygon triangulation could not find a valid ear");
     triangles.push(
       working[(at + size - 1) % size]!,
       working[at]!,
@@ -1930,12 +1930,11 @@ const earClip = (
 };
 
 /**
- * Is the corner at `at` an ear: convex, with no reflex corner inside it?
+ * Is the corner at `at` an ear: convex, with no other vertex in or on it?
  *
- * Only reflex corners can block an ear, and only strictly inside ones, which is
- * what lets a bridged ring work: a bridge repeats one corner of each ring it
- * joins, and a repeated corner sits on the candidate triangle's boundary rather
- * than in its interior.
+ * A vertex on the proposed diagonal blocks the cut too: skipping it can leave
+ * only a zero-area chain for the remaining triangulation. A bridge repeats its
+ * endpoints by index; those copies are the triangle's own corners, not blockers.
  */
 const isEar = (
   points: readonly IAutoMovieProfilePoint[],
@@ -1949,37 +1948,29 @@ const isEar = (
   const corner = points[ring[at]!]!;
   const next = points[ring[nextAt]!]!;
   if (cross2(previous, corner, next) <= PLANAR_EPSILON) return false;
-  return ring.every((vertex, index) => {
-    if (index === previousAt || index === at || index === nextAt) return true;
+  return ring.every((vertex) => {
+    if (
+      vertex === ring[previousAt] ||
+      vertex === ring[at] ||
+      vertex === ring[nextAt]
+    )
+      return true;
     return (
-      isReflex(points, ring, index) === false ||
-      insideTriangle(previous, corner, next, points[vertex]!) === false
+      insideOrOnTriangle(previous, corner, next, points[vertex]!) === false
     );
   });
 };
 
-/** Does the ring turn clockwise at this corner, cutting into the region? */
-const isReflex = (
-  points: readonly IAutoMovieProfilePoint[],
-  ring: readonly number[],
-  at: number,
-): boolean =>
-  cross2(
-    points[ring[(at + ring.length - 1) % ring.length]!]!,
-    points[ring[at]!]!,
-    points[ring[(at + 1) % ring.length]!]!,
-  ) < -PLANAR_EPSILON;
-
-/** Is the point strictly inside the counter-clockwise triangle `a b c`? */
-const insideTriangle = (
+/** Is the point inside or on the counter-clockwise triangle `a b c`? */
+const insideOrOnTriangle = (
   a: IAutoMovieProfilePoint,
   b: IAutoMovieProfilePoint,
   c: IAutoMovieProfilePoint,
   point: IAutoMovieProfilePoint,
 ): boolean =>
-  cross2(a, b, point) > PLANAR_EPSILON &&
-  cross2(b, c, point) > PLANAR_EPSILON &&
-  cross2(c, a, point) > PLANAR_EPSILON;
+  cross2(a, b, point) >= -PLANAR_EPSILON &&
+  cross2(b, c, point) >= -PLANAR_EPSILON &&
+  cross2(c, a, point) >= -PLANAR_EPSILON;
 
 /** One loft section's rings in canonical declaration order. */
 const loftSectionRings = (
