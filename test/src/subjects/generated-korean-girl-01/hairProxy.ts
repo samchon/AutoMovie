@@ -1,3 +1,6 @@
+import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
+import type { IAutoMovieMesh } from "@automovie/interface";
+
 import {
   portraitNormals,
   portraitPart,
@@ -14,7 +17,11 @@ import {
  * All construction values are millimetres in the same head frame as the skin.
  * Clay inspection hides the hair finish so the underlying face stays reviewable.
  */
-export function buildPortraitHairProxy(scalp?: readonly number[][]) {
+export function buildPortraitHairProxy(
+  scalp?: readonly number[][],
+  /** Optional actual head mesh in engine metres, supplying the coarse fringe attachment. */
+  forehead?: IAutoMovieMesh,
+) {
   // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
   // cannot follow another foundation or fitted head. Uniform expansion retains
   // the authored haircut and ear cutout while enclosing every supplied scalp
@@ -85,6 +92,59 @@ export function buildPortraitHairProxy(scalp?: readonly number[][]) {
         ring[i],
       );
     previous = ring;
+  }
+  if (forehead !== undefined) {
+    const sample = createAutoMovieMeshDepthSampler(forehead, "z");
+    // Nine broad panels supply the reference's forehead fringe. These are hair
+    // clumps, not fibres: each tuple is [root X, tip X, tip Y, width] in mm.
+    // Their tips stay near/above the brow region and well inside the ear's X
+    // range. The cap, fringe and curtain share the same envelope and finish.
+    const panels = [
+      [-27, -34, 58, 6],
+      [-20, -26, 54, 5.5],
+      [-14, -19, 57, 6],
+      [-8, -12, 51, 5.5],
+      [-2, -5, 54, 5],
+      [4, 4, 58, 5.5],
+      [10, 12, 56, 5.5],
+      [17, 22, 61, 6],
+      [24, 32, 65, 6],
+    ];
+    for (const [rootX, tipX, tipY, width] of panels) {
+      const panel = portraitPatch(
+        (u, v) => {
+          const taper = 0.06 + 0.94 * (1 - v) ** 0.75;
+          const x = rootX + (tipX - rootX) * v * v + (u - 0.5) * width * taper;
+          const y = 108 + (tipY - 108) * v;
+          const hit = sample(x / 1000, y / 1000);
+          if (hit === null)
+            throw new Error(
+              "Fringe panels require a supporting forehead surface.",
+            );
+          const skinZ = hit.maximum * 1000;
+          if (!Number.isFinite(skinZ))
+            throw new Error(
+              "Fringe support exceeds its construction-millimetre range.",
+            );
+          // Extend the cap's virtual front ellipse below its cutout, then keep
+          // at least 1.2 mm of anterior clearance from the actual forehead. The
+          // small cross-panel arch gives each coarse clump volume without tubes.
+          const envelopeZ =
+            -32 + rz * Math.sqrt(1 - (x / rx) ** 2 - ((y - 30) / ry) ** 2);
+          const arch = 0.65 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
+          return portraitPoint(
+            x,
+            y,
+            Math.max(envelopeZ + 0.12, skinZ + 1.2) + arch,
+          );
+        },
+        6,
+        20,
+      );
+      const offset = cap.positions.length / 3;
+      cap.positions.push(...panel.positions);
+      cap.indices!.push(...panel.indices!.map((i) => i + offset));
+    }
   }
   cap.normals = portraitNormals(cap.positions, cap.indices!);
   return [portraitPart("hair-mass", cap, "hair")];
