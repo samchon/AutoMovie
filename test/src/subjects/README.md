@@ -24,7 +24,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
 | `generated-korean-girl-01/dentalCrown.ts` | Closed enamel lofts with cervical narrowing and independently shaped cutting edges |
 | `generated-korean-girl-01/anatomy.ts` | Subject-owned nasal, orbital and perioral tissue supports |
-| `generated-korean-girl-01/hairProxy.ts` | Coarse cap/curtain and forehead-attached fringe panels, keeping the photograph's right ear exposed |
+| `generated-korean-girl-01/hairProxy.ts` | Active coarse cap/curtain with the photograph's right ear exposed; optional fringe attachment remains a separate unaccepted study |
 | `generated-korean-girl-01/cheeks.ts` | Skin-bound malar, medial/buccal cheek and mouth-corner relief, with a separately controlled nasolabial groove |
 | `portraitEyeSphere.ts` | Socket-oriented spherical curvature and camera-ray contact fitting, independent of gaze |
 | `portraitCornea.ts` | Closed transparent optical shell with independently controlled curvature and axial thickness |

@@ -95,9 +95,7 @@ export function buildReferencePortrait(
     parts: [
       ...head.parts,
       ...buildPortraitEars(skin.mesh),
-      ...(assembly.hairProxy
-        ? buildPortraitHairProxy(undefined, skin.mesh)
-        : []),
+      ...(assembly.hairProxy ? buildPortraitHairProxy() : []),
     ],
     materials: [
       ...createPortraitMaterials(),
