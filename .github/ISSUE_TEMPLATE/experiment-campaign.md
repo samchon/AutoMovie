@@ -102,7 +102,7 @@ assignees: ""
 ## Durable records and launch audit
 
 - Generated production evidence:
-- Tracked baseline under `experiments/baselines/`:
+- Durable measurements preserved in this issue:
 - Durable conclusions carried by this issue:
 - Manual record-matrix result from `.agents/skills/experiment/records.md`:
 - Launch audit disposition (`ready`, `blocked`, or `not authorized`) and reason:

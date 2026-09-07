@@ -96,7 +96,7 @@ The independent cross-work reviewer closes the comparison by reading all product
 | Ownership | Two units contend over one file, one config key, or one scratch name | Every shared resource on the machine is prefixed by its owner, and [One Machine, Several Campaigns](steering.md#one-machine-several-campaigns) applies in full |
 | Gate | The reviewer is asked for a second clean pass and finds nothing twice | One invocation and one complete pass; use the verdict and escalation handoff above rather than demanding another clean pass |
 | Gate | A run stops because an early artifact was judged against a late gate | Each gate judges only what its own transition is for |
-| Record | The result dies with the sandbox | Operational status goes to the ignored `.wiki`, durable conclusions to the issue, and a baseline to the tracked [baseline directory](../../../experiments/baselines/README.md) in its fixed format before the sandbox is deleted |
+| Record | The result dies with the sandbox | Operational status goes to the ignored `.wiki`; preserve durable conclusions and measurements in the issue before deleting the sandbox |
 | Record | A number in prose disagrees with the artifact it came from | Re-count when you move a number into prose, and cite what you re-counted from |
 
 ## What Is Not Imported
