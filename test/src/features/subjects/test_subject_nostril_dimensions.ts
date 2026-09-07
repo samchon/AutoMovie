@@ -1,9 +1,5 @@
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitNoseShape,
-  portraitNoseSocket,
-} from "../../subjects/generated-korean-girl-01/configuration";
 import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
 import { resizePortraitNostrilRim } from "../../subjects/generated-korean-girl-01/nostrilRim";
 import { nclose, throwsError } from "../internal/predicates";
@@ -33,18 +29,30 @@ export const test_subject_nostril_dimensions = (): void => {
     viewRay: [0, 0, 1],
   };
   const socket = {
-    ...portraitNoseSocket,
+    midline: 0,
+    tipY: 0,
+    tipRadius: [1, 1] as [number, number],
+    alarOffset: 1,
+    alarY: 0,
+    alarRadius: 1,
     surface: [0, 1, 2, 3],
     nostrils: [[0, 1]],
   };
   const plan = createPortraitNoseComponent(socket, {
-    ...portraitNoseShape,
+    // This oracle is a planar square with neutral width and depth. Its setup
+    // must not inherit a photographed subject's evolving aperture dimensions.
+    widthScale: 1,
+    tipProjection: 0,
+    alarProjection: 0,
+    nostrilWidthScale: 1,
     nostrilHeightScale: 2,
+    nostrilRise: 0,
     nostrilTilt: 0,
     rimRoundness: 0,
     rimSupport: 0.1,
     cavityContraction: 0.6,
     cavityOffset: [0, 3, -5],
+    blendReach: 0,
   }).fit(host);
   TestValidator.predicate(
     "height preserves the aperture plane",

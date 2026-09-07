@@ -155,10 +155,16 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
   alarProjection: 0,
-  nostrilWidthScale: 1,
+  // The source-pose inspection sees substantially less dark aperture than the
+  // current measured cut exposes. Narrow within the opening's own plane and
+  // rotate the complete rim/lining down together. Eight degrees reduces the
+  // fitted normals' projected area without moving either opening's centroid;
+  // shared skin constraints propagate the same edit into the alar attachment.
+  // This is an authored exposure fit, not a clinical nostril orientation.
+  nostrilWidthScale: 0.88,
   nostrilHeightScale: 0.65,
   nostrilRise: 0,
-  nostrilTilt: 0,
+  nostrilTilt: 8,
   cavityContraction: 0.6,
   rimSupport: 0.1,
   // Blend the sparse cut boundary towards its own fitted ellipse. The shared

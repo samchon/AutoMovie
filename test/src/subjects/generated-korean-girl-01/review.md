@@ -1,10 +1,10 @@
 # Reference face inspection {#reference-face-inspection}
 
-**Unfinished; likeness remains unaccepted.** The actually inspected complete capture belongs to source `79ad4b88`, GLB `2e4ae6c831a5c82a3db71e9363c7477b12bf550e59fab1cf8530f93eac1bff1c`, profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. The source comparison, all nine views and all three clay views were opened. Blender 5.1.2 rendered the actual GLTF with 64 denoised Cycles CPU samples. New source may be newer than this frozen inspection.
+**Unfinished; likeness remains unaccepted.** The actually inspected complete capture belongs to source `999a8fc9`, GLB `2567261f720217d9bf4575f9f849d8a4eebf68d0de3e283deeb547dd39dd6d56`, profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. The source comparison, all nine views and all three clay views were opened. Blender 5.1.2 rendered the actual GLTF with 64 denoised Cycles CPU samples. New source may be newer than this frozen inspection.
 
 ## Front {#front}
 
-The medial cheek and smile transition are readable, but the face still looks synthetic. The narrowed upper band and compact lower roll remain visible. Nasal apertures are rounded but too prominent/dark. Teeth form one row and the neck is continuous.
+The medial cheek and smile transition are readable, but the face still looks synthetic. Small warm medial eye tissue now separates the sclera from the inner corner; the lower margin is subtle. The narrowed upper band and compact lower roll remain visible. Nasal apertures are rounded but too prominent/dark. Teeth form one row and the neck is continuous.
 
 ## Anatomical left oblique {#left-oblique}
 
@@ -40,7 +40,7 @@ The curtain, cap and simplified ear silhouette remain coherent coarse context. T
 
 ## Recorded source pose {#reference}
 
-The source still differs in eyes, nose, cheek/perioral form, lips, dental appearance and hair. The cheek profile changed but is not a likeness breakthrough. The original fringe is an obvious missing part of the rough hairstyle; adding broad attached clumps is appropriate context, while detailed grooming remains deferred. The photograph's right ear stays exposed.
+The source still differs in eyes, nose, cheek/perioral form, lips, dental appearance and hair. The new medial eye tissue supplies small local context without materially resolving the whole-face difference. The source fringe remains missing; the active coarse cap/curtain retains the photograph's exposed right ear. Detailed grooming remains deferred.
 
 ## Clay reference, front and oblique {#clay}
 
@@ -48,4 +48,4 @@ All three were opened. The changed cheek/perioral relief survives removal of col
 
 ## Component replacement {#component-replacement}
 
-The measured host composes eyes, nose, mouth and a grouped dental interior. The dental group reads actual refined oral anchors; its local enamel/arch settings are separate from rigid placement. Cheek envelopes expose an optional mirrored outward/up/forward offset from live skin anchors. Numerical checks cover group rigidity, attachment translation, mirrored offsets, ownership, neutral compatibility and refusals. Current alternate-component appearance and overall likeness remain unaccepted.
+The measured host composes eyes, nose, mouth and a grouped dental interior. The dental group reads actual refined oral anchors; its local enamel/arch settings are separate from rigid placement. Cheek envelopes expose an optional mirrored outward/up/forward offset from live skin anchors. Each eye owns optional medial tissue and lower-margin dimensions and supplies both with its final lid/globe frame. Numerical checks cover group rigidity, attachment translation, mirrored offsets, ownership, neutral compatibility and refusals. The ocular stage retains all 922 previous parts and adds only four tissue surfaces. Current alternate-component appearance and overall likeness remain unaccepted.
