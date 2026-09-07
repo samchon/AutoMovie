@@ -13,9 +13,16 @@ import { Vector3 } from "../math/Vector3";
  *
  * Influence is (1-r²)^3 inside the normalized ellipsoid and zero outside.
  * Nonfinite fields, nonpositive radii and local orientation reversal are refused.
+ * A positive Jacobian at each vertex does not guarantee that the straight
+ * triangles joining those samples remain valid. Each emitted triangle must
+ * retain nonzero area and agree with its original face orientation transported
+ * by the three vertex Jacobians. This is a tessellation check, not a global
+ * self-intersection test or proof of the field between its sampled vertices.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies composable spatial displacement and stretch fields to resident geometry without changing its triangle population.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves connectivity and shared normals through one analytic deformation, rejecting local folds instead of emitting inverted surface patches.
+ * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Refuses malformed resident triangles and deformation output whose area collapses or opposes its transported face orientation.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Checks the actual emitted triangle population as well as vertex derivatives, naming a triangle that cannot preserve an oriented surface.
  * @author Samchon
  */
 export function createAutoMovieMeshDeformer(
@@ -43,8 +50,32 @@ export function createAutoMovieMeshDeformer(
     return { center, radius, displacement, stretch };
   });
   return (mesh) => {
+    const indices =
+      mesh.indices ??
+      Array.from({ length: mesh.positions.length / 3 }, (_v, i) => i);
+    if (
+      mesh.positions.length % 3 !== 0 ||
+      !mesh.positions.every(Number.isFinite) ||
+      indices.length % 3 !== 0 ||
+      indices.some(
+        (index) =>
+          !Number.isInteger(index) ||
+          index < 0 ||
+          index >= mesh.positions.length / 3,
+      ) ||
+      (mesh.normals !== null &&
+        (mesh.normals.length !== mesh.positions.length ||
+          !mesh.normals.every(Number.isFinite)))
+    )
+      throw new Error(
+        "Mesh deformation needs finite complete positions, aligned normals and resident triangle indices.",
+      );
     const positions: number[] = [];
     const normals: number[] | null = mesh.normals === null ? null : [];
+    // Store the analytic cofactor matrix even when shading normals are absent.
+    // Topological orientation belongs to each source face's winding, not to
+    // smooth normals supplied by a caller or reconstructed from the result.
+    const cofactors: number[][] = [];
     for (let vertex = 0; vertex < mesh.positions.length; vertex += 3) {
       const point = mesh.positions.slice(vertex, vertex + 3);
       const target = [...point];
@@ -99,6 +130,7 @@ export function createAutoMovieMeshDeformer(
           "Mesh deformation must remain finite and preserve local surface orientation.",
         );
       positions.push(...target);
+      cofactors.push([bc.x, ca.x, ab.x, bc.y, ca.y, ab.y, bc.z, ca.z, ab.z]);
       if (normals !== null) {
         const normal = Vector3.normalize(
           Vector3.add(
@@ -112,6 +144,80 @@ export function createAutoMovieMeshDeformer(
         normals.push(normal.x, normal.y, normal.z);
       }
     }
+    assertDeformedTriangles(mesh.positions, positions, indices, cofactors);
     return { ...mesh, positions, normals };
   };
+}
+
+/**
+ * Compare a straight output face with the differential orientation of its
+ * source face. Cofactors are det(J) * inverse(J)-transpose, so their positive
+ * scalar does not alter orientation. Normalizing each transported face normal
+ * before summation gives every corner equal weight, independent of local area
+ * stretch. Comparing old and new area vectors directly would incorrectly
+ * refuse an orientation-preserving bend that turns the face through 90 degrees.
+ *
+ * Cross products have square-metre units; normalized orientation is unitless.
+ * No absolute area epsilon excludes a small but representable triangle. A
+ * collapsed or opposing sampled face needs finer tessellation or a different
+ * field, even when all of its endpoint Jacobians remain positive.
+ */
+function assertDeformedTriangles(
+  source: readonly number[],
+  target: readonly number[],
+  indices: readonly number[],
+  cofactors: readonly (readonly number[])[],
+): void {
+  const area = (
+    positions: readonly number[],
+    a: number,
+    b: number,
+    c: number,
+  ) => {
+    const ux = positions[3 * b] - positions[3 * a];
+    const uy = positions[3 * b + 1] - positions[3 * a + 1];
+    const uz = positions[3 * b + 2] - positions[3 * a + 2];
+    const vx = positions[3 * c] - positions[3 * a];
+    const vy = positions[3 * c + 1] - positions[3 * a + 1];
+    const vz = positions[3 * c + 2] - positions[3 * a + 2];
+    return [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+  };
+  for (let triangle = 0; triangle < indices.length; triangle += 3) {
+    const vertices = indices.slice(triangle, triangle + 3);
+    const before = area(source, vertices[0], vertices[1], vertices[2]);
+    const after = area(target, vertices[0], vertices[1], vertices[2]);
+    const beforeLength = Math.hypot(...before);
+    const afterLength = Math.hypot(...after);
+    if (
+      !Number.isFinite(beforeLength) ||
+      beforeLength === 0 ||
+      !Number.isFinite(afterLength) ||
+      afterLength === 0
+    )
+      throw new Error(
+        `Mesh deformation triangle ${triangle / 3} needs finite nonzero source and output area.`,
+      );
+    const expected = [0, 0, 0];
+    const normal = before.map((value) => value / beforeLength);
+    for (const vertex of vertices) {
+      const matrix = cofactors[vertex];
+      const transported = [0, 1, 2].map(
+        (row) =>
+          matrix[3 * row] * normal[0] +
+          matrix[3 * row + 1] * normal[1] +
+          matrix[3 * row + 2] * normal[2],
+      );
+      const length = Math.hypot(...transported);
+      for (let axis = 0; axis < 3; axis++)
+        expected[axis] += transported[axis] / length;
+    }
+    const agreement = after.reduce(
+      (sum, value, axis) => sum + (value / afterLength) * expected[axis],
+      0,
+    );
+    if (!(agreement > 0))
+      throw new Error(
+        `Mesh deformation triangle ${triangle / 3} opposes its transported surface orientation.`,
+      );
+  }
 }
