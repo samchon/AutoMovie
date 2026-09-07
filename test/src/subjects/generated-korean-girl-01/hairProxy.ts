@@ -14,18 +14,44 @@ import {
  * All construction values are millimetres in the same head frame as the skin.
  * Clay inspection hides the hair finish so the underlying face stays reviewable.
  */
-export function buildPortraitHairProxy() {
+export function buildPortraitHairProxy(scalp?: readonly number[][]) {
+  // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
+  // cannot follow another foundation or fitted head. Uniform expansion retains
+  // the authored haircut and ear cutout while enclosing every supplied scalp
+  // vertex above Y=20 mm. Three millimetres of radial margin cover coarse panel
+  // interpolation; this is context geometry, not a scalp/hair collision solver.
+  if (scalp?.some((p) => p.length !== 3 || !p.every(Number.isFinite)))
+    throw new Error(
+      "Hair attachment needs finite construction-millimetre XYZ points.",
+    );
+  let enclosure = 1;
+  for (const [x, y, z] of scalp ?? [])
+    if (y >= 20)
+      enclosure = Math.max(
+        enclosure,
+        Math.hypot(x / 82, (y - 30) / 118, (z + 32) / 101) + 3 / 82,
+      );
+  const rx = 82 * enclosure,
+    ry = 118 * enclosure,
+    rz = 101 * enclosure;
+  if (
+    ![rx, ry, rz].every(
+      (r) => Number.isFinite(r) && Number.isFinite(Math.fround(r / 1000)),
+    )
+  )
+    throw new Error("Hair attachment exceeds its representable metric range.");
+
   const cap = portraitPatch(
     (u, v) => {
       const azimuth = 2 * Math.PI * u;
       const front = Math.max(0, Math.cos(azimuth));
       const earClearance = 50 - 160 * ((azimuth - Math.PI / 2) / 0.8) ** 2;
       const boundaryY = Math.max(25, -70 + 152 * front ** 2, earClearance);
-      const polar = 0.002 + v * (Math.acos((boundaryY - 30) / 118) - 0.002);
+      const polar = 0.002 + v * (Math.acos((boundaryY - 30) / ry) - 0.002);
       return portraitPoint(
-        82 * Math.sin(polar) * Math.sin(azimuth),
-        30 + 118 * Math.cos(polar),
-        -32 + 101 * Math.sin(polar) * Math.cos(azimuth),
+        rx * Math.sin(polar) * Math.sin(azimuth),
+        30 + ry * Math.cos(polar),
+        -32 + rz * Math.sin(polar) * Math.cos(azimuth),
       );
     },
     48,
@@ -44,9 +70,9 @@ export function buildPortraitHairProxy() {
       const flow = 1.1 * Math.sin(18 * azimuth + v) * Math.sin(Math.PI * v);
       ring.push(cap.positions.length / 3);
       cap.positions.push(
-        root[0] + v * ((89 + flow) * Math.sin(azimuth) - root[0]),
+        root[0] + v * ((rx + 7 + flow) * Math.sin(azimuth) - root[0]),
         root[1] + v * (-160 + 5 * Math.cos(3 * azimuth) - root[1]),
-        root[2] + v * (-33 + (101 + flow) * Math.cos(azimuth) - root[2]),
+        root[2] + v * (-33 + (rz + flow) * Math.cos(azimuth) - root[2]),
       );
     }
     for (let i = 0; i < ring.length - 1; i++)

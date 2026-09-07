@@ -51,7 +51,19 @@ cross2 = np.cross(delta,e1)
 projected = np.column_stack([all_points[:,0]/(camera[2]-all_points[:,2])/(tan*aspect),(all_points[:,1]-camera[1])/(camera[2]-all_points[:,2])/tan])
 rotation = np.asarray(target["captureBasis"]["rotation"]).reshape(3,3)
 plane = rotation[:2,:2]
-origins, requested, fallbacks = [], [], []
+# Aperture landmarks describe anterior rims, not the first arbitrary skin hit
+# behind an empty opening. The frozen model has actual globe centres and a lip
+# material region; use those semantic owners to exclude posterior cavity walls.
+# A ray through an opening falls back to the closest projected anterior rim.
+# This is a recorded correspondence approximation, never an unlabelled ray hit.
+lip_triangles = np.concatenate([np.full(len(m["indices"])//3, p["material"] == "lips") for p,m in zip([p for p in source["parts"] if p["id"].startswith("anatomical-")],skin)])
+lip_vertices = np.concatenate([p["geometry"]["mesh"]["positions"] for p in source["parts"] if p["id"] == "anatomical-lips"]).reshape(-1,3)*1000
+optical_centres = []
+for side in range(2):
+    globe = next(p["geometry"]["mesh"] for p in source["parts"] if p["id"] == "study-globe-"+str(side))
+    globe_points = np.asarray(globe["positions"]).reshape(-1,3)*1000
+    optical_centres.append((globe_points.min(axis=0)+globe_points.max(axis=0))/2)
+origins, requested, fallbacks, source_pixel_errors = [], [], [], []
 for identity in identities:
     landmark = observed[identity]
     screen = np.asarray([2*landmark["x"]-1,1-2*landmark["y"]])
@@ -64,13 +76,24 @@ for identity in identities:
     v = (cross2@ray)*inverse
     distance = np.einsum("ij,ij->i",e2,cross2)*inverse
     valid &= (u>=0)&(v>=0)&(u+v<=1)&(distance>0)
+    candidates = all_points[all_points[:,2]>=0]
+    if identity in mouth:
+        valid &= lip_triangles
+        candidates = lip_vertices
+    elif identity in eyes:
+        eye = optical_centres[0 if identity in eyes[:16] else 1]
+        # A lid rim lies on the globe's anterior hemisphere. Skin behind its
+        # equatorial plane is an internal socket, even when the ray hits it.
+        valid &= camera[2] + ray[2]*distance >= eye[2]
+        candidates = all_points[(all_points[:,2]>=eye[2]) & (np.abs(all_points[:,0]-eye[0])<24) & (np.abs(all_points[:,1]-eye[1])<24)]
     if np.any(valid):
         point = camera+ray*np.min(distance[valid])
     else:
-        error = np.sum((projected-screen)**2,axis=1)
-        error[all_points[:,2]<0] = np.inf
-        point = all_points[np.argmin(error)]
+        candidate_screen = np.column_stack([candidates[:,0]/(camera[2]-candidates[:,2])/(tan*aspect),(candidates[:,1]-camera[1])/(camera[2]-candidates[:,2])/tan])
+        point = candidates[np.argmin(np.sum((candidate_screen-screen)**2,axis=1))]
         fallbacks.append(identity)
+    selected_screen = np.asarray([point[0]/(camera[2]-point[2])/(tan*aspect),(point[1]-camera[1])/(camera[2]-point[2])/tan])
+    source_pixel_errors.append(float(np.linalg.norm((selected_screen-screen)*np.asarray([profile["image"]["width"],profile["image"]["height"]])/2)))
     desired = np.asarray(target["positions"][identity])
     # R[:2] describes the photograph's two projection coordinates. Fixing Z to
     # the prior requires solving both X/Y together; simply replacing target Z
@@ -110,7 +133,7 @@ output = {
     "scale":100,"centres":centres.tolist(),"weights":weights.tolist(),"affine":affine.tolist(),
     "gazeOrigins":[target["positions"][468],target["positions"][473]],"viewRay":target["viewRay"],
     "landmarks":{str(i):p.tolist() for i,p in zip(identities,mapped)},
-    "basis":{"sourceModelSha256":digest(source_bytes),"sourceGltfSha256":receipt["artifact"]["gltf"],"sourceImageSha256":measurement["imageSha256"],"targetInputSha256":target["inputSha256"],"smoothing":smoothing,"depth":"anatomical prior preserved","rayFallbacks":fallbacks,"xyResidualMmRms":np.sqrt(np.mean(residual**2,axis=0)).tolist()},
+    "basis":{"sourceModelSha256":digest(source_bytes),"sourceGltfSha256":receipt["artifact"]["gltf"],"sourceImageSha256":measurement["imageSha256"],"targetInputSha256":target["inputSha256"],"smoothing":smoothing,"depth":"anatomical prior preserved","rayFallbacks":fallbacks,"sourceCorrespondencePixelError":{"maximum":max(source_pixel_errors),"rms":float(np.sqrt(np.mean(np.square(source_pixel_errors))))},"correspondencePolicy":"anterior optical hemisphere for lids; lip material for oral rims; nearest projected semantic surface on an aperture miss","xyResidualMmRms":np.sqrt(np.mean(residual**2,axis=0)).tolist()},
 }
 destination = ROOT / "test/src/subjects/generated-korean-girl-01/surfaceFit.json"
 destination.write_text(json.dumps(output,separators=(",",":")),encoding="utf8")

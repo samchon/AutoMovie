@@ -75,7 +75,7 @@ export function buildFittedReferencePortrait(
       portraitMouthSocket,
       portraitMouthShape,
     ).filter((p) => p.id.startsWith("tooth-")),
-    ...buildPortraitHairProxy(),
+    ...buildPortraitHairProxy(positions.slice(0, offset)),
   );
   model.id = "generated-korean-girl-01";
   model.name = "Anatomical reference reconstruction; likeness under review";

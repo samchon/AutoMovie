@@ -17,6 +17,10 @@ import type { portraitReview } from "./review";
  * Construction coordinates
  * are millimetres, +Y is up and +Z points out of the face. Anatomical left is +X.
  *
+ * The anatomical foundation delegates to the connected prior and recorded fit;
+ * the procedural foundation uses the replaceable component protocol below.
+ * Their settings are deliberately separate, so a procedural nose parameter
+ * cannot silently become an inactive control on the anatomical foundation.
  * The control net owns measurement provenance. Replaceable components supply
  * exact skin attachments; the host adapts surrounding skin and refines their
  * common surface before each component finishes against its actual opening.

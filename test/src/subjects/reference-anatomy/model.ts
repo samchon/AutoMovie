@@ -73,9 +73,9 @@ export const anatomicalStudyShape: IAnatomicalStudyShape = {
  * the same weighted targets before one common normalization. No body below the
  * recorded crop, helper cubes or MPFB program logic enter the rendered model.
  *
- * This is an explicitly labelled reference study. The supplied photograph has
- * not been fitted to this surface. Primitive optical parts only make the eye
- * openings readable while the continuous surface is evaluated.
+ * Without a fit this remains the labelled anatomical prior. A supplied recorded
+ * residual fits that same surface to image observations; the residual's source
+ * and inferred depth retain separate provenance. Optical parts remain rigid.
  */
 export function buildAnatomicalStudy(
   input: IAnatomicalStudyShape,
@@ -134,11 +134,12 @@ export function buildAnatomicalStudy(
     throw new Error(
       "Anatomical study coordinates exceed their representable range.",
     );
-  // Refine the original quads before triangulation. Original material labels
-  // inherit through the same subdivision, so the lip border cannot split skin.
+  // Keep the original quad cage until the neck has been attached. Refining skin
+  // first would leave the newly introduced neck rings outside the shared smooth
+  // surface and retain the crop's stair-step boundary in the visible result.
   const smooth = subdividePortraitQuads(
     { positions: transformed, faces: basis.faces, groups: basis.faceGroups },
-    shape.subdivisionRounds ?? 1,
+    0,
   );
   const cage = {
     positions: smooth.positions,
@@ -182,6 +183,7 @@ export function buildAnatomicalStudy(
     back: s.back * proportion,
     centre: shape.eyeDepth + (s.centre - 37) * proportion,
   });
+  const originalTriangleIndexCount = cage.indices.length;
   const crop = appendPortraitNeck(
     cage,
     { boundary, exterior },
@@ -192,6 +194,32 @@ export function buildAnatomicalStudy(
     },
   );
   assertPortraitSkinTopology(cage, [crop]);
+  // The neck writer emits two triangles [a,b,c], [b,d,c] per ring cell.
+  // Recover that exact quad [a,b,d,c], then refine head, lip labels and neck
+  // together. Shared edge points give the attachment one continuous limit
+  // surface; normals alone cannot smooth a geometric fold at the crop.
+  const joinedFaces = smooth.faces.map((face) => [...face]);
+  const joinedGroups = [...smooth.groups];
+  for (let i = originalTriangleIndexCount; i < cage.indices.length; i += 6) {
+    joinedFaces.push([
+      cage.indices[i],
+      cage.indices[i + 1],
+      cage.indices[i + 4],
+      cage.indices[i + 2],
+    ]);
+    joinedGroups.push(0);
+  }
+  const refined = subdividePortraitQuads(
+    { positions: cage.positions, faces: joinedFaces, groups: joinedGroups },
+    shape.subdivisionRounds ?? 1,
+  );
+  cage.positions = refined.positions;
+  cage.indices = [];
+  cage.groups = [];
+  refined.faces.forEach((face, i) => {
+    cage.indices.push(face[0], face[1], face[2], face[0], face[2], face[3]);
+    cage.groups.push(refined.groups[i], refined.groups[i]);
+  });
   // Warp shared skin before material separation. Optical centres receive the
   // residual once; their globe surfaces stay rigid and keep their own radius.
   if (fit !== undefined) {
