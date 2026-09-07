@@ -21,6 +21,7 @@ export const test_subject_anatomical_basis = (): void => {
     eyeDistance: 64,
     eyeHeight: 25,
     eyeDepth: 37,
+    subdivisionRounds: 0,
   };
   const model = buildAnatomicalStudy(input);
   for (let side = 0; side < 2; side++) {
@@ -83,8 +84,8 @@ export const test_subject_anatomical_basis = (): void => {
     { eyeRadius: 32 },
     { irisRadius: 0 },
     { pupilRadius: 0 },
-    { irisRadius: 12.2 },
-    { pupilRadius: 5.7 },
+    { irisRadius: 16 },
+    { pupilRadius: 6.4 },
     { eyeHeight: NaN },
     { eyeDepth: Infinity },
   ])

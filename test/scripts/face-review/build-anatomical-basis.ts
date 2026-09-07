@@ -3,14 +3,16 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 
+import { chromium } from "../../node_modules/playwright";
+
 /**
  * Freeze only the head/upper-neck portion of the pinned CC0 MakeHuman asset and
  * the selected CC0 shape deltas. No MPFB program code or body surface below the
  * crop is copied. Runtime construction consumes the resulting resident JSON;
  * this offline generator alone requires the reference checkout.
  *
- * Source OBJ faces retain their original order for the published lip UV-region
- * membership. Eye joint means travel with the same morphs as the skin. Keeping
+ * Source OBJ faces retain their global texture coordinates for the published
+ * lip mask. Eye joint means travel with the same morphs as the skin. Keeping
  * these attachments prevents a phenotype edit from leaving the eyes behind.
  */
 async function main(): Promise<void> {
@@ -37,23 +39,78 @@ async function main(): Promise<void> {
   const membership = JSON.parse(
     (await read("mesh_metadata/basemesh_vertex_groups.json")).toString(),
   );
-  const lips = JSON.parse(
-    gunzipSync(await read("uv_layers/lips_solid.json.gz")).toString(),
-  );
+  const lipMask = await read("textures/mpfb_lips.jpg");
   const positions: number[][] = [],
-    faces: { vertices: number[]; group: number }[] = [];
-  let group = "",
-    ordinal = 0;
+    uvs: number[][] = [],
+    faces: { vertices: number[]; uv: number[]; group: number }[] = [];
+  let group = "";
   for (const line of source.split(/\r?\n/)) {
     const [kind, ...values] = line.trim().split(/\s+/);
     if (kind === "v") positions.push(values.map(Number));
+    if (kind === "vt") uvs.push(values.map(Number));
     if (kind === "g") group = values.join(" ");
     if (kind === "f") {
       const vertices = values.map((v) => Number(v.split("/")[0]) - 1);
-      if (group === "body" && vertices.every((i) => positions[i][1] >= 6.2))
-        faces.push({ vertices, group: lips[ordinal] === undefined ? 0 : 1 });
-      ordinal++;
+      if (group === "body" && vertices.every((i) => positions[i][1] >= 6.2)) {
+        const coords = values.map((v) => uvs[Number(v.split("/")[1]) - 1]);
+        faces.push({
+          vertices,
+          uv: [0, 1].map(
+            (a) => coords.reduce((sum, p) => sum + p[a], 0) / coords.length,
+          ),
+          group: 0,
+        });
+      }
     }
+  }
+  // Decode the CC0 value mask, not a photograph. OBJ UV origin is at the bottom;
+  // canvas pixels begin at the top. The decoder version belongs to provenance.
+  const browser = await chromium.launch({
+    channel: "chromium",
+    headless: true,
+  });
+  const maskDecoder = browser.version();
+  try {
+    const page = await browser.newPage();
+    const mask = await page.evaluate(
+      async ({ uri, points }) => {
+        const image = new Image();
+        image.src = uri;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext("2d", { willReadFrequently: true })!;
+        context.drawImage(image, 0, 0);
+        const data = context.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        ).data;
+        return points.map(([u, v]) => {
+          const x = Math.max(
+              0,
+              Math.min(canvas.width - 1, Math.round(u * (canvas.width - 1))),
+            ),
+            y = Math.max(
+              0,
+              Math.min(
+                canvas.height - 1,
+                Math.round((1 - v) * (canvas.height - 1)),
+              ),
+            );
+          return data[4 * (y * canvas.width + x)] / 255;
+        });
+      },
+      {
+        uri: "data:image/jpeg;base64," + lipMask.toString("base64"),
+        points: faces.map((f) => f.uv),
+      },
+    );
+    faces.forEach((face, i) => (face.group = mask[i] >= 0.5 ? 1 : 0));
+  } finally {
+    await browser.close();
   }
   const retained = [...new Set(faces.flatMap((f) => f.vertices))].sort(
     (a, b) => a - b,
@@ -111,11 +168,14 @@ async function main(): Promise<void> {
         license: "CC0-1.0",
         sourceUnit: "MakeHuman OBJ unit",
         minimumOriginalY: 6.2,
+        maskDecoder,
         inputs,
       },
       positions: retained.map((i) => positions[i]),
       indices,
       groups,
+      faces: faces.map((f) => f.vertices.map((id) => remap.get(id)!)),
+      faceGroups: faces.map((f) => f.group),
       eyes: eyeIds.map((ids) => mean(ids, positions)),
       morphs,
     }),

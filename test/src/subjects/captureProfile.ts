@@ -26,10 +26,11 @@ export const portraitCaptureProfile = {
     { name: "rear-oblique", yaw: -135 },
   ],
   cycles: {
-    // Preserve subpixel strands during geometry inspection. Sampling noise is
-    // visible evidence; denoising must not erase a feature being judged.
-    denoising: false,
-    samples: 256,
+    // Current review judges broad facial form. Brows and hair are coarse context,
+    // so filtering their subpixel detail is acceptable at this inspection stage.
+    // Fine-strand review requires a separately declared unfiltered capture.
+    denoising: true,
+    samples: 64,
     exposure: -1.5,
     world: { color: [0.7, 0.75, 0.8], strength: 0.35 },
     background: { color: [0.035, 0.042, 0.055], strength: 0.7 },

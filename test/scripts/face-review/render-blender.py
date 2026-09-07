@@ -27,6 +27,10 @@ with open(os.path.join(OUT, "capture-profile.json")) as file:
     profile = json.load(file)
 with open(os.path.join(OUT, "artifact-basis.json")) as file:
     artifact = json.load(file)
+selected = set(arguments[2].split(",")) if len(arguments) > 2 else None
+available = {"calibration", "reference", "reference-clay", "clay", "clay-oblique"} | {view["name"] for view in profile["views"]}
+if selected is not None and (not selected or not selected <= available):
+    raise ValueError("Unknown measurement-frame selection.")
 
 def digest(filename):
     with open(filename, "rb") as file:
@@ -102,6 +106,10 @@ camera_data.lens = 24 / (2 * math.tan(math.radians(profile["camera"]["verticalFo
 receipts = []
 
 def render(name, observation):
+    # A numerical correspondence measurement can request one exact view. Its
+    # receipt remains partial and cannot pass the complete-preview verifier.
+    if selected is not None and name not in selected:
+        return
     filename = os.path.join(OUT, name + ".png")
     scene.render.filepath = filename
     bpy.ops.render.render(write_still=True)

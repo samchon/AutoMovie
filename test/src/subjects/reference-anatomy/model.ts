@@ -1,6 +1,11 @@
 import type { IAutoMovieModel } from "@automovie/interface";
 
+import {
+  appendPortraitNeck,
+  portraitNeckShape,
+} from "../generated-korean-girl-01/cranium";
 import { createPortraitMaterials } from "../generated-korean-girl-01/materials";
+import { portraitCutBoundary } from "../generated-korean-girl-01/nose";
 import {
   portraitNormals,
   portraitPart,
@@ -8,6 +13,8 @@ import {
   portraitPoint,
   portraitRegion,
 } from "../geometry";
+import { assertPortraitSkinTopology } from "../portraitSkinTopology";
+import { subdividePortraitQuads } from "../subdividePortraitQuads";
 import basis from "./mesh.json";
 
 /**
@@ -35,6 +42,8 @@ export interface IAnatomicalStudyShape {
   irisRadius: number;
   /** Positive pupil radius, smaller than the iris. */
   pupilRadius: number;
+  /** Surface refinement, separate from anatomy; integer zero through three. */
+  subdivisionRounds?: number;
 }
 
 /** Current unfitted anatomical prior; its values do not claim the target likeness. */
@@ -45,8 +54,11 @@ export const anatomicalStudyShape: IAnatomicalStudyShape = {
   eyeDistance: 64,
   eyeHeight: 25,
   eyeDepth: 37,
-  eyeRadius: 12.2,
-  irisRadius: 5.7,
+  // The source eye-helper envelope at this normalized separation has a
+  // transverse radius about 16.7 mm. This 16 mm globe is an authored fit to that
+  // envelope; it is not a physiological radius inferred from the photograph.
+  eyeRadius: 16,
+  irisRadius: 6.4,
   pupilRadius: 2.55,
 };
 
@@ -116,15 +128,73 @@ export function buildAnatomicalStudy(
     throw new Error(
       "Anatomical study coordinates exceed their representable range.",
     );
-  const packed = transformed.flat(),
-    normals = portraitNormals(packed, basis.indices);
+  // Refine the original quads before triangulation. Original material labels
+  // inherit through the same subdivision, so the lip border cannot split skin.
+  const smooth = subdividePortraitQuads(
+    { positions: transformed, faces: basis.faces, groups: basis.faceGroups },
+    shape.subdivisionRounds ?? 1,
+  );
+  const cage = {
+    positions: smooth.positions,
+    indices: [] as number[],
+    groups: [] as number[],
+  };
+  smooth.faces.forEach((face, i) => {
+    cage.indices.push(face[0], face[1], face[2], face[0], face[2], face[3]);
+    cage.groups.push(smooth.groups[i], smooth.groups[i]);
+  });
+  // The native crop is one open ring. Reverse its existing boundary direction
+  // before adding neck faces, giving every shared edge opposite incident winding.
+  const boundary = portraitCutBoundary(
+    Array.from({ length: cage.indices.length / 3 }, (_v, i) =>
+      cage.indices.slice(i * 3, i * 3 + 3),
+    ),
+  )
+    .map((edge) => edge.a)
+    .reverse();
+  // An original crop corner may have only boundary neighbours. Incident face
+  // centres still define its inward support, including an unrefined single-face
+  // corner; averaging only non-boundary vertices would be undefined there.
+  const sums = cage.positions.map(() => [0, 0, 0]),
+    counts = new Uint32Array(cage.positions.length);
+  for (let i = 0; i < cage.indices.length; i += 3) {
+    const ids = cage.indices.slice(i, i + 3),
+      centre = [0, 1, 2].map((a) =>
+        ids.reduce((sum, id) => sum + cage.positions[id][a] / 3, 0),
+      );
+    for (const id of ids) {
+      counts[id]++;
+      for (let a = 0; a < 3; a++) sums[id][a] += centre[a];
+    }
+  }
+  const exterior = boundary.map((id) => sums[id].map((v) => v / counts[id]));
+  const proportion = shape.eyeDistance / 64;
+  const section = (s: typeof portraitNeckShape.upper) => ({
+    y: shape.eyeHeight + (s.y - 25) * proportion,
+    width: s.width * proportion,
+    front: s.front * proportion,
+    back: s.back * proportion,
+    centre: shape.eyeDepth + (s.centre - 37) * proportion,
+  });
+  const crop = appendPortraitNeck(
+    cage,
+    { boundary, exterior },
+    {
+      upper: section(portraitNeckShape.upper),
+      lower: section(portraitNeckShape.lower),
+      crop: section(portraitNeckShape.crop),
+    },
+  );
+  assertPortraitSkinTopology(cage, [crop]);
+  const packed = cage.positions.flat(),
+    normals = portraitNormals(packed, cage.indices);
   const parts = [];
   for (const [group, material] of [
     [0, "skin"],
     [1, "lips"],
   ] as const) {
-    const indices = basis.indices.filter(
-      (_v, i) => basis.groups[Math.floor(i / 3)] === group,
+    const indices = cage.indices.filter(
+      (_v, i) => cage.groups[Math.floor(i / 3)] === group,
     );
     parts.push(
       portraitPart(
