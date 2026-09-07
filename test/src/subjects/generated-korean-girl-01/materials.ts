@@ -24,9 +24,11 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   };
   material("skin", [0.63, 0.41, 0.285], 0.63);
   material("lips", [0.48, 0.125, 0.145], 0.46);
-  // Low ocular roughness supplies a wet specular response to the actual scene
-  // lights. Pigment colours carry no painted catchlights or baked illumination.
-  material("sclera", [0.66, 0.64, 0.58], 0.08);
+  // The sclera has a broad surface response. The transparent eye-owned cornea
+  // carries the sharp highlight over the iris; repeating a mirror-like lobe on
+  // opaque pigment beneath it would add a second unrelated reflective surface.
+  // These are authored PBR approximations, not measured tissue reflectance.
+  material("sclera", [0.66, 0.64, 0.58], 0.22);
   // Radial pigment bands vary a dark brown iris without changing its outline.
   // The geometry selects these colours deterministically; no reference pixels
   // are projected onto the eye and no lighting is baked into the pigment.
@@ -35,10 +37,12 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
     material(
       `iris-${i}`,
       [0.009 + 0.05 * tone, 0.006 + 0.031 * tone, 0.004 + 0.012 * tone],
-      0.08,
+      0.65,
     );
   }
-  material("pupil", [0.0025, 0.002, 0.0015], 0.08);
+  // The pupil patch approximates the dark opening into the eye. Its opaque
+  // stand-in must not produce a sharp painted-looking secondary catchlight.
+  material("pupil", [0.0025, 0.002, 0.0015], 1);
   material("mouth-interior", [0.035, 0.006, 0.011], 0.85);
   material("teeth", [0.74, 0.69, 0.57], 0.3);
   material("brows", [0.023, 0.016, 0.013], 0.76);
