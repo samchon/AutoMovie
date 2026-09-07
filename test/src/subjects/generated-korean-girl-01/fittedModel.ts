@@ -1,19 +1,21 @@
 import { mergeAutoMovieMeshes } from "@automovie/engine";
 import type { IAutoMovieModel } from "@automovie/interface";
 
+import { portraitPart, portraitPoint } from "../geometry";
 import {
   anatomicalStudyShape,
   buildAnatomicalStudy,
 } from "../reference-anatomy/model";
 import {
+  portraitDentalPlacement,
+  portraitDentalRow,
+  portraitDentalSocket,
   portraitEyeSockets,
-  portraitMouthShape,
-  portraitMouthSocket,
 } from "./configuration";
 import { referenceControlNet } from "./controlNet";
+import { attachPortraitDentalRow, buildPortraitDentalRow } from "./dentalRow";
 import { buildPortraitEyebrow, portraitEyebrowProfile } from "./eyebrows";
 import { buildPortraitHairProxy } from "./hairProxy";
-import { buildPortraitMouth } from "./mouth";
 import fit from "./surfaceFit.json";
 
 /**
@@ -69,12 +71,20 @@ export function buildFittedReferencePortrait(
         { ...portraitEyebrowProfile, radius: 0.06, radiusStep: 0.01 },
       ),
     );
+  const oralPoint = (id: number) =>
+    portraitPoint(landmarks[id][0], landmarks[id][1], landmarks[id][2]);
   model.parts.push(
-    ...buildPortraitMouth(
-      landmarks,
-      portraitMouthSocket,
-      portraitMouthShape,
-    ).filter((p) => p.id.startsWith("tooth-")),
+    portraitPart(
+      "tooth-upper-arch",
+      attachPortraitDentalRow(buildPortraitDentalRow(portraitDentalRow), {
+        rightCorner: oralPoint(portraitDentalSocket.rightCorner),
+        leftCorner: oralPoint(portraitDentalSocket.leftCorner),
+        upperLipMiddle: oralPoint(portraitDentalSocket.upperLipMiddle),
+        up: portraitPoint(0, 1, 0),
+        ...portraitDentalPlacement,
+      }),
+      "teeth",
+    ),
     ...buildPortraitHairProxy(positions.slice(0, offset)),
   );
   model.id = "generated-korean-girl-01";

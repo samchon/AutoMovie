@@ -12,6 +12,11 @@ import { buildFittedReferencePortrait } from "../../subjects/generated-korean-gi
 export const test_subject_fitted_portrait = (): void => {
   const model = buildFittedReferencePortrait(0),
     materials = new Set(model.materials.map((m) => m.id));
+  TestValidator.equals(
+    "one grouped upper dentition",
+    model.parts.filter((p) => p.material === "teeth").map((p) => p.id),
+    ["tooth-upper-arch"],
+  );
   TestValidator.predicate(
     "complete target attachments",
     model.parts.some((p) => p.id.startsWith("tooth-")) &&

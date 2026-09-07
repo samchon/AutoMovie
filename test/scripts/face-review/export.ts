@@ -6,7 +6,9 @@ import fs from "node:fs/promises";
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
   portraitAssembly,
-  portraitMouthShape,
+  portraitDentalPlacement,
+  portraitDentalRow,
+  portraitDentalSocket,
 } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
 import { portraitNeckShape } from "../../src/subjects/generated-korean-girl-01/cranium";
@@ -57,12 +59,9 @@ async function main() {
       surfaceFit,
       hairProxy: true,
       dental: {
-        dentalOffset: portraitMouthShape.dentalOffset,
-        dentalRecess: portraitMouthShape.dentalRecess,
-        dentalDrop: portraitMouthShape.dentalDrop,
-        dentalDepth: portraitMouthShape.dentalDepth,
-        toothGap: portraitMouthShape.toothGap,
-        crowns: portraitMouthShape.crowns,
+        row: portraitDentalRow,
+        socket: portraitDentalSocket,
+        placement: portraitDentalPlacement,
       },
       neck: portraitNeckShape,
       subdivisionRounds: portraitAssembly.subdivisionRounds,

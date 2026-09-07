@@ -12,6 +12,7 @@ import {
   createPortraitCheekLayer,
 } from "./cheeks";
 import { referenceControlNet } from "./controlNet";
+import type { IPortraitDentalRow } from "./dentalRow";
 import { portraitEyebrowProfile } from "./eyebrows";
 import {
   type IPortraitEyeShape,
@@ -201,6 +202,38 @@ export const portraitMouthShape: IPortraitMouthShape = {
     { width: 4.4, height: 8.5 },
   ],
 };
+
+/**
+ * The upper row is one group: local arch dimensions own every tooth placement.
+ * The authored enamel profiles are shared with the procedural study; the active
+ * row has its own arch and attachment controls. Changing a crown recomputes
+ * arc-distance centres for the complete group without sampling the lip shape.
+ */
+export const portraitDentalRow: IPortraitDentalRow = {
+  halfWidth: 24,
+  depth: 18,
+  gap: 0.08,
+  crowns: portraitMouthShape.crowns.map((crown) => ({
+    ...crown,
+    depth: 1.5,
+    cervicalWidth: crown.cervicalWidth ?? 0.78,
+    edgeRise: crown.edgeRise ?? 0.035 * crown.height,
+  })),
+};
+
+/** Central upper lip and corner identities establish one oral frame. */
+export const portraitDentalSocket = {
+  rightCorner: 78,
+  leftCorner: 308,
+  upperLipMiddle: 13,
+};
+
+/**
+ * One group placement in mm: positive lift hides gingival ends behind the upper
+ * lip; positive recess moves the entire arch posteriorly. These are authored
+ * estimates and require both profile views after every placement change.
+ */
+export const portraitDentalPlacement = { lift: 1.5, recess: 6 };
 
 /**
  * Retained skin identities for the paired cheek masses and nasolabial paths.

@@ -46,6 +46,10 @@ The image supplies image-plane landmarks. Depth, rear skull and occluded anatomy
 
 The corneal curvature radius of 7.8 mm, axial thickness of 0.55 mm and refractive index of 1.376 are schematic rendering assumptions from the [eye-model table](https://pmc.ncbi.nlm.nih.gov/articles/PMC4646557/), not measurements of this subject. The fitted globe and clipped corneal shell approximate the visible eye; optical parameters do not establish physiological accuracy.
 
+## Grouped dentition
+
+The active fitted portrait uses three owners: `dentalCrown.ts` builds individual enamel profiles; `dentalRow.ts` composes those crowns along one local arch and gingival plane; `attachPortraitDentalRow` applies one rigid oral frame to the merged group. `portraitDentalRow` owns arch half-width/depth, arc-length gap and ordered crown profiles. `portraitDentalSocket` identifies three oral anchors, while `portraitDentalPlacement` moves the whole upper row by lift and recess in millimetres. A profile edit recomputes the group; no tooth independently samples a lip landmark. These authored settings require intermediate front/profile/clay renders and do not establish anatomical or visual acceptance.
+
 ## Replace an anatomical component
 
 The face assembler depends on `IPortraitComponent`, with one instance for each eye, one for the nose and one for the mouth. The subject's `configuration.ts` supplies socket identities and numerical dimensions. Component implementations receive those bindings instead of embedding landmark IDs.
