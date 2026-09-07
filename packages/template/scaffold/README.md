@@ -55,7 +55,7 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `verify` | `npm run verify` | Reopen and verify final generated, render, and delivery evidence; follow [Production review](.agents/skills/review-verification/review.md). |
 | `viewer` | `npm run viewer` | Keep the compiled viewer open while source changes recompile and reload; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
-| `viewer:preview` | `npm run viewer:preview` | Inspect current source through a production-owned preview factory; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
+| `viewer:preview` | `npm run viewer:preview` | Inspect ttsc-emitted current source through a production-owned preview factory; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
 
 The table names entry points, not completion evidence. Read the linked procedure for accepted arguments, applicability, refusals, and the observation required before treating an execution as evidence.
 

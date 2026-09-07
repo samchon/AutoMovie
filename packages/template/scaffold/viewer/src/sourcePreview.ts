@@ -7,6 +7,7 @@ import type * as THREE from "three";
 export interface IAutoMovieSourcePreview {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
+  /** Authored aim point, kept in front of the eye during first-person flight. */
   target?: THREE.Vector3;
   /** Apply production-owned render settings synchronously before the first frame. */
   configureRenderer?: (renderer: THREE.WebGLRenderer) => void;

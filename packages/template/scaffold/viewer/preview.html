@@ -16,6 +16,7 @@
       }
       #view {
         display: block;
+        visibility: hidden;
         width: 100%;
         height: 100%;
       }
@@ -59,16 +60,17 @@
     </style>
   </head>
   <body>
-    <canvas id="view"></canvas>
+    <canvas id="view" tabindex="0"></canvas>
     <div id="notice">
-      SOURCE PREVIEW. Working source without type checking or production
-      compilation. Not review or delivery evidence.
+      SOURCE PREVIEW. Working source checked and emitted by ttsc. Production
+      admission is separate. Not review or delivery evidence.
     </div>
     <div id="keys">
-      Drag: orbit · right drag: pan · wheel: zoom<br />W A S D: move · Space /
-      C: rise / descend<br />Q / E: slower / faster · Shift: fast
+      Click: mouse look · Esc: release<br />W A S D / arrows: fly · Space /
+      C: rise / descend<br />Q / E: slower / faster · Shift: fast<br />Wheel:
+      field of view
     </div>
     <div id="status">Loading current source...</div>
-    <script type="module" src="/viewer/src/preview.ts"></script>
+    <script type="module" src="/viewer/src/sourcePreviewClient.js"></script>
   </body>
 </html>

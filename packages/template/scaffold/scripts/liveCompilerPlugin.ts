@@ -4,6 +4,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin } from "vite";
 
+import { isViewerWatchOutput } from "./viewerWatchOptions";
+
 /** Reexecute source in a fresh ttsx process before serving a new generation. */
 export const liveCompilerPlugin = (root: string): Plugin => {
   let generation = 0;
@@ -143,6 +145,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
 
 /** Authored inputs only; compiler state and observation writes cannot loop. */
 const isLiveCompilerInput = (root: string, file: string): boolean => {
+  if (isViewerWatchOutput(root, file)) return false;
   const relative = path.relative(root, file).split(path.sep).join("/");
   if (relative.startsWith("../") || path.isAbsolute(relative)) return false;
   if (/^(src|docs|assets|scripts|viewer|vendor)\//.test(relative)) return true;
@@ -154,5 +157,7 @@ const isLiveCompilerInput = (root: string, file: string): boolean => {
     )
   )
     return true;
-  return /^[^/]+\.(?:[cm]?tsx?|json|ya?ml)$/.test(relative);
+  return (
+    /\.[cm]?[jt]sx?$/.test(relative) || /^[^/]+\.(?:json|ya?ml)$/.test(relative)
+  );
 };

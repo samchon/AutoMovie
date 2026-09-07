@@ -21,5 +21,6 @@
     "repaintSelectionReviews.ts",
     "vite.config.ts",
     "lint.config.ts"
-  ]
+  ],
+  "exclude": ["viewer/preview.ts", "viewer/src/preview.ts"]
 }

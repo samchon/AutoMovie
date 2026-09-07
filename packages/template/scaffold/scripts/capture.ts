@@ -30,6 +30,7 @@ import {
   productionDialogueFrameForShotTime,
   productionDialogueRuntimeIdentity,
 } from "./productionRuntimeState";
+import { viewerWatchOptions } from "./viewerWatchOptions";
 
 interface CaptureSession {
   server: ViteDevServer;
@@ -169,7 +170,12 @@ const startSession = async (
     logLevel: "silent",
     plugins: [generatedShotPlugin(projectRoot, productionId, runtimeProvider)],
     resolve: { dedupe: ["three"] },
-    server: { host: viewerHost, port: 0, strictPort: false },
+    server: {
+      host: viewerHost,
+      port: 0,
+      strictPort: false,
+      watch: viewerWatchOptions(projectRoot),
+    },
   });
   try {
     await server.listen();

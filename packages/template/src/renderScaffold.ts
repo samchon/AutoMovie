@@ -116,13 +116,12 @@ const renderKey = (
 const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
 
 /**
- * File shapes the scaffold never ships, whatever a host leaves there.
+ * Compiler-output shapes excluded unless an exact authored runtime owns them.
  *
- * The scaffold's authored tree is Markdown, TypeScript, JSON, HTML, the two
- * dotfile stand-ins renamed above, a licence and directory placeholders. It
- * contains no JavaScript and no declaration file, so a file carrying a
- * compiler-output shape was emitted into the directory by a tool run rather
- * than authored, and it belongs to the same class as the lint cache above.
+ * Most authored sources are Markdown, TypeScript, JSON and HTML. The source
+ * preview also owns a Node worker and a browser diagnostic shell that must run
+ * before the authored TypeScript can compile. Their exact JavaScript paths are
+ * declared below; every other compiler-output shape remains unshipped.
  *
  * The reason to name the class rather than the two directories alone is that
  * this one is invisible where it happens. Running the type-checker without
@@ -137,6 +136,12 @@ const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
  */
 const UNSHIPPED_FILES =
   /(?:\.(?:c|m)?js(?:\.map)?|\.d\.(?:c|m)?ts|\.tsbuildinfo)$/u;
+
+/** Executable bootstrap sources, never inferred from files left by a build. */
+const AUTHORED_JAVASCRIPT = new Set([
+  "scripts/compileSourcePreview.mjs",
+  "viewer/src/sourcePreviewClient.js",
+]);
 
 /**
  * Every shipped file under `root`, root-relative, in deterministic sorted
@@ -161,8 +166,14 @@ const listFiles = (root: string): string[] => {
       if (entry.isDirectory()) {
         if (UNSHIPPED_DIRECTORIES.has(entry.name)) continue;
         walk(full);
-      } else if (entry.isFile() && UNSHIPPED_FILES.test(entry.name) === false)
-        out.push(path.relative(root, full));
+      } else if (entry.isFile()) {
+        const relative = path.relative(root, full);
+        if (
+          UNSHIPPED_FILES.test(entry.name) === false ||
+          AUTHORED_JAVASCRIPT.has(toPosix(relative))
+        )
+          out.push(relative);
+      }
     }
   };
   walk(root);
