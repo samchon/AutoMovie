@@ -1,6 +1,6 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import type { IControlMesh } from "../subdivideControlMesh";
-import { fitPortraitNostrilRim } from "./nostrilRim";
+import { fitPortraitNostrilRim, resizePortraitNostrilRim } from "./nostrilRim";
 
 /**
  * Subject-owned nasal attachment. The two cut populations are triangle ordinals
@@ -40,9 +40,9 @@ export interface IPortraitNoseShape {
   tipProjection: number;
   /** Alar displacement along host Z, in mm. */
   alarProjection: number;
-  /** Opening width multiplier, additional to overall nasal width. */
+  /** Width multiplier in the aperture plane, before overall head-X nasal scaling. */
   nostrilWidthScale: number;
-  /** Opening height multiplier about each fitted aperture centre. */
+  /** Height multiplier in the aperture plane; preserves its orientation about its centre. */
   nostrilHeightScale: number;
   /** Aperture displacement upwards in host Y, in mm. */
   nostrilRise: number;
@@ -185,14 +185,18 @@ export function createPortraitNoseComponent(
       }
       for (const faces of openings) {
         const ids = portraitCutBoundary(faces).map((edge) => edge.a);
-        const rim = fitPortraitNostrilRim(
-          ids.map((id) => [
-            host.positions[id][0],
-            host.positions[id][1],
-            host.positions[id][2] +
-              portraitNoseDepth(host.positions[id], socket, shape),
-          ]),
-          shape.rimRoundness,
+        const rim = resizePortraitNostrilRim(
+          fitPortraitNostrilRim(
+            ids.map((id) => [
+              host.positions[id][0],
+              host.positions[id][1],
+              host.positions[id][2] +
+                portraitNoseDepth(host.positions[id], socket, shape),
+            ]),
+            shape.rimRoundness,
+          ),
+          shape.nostrilWidthScale,
+          shape.nostrilHeightScale,
         );
         const center = [0, 1, 2].map(
           (axis) =>
@@ -213,14 +217,10 @@ export function createPortraitNoseComponent(
         for (let vertex = 0; vertex < ids.length; vertex++) {
           const id = ids[vertex],
             point = rim[vertex];
-          const y = (point[1] - center[1]) * shape.nostrilHeightScale;
+          const y = point[1] - center[1];
           const z = point[2] - centerZ;
           targets.set(id, [
-            socket.midline +
-              (center[0] - socket.midline) * shape.widthScale +
-              (point[0] - center[0]) *
-                shape.widthScale *
-                shape.nostrilWidthScale,
+            socket.midline + (point[0] - socket.midline) * shape.widthScale,
             center[1] +
               shape.nostrilRise +
               y * Math.cos(angle) -
@@ -277,9 +277,8 @@ export function appendPortraitNostrils(
       (axis) =>
         ids.reduce((sum, id) => sum + positions[id][axis], 0) / ids.length,
     );
-    // The aperture needs a near support before the deep lining. Connecting
-    // its rim directly to a floor-side ring let subdivision pull the exterior
-    // alar skin into the cavity, softening the opening into a shallow crease.
+    // A near support ring retains the aperture edge through subdivision before
+    // the lining travels to its contracted deep ring and recessed floor.
     const rings = [new Map(ids.map((id) => [id, id]))];
     for (const fraction of [shape.rimSupport, 1]) {
       const ring = new Map<number, number>();

@@ -1,8 +1,7 @@
 import { TestValidator } from "@nestia/e2e";
 
 import {
-  portraitCheekLayersFor,
-  portraitCheekShape,
+  portraitAssembly,
   portraitComponentsFor,
   portraitEyeShape,
   portraitNoseShape,
@@ -15,7 +14,7 @@ import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/
  *
  * Scenarios:
  * 1. Construct a coarse preview through every anatomical builder, including the
- *    paired cheek relief on the connected skin, and confirm its
+ *    cheek, nasal, orbital and perioral supports plus the rough hair proxy; confirm
  *    static generated identity and complete material bindings.
  * 2. Every mesh has aligned finite positions/normals, integral resident triangle
  *    indices and no skeletal data. The metre-scale bounds reject unit mistakes.
@@ -28,12 +27,10 @@ export const test_subject_portrait_model = (): void => {
     sampling: { eyeColumns: 12, eyeRows: 6, irisColumns: 16, irisRows: 4 },
   };
   const model = buildReferencePortrait({
+    hairProxy: true,
     components: portraitComponentsFor(eye, eye, portraitNoseShape),
     subdivisionRounds: 1,
-    surfaceLayers: portraitCheekLayersFor(
-      portraitCheekShape,
-      portraitCheekShape,
-    ),
+    surfaceLayers: portraitAssembly.surfaceLayers,
   });
   TestValidator.equals(
     "static generated model",
@@ -41,6 +38,10 @@ export const test_subject_portrait_model = (): void => {
     ["generated", null, null, null],
   );
   const materials = new Set(model.materials.map((m) => m.id));
+  TestValidator.predicate(
+    "requested rough hair is present",
+    model.parts.some((part) => part.material === "hair"),
+  );
   let valid = true,
     extent = 0;
   for (const part of model.parts) {

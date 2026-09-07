@@ -2,7 +2,7 @@
 
 These are directly authored AutoMovie model studies. They use `@automovie/interface` model/mesh types and general `@automovie/engine` geometry operations. They do not use `@automovie/face`, and they are not a shared `human` parameter module.
 
-The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection record](generated-korean-girl-01/review.md) explicitly does not accept the likeness. Hair and torso are deferred. The source photograph is `.shots/input/east-asian/generated-korean-girl-01/generated-korean-girl-age-16.png`; the compiled model does not need that file or the measurement software at runtime.
+The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection record](generated-korean-girl-01/review.md) explicitly does not accept the likeness. Hair is a coarse optional silhouette mass; eyebrow/hair detail and torso remain deferred. The source photograph is `.shots/input/east-asian/generated-korean-girl-01/generated-korean-girl-age-16.png`; the compiled model does not need that file or the measurement software at runtime.
 
 ## Construction
 
@@ -15,8 +15,12 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 | `generated-korean-girl-01/eyes.ts` | Shared lid boundary, fold, sclera, gaze intersection, iris, lashes and brow assembly |
 | `generated-korean-girl-01/eyebrows.ts` | Replaceable fibre dimensions and attachment to the actual refined forehead surface |
 | `generated-korean-girl-01/nose.ts` | Provisional alar/tip depth and geometric nasal cavities |
+| `generated-korean-girl-01/nostrilRim.ts` | Aperture-plane dimensions and optional elliptical rim regularization |
 | `generated-korean-girl-01/mouth.ts` | Replaceable lips, shared boundary topology, oral cavity and individual dental crowns |
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
+| `generated-korean-girl-01/dentalCrown.ts` | Closed enamel lofts with cervical narrowing and independently shaped cutting edges |
+| `generated-korean-girl-01/anatomy.ts` | Subject-owned nasal, orbital and perioral tissue supports |
+| `generated-korean-girl-01/hairProxy.ts` | Coarse continuous hair mass with the photograph's right ear exposed |
 | `generated-korean-girl-01/cheeks.ts` | Skin-bound malar, medial/buccal cheek and mouth-corner relief, with a separately controlled nasolabial groove |
 | `portraitEyeSphere.ts` | Socket-oriented spherical curvature and camera-ray contact fitting, independent of gaze |
 | `portraitCornea.ts` | Closed transparent optical shell with independently controlled curvature and axial thickness |
@@ -25,6 +29,7 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 | `portraitComponents.ts` | Fit, shared attachment and refined-interior protocol for replaceable parts |
 | `blendPortraitSkin.ts` and `portraitSkinTopology.ts` | Geodesic skin adaptation and explicit opening/stitch validation |
 | `portraitSurface.ts` | Compose anatomical deformation layers on refined skin while preserving its open attachment rims |
+| `portraitRelief.ts` | Bind named support regions to the actual refined skin and convert their metric fields |
 | `geometry.ts` and `subdivideControlMesh.ts` | Sampling, interpolation, subdivision, shared normals and metric conversion |
 | `portraitDocument.ts` | Static GLTF conversion preserving resident buffers and supported material factors |
 | `captureProfile.ts` | Fixed camera, crop and area-light conditions for inspection |
@@ -51,7 +56,7 @@ The order is part of the attachment contract:
 4. Evaluate optional surface layers against the same refined host. Their engine fields use metres; the adapter returns millimetres and fades displacement at open rims.
 5. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface.
 
-The current `portraitAssembly` supplies paired cheek layers. Each side controls upper, medial and lower cheek relief, mouth-corner support, and the adjacent nasolabial groove. These are compact surface envelopes, not reconstructed internal fat compartments or a muscle simulation. Tear troughs, the philtrum/chin transition and finer wrinkles remain implementation work. The ear roots are embedded separate shells; they are not welded to the skin.
+The current `portraitAssembly` supplies paired cheek layers plus named nasal, orbital and perioral supports. Each region carries its attachment, offset, XYZ support radii and signed displacement. The nasal layer distinguishes tip domes, alar lobules, their facial boundaries and columellar support; the perioral layer distinguishes philtral columns, their groove and the lip-to-chin transition. These are compact surface envelopes, not reconstructed internal tissues or a muscle simulation. The current young-face fit adds no extra nasolabial or medial tear-trough depression. Fine wrinkles remain deferred. Ear roots are embedded separate shells, not welded to the skin.
 
 This prototype currently exposes replaceable procedural eyes, noses and mouths. Ears, cranium and neck remain subject builders. Numerical controls do not establish anatomical correctness.
 
@@ -80,6 +85,8 @@ Eye controls include aperture width/opening, outer-corner lift, orbital depth, l
 
 Each eye accepts a separate `browProfile` containing fibre radius, radius variation, taper, surface clearance, arch, outward bend and longitudinal sampling. `browFibres` is an integer from zero through 4096; zero disables that brow. The socket's upper/lower brow boundaries supply its planar distribution. Every fibre sample queries the front envelope of the final skin and offsets along its estimated normal, so changing the orbital or forehead surface moves its attachment with that surface. Length controls use millimetres; they are authored values rather than measurements of this person's hair. A path outside the supporting skin refuses. The shared strand sweep also refuses zero, nonfinite or Z-parallel tangents because its cross-section guide is Z.
 
+Nostril width and height act in each opening's fitted plane, about its centroid. Width follows projected head X, with head Y as the guide for a plane exactly normal to X; height is perpendicular within that plane. Sizing retains the rim's normal residual and therefore does not flatten its irregularity. Overall nasal width then scales head X, and `nostrilTilt` rotates the opening and cavity offset around head X. The lining reads the resulting shared rim, so shrinking the aperture also moves its support rings. `rimRoundness: 0` preserves the measured rim before sizing; nonzero values blend towards its fitted ellipse.
+
 Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek settings in `assembly.surfaceLayers`. Each region has transverse, vertical and depth support radii plus anterior projection and upward lift, all in millimetres. The nasolabial groove has separate width, depth and depth-support controls. Its field spacing follows the support metric and its endpoint fade follows physical path distance. Preserve the rest of `portraitAssembly` when changing one component so its other anatomical layers remain selected.
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
@@ -102,7 +109,7 @@ The model review graph reports warnings. Rendering precedes visual review, so mi
 
 Before changing geometry or an appearance dependency, remove the affected review companions. Build a new GLTF, freeze its bytes and capture profile, and inspect front, both obliques, both profiles, back, reference pose and clay. Compare visible feature boundaries against the original image. Write the observed failures as well as the successes, then write new review companions. A compiler-provided fingerprint is not a visual review, and a green graph is not an acceptance of likeness.
 
-Run `test/scripts/face-review/preview.ps1` from PowerShell to export and publish the latest complete bundle. The script requires the installed workspace, Chromium and Blender 5.1 at its declared local path. It publishes `.shots/face-experiment/preview` only after export, all eleven Cycles captures and comparison verification finish. The bundle includes `portrait.glb`, JSON GLTF/buffer, `comparison.png`, `views.png`, `clay-views.png`, camera/light profile and hashes. Previous and incomplete capture directories are recycled instead of accumulating numbered rounds. A failed export or render leaves the previous complete preview available.
+Run `test/scripts/face-review/preview.ps1` from PowerShell to export and publish the latest complete bundle. The script requires the installed workspace, Chromium and Blender 5.1 at its declared local path. It publishes `.shots/face-experiment/preview` only after export, all fourteen Cycles captures and comparison verification finish. The bundle includes `portrait.glb`, JSON GLTF/buffer, `comparison.png`, `views.png`, `clay-views.png`, camera/light profile and hashes. Previous and incomplete capture directories are recycled instead of accumulating numbered rounds. A failed export or render leaves the previous complete preview available.
 
 ```powershell
 ./test/scripts/face-review/preview.ps1
@@ -110,7 +117,7 @@ Run `test/scripts/face-review/preview.ps1` from PowerShell to export and publish
 
 The Blender executable is `C:/Program Files/Blender Foundation/Blender 5.1/blender.exe`. The comparison step uses the Playwright Chromium installation available to `test`; install that browser with `pnpm --filter @automovie/test exec playwright install chromium` if it is absent. Progress and process failures are written to `.shots/face-experiment/preview.log`. The publisher owns an exclusive `preview.lock`; wait for its process to finish before starting another capture.
 
-`comparison.png` places the source photograph beside an actual GLTF render. `reference.png` is also a render, in the estimated source-camera pose. `views.png` contains six yaw views and `clay-views.png` contains three views without the colour finishes. The receipts inside `preview/` identify the exact model, configuration, profile and frame bytes. Read those files for artifact identity; a source edit may be newer than the last successfully published capture.
+`comparison.png` places the source photograph beside an actual GLTF render. `reference.png` is also a render, in the estimated source-camera pose. `views.png` contains nine views, including steep top/bottom and an opposing rear oblique and `clay-views.png` contains three views without the colour finishes. The receipts inside `preview/` identify the exact model, configuration, profile and frame bytes. Read those files for artifact identity; a source edit may be newer than the last successfully published capture.
 
 `captureProfile.ts` owns Cycles sampling and its explicit denoising switch. Current inspection uses 256 samples with denoising disabled so the judged strands remain in the unfiltered render. This setting can retain sampling noise, particularly behind the transparent cornea. Compare the capture profile as well as the GLB digest when assessing an appearance change.
 

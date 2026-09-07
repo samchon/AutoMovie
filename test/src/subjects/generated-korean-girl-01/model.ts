@@ -5,6 +5,7 @@ import type { IPortraitComponent } from "../portraitComponents";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import { referenceControlNet } from "./controlNet";
 import { buildPortraitEars } from "./ears";
+import { buildPortraitHairProxy } from "./hairProxy";
 import { buildPortraitHead } from "./head";
 import { createPortraitMaterials } from "./materials";
 import type { portraitReview } from "./review";
@@ -19,7 +20,8 @@ import type { portraitReview } from "./review";
  * exact skin attachments; the host adapts surrounding skin and refines their
  * common surface before each component finishes against its actual opening.
  * Every part crosses the same engine-owned metre conversion in portraitPart before becoming AutoMovie
- * model data. Hair and torso remain deferred under the user's current scope.
+ * model data. Optional coarse hair supports silhouette inspection; detailed
+ * hair and torso remain outside this face iteration.
  *
  * The caller chooses components and optional refined-skin layers. Empty layers
  * preserve the subdivided skin. Eye-owned optical materials are collected with
@@ -32,6 +34,9 @@ import type { portraitReview } from "./review";
  * @evidence src/subjects/generated-korean-girl-01/review.md#left-profile Supplies the forehead-to-chin silhouette inspected from the anatomical left.
  * @evidence src/subjects/generated-korean-girl-01/review.md#right-profile Supplies the opposite profile and mirrored ear inspected from the anatomical right.
  * @evidence src/subjects/generated-korean-girl-01/review.md#back Supplies the inferred closed rear skull and neck attachment inspected from behind.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#top Supplies the cranial and nasal silhouette inspected at steep positive elevation.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#bottom Supplies the nasal cavities, chin underside and intentionally open neck crop inspected from below.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#rear-oblique Supplies the opposing oblique that exposes the hair curtain and rear attachment relationship.
  * @evidence src/subjects/generated-korean-girl-01/review.md#reference Supplies the geometry compared against the photograph in its recorded camera pose.
  * @evidence src/subjects/generated-korean-girl-01/review.md#clay Supplies the shared surface inspected independently of its material colours.
  * @evidence src/subjects/generated-korean-girl-01/review.md#component-replacement Assembles the component selections exercised by the replacement tests; fresh alternate-assembly captures remain pending for this revision.
@@ -41,6 +46,8 @@ export function buildReferencePortrait(assembly: {
   components: IPortraitComponent[];
   subdivisionRounds: number;
   surfaceLayers?: readonly IPortraitSurfaceLayer[];
+  /** Include only the coarse hairstyle mass; omitted for isolated face inspection. */
+  hairProxy?: boolean;
 }): IAutoMovieModel {
   const head = buildPortraitHead(
     {
@@ -69,7 +76,11 @@ export function buildReferencePortrait(assembly: {
     id: "generated-korean-girl-01",
     name: "Measured reference face study",
     origin: "generated",
-    parts: [...head.parts, ...buildPortraitEars(skin.mesh)],
+    parts: [
+      ...head.parts,
+      ...buildPortraitEars(skin.mesh),
+      ...(assembly.hairProxy ? buildPortraitHairProxy() : []),
+    ],
     materials: [
       ...createPortraitMaterials(),
       ...assembly.components.flatMap((component) => component.materials ?? []),

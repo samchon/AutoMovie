@@ -22,8 +22,8 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
     });
     return id;
   };
-  material("skin", [0.66, 0.42, 0.32], 0.63);
-  material("lips", [0.52, 0.155, 0.18], 0.46);
+  material("skin", [0.63, 0.41, 0.285], 0.63);
+  material("lips", [0.48, 0.125, 0.145], 0.46);
   // Low ocular roughness supplies a wet specular response to the actual scene
   // lights. Pigment colours carry no painted catchlights or baked illumination.
   material("sclera", [0.66, 0.64, 0.58], 0.08);
@@ -40,8 +40,9 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   }
   material("pupil", [0.0025, 0.002, 0.0015], 0.08);
   material("mouth-interior", [0.035, 0.006, 0.011], 0.85);
-  material("teeth", [0.83, 0.78, 0.66], 0.3);
+  material("teeth", [0.74, 0.69, 0.57], 0.3);
   material("brows", [0.023, 0.016, 0.013], 0.76);
+  material("hair", [0.013, 0.009, 0.0065], 0.73);
   // Nasal lining has its own dark diffuse finish. The cavity's occlusion and
   // inward-facing walls supply depth; this colour does not replace geometry.
   material("nasal-interior", [0.095, 0.035, 0.025], 0.87);

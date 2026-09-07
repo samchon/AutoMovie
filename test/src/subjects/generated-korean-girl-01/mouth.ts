@@ -15,10 +15,13 @@ import {
   portraitFacesInsideLoop,
 } from "../portraitComponents";
 import { createPortraitDentalArc } from "./dentalArc";
+import {
+  assertPortraitDentalCrown,
+  buildPortraitDentalCrown,
+} from "./dentalCrown";
 
 type Point = IAutoMovieVector3;
-const pi = Math.PI,
-  tau = pi * 2;
+const pi = Math.PI;
 
 /**
  * Subject-owned oral boundaries. Upper and lower curves share their endpoints
@@ -71,7 +74,12 @@ export interface IPortraitMouthShape {
   /** Clearance along the arch; changing it never shrinks a crown's width. */
   toothGap: number;
   /** Individual crown widths and heights, ordered from negative to positive X. */
-  crowns: { width: number; height: number }[];
+  crowns: {
+    width: number;
+    height: number;
+    cervicalWidth?: number;
+    edgeRise?: number;
+  }[];
 }
 
 const innerLoop = (socket: IPortraitMouthSocket): number[] => [
@@ -142,6 +150,13 @@ export function createPortraitMouthComponent(
     ...inputShape,
     crowns: inputShape.crowns.map((crown) => ({ ...crown })),
   };
+  for (const crown of shape.crowns)
+    assertPortraitDentalCrown({
+      ...crown,
+      depth: shape.dentalDepth,
+      cervicalWidth: crown.cervicalWidth ?? 0.78,
+      edgeRise: crown.edgeRise ?? 0.035 * crown.height,
+    });
   if (
     [
       shape.widthScale,
@@ -160,14 +175,7 @@ export function createPortraitMouthComponent(
       shape.upperLipProjection,
       shape.lowerLipProjection,
       shape.dentalOffset,
-    ].some((value) => !Number.isFinite(value)) ||
-    shape.crowns.some(
-      (crown) =>
-        !Number.isFinite(crown.width) ||
-        crown.width <= 0 ||
-        !Number.isFinite(crown.height) ||
-        crown.height <= 0,
-    )
+    ].some((value) => !Number.isFinite(value))
   )
     throw new Error(
       "Mouth dimensions must be finite, with positive openings and crown sizes.",
@@ -291,38 +299,31 @@ export function buildPortraitMouth(
     const { position: at, tangent } = arch.sample(cursor + width / 2);
     cursor += width + shape.toothGap;
     const angleY = -Math.atan2(tangent.z, tangent.x);
-    const rounded = (value: number): number =>
-      Math.sign(value) * Math.abs(value) ** 0.45;
-    add(
-      `tooth-${i}`,
-      patch(
-        (u, v) => {
-          const angle = u * tau,
-            latitude = mix(-pi / 2 + 0.0001, pi / 2 - 0.0001, v);
-          const localX =
-            (width / 2) *
-            rounded(Math.sin(angle)) *
-            rounded(Math.cos(latitude));
-          const localZ =
-            shape.dentalDepth *
-            rounded(Math.cos(angle)) *
-            rounded(Math.cos(latitude));
-          return p(
-            at.x + Math.cos(angleY) * localX + Math.sin(angleY) * localZ,
-            at.y -
-              shape.dentalDrop +
-              (height / 2) * rounded(Math.sin(latitude)),
-            at.z -
-              shape.dentalRecess -
-              Math.sin(angleY) * localX +
-              Math.cos(angleY) * localZ,
-          );
-        },
-        36,
-        24,
-      ),
-      enamel,
-    );
+    const crown = buildPortraitDentalCrown({
+      width,
+      height,
+      depth: shape.dentalDepth,
+      cervicalWidth: shape.crowns[i].cervicalWidth ?? 0.78,
+      edgeRise: shape.crowns[i].edgeRise ?? 0.035 * height,
+    });
+    // Placement and normals use the same rigid arch rotation. The local crown
+    // profile therefore cannot silently change measured interdental clearance.
+    for (let vertex = 0; vertex < crown.positions.length; vertex += 3) {
+      const x = crown.positions[vertex],
+        y = crown.positions[vertex + 1],
+        z = crown.positions[vertex + 2];
+      crown.positions[vertex] =
+        at.x + Math.cos(angleY) * x + Math.sin(angleY) * z;
+      crown.positions[vertex + 1] = at.y - shape.dentalDrop + y;
+      crown.positions[vertex + 2] =
+        at.z - shape.dentalRecess - Math.sin(angleY) * x + Math.cos(angleY) * z;
+      const nx = crown.normals![vertex],
+        nz = crown.normals![vertex + 2];
+      crown.normals![vertex] = Math.cos(angleY) * nx + Math.sin(angleY) * nz;
+      crown.normals![vertex + 2] =
+        -Math.sin(angleY) * nx + Math.cos(angleY) * nz;
+    }
+    add(`tooth-${i}`, crown, enamel);
   }
   return parts;
 }

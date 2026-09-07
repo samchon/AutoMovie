@@ -108,14 +108,15 @@ def render(name, observation):
     receipts.append({"name": name, "file": name + ".png", "sha256": digest(filename), "view": observation})
     print("CAPTURED", name, flush=True)
 
-def pose(yaw):
+def pose(yaw, pitch=0):
     root.matrix_world = Matrix.Identity(4)
     scene.render.resolution_y = profile["image"]["height"]
     camera_data.type = "PERSP"
     angle = math.radians(yaw)
+    elevation = math.radians(pitch)
     distance = profile["camera"]["distance"]
     target = converted(profile["camera"]["target"])
-    camera.location = target + converted((distance*math.sin(angle),0,distance*math.cos(angle)))
+    camera.location = target + converted((distance*math.cos(elevation)*math.sin(angle),distance*math.sin(elevation),distance*math.cos(elevation)*math.cos(angle)))
     aim(camera, target)
 
 # Independent native geometry establishes axis reading and real cast shadows.
@@ -141,8 +142,8 @@ for obj in subjects:
     obj.hide_render = False
 
 for view in profile["views"]:
-    pose(view["yaw"])
-    render(view["name"], {"yaw":view["yaw"],"mode":"colour"})
+    pose(view["yaw"], view.get("pitch", 0))
+    render(view["name"], {"yaw":view["yaw"],"pitch":view.get("pitch",0),"mode":"colour"})
 
 # The GLTF importer applies basis B. Conjugate the recorded image pose by B.
 basis = Matrix([[1,0,0],[0,0,-1],[0,1,0]])
@@ -167,6 +168,8 @@ bsdf = clay.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (0.35,0.35,0.35,1)
 bsdf.inputs["Roughness"].default_value = 0.72
 for obj in subjects:
+    if any(slot.material and slot.material.name in profile["clayHideMaterials"] for slot in obj.material_slots):
+        obj.hide_render = True
     for slot in obj.material_slots:
         slot.material = clay
 render("reference-clay", {"mode":"clay","crop":crop,"pose":"recorded image pose"})

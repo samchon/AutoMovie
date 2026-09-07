@@ -77,6 +77,10 @@ export const test_subject_brow_profile = (): void => {
   eye.browProfile.radius = -1;
   const model = buildReferencePortrait({ components, subdivisionRounds: 0 });
   TestValidator.predicate(
+    "hair proxy is opt-in",
+    !model.parts.some((part) => part.material === "hair"),
+  );
+  TestValidator.predicate(
     "copied profile survives caller mutation",
     model.parts.length > 0 &&
       !model.parts.some((part) => part.id.includes("-brow-hair-")),

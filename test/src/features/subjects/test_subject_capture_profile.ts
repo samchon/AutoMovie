@@ -7,7 +7,8 @@ import { portraitCaptureProfile } from "../../subjects/captureProfile";
  * This checks usable viewing conditions, not filenames or source text.
  *
  * Scenarios:
- * 1. Front, both oblique directions, both profiles and the back are reachable.
+ * 1. Front, both oblique directions, both profiles, back, steep top/bottom and
+ *    an oblique opposing the frontal oblique are reachable.
  * 2. The perspective camera and image extents are finite and non-degenerate.
  * 3. The reference crop remains inside the image and every area light has a
  *    positive size/power and a finite position and colour.
@@ -15,6 +16,17 @@ import { portraitCaptureProfile } from "../../subjects/captureProfile";
 export const test_subject_capture_profile = (): void => {
   const plan = portraitCaptureProfile;
   const yaws = plan.views.map((view) => view.yaw);
+  TestValidator.predicate(
+    "top and bottom coverage",
+    plan.views.some((view) => (view.pitch ?? 0) > 60) &&
+      plan.views.some((view) => (view.pitch ?? 0) < -60),
+  );
+  TestValidator.predicate(
+    "opposing oblique coverage",
+    yaws.some(
+      (a) => a > 0 && a < 90 && yaws.some((b) => Math.abs(a - b) === 180),
+    ),
+  );
   TestValidator.predicate(
     "front and back",
     yaws.includes(0) && yaws.some((yaw) => Math.abs(yaw) === 180),

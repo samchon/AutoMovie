@@ -9,6 +9,9 @@
  */
 export const portraitCaptureProfile = {
   image: { width: 900, height: 1000 },
+  // The rough hair mass helps the colour silhouette but must not conceal the
+  // cranial and facial surfaces during geometry-only inspection.
+  clayHideMaterials: ["hair"],
   camera: { verticalFov: 30, distance: 0.63, target: [0, -0.008, 0] },
   reference: { width: 896, height: 1000, crop: { x: 250, y: 240, size: 430 } },
   views: [
@@ -18,6 +21,9 @@ export const portraitCaptureProfile = {
     { name: "left-profile", yaw: 90 },
     { name: "right-profile", yaw: -90 },
     { name: "back", yaw: 180 },
+    { name: "top", yaw: 0, pitch: 75 },
+    { name: "bottom", yaw: 0, pitch: -75 },
+    { name: "rear-oblique", yaw: -135 },
   ],
   cycles: {
     // Preserve subpixel strands during geometry inspection. Sampling noise is

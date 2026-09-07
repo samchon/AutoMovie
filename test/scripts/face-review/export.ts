@@ -5,6 +5,11 @@ import fs from "node:fs/promises";
 
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
+  portraitNasalRelief,
+  portraitOrbitalRelief,
+  portraitPerioralRelief,
+} from "../../src/subjects/generated-korean-girl-01/anatomy";
+import {
   portraitAssembly,
   portraitCheekShape,
   portraitCheekSockets,
@@ -56,11 +61,15 @@ async function main() {
   const configuration = JSON.stringify(
     {
       rightEye: portraitEyeShape,
+      hairProxy: portraitAssembly.hairProxy,
       leftEye: portraitEyeShape,
       nose: portraitNoseShape,
       mouth: portraitMouthShape,
       neck: portraitNeckShape,
       ears: portraitEarShape,
+      nasalRelief: portraitNasalRelief,
+      orbitalRelief: portraitOrbitalRelief,
+      perioralRelief: portraitPerioralRelief,
       cheeks: {
         right: portraitCheekShape,
         left: portraitCheekShape,

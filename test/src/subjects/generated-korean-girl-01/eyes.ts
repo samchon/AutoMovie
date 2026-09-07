@@ -1,3 +1,4 @@
+import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
 import type {
   IAutoMovieModelPart,
   IAutoMovieVector3,
@@ -123,6 +124,7 @@ const lidRows = (
   source: number[][],
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
+  outerDepths?: ReadonlyMap<number, number>,
 ) => {
   const loop = loopOf(socket);
   const left = Math.min(...loop.map((id) => source[id][0]));
@@ -140,11 +142,15 @@ const lidRows = (
     const weight = socket.top.includes(id)
       ? Math.sin((pi * (point[0] - left)) / (right - left))
       : 0;
-    const at = (offset: number, depth: number): number[] => [
-      point[0] + (offset * nx) / distance,
-      point[1] + (offset * ny) / distance,
-      point[2] + depth,
-    ];
+    const at = (offset: number, depth: number): number[] => {
+      const t = Math.min(1, offset / outerWidth),
+        blend = t * t * (3 - 2 * t);
+      return [
+        point[0] + (offset * nx) / distance,
+        point[1] + (offset * ny) / distance,
+        mix(point[2], outerDepths?.get(id) ?? point[2], blend) + depth,
+      ];
+    };
     // Two nearby support rows delimit the supratarsal crease through common
     // Loop subdivision and retain its depth between the tarsal ridge and hood.
     // The hood sits above the recessed fold and produces a real cast shadow.
@@ -156,12 +162,10 @@ const lidRows = (
       : Math.sin((pi * (point[0] - left)) / (right - left));
     const lowerWidth = shape.lowerLidWidth * lowerWeight;
     const lowerVolume = shape.lowerLidVolume * lowerWeight;
+    const outerWidth = 1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth;
     return {
       id,
-      outer: at(
-        1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth,
-        -0.4 + 0.2 * weight,
-      ),
+      outer: at(outerWidth, -0.4 + 0.2 * weight),
       hoodUpper: at(
         1.0 + (shape.foldWidth + 1.1) * weight + 0.9 * lowerWidth,
         shape.lidThickness + 0.45 * depth + 0.1 * lowerVolume,
@@ -310,13 +314,41 @@ export function createPortraitEyeComponent(
         );
         aperture[id] = [contact.x, contact.y, contact.z];
       }
+      // The outer eyelid attaches to the actual supporting skin. Its section
+      // bridges that depth to the fitted globe instead of extruding a flat
+      // annulus from the aperture. The two boundaries keep distinct ownership.
+      const support = createAutoMovieMeshDepthSampler(
+        portraitPart(
+          "orbital-support-basis",
+          {
+            positions: host.positions.flat(),
+            indices: host.indices,
+            normals: null,
+            uvs: null,
+            skin: null,
+          },
+          "skin",
+        ).geometry.mesh,
+        "z",
+      );
       return {
         constraints: [
-          ...lidRows(aperture, socket, shape).map((row) => ({
-            vertex: row.id,
-            target: row.outer,
-            reach: shape.blendReach,
-          })),
+          ...lidRows(aperture, socket, shape).map((row) => {
+            const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
+            if (hit === null)
+              throw new Error(
+                "An eyelid's outer attachment must remain on supporting skin.",
+              );
+            return {
+              vertex: row.id,
+              target: [
+                row.outer[0],
+                row.outer[1],
+                hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
+              ],
+              reach: shape.blendReach,
+            };
+          }),
           { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
         ],
         cutFaces: portraitFacesInsideLoop(host, loop),
@@ -356,7 +388,12 @@ export function appendPortraitEyeMargins(
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
 ): Map<number, number> {
-  const rows = lidRows(aperture, socket, shape);
+  const rows = lidRows(
+    aperture,
+    socket,
+    shape,
+    new Map(loopOf(socket).map((id) => [id, cage.positions[id][2]])),
+  );
   const margins = new Map<number, number>();
   const rings = [rows.map((row) => row.id)];
   for (const name of [

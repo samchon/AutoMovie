@@ -31,6 +31,22 @@ export const test_subject_eyelid_volume = (): void => {
     indices: [0, 3, 4, 3, 2, 4, 2, 1, 4, 1, 0, 4],
     viewRay: [0, 0, 1],
   };
+  // A fitted lid now consumes supporting skin outside its opening. The broad
+  // planar annulus supplies that host while preserving the original aperture.
+  host.positions.push([-20, -20, 0], [20, -20, 0], [20, 20, 0], [-20, 20, 0]);
+  const inner = [0, 3, 2, 1],
+    outer = [5, 6, 7, 8];
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    host.indices.push(
+      outer[i],
+      outer[j],
+      inner[i],
+      outer[j],
+      inner[j],
+      inner[i],
+    );
+  }
   const socket = {
     name: "left" as const,
     top: [0, 1, 2],

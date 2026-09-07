@@ -1,5 +1,11 @@
 import type { IPortraitComponent } from "../portraitComponents";
+import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
+import {
+  portraitNasalRelief,
+  portraitOrbitalRelief,
+  portraitPerioralRelief,
+} from "./anatomy";
 import {
   type IPortraitCheekShape,
   type IPortraitCheekSocket,
@@ -58,11 +64,11 @@ export const portraitEyeShape: IPortraitEyeShape = {
   socketLift: 0,
   blendReach: 18,
   foldWidth: 3.1,
-  foldDepth: 0.8,
-  upperLidVolume: 0.45,
-  lowerLidWidth: 4.5,
-  lowerLidVolume: 0.45,
-  lidThickness: 0.35,
+  foldDepth: 0.28,
+  upperLidVolume: 0.2,
+  lowerLidWidth: 5.5,
+  lowerLidVolume: 0.15,
+  lidThickness: 0.22,
   surfaceRadius: 18,
   // Schematic-eye optical dimensions, not measurements recovered from this
   // photo. The curvature, axial thickness and refractive index follow the
@@ -134,12 +140,12 @@ export const portraitNoseShape: IPortraitNoseShape = {
   tipProjection: 0,
   alarProjection: 0,
   nostrilWidthScale: 1,
-  nostrilHeightScale: 1,
+  nostrilHeightScale: 0.65,
   nostrilRise: 0,
-  nostrilTilt: 25,
+  nostrilTilt: 0,
   cavityContraction: 0.6,
   rimSupport: 0.1,
-  rimRoundness: 0.85,
+  rimRoundness: 0,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };
@@ -185,12 +191,12 @@ export const portraitMouthShape: IPortraitMouthShape = {
   crowns: [
     { width: 4.4, height: 8.5 },
     { width: 5.1, height: 8.8 },
-    { width: 6, height: 9.3 },
-    { width: 7.2, height: 10.1 },
-    { width: 7.7, height: 10.7 },
-    { width: 7.7, height: 10.7 },
-    { width: 7.2, height: 10.1 },
-    { width: 6, height: 9.3 },
+    { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
+    { width: 6.8, height: 9.8, cervicalWidth: 0.76, edgeRise: 0.5 },
+    { width: 8.1, height: 10.4, cervicalWidth: 0.82, edgeRise: 0.22 },
+    { width: 8.1, height: 10.5, cervicalWidth: 0.82, edgeRise: 0.3 },
+    { width: 6.8, height: 9.8, cervicalWidth: 0.76, edgeRise: 0.5 },
+    { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
     { width: 5.1, height: 8.8 },
     { width: 4.4, height: 8.5 },
   ],
@@ -229,12 +235,12 @@ export const portraitCheekSockets: IPortraitCheekSocket[] = [
  * zero because the host already contains the photographed smile.
  */
 export const portraitCheekShape: IPortraitCheekShape = {
-  malar: { width: 24, height: 27, reach: 34, projection: 2.2, lift: 0 },
-  medial: { width: 22, height: 25, reach: 32, projection: 3.6, lift: 0 },
-  buccal: { width: 18, height: 20, reach: 30, projection: 0.8, lift: 0 },
-  modiolus: { width: 9, height: 10, reach: 24, projection: 0.7, lift: 0 },
-  foldWidth: 3.6,
-  foldDepth: 0.8,
+  malar: { width: 30, height: 35, reach: 40, projection: 3.7, lift: 0 },
+  medial: { width: 29, height: 33, reach: 40, projection: 3.8, lift: 0 },
+  buccal: { width: 28, height: 33, reach: 35, projection: 2.5, lift: 0 },
+  modiolus: { width: 12, height: 14, reach: 24, projection: 0.2, lift: 0 },
+  foldWidth: 5,
+  foldDepth: 0,
   foldReach: 30,
 };
 
@@ -266,11 +272,17 @@ export function portraitComponentsFor(
 
 /** Full inspection assembly; tessellation is explicit rather than hidden in the host. */
 export const portraitAssembly = {
+  hairProxy: true,
   components: portraitComponentsFor(
     portraitEyeShape,
     portraitEyeShape,
     portraitNoseShape,
   ),
   subdivisionRounds: 3,
-  surfaceLayers: portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
+  surfaceLayers: [
+    ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
+    createPortraitReliefLayer("nasal-subunits", portraitNasalRelief),
+    createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
+    createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
+  ],
 };
