@@ -52,8 +52,10 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   material("teeth", [0.74, 0.69, 0.57], 0.3);
   material("brows", [0.023, 0.016, 0.013], 0.76);
   material("hair", [0.013, 0.009, 0.0065], 0.73);
-  // Nasal lining has its own dark diffuse finish. The cavity's occlusion and
-  // inward-facing walls supply depth; this colour does not replace geometry.
-  material("nasal-interior", [0.095, 0.035, 0.025], 0.87);
+  // The visible nasal vestibule is a tissue surface; its recessed geometry and
+  // illumination supply the shadow. Keep its base colour in the tissue range
+  // rather than baking the photographed cavity darkness into the albedo too.
+  // This warm linear-RGB fit is authored, not measured mucosal reflectance.
+  material("nasal-interior", [0.42, 0.23, 0.19], 0.87);
   return materials;
 }
