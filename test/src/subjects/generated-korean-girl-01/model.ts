@@ -5,6 +5,7 @@ import type { IPortraitComponent } from "../portraitComponents";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import { referenceControlNet } from "./controlNet";
 import { buildPortraitEars } from "./ears";
+import { buildFittedReferencePortrait } from "./fittedModel";
 import { buildPortraitHairProxy } from "./hairProxy";
 import { buildPortraitHead } from "./head";
 import { createPortraitMaterials } from "./materials";
@@ -42,13 +43,24 @@ import type { portraitReview } from "./review";
  * @evidence src/subjects/generated-korean-girl-01/review.md#component-replacement Assembles the component selections exercised by the replacement tests; fresh alternate-assembly captures remain pending for this revision.
  * @evidence {@link portraitReview} Retains the construction review carrier for this assembled face; its written observations do not accept the likeness.
  */
-export function buildReferencePortrait(assembly: {
-  components: IPortraitComponent[];
-  subdivisionRounds: number;
-  surfaceLayers?: readonly IPortraitSurfaceLayer[];
-  /** Include only the coarse hairstyle mass; omitted for isolated face inspection. */
-  hairProxy?: boolean;
-}): IAutoMovieModel {
+export function buildReferencePortrait(
+  assembly:
+    | {
+        foundation: "anatomical";
+        /** Surface sampling remains independent of the fitted anatomical controls. */
+        subdivisionRounds: number;
+      }
+    | {
+        foundation?: undefined;
+        components: IPortraitComponent[];
+        subdivisionRounds: number;
+        surfaceLayers?: readonly IPortraitSurfaceLayer[];
+        /** Include only the coarse hairstyle mass; omitted for isolated face inspection. */
+        hairProxy?: boolean;
+      },
+): IAutoMovieModel {
+  if (assembly.foundation === "anatomical")
+    return buildFittedReferencePortrait(assembly.subdivisionRounds);
   const head = buildPortraitHead(
     {
       positions: referenceControlNet.positions,

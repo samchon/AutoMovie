@@ -270,8 +270,8 @@ export function portraitComponentsFor(
   ];
 }
 
-/** Full inspection assembly; tessellation is explicit rather than hidden in the host. */
-export const portraitAssembly = {
+/** Retained measured-cage baseline for independent component experiments. */
+export const measuredPortraitAssembly = {
   hairProxy: true,
   components: portraitComponentsFor(
     portraitEyeShape,
@@ -285,4 +285,10 @@ export const portraitAssembly = {
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
   ],
+};
+
+/** Current target uses the fitted connected surface; legacy component knobs are separate. */
+export const portraitAssembly = {
+  foundation: "anatomical" as const,
+  subdivisionRounds: 1,
 };

@@ -6,8 +6,8 @@ import path from "node:path";
 import { chromium } from "../../node_modules/playwright";
 import { portraitAssembly } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../src/subjects/generated-korean-girl-01/head";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
+import surfaceFit from "../../src/subjects/generated-korean-girl-01/surfaceFit.json";
 import {
   portraitDocument,
   portraitGltfExtensions,
@@ -34,12 +34,6 @@ async function main(): Promise<void> {
     throw new Error(
       "Projection diagnostic needs the captured construction revision.",
     );
-  const head = buildPortraitHead(
-    referenceControlNet,
-    portraitAssembly.components,
-    portraitAssembly.subdivisionRounds,
-    portraitAssembly.surfaceLayers,
-  );
   const {
     rotation: r,
     origin,
@@ -57,7 +51,9 @@ async function main(): Promise<void> {
   ].map((id) => ({
     id,
     reference: project(referenceControlNet.positions[id]),
-    current: project(head.refined.positions[id]),
+    current: project(
+      (surfaceFit.landmarks as Record<string, number[]>)[String(id)],
+    ),
   }));
   const source = await fs.readFile(
     path.join(
@@ -88,7 +84,7 @@ async function main(): Promise<void> {
       deviceScaleFactor: 1,
     });
     await page.setContent(
-      `<style>body{margin:0}main{display:flex}figure{position:relative;overflow:hidden;width:860px;height:860px;margin:0}img{position:absolute}i{position:absolute;width:8px;height:8px;border:2px solid cyan;border-radius:50%;transform:translate(-50%,-50%)}b{position:absolute;left:10px;top:-8px;background:#111c;color:cyan;font:14px sans-serif}figcaption{position:absolute;top:8px;left:8px;color:white;background:#111c;padding:5px;font:18px sans-serif}</style><main><figure><img style="width:${profile.reference.width * scale}px;left:${-crop.x * scale}px;top:${-crop.y * scale}px" src="${image(source)}">${marks("reference")}<figcaption>Source landmarks</figcaption></figure><figure><img style="width:860px;height:860px" src="${image(render)}">${marks("current")}<figcaption>Projected mesh witnesses / ${receipt.artifact.gltf.slice(0, 8)}</figcaption></figure></main>`,
+      `<style>body{margin:0}main{display:flex}figure{position:relative;overflow:hidden;width:860px;height:860px;margin:0}img{position:absolute}i{position:absolute;width:8px;height:8px;border:2px solid cyan;border-radius:50%;transform:translate(-50%,-50%)}b{position:absolute;left:10px;top:-8px;background:#111c;color:cyan;font:14px sans-serif}figcaption{position:absolute;top:8px;left:8px;color:white;background:#111c;padding:5px;font:18px sans-serif}</style><main><figure><img style="width:${profile.reference.width * scale}px;left:${-crop.x * scale}px;top:${-crop.y * scale}px" src="${image(source)}">${marks("reference")}<figcaption>Source landmarks</figcaption></figure><figure><img style="width:860px;height:860px" src="${image(render)}">${marks("current")}<figcaption>Fitted correspondence samples / ${receipt.artifact.gltf.slice(0, 8)}</figcaption></figure></main>`,
     );
     await page.evaluate(() =>
       Promise.all([...document.images].map((image) => image.decode())),
@@ -104,6 +100,8 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         gltfSha256: receipt.artifact.gltf,
+        sampleKind:
+          "Fitted correspondence samples; not mesh-vertex witnesses or a likeness score",
         records,
         review: "not automatically supplied",
       },

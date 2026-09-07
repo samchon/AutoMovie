@@ -6,6 +6,10 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 
 ## Construction
 
+The active export uses `portraitAssembly.foundation: "anatomical"`. Read `configuration.ts`, `fittedModel.ts`, then `reference-anatomy/model.ts` for that path. The continuous head/ear/lid/nasal/oral surface and sparse shape targets are attributed CC0 MakeHuman/MPFB assets; see [their provenance](reference-anatomy/README.md). Catmull-Clark refinement and the neck attachment precede a subject-specific XY deformation. `surfaceFit.json` records 150 observed correspondences, fixed posterior anchors and fit receipts. The fit preserves the anatomical prior's depth and the source photograph's estimated projection. Its small correspondence residual does not establish likeness or recover unobserved anatomy. Globes remain rigid; coarse brows attach to the fitted skin, and separate crowns and coarse hair complete the assembly.
+
+The procedural component experiment below remains available as `measuredPortraitAssembly`. Its eye/nose/cheek skin controls apply to that assembly; they do not modify the active anatomical foundation. The anatomical foundation still needs a reusable component parameter interface before extraction into `human`.
+
 | Source | Responsibility |
 | --- | --- |
 | `generated-korean-girl-01/controlNet.ts` | Frozen image measurements, estimated depth, normalization and provenance |
@@ -36,7 +40,7 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 
 Construction coordinates are millimetres, with +Y up and +Z in front of the face. Anatomical left is +X. `portraitPart` converts completed meshes into metre-valued model parts. Transient surface-deformation commands also use engine metres; their adapter returns displacements to construction millimetres before model parts are created. Skin, lips and nasal lining share the same refined cage and normal field; material regions retain only their referenced vertices. Eye geometry reads the refined lid boundary, so it cannot independently invent a second aperture.
 
-Read `configuration.ts`, `model.ts`, then `head.ts` to follow the running assembly. `controlNet.ts` preserves observed landmark identities; individual component files define what their controls mean. Keep subject-specific vertex IDs in socket bindings. Measurements, inferred anatomy and authored control values have different confidence and must remain distinguishable.
+For the procedural assembly, read `configuration.ts`, `model.ts`, then `head.ts`. `controlNet.ts` preserves observed landmark identities; individual component files define what their controls mean. Keep subject-specific vertex IDs in socket bindings. Measurements, inferred anatomy and authored control values have different confidence and must remain distinguishable.
 
 The image supplies image-plane landmarks. Depth, rear skull and occluded anatomy remain estimates. See [measurement provenance and attribution](generated-korean-girl-01/NOTICE.md). No source photograph is projected onto the model as a texture.
 
@@ -56,7 +60,7 @@ The order is part of the attachment contract:
 4. Evaluate optional surface layers against the same refined host. Their engine fields use metres; the adapter returns millimetres and fades displacement at open rims.
 5. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface.
 
-The current `portraitAssembly` supplies paired cheek layers plus named nasal, orbital and perioral supports. Each region carries its attachment, offset, XYZ support radii and signed displacement. The nasal layer distinguishes tip domes, alar lobules, their facial boundaries and columellar support; the perioral layer distinguishes philtral columns, their groove and the lip-to-chin transition. These are compact surface envelopes, not reconstructed internal tissues or a muscle simulation. The current young-face fit adds no extra nasolabial or medial tear-trough depression. Fine wrinkles remain deferred. Ear roots are embedded separate shells, not welded to the skin.
+The `measuredPortraitAssembly` supplies paired cheek layers plus named nasal, orbital and perioral supports. Each region carries its attachment, offset, XYZ support radii and signed displacement. The nasal layer distinguishes tip domes, alar lobules, their facial boundaries and columellar support; the perioral layer distinguishes philtral columns, their groove and the lip-to-chin transition. These are compact surface envelopes, not reconstructed internal tissues or a muscle simulation. The current young-face fit adds no extra nasolabial or medial tear-trough depression. Fine wrinkles remain deferred. Ear roots are embedded separate shells, not welded to the skin.
 
 This prototype currently exposes replaceable procedural eyes, noses and mouths. Ears, cranium and neck remain subject builders. Numerical controls do not establish anatomical correctness.
 
@@ -64,14 +68,14 @@ This prototype currently exposes replaceable procedural eyes, noses and mouths. 
 import {
   alternatePortraitEye,
   alternatePortraitNose,
-  portraitAssembly,
+  measuredPortraitAssembly,
   portraitComponentsFor,
   portraitEyeShape,
 } from "./generated-korean-girl-01/configuration";
 import { buildReferencePortrait } from "./generated-korean-girl-01/model";
 
 const model = buildReferencePortrait({
-  ...portraitAssembly,
+  ...measuredPortraitAssembly,
   components: portraitComponentsFor(
     portraitEyeShape,       // anatomical right eye
     alternatePortraitEye,  // independently replaced left eye
@@ -87,7 +91,7 @@ Each eye accepts a separate `browProfile` containing fibre radius, radius variat
 
 Nostril width and height act in each opening's fitted plane, about its centroid. Width follows projected head X, with head Y as the guide for a plane exactly normal to X; height is perpendicular within that plane. Sizing retains the rim's normal residual and therefore does not flatten its irregularity. Overall nasal width then scales head X, and `nostrilTilt` rotates the opening and cavity offset around head X. The lining reads the resulting shared rim, so shrinking the aperture also moves its support rings. `rimRoundness: 0` preserves the measured rim before sizing; nonzero values blend towards its fitted ellipse.
 
-Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek settings in `assembly.surfaceLayers`. Each region has transverse, vertical and depth support radii plus anterior projection and upward lift, all in millimetres. The nasolabial groove has separate width, depth and depth-support controls. Its field spacing follows the support metric and its endpoint fade follows physical path distance. Preserve the rest of `portraitAssembly` when changing one component so its other anatomical layers remain selected.
+Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek settings in `assembly.surfaceLayers`. Each region has transverse, vertical and depth support radii plus anterior projection and upward lift, all in millimetres. The nasolabial groove has separate width, depth and depth-support controls. Its field spacing follows the support metric and its endpoint fade follows physical path distance. Preserve the rest of `measuredPortraitAssembly` when changing one component so its other anatomical layers remain selected.
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
 
@@ -121,7 +125,7 @@ The Blender executable is `C:/Program Files/Blender Foundation/Blender 5.1/blend
 
 `comparison.png` places the source photograph beside an actual GLTF render. `reference.png` is also a render, in the estimated source-camera pose. `views.png` contains nine views, including steep top/bottom and an opposing rear oblique and `clay-views.png` contains three views without the colour finishes. The receipts inside `preview/` identify the exact model, configuration, profile and frame bytes. Read those files for artifact identity; a source edit may be newer than the last successfully published capture.
 
-`captureProfile.ts` owns Cycles sampling and its explicit denoising switch. Current inspection uses 256 samples with denoising disabled so the judged strands remain in the unfiltered render. This setting can retain sampling noise, particularly behind the transparent cornea. Compare the capture profile as well as the GLB digest when assessing an appearance change.
+`captureProfile.ts` owns Cycles sampling and its explicit denoising switch. Current broad-form inspection uses 64 samples with denoising enabled. Fine hair and brow judgments remain deferred; the filter can change small surface features. Compare the capture profile as well as the GLB digest when assessing an appearance change.
 
 The review points to the fixed preview path and records the exact inspected GLB digest. A new preview does not automatically renew that review or its evidence comments. Renderer differences must not be credited as geometry improvements. Import-only changes, private module state and external renderer-script changes also require a new manual inspection even when a public-declaration fingerprint does not change.
 

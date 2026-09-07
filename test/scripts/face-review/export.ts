@@ -5,26 +5,18 @@ import fs from "node:fs/promises";
 
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
-  portraitNasalRelief,
-  portraitOrbitalRelief,
-  portraitPerioralRelief,
-} from "../../src/subjects/generated-korean-girl-01/anatomy";
-import {
   portraitAssembly,
-  portraitCheekShape,
-  portraitCheekSockets,
-  portraitEyeShape,
   portraitMouthShape,
-  portraitNoseShape,
 } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
 import { portraitNeckShape } from "../../src/subjects/generated-korean-girl-01/cranium";
-import { portraitEarShape } from "../../src/subjects/generated-korean-girl-01/ears";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
+import surfaceFit from "../../src/subjects/generated-korean-girl-01/surfaceFit.json";
 import {
   portraitDocument,
   portraitGltfExtensions,
 } from "../../src/subjects/portraitDocument";
+import { anatomicalStudyShape } from "../../src/subjects/reference-anatomy/model";
 
 async function main() {
   await fs.mkdir(".shots/face-experiment", { recursive: true });
@@ -60,21 +52,19 @@ async function main() {
     createHash("sha256").update(bytes).digest("hex");
   const configuration = JSON.stringify(
     {
-      rightEye: portraitEyeShape,
-      hairProxy: portraitAssembly.hairProxy,
-      leftEye: portraitEyeShape,
-      nose: portraitNoseShape,
-      mouth: portraitMouthShape,
-      neck: portraitNeckShape,
-      ears: portraitEarShape,
-      nasalRelief: portraitNasalRelief,
-      orbitalRelief: portraitOrbitalRelief,
-      perioralRelief: portraitPerioralRelief,
-      cheeks: {
-        right: portraitCheekShape,
-        left: portraitCheekShape,
-        sockets: portraitCheekSockets,
+      foundation: portraitAssembly.foundation,
+      anatomicalShape: anatomicalStudyShape,
+      surfaceFit,
+      hairProxy: true,
+      dental: {
+        dentalOffset: portraitMouthShape.dentalOffset,
+        dentalRecess: portraitMouthShape.dentalRecess,
+        dentalDrop: portraitMouthShape.dentalDrop,
+        dentalDepth: portraitMouthShape.dentalDepth,
+        toothGap: portraitMouthShape.toothGap,
+        crowns: portraitMouthShape.crowns,
       },
+      neck: portraitNeckShape,
       subdivisionRounds: portraitAssembly.subdivisionRounds,
     },
     null,

@@ -1,7 +1,7 @@
 import { TestValidator } from "@nestia/e2e";
 
 import {
-  portraitAssembly,
+  measuredPortraitAssembly,
   portraitComponentsFor,
   portraitEyeShape,
   portraitNoseShape,
@@ -30,7 +30,7 @@ export const test_subject_portrait_model = (): void => {
     hairProxy: true,
     components: portraitComponentsFor(eye, eye, portraitNoseShape),
     subdivisionRounds: 1,
-    surfaceLayers: portraitAssembly.surfaceLayers,
+    surfaceLayers: measuredPortraitAssembly.surfaceLayers,
   });
   TestValidator.equals(
     "static generated model",

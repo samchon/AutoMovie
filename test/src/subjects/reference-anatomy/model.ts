@@ -13,7 +13,12 @@ import {
   portraitPoint,
   portraitRegion,
 } from "../geometry";
+import { portraitEyeSphereIntersection } from "../portraitEyeSphere";
 import { assertPortraitSkinTopology } from "../portraitSkinTopology";
+import {
+  type IPortraitSurfaceFit,
+  createPortraitSurfaceFitter,
+} from "../portraitSurfaceFit";
 import { subdividePortraitQuads } from "../subdividePortraitQuads";
 import basis from "./mesh.json";
 
@@ -74,6 +79,7 @@ export const anatomicalStudyShape: IAnatomicalStudyShape = {
  */
 export function buildAnatomicalStudy(
   input: IAnatomicalStudyShape,
+  fit?: IPortraitSurfaceFit,
 ): IAutoMovieModel {
   const shape = { ...input };
   if (
@@ -186,6 +192,13 @@ export function buildAnatomicalStudy(
     },
   );
   assertPortraitSkinTopology(cage, [crop]);
+  // Warp shared skin before material separation. Optical centres receive the
+  // residual once; their globe surfaces stay rigid and keep their own radius.
+  if (fit !== undefined) {
+    const warp = createPortraitSurfaceFitter(fit);
+    cage.positions = cage.positions.map(warp);
+    for (let i = 0; i < centres.length; i++) centres[i] = warp(centres[i]);
+  }
   const packed = cage.positions.flat(),
     normals = portraitNormals(packed, cage.indices);
   const parts = [];
@@ -206,6 +219,15 @@ export function buildAnatomicalStudy(
   }
   for (let side = 0; side < 2; side++) {
     const [x, y, z] = centres[side];
+    const gaze = fit?.gazeOrigins?.[side];
+    const irisCenter =
+      gaze === undefined
+        ? portraitPoint(x, y, z + shape.eyeRadius)
+        : portraitEyeSphereIntersection(
+            { center: portraitPoint(x, y, z), radius: shape.eyeRadius },
+            portraitPoint(gaze[0], gaze[1], gaze[2]),
+            portraitPoint(...(fit!.viewRay as [number, number, number])),
+          );
     parts.push(
       portraitPart(
         "study-globe-" + side,
@@ -237,9 +259,15 @@ export function buildAnatomicalStudy(
               const dx = radius * v * Math.cos(2 * Math.PI * u),
                 dy = -radius * v * Math.sin(2 * Math.PI * u);
               return portraitPoint(
-                x + dx,
-                y + dy,
-                z + Math.sqrt(shape.eyeRadius ** 2 - dx * dx - dy * dy) + lift,
+                irisCenter.x + dx,
+                irisCenter.y + dy,
+                z +
+                  Math.sqrt(
+                    shape.eyeRadius ** 2 -
+                      (irisCenter.x + dx - x) ** 2 -
+                      (irisCenter.y + dy - y) ** 2,
+                  ) +
+                  lift,
               );
             },
             48,
