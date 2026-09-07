@@ -23,6 +23,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
     message: "Compiling preview source with ttsc...",
   };
   let output = new Map<string, string>();
+  const importedInputs = new Set<string>();
   const relativeSource = (file: string): string | undefined => {
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (
@@ -44,8 +45,15 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
       (/^(src|docs|assets|public|scripts|viewer|vendor|automovie)\//.test(
         relative,
       ) ||
-        /\.(?:[cm]?[jt]sx?|json|ya?ml)$/.test(relative))
+        /\.[cm]?[jt]sx?$/.test(relative) ||
+        /^[^/]+\.(?:json|ya?ml)$/.test(relative) ||
+        importedInputs.has(relative))
     );
+  };
+  const rememberInput = (file: string): void => {
+    const relative = relativeSource(file);
+    if (relative !== undefined && !isViewerWatchOutput(root, file))
+      importedInputs.add(relative);
   };
   const requireGeneration = (requested: string | null): void => {
     if (state.phase !== "ready") throw new Error(state.message);
@@ -95,6 +103,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
       );
       if (resolved === null) return;
       const [file, query] = resolved.id.split("?", 2);
+      if (file !== undefined) rememberInput(file);
       if (
         file === undefined ||
         !compilerModule(file) ||
@@ -161,6 +170,10 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
           schedule();
           return;
         }
+        if (result.type !== "exception")
+          for (const diagnostic of result.diagnostics ?? [])
+            if (diagnostic.file !== undefined)
+              rememberInput(path.resolve(root, diagnostic.file));
         if (result.type === "success") {
           const entries = Object.entries(result.output);
           if (
@@ -168,6 +181,10 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
               undefined &&
             entries.every(([file]) => file.startsWith(OUTPUT_PREFIX))
           ) {
+            importedInputs.clear();
+            for (const [file] of entries)
+              if (file.endsWith(".json"))
+                importedInputs.add(file.slice(OUTPUT_PREFIX.length));
             output = new Map(
               entries.map(([file, code]) => [
                 file.slice(OUTPUT_PREFIX.length),
@@ -200,8 +217,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         clearTimeout(timer);
         timer = setTimeout(() => void compile(), 250);
       };
-      const changed = (file: string): void => {
-        if (!sourceInput(file)) return;
+      const invalidate = (): void => {
         generation++;
         output = new Map();
         state = {
@@ -212,13 +228,29 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         server.moduleGraph.invalidateAll();
         schedule();
       };
-      server.watcher.on("add", changed);
+      const changed = (file: string): void => {
+        if (sourceInput(file)) invalidate();
+      };
+      const added = (file: string): void => {
+        const relative = relativeSource(file);
+        // A missing data import has no browser module yet. Its creation can
+        // recover an already refused compilation without disrupting a view.
+        if (
+          sourceInput(file) ||
+          (state.phase === "error" &&
+            relative !== undefined &&
+            /\.(?:json|ya?ml)$/.test(relative) &&
+            !isViewerWatchOutput(root, file))
+        )
+          invalidate();
+      };
+      server.watcher.on("add", added);
       server.watcher.on("change", changed);
       server.watcher.on("unlink", changed);
       server.httpServer?.once("close", () => {
         closed = true;
         clearTimeout(timer);
-        server.watcher.off("add", changed);
+        server.watcher.off("add", added);
         server.watcher.off("change", changed);
         server.watcher.off("unlink", changed);
         // A worker already inside the native compiler finishes normally.

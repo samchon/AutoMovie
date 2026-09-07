@@ -4,6 +4,8 @@ Keep one viewer running while changing source. Select the mode by what exists: `
 
 All viewer servers, including the internal capture and inspection servers, exclude reserved output directories before opening file-watch handles. These include `generated`, `renders`, `reports`, `artifacts`, build output, caches, logs, and AutoMovie runtime state. The tracked AutoMovie design, derivation, migration, and registry inputs remain watched, as do `assets`, `public`, and actual source imported from `.wiki`. Keep source outside reserved output directories; a Git ignore is not a source-watch policy. Waiting for a write to settle delays source notifications and cannot protect a watcher that already opened a busy output file.
 
+Saving a review JSON or YAML outside the authored input directories does not invalidate the source preview. Imported data, root configuration, and files named by compiler diagnostics remain inputs. A newly created data file can also recover a refused missing import. This keeps review recording from stopping mouse look or resetting the current camera.
+
 ## Compiled output
 
 `npm run viewer` starts a fresh `ttsx` execution of `scripts/compile.ts`, then repeats it when authored source, design documents, assets, scripts, viewer code, root configuration, or the tracked AutoMovie design and derivation inputs change. JavaScript and TypeScript helpers are watched even outside the usual source directories. Saves are coalesced and compiler executions are serial. An edit during a run queues another run; the intermediate result is not served as current. Generated output, renders, capture state, receipts, logs, reports, and caches do not trigger that loop. Restart the server after changing installed dependencies or inputs outside the project root.
