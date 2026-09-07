@@ -103,6 +103,8 @@ The GLB is self-contained. The JSON GLTF uses its sibling `portrait.bin`. `portr
 
 ## Inspect and revise
 
+For each geometry round, complete numerical checks, format, commit and push the changed source before its visual review. Open the actual current GLTF captures, then write a detailed `.shots/face-experiment/preview/REVIEW.md` naming the source commit and artifact identities, every view's observations, unresolved differences, proven causes versus hypotheses, and the next coherent correction. Post a formal `COMMENT` review on the Draft PR with the remaining failures and next action. A new capture replaces the previous bundle; author its current review again rather than carrying forward an old verdict.
+
 `test/lint.config.ts` connects the model to every H2 view in its inspection record and connects `review.ts` to the complete construction export population. TypeScript evidence uses type-only imports and `{@link ...}` targets. A changed referenced declaration invalidates its `@evidenceReview` fingerprint. New source enters either its declared subject or the shared residual population.
 
 The model review graph reports warnings. Rendering precedes visual review, so missing or expired review evidence must allow the authoring entrypoint to run under `ttsx`. A warning remains an outstanding inspection obligation; it does not accept the model's appearance.
