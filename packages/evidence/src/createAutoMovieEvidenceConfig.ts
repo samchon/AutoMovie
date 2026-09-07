@@ -1436,8 +1436,10 @@ const markdownIdentities = (
 
 const POSITIVE_EVIDENCE_TAG = /@evidence(?!Exclude)[A-Za-z]*\b/u;
 const EXCLUSION_TAG = /@evidenceExclude[A-Za-z]*\b/u;
-const DISCOVERY_EVIDENCE_TAG = /@evidence\s+discovery\/[\w./#-]+/u;
-const DISCOVERY_EXCLUSION_TAG = /@evidenceExclude\s+discovery\/[\w./#-]+/u;
+const DISCOVERY_EVIDENCE_TAG =
+  /@evidence\s+(?:language\/)?discovery\/[\w./#-]+/u;
+const DISCOVERY_EXCLUSION_TAG =
+  /@evidenceExclude\s+(?:language\/)?discovery\/[\w./#-]+/u;
 const EVIDENCE_TARGET = /@evidence[A-Za-z]*\s+([^\s]+)/gu;
 
 const validateTargetForm = (
@@ -1978,7 +1980,7 @@ const validateWorkSpecificContracts = (graph: IProductionGraph): void => {
         `${relative} may carry discovery host tags only in its comment preamble before H1.`,
       );
     for (const match of evidence.matchAll(EVIDENCE_TARGET))
-      if (match[1]?.startsWith("discovery/") !== true)
+      if (!/^(?:language\/)?discovery\//u.test(match[1] ?? ""))
         throw new Error(
           `${relative} may host only discovery evidence before its H1; received ${match[1]}.`,
         );
@@ -2436,7 +2438,12 @@ const authoredPopulationFiles = (
   graph: IProductionGraph,
   layer: MarkdownLayer,
 ): string[] =>
-  createAutoMovieAuthoredPopulationFiles(layer, graph.populationScope);
+  createAutoMovieAuthoredPopulationFiles(
+    layer,
+    graph[layer] === "disabled"
+      ? { mode: "complete-production" }
+      : graph.populationScope,
+  );
 
 const populationFiles = (
   graph: IProductionGraph,

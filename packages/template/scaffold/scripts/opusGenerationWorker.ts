@@ -23,7 +23,8 @@ export interface IOpusGenerationWorkerPackage {
 }
 
 export interface IOpusGenerationPacket {
-  bytes: Uint8Array;
+  /** Packet bytes are copied out of the encoder into an owned buffer. */
+  bytes: Uint8Array<ArrayBuffer>;
   dts: number;
   duration: number;
 }

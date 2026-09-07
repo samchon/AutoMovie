@@ -247,7 +247,11 @@ const serveKokoroGenerationWorker = async (
     ) as Promise<ITransformersModule>,
   ]);
   assertCurrent();
-  const runtime = await loadKokoroRuntime({
+  const runtime = await loadKokoroRuntime<
+    StyleTextToSpeech2Model,
+    PreTrainedTokenizer,
+    IKokoroRuntime
+  >({
     cacheRoot: data.cacheRoot,
     device: data.selection.device,
     dtype: data.selection.dtype,

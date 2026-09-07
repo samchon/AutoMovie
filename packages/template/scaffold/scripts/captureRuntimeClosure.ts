@@ -9,6 +9,11 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import {
+  type ICapturePackageDependency,
+  assertCapturePackageDependencyCurrent,
+  capturePackageDependency,
+} from "./capturePackageDependency";
+import {
   type IRuntimePackageSnapshot,
   assertRuntimePackageSnapshotCurrent,
   snapshotRuntimePackage,
@@ -46,7 +51,7 @@ interface IPhysicalTreeSnapshot {
 
 interface IResolvedPackageSnapshot {
   entry: string;
-  dependencies: string[];
+  dependencies: ICapturePackageDependency[];
   snapshot: IRuntimePackageSnapshot;
 }
 
@@ -129,16 +134,14 @@ export const snapshotProductionCaptureRuntimeClosure = (props: {
     for (const entry of packages) {
       assertRuntimePackageSnapshotCurrent(entry.snapshot);
       for (const dependency of entry.dependencies) {
-        const resolved = resolvePackageEntry(entry.snapshot.root, dependency);
-        const expected = packages.find(
-          (candidate) =>
-            candidate.snapshot.package === dependency &&
-            candidate.entry === resolved,
-        );
-        if (expected === undefined)
-          throw new Error(
-            `Installed capture dependency "${dependency}" changed its resolved package generation. Restart with the current installation.`,
-          );
+        assertCapturePackageDependencyCurrent({
+          dependency,
+          resolved: resolvePackageEntry(
+            entry.snapshot.root,
+            dependency.specifier,
+          ),
+          packages,
+        });
       }
     }
     if (browserTree !== null) assertPhysicalTreeCurrent(browserTree);
@@ -201,16 +204,22 @@ const snapshotPackageGraph = (
         ...dependencyNames(parsed.optionalDependencies),
       ]),
     ].sort(compare);
-    const resolvedDependencies: string[] = [];
-    for (const dependency of dependencies)
+    const resolvedDependencies: ICapturePackageDependency[] = [];
+    for (const dependency of dependencies) {
+      const identity = capturePackageDependency({
+        optionalVersion: parsed.optionalDependencies?.[dependency],
+        specifier: dependency,
+        version: parsed.dependencies?.[dependency],
+      });
       try {
         const entry = resolvePackageEntry(snapshot.root, dependency);
-        resolvedDependencies.push(dependency);
-        pending.push({ entry, package: dependency });
+        const resolved = { ...identity, entry };
+        resolvedDependencies.push(resolved);
+        pending.push(resolved);
       } catch (error) {
-        if (dependencyNames(parsed.dependencies).includes(dependency))
-          throw error;
+        if (identity.optional === false) throw error;
       }
+    }
     output.push({
       entry: path.resolve(current.entry),
       dependencies: resolvedDependencies,

@@ -8,6 +8,8 @@ A registered capture browser starts, draws, and commits bytes. `npm run preview`
 
 Run `capture:install` and `capture:doctor` before the first capture of a session. A missing or drifted browser is refused by name there, which is cheaper than reading it out of a failed render.
 
+The host may set `AUTOMOVIE_CAPTURE_GRAPHICS_BACKEND=default` to let the browser select its graphics backend. Omission or `swiftshader` keeps the shipped software backend. Freeze this choice for the capture session: it changes the requested runtime identity and may change pixels. Read the doctor's observed vendor and renderer before claiming a real GPU; `default` requests browser selection and does not prove hardware acceleration. Keep that same host setting for every capture whose receipt belongs to the session.
+
 ## Request
 
 Choose exactly one compiler-registry target, and the choice is between these two:
