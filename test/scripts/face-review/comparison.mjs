@@ -28,6 +28,8 @@ if (
 const model = await fs.readFile(join(directory, "portrait.glb"));
 if (digest(model) !== record.artifact.gltf)
   throw new Error("Preview model does not match its capture.");
+if (digest(await fs.readFile(join(directory, "model.json"))) !== record.artifact.model)
+  throw new Error("Preview named model parts do not match their capture.");
 for (const frame of record.captures)
   if (digest(await fs.readFile(join(directory, frame.file))) !== frame.sha256)
     throw new Error("Preview frame does not match its capture.");

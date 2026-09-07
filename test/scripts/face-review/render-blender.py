@@ -18,7 +18,7 @@ capture_root = os.path.join(ROOT, ".shots", "face-experiment")
 if os.path.normcase(os.path.commonpath([capture_root, OUT])) != os.path.normcase(capture_root) or WORK == OUT:
     raise ValueError("Portrait captures must stay inside their workspace and apart from source exports.")
 os.makedirs(OUT, exist_ok=True)
-for filename in ["portrait.glb", "portrait.gltf", "portrait.bin", "capture-profile.json", "artifact-basis.json"]:
+for filename in ["portrait.glb", "portrait.gltf", "portrait.bin", "model.json", "capture-profile.json", "artifact-basis.json"]:
     shutil.copyfile(os.path.join(WORK, filename), os.path.join(OUT, filename))
 if os.path.exists(os.path.join(WORK, "configuration.json")):
     shutil.copyfile(os.path.join(WORK, "configuration.json"), os.path.join(OUT, "configuration.json"))
@@ -37,6 +37,7 @@ def digest(filename):
         return hashlib.sha256(file.read()).hexdigest()
 
 assert digest(os.path.join(OUT, "portrait.glb")) == artifact["gltf"]
+assert digest(os.path.join(OUT, "model.json")) == artifact["model"]
 assert digest(os.path.join(OUT, "capture-profile.json")) == artifact["profile"]
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)

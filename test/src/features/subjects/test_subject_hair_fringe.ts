@@ -40,6 +40,21 @@ export const test_subject_hair_fringe = (): void => {
         ),
   );
   TestValidator.equals("forehead ownership", forehead, saved);
+  const nearHead = {
+    ...forehead,
+    positions: forehead.positions.map((v, i) => (i % 3 === 2 ? 0.04 : v)),
+  };
+  const near = buildPortraitHairProxy(undefined, nearHead)[0].geometry;
+  if (near.type !== "mesh") throw new Error("Expected fringe mesh.");
+  const lowerDepths: number[] = [];
+  for (let i = boundary; i < near.mesh.positions.length; i += 3)
+    if (near.mesh.positions[i + 1] <= 0.05)
+      lowerDepths.push(near.mesh.positions[i + 2]);
+  TestValidator.predicate(
+    "lower fringe follows the forehead rather than a virtual cap",
+    lowerDepths.length > 0 &&
+      lowerDepths.every((z) => z >= 0.0412 - 1e-12 && z < 0.044),
+  );
   const absent = {
     ...forehead,
     positions: forehead.positions.map((v, i) => (i % 3 === 0 ? v + 2 : v)),

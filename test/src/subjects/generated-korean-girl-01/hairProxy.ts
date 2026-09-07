@@ -100,22 +100,27 @@ export function buildPortraitHairProxy(
     // Their tips stay near/above the brow region and well inside the ear's X
     // range. The cap, fringe and curtain share the same envelope and finish.
     const panels = [
-      [-27, -34, 58, 6],
-      [-20, -26, 54, 5.5],
-      [-14, -19, 57, 6],
-      [-8, -12, 51, 5.5],
-      [-2, -5, 54, 5],
-      [4, 4, 58, 5.5],
-      [10, 12, 56, 5.5],
-      [17, 22, 61, 6],
-      [24, 32, 65, 6],
+      [-27, -34, 54, 8],
+      [-20, -26, 48, 8],
+      [-14, -19, 51, 8],
+      [-8, -12, 44, 8],
+      [-2, -5, 46, 8],
+      [4, 4, 50, 8],
+      [10, 12, 47, 9],
+      [17, 22, 54, 9],
+      [24, 32, 58, 9],
     ];
     for (const [rootX, tipX, tipY, width] of panels) {
       const panel = portraitPatch(
         (u, v) => {
-          const taper = 0.06 + 0.94 * (1 - v) ** 0.75;
+          // Clump bodies retain collective coverage. Only the final 28 percent
+          // tapers, and the terminal cross-section curves up at its edges.
+          const end = Math.max(0, Math.min(1, (v - 0.72) / 0.28));
+          const taper =
+            (0.6 + 0.4 * Math.sin((Math.PI * v) / 2)) *
+            (1 - 0.9 * end * end * (3 - 2 * end));
           const x = rootX + (tipX - rootX) * v * v + (u - 0.5) * width * taper;
-          const y = 108 + (tipY - 108) * v;
+          const y = 108 + (tipY - 108) * v + 3.5 * (2 * u - 1) ** 2 * v ** 6;
           const hit = sample(x / 1000, y / 1000);
           if (hit === null)
             throw new Error(
@@ -126,17 +131,21 @@ export function buildPortraitHairProxy(
             throw new Error(
               "Fringe support exceeds its construction-millimetre range.",
             );
-          // Extend the cap's virtual front ellipse below its cutout, then keep
-          // at least 1.2 mm of anterior clearance from the actual forehead. The
-          // small cross-panel arch gives each coarse clump volume without tubes.
+          // Roots share the cap envelope. Below its front cutout, blend over
+          // 8 mm towards the forehead's 1.2 mm clearance surface. The small
+          // cross-panel arch gives coarse clumps volume without individual fibres.
           const envelopeZ =
             -32 + rz * Math.sqrt(1 - (x / rx) ** 2 - ((y - 30) / ry) ** 2);
+          const angle = Math.atan2(x / rx, (envelopeZ + 32) / rz);
+          // The panels are anterior to the ear cutout; this is the cap's same
+          // front-boundary rule on both anatomical sides.
+          const cutY = Math.max(25, -70 + 152 * Math.cos(angle) ** 2);
+          const contact = Math.max(0, Math.min(1, (cutY - y) / 8));
+          const blend = contact * contact * (3 - 2 * contact);
+          const support =
+            (envelopeZ + 0.12) * (1 - blend) + (skinZ + 1.2) * blend;
           const arch = 0.65 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
-          return portraitPoint(
-            x,
-            y,
-            Math.max(envelopeZ + 0.12, skinZ + 1.2) + arch,
-          );
+          return portraitPoint(x, y, Math.max(support, skinZ + 1.2) + arch);
         },
         6,
         20,
