@@ -205,6 +205,19 @@ export const portraitMouthShape: IPortraitMouthShape = {
   cornerLift: 0,
   upperLipProjection: 0,
   lowerLipProjection: 0,
+  // Add cross-sectional body between the existing cutaneous and oral borders.
+  // The central upper tubercle and lower paired pads are independent from the
+  // broad body. Projections use mm; widths/offsets use oral half-width fractions.
+  // This provisional shape retains the photographed aperture and dental frame.
+  section: {
+    upperBody: 0.45,
+    upperTubercle: 0.25,
+    upperTubercleWidth: 0.25,
+    lowerBody: 0.55,
+    lowerPads: 0.15,
+    lowerPadOffset: 0.28,
+    lowerPadWidth: 0.26,
+  },
   blendReach: 14,
   cavityDepth: 5,
   dentalOffset: -1.15,

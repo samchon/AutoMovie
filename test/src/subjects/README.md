@@ -22,6 +22,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `generated-korean-girl-01/nose.ts` | Provisional alar/tip depth and geometric nasal cavities |
 | `generated-korean-girl-01/nostrilRim.ts` | Aperture-plane dimensions and optional elliptical rim regularization |
 | `generated-korean-girl-01/mouth.ts` | Replaceable lips, shared boundary topology, oral cavity and individual dental crowns |
+| `generated-korean-girl-01/lipSection.ts` | Curved upper/lower band coordinates and independent body, upper tubercle and lower pad relief |
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
 | `generated-korean-girl-01/dentalCrown.ts` | Closed enamel lofts with cervical narrowing and independently shaped cutting edges |
 | `generated-korean-girl-01/anatomy.ts` | Subject-owned nasal, orbital and perioral tissue supports |
@@ -93,6 +94,8 @@ const model = buildReferencePortrait({
 ```
 
 Eye controls include aperture width/opening, outer-corner lift, orbital depth, lid fold, iris/pupil radius and spherical surface curvature. Nose controls include overall width, tip/alar projection, aperture dimensions, aperture rise/tilt and cavity dimensions. Mouth controls include width, opening, corner elevation, upper/lower lip projection, individual crown dimensions, dental-row placement and tooth spacing. Tessellation is explicit. Factories copy their inputs, so editing one preset does not mutate an existing component. A fourth argument to `portraitComponentsFor` replaces the mouth shape; omission selects this subject's current smile.
+
+The optional mouth `section` profile separates `upperBody`, `upperTubercle`, `lowerBody` and `lowerPads` projections in millimetres. Tubercle/pad widths and pad offset are fractions of the inner mouth's half-width. Coordinates follow the actual curved upper/lower opening and outer vermilion loop; a raised lower lip stays lower even above the overall mouth midpoint. The smooth section is exactly zero at the two band boundaries and corners. It changes existing shared lip vertices, then the ordinary subdivision and common-normal calculation continue into adjacent skin. Zero projections reproduce the existing band; omission disables added section relief. These are anatomy-inspired surface controls, not a muscle or filler simulation. The [histological study of Cupid's bow](https://pubmed.ncbi.nlm.nih.gov/8341737/) describes the cutaneous-vermilion junction as a structural prominence; the model does not substitute a painted white stripe for that form.
 
 Each eye accepts a separate `browProfile` containing fibre radius, radius variation, taper, surface clearance, arch, outward bend and longitudinal sampling. `browFibres` is an integer from zero through 4096; zero disables that brow. The socket's upper/lower brow boundaries supply its planar distribution. Every fibre sample queries the front envelope of the final skin and offsets along its estimated normal, so changing the orbital or forehead surface moves its attachment with that surface. Length controls use millimetres; they are authored values rather than measurements of this person's hair. A path outside the supporting skin refuses. The shared strand sweep also refuses zero, nonfinite or Z-parallel tangents because its cross-section guide is Z.
 

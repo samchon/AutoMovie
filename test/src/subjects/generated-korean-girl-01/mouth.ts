@@ -19,6 +19,11 @@ import {
   assertPortraitDentalCrown,
   buildPortraitDentalCrown,
 } from "./dentalCrown";
+import {
+  type IPortraitLipSection,
+  createPortraitLipCoordinates,
+  createPortraitLipSection,
+} from "./lipSection";
 
 type Point = IAutoMovieVector3;
 const pi = Math.PI;
@@ -59,6 +64,8 @@ export interface IPortraitMouthShape {
   upperLipProjection: number;
   /** Lower vermilion projection in host Z. Zero retains measured depth. */
   lowerLipProjection: number;
+  /** Optional body and tubercle relief between the existing lip boundaries. */
+  section?: IPortraitLipSection;
   /** Geodesic reach of surrounding skin adaptation. */
   blendReach: number;
   /** Recession of the oral cavity behind the actual refined opening. */
@@ -150,6 +157,10 @@ export function createPortraitMouthComponent(
     ...inputShape,
     crowns: inputShape.crowns.map((crown) => ({ ...crown })),
   };
+  const section =
+    inputShape.section === undefined
+      ? undefined
+      : createPortraitLipSection(inputShape.section);
   for (const crown of shape.crowns)
     assertPortraitDentalCrown({
       ...crown,
@@ -200,9 +211,19 @@ export function createPortraitMouthComponent(
         (Math.min(...points.map((point) => point[1])) +
           Math.max(...points.map((point) => point[1]))) /
         2;
+      // Follow the curved smile locally when distinguishing the two bands.
+      // A lower-lip point near a raised corner may be above the global centre;
+      // its anatomical role is still lower lip. Both borders come from this
+      // socket, and section relief is exactly zero on either retained boundary.
+      const coordinate = createPortraitLipCoordinates(
+        socket.outer.map((id) => host.positions[id]),
+        socket.upper.map((id) => host.positions[id]),
+        socket.lower.map((id) => host.positions[id]),
+      );
       return {
         constraints: [...skin].map((vertex) => {
           const point = host.positions[vertex];
+          const local = coordinate(point);
           const corner = Math.min(
             1,
             Math.abs((point[0] - centerX) / ((right - left) / 2)),
@@ -215,10 +236,11 @@ export function createPortraitMouthComponent(
                 (point[1] - centerY) * shape.openingScale +
                 shape.cornerLift * corner ** 2,
               point[2] +
-                (point[1] >= centerY
+                (local.side === "upper"
                   ? shape.upperLipProjection
                   : shape.lowerLipProjection) *
-                  (1 - corner ** 2),
+                  (1 - corner ** 2) +
+                (section?.(local) ?? 0),
             ],
             reach: shape.blendReach,
           };
