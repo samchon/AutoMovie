@@ -17,6 +17,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `generated-korean-girl-01/model.ts` | Assemble the independently inspectable anatomical builders |
 | `generated-korean-girl-01/head.ts` | Join facial openings, nasal lining, lid margins and the inferred cranium before subdivision |
 | `generated-korean-girl-01/eyes.ts` | Shared lid boundary, fold, sclera, gaze intersection, iris, lashes and brow assembly |
+| `generated-korean-girl-01/ocularTissues.ts` | Medial caruncular/plica relief and lower margin sampled in the eye's final lid/globe frame |
 | `generated-korean-girl-01/eyebrows.ts` | Replaceable fibre dimensions and attachment to the actual refined forehead surface |
 | `generated-korean-girl-01/nose.ts` | Provisional alar/tip depth and geometric nasal cavities |
 | `generated-korean-girl-01/nostrilRim.ts` | Aperture-plane dimensions and optional elliptical rim regularization |
@@ -45,6 +46,8 @@ For the procedural assembly, read `configuration.ts`, `model.ts`, then `head.ts`
 The image supplies image-plane landmarks. Depth, rear skull and occluded anatomy remain estimates. See [measurement provenance and attribution](generated-korean-girl-01/NOTICE.md). No source photograph is projected onto the model as a texture.
 
 The corneal curvature radius of 7.8 mm, axial thickness of 0.55 mm and refractive index of 1.376 are schematic rendering assumptions from the [eye-model table](https://pmc.ncbi.nlm.nih.gov/articles/PMC4646557/), not measurements of this subject. The fitted globe and clipped corneal shell approximate the visible eye; optical parameters do not establish physiological accuracy.
+
+The optional eye `tissues` profile supplies `cornerLength`, `caruncleProjection`, `plicaProjection`, `lowerMarginWidth` and `lowerMarginLift`, all in millimetres. A common medial patch places the plica lateral to the caruncular mound, following the [Kellogg Eye Center's external-eye anatomy](https://kellogg.umich.edu/theeyeshaveit/anatomy/external-eye.html). The eye supplies its actual refined upper/lower curves and spherical surface; neither tissue owns a second aperture. The lower margin is clipped to half the local opening and fades at the canthi. Omission disables both surfaces; zero corner length or margin width disables that surface independently. The factory copies the dimensions. The active dimensions and vascular PBR finishes are provisional authored fits, not measured anatomy or a physiological optical simulation.
 
 ## Grouped dentition
 

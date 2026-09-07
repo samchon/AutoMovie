@@ -29,6 +29,11 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   // opaque pigment beneath it would add a second unrelated reflective surface.
   // These are authored PBR approximations, not measured tissue reflectance.
   material("sclera", [0.66, 0.64, 0.58], 0.22);
+  // Vascular medial conjunctiva and the narrow moist lid edge have distinct
+  // surface responses. These linear-RGB fits are not sampled photograph pixels
+  // or a physiological scattering model; geometry determines their coverage.
+  material("ocular-corner", [0.48, 0.24, 0.2], 0.42);
+  material("ocular-margin", [0.58, 0.36, 0.28], 0.28);
   // Radial pigment bands vary a dark brown iris without changing its outline.
   // The geometry selects these colours deterministically; no reference pixels
   // are projected onto the eye and no lighting is baked into the pigment.

@@ -86,6 +86,16 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // pose removal. One radius fits this subject's two independently bound eyes.
   irisRadius: 6.4,
   pupilRadius: 2.55,
+  // Visible tissue occupies the existing aperture; it does not move its skin
+  // attachment or resize the eye. Values are authored millimetre fits. The
+  // lower width stays within the iris patch's 0.15 mm lid clearance.
+  tissues: {
+    cornerLength: 1.4,
+    caruncleProjection: 0.18,
+    plicaProjection: 0.08,
+    lowerMarginWidth: 0.15,
+    lowerMarginLift: 0.035,
+  },
   browFibres: 420,
   browProfile: { ...portraitEyebrowProfile },
   upperLashes: 24,

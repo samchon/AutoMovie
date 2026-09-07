@@ -31,6 +31,10 @@ import {
   buildPortraitEyebrow,
   portraitEyebrowProfile,
 } from "./eyebrows";
+import {
+  type IPortraitOcularTissueShape,
+  createPortraitOcularTissues,
+} from "./ocularTissues";
 
 type Point = IAutoMovieVector3;
 const pi = Math.PI,
@@ -98,6 +102,8 @@ export interface IPortraitEyeShape {
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
   pupilRadius: number;
+  /** Optional medial conjunctiva and lower lid margin; omission leaves them absent. */
+  tissues?: IPortraitOcularTissueShape;
   /** Number of independently generated brow fibres, in [0,4096]; zero disables them. */
   browFibres: number;
   /** Optional fibre dimensions and skin clearance; omission uses the declared brow profile. */
@@ -213,7 +219,15 @@ export function createPortraitEyeComponent(
     ...inputShape,
     sampling: { ...inputShape.sampling },
     browProfile: { ...(inputShape.browProfile ?? portraitEyebrowProfile) },
+    tissues:
+      inputShape.tissues === undefined ? undefined : { ...inputShape.tissues },
   };
+  // Build/validate once and retain the copied dimensions through fitting. Both
+  // visible tissue surfaces will consume this eye's final refined boundary.
+  const tissues =
+    shape.tissues === undefined
+      ? undefined
+      : createPortraitOcularTissues(shape.tissues);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
   const positive = [
     shape.widthScale,
@@ -370,6 +384,7 @@ export function createPortraitEyeComponent(
                 socket,
                 shape,
                 sphere,
+                tissues,
               ),
           };
         },
@@ -433,6 +448,7 @@ export function buildPortraitEye(
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
   sphere: IPortraitEyeSphere,
+  tissues?: ReturnType<typeof createPortraitOcularTissues>,
 ): IAutoMovieModelPart[] {
   const parts: IAutoMovieModelPart[] = [];
   const add = (
@@ -504,6 +520,24 @@ export function buildPortraitEye(
       ),
       white,
     );
+    if (tissues !== undefined) {
+      const surfaces = tissues({
+        side: eye.name,
+        minimumX: lower[0].x,
+        maximumX: lower[lower.length - 1].x,
+        lower: (x) => lidAt(x, lower),
+        upper: (x) => lidAt(x, upper),
+        globe: eyeZ,
+      });
+      if (surfaces.corner !== null)
+        add(`${eye.name}-medial-conjunctiva`, surfaces.corner, "ocular-corner");
+      if (surfaces.lowerMargin !== null)
+        add(
+          `${eye.name}-lower-lid-margin`,
+          surfaces.lowerMargin,
+          "ocular-margin",
+        );
+    }
     // The detector's iris depth differs from the eye surface depth. Simply
     // replacing Z moves the apparent gaze in the reference camera. Intersect
     // its measured ray instead, retaining the photographed iris centre in XY.
