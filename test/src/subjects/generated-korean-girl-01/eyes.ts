@@ -1,0 +1,623 @@
+import type {
+  IAutoMovieModelPart,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+
+import {
+  portraitSpline as interpolate,
+  portraitMix as mix,
+  portraitPoint as p,
+  portraitPatch as patch,
+  portraitPart,
+  portraitRegion,
+  portraitTube as tube,
+} from "../geometry";
+import {
+  type IPortraitComponent,
+  portraitFacesInsideLoop,
+} from "../portraitComponents";
+import { buildPortraitCornea } from "../portraitCornea";
+import {
+  type IPortraitEyeSphere,
+  fitPortraitEyeSphere,
+  portraitEyeSphereHeight,
+  portraitEyeSphereIntersection,
+} from "../portraitEyeSphere";
+import type { IControlMesh } from "../subdivideControlMesh";
+
+type Point = IAutoMovieVector3;
+const pi = Math.PI,
+  tau = pi * 2;
+
+/**
+ * One subject-owned eye socket. Ordered lid curves run from negative to positive
+ * local X; the component receives their identities instead of embedding them.
+ *
+ * @author Samchon
+ */
+export interface IPortraitEyeSocket {
+  /** Anatomical side; positive host X is left. */
+  name: "left" | "right";
+  /** Upper aperture rim from negative X to positive X, including both corners. */
+  top: number[];
+  /** Lower rim in the same direction, including the same corner identities. */
+  bottom: number[];
+  /** Non-skin measured gaze marker. */
+  iris: number;
+  /** Upper brow boundary, in the same X order. */
+  browTop: number[];
+  /** Lower brow boundary, in the same X order. */
+  browBottom: number[];
+}
+
+/**
+ * Numerical eye shape independent of its host socket. Lengths are millimetres;
+ * width/opening multipliers deform the fitted aperture, not an isolated eyeball.
+ *
+ * @author Samchon
+ */
+export interface IPortraitEyeShape {
+  /** Multiplier of the socket aperture width; one retains its measured width. */
+  widthScale: number;
+  /** Multiplier of aperture height; one retains the measured opening. */
+  openingScale: number;
+  /** Upward outer-corner displacement, fading towards the inner corner, in mm. */
+  outerCornerLift: number;
+  /** Socket translation along the recorded camera ray, in mm. */
+  socketLift: number;
+  /** Geodesic reach of surrounding skin adaptation, in mm. */
+  blendReach: number;
+  /** Upper lid fold width, in mm. */
+  foldWidth: number;
+  /** Upper crease depth behind the lid ridge, in mm. */
+  foldDepth: number;
+  /** Additional upper tarsal volume in front of the aperture plane, in mm. */
+  upperLidVolume: number;
+  /** Width of the lower eyelid's soft-tissue transition, in mm. */
+  lowerLidWidth: number;
+  /** Peak lower-lid roll projection, in mm; independent of the upper fold. */
+  lowerLidVolume: number;
+  /** Forward projection of the inner lid margin, in mm. */
+  lidThickness: number;
+  /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
+  surfaceRadius: number;
+  /** Corneal curvature radius in mm; greater than iris radius and no greater than globe radius. */
+  cornealRadius: number;
+  /** Positive axial thickness of the closed anterior optical shell, in mm. */
+  cornealThickness: number;
+  /** Corneal rim's lift above the globe, in mm; clears the underlying iris surface. */
+  cornealRimLift: number;
+  /** Iris radius in mm before clipping against the fitted eyelid. */
+  irisRadius: number;
+  /** Pupil radius in mm; smaller than the iris. */
+  pupilRadius: number;
+  /** Number of independently generated brow fibres. */
+  browFibres: number;
+  /** Number of upper lashes. */
+  upperLashes: number;
+  /** Tessellation controls, separate from the anatomical shape. */
+  sampling: {
+    eyeColumns: number;
+    eyeRows: number;
+    irisColumns: number;
+    irisRows: number;
+  };
+}
+
+const loopOf = (socket: IPortraitEyeSocket): number[] => [
+  ...socket.bottom,
+  ...socket.top.slice(1, -1).reverse(),
+];
+
+// One calculation supplies both the part boundary constraint and its lid rows.
+// The host and the component therefore cannot disagree about the seam position.
+const lidRows = (
+  source: number[][],
+  socket: IPortraitEyeSocket,
+  shape: IPortraitEyeShape,
+) => {
+  const loop = loopOf(socket);
+  const left = Math.min(...loop.map((id) => source[id][0]));
+  const right = Math.max(...loop.map((id) => source[id][0]));
+  return loop.map((id, index) => {
+    const point = source[id];
+    // The rim expands along its own planar normal. Using the iris centre here
+    // made gaze changes reshape the surrounding skin, coupling two independent
+    // controls. The counterclockwise loop gives this outward normal directly.
+    const before = source[loop[(index + loop.length - 1) % loop.length]];
+    const after = source[loop[(index + 1) % loop.length]];
+    const nx = after[1] - before[1];
+    const ny = before[0] - after[0];
+    const distance = Math.hypot(nx, ny);
+    const weight = socket.top.includes(id)
+      ? Math.sin((pi * (point[0] - left)) / (right - left))
+      : 0;
+    const at = (offset: number, depth: number): number[] => [
+      point[0] + (offset * nx) / distance,
+      point[1] + (offset * ny) / distance,
+      point[2] + depth,
+    ];
+    // The supratarsal crease needs two nearby support rows. A lone recessed
+    // row averaged into the ridge and outer skin during Loop subdivision.
+    // The hood sits above the recessed fold and produces a real cast shadow.
+    // Weight fades the fold at both canthi and leaves the lower lid uncreased.
+    const fold = shape.foldWidth * weight;
+    const depth = shape.foldDepth * weight;
+    const lowerWeight = socket.top.includes(id)
+      ? 0
+      : Math.sin((pi * (point[0] - left)) / (right - left));
+    const lowerWidth = shape.lowerLidWidth * lowerWeight;
+    const lowerVolume = shape.lowerLidVolume * lowerWeight;
+    return {
+      id,
+      outer: at(
+        1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth,
+        -0.4 + 0.2 * weight,
+      ),
+      hoodUpper: at(
+        1.0 + (shape.foldWidth + 1.1) * weight + 0.9 * lowerWidth,
+        shape.lidThickness + 0.45 * depth + 0.1 * lowerVolume,
+      ),
+      hoodEdge: at(
+        0.85 + fold + 0.75 * lowerWidth,
+        shape.lidThickness + 0.5 * depth + 0.3 * lowerVolume,
+      ),
+      creaseOuter: at(
+        0.65 + fold + 0.6 * lowerWidth,
+        shape.lidThickness - depth + 0.6 * lowerVolume,
+      ),
+      creaseInner: at(
+        0.4 + fold + 0.45 * lowerWidth,
+        shape.lidThickness - depth + lowerVolume,
+      ),
+      tarsal: at(
+        0.35 + 0.55 * fold + 0.3 * lowerWidth,
+        shape.lidThickness +
+          0.2 * depth +
+          shape.upperLidVolume * weight +
+          lowerVolume,
+      ),
+      ridge: at(0.18, shape.lidThickness + 0.08),
+      inner: [point[0], point[1], point[2] + shape.lidThickness],
+    };
+  });
+};
+
+/** Fit one replaceable eye and expose its actual outer lid as the skin seam. */
+export function createPortraitEyeComponent(
+  inputSocket: IPortraitEyeSocket,
+  inputShape: IPortraitEyeShape,
+): IPortraitComponent {
+  // A fitted component owns its inputs. Editing a preset for another instance
+  // must not silently mutate an already constructed eye.
+  const socket = {
+    ...inputSocket,
+    top: [...inputSocket.top],
+    bottom: [...inputSocket.bottom],
+    browTop: [...inputSocket.browTop],
+    browBottom: [...inputSocket.browBottom],
+  };
+  const shape = { ...inputShape, sampling: { ...inputShape.sampling } };
+  const positive = [
+    shape.widthScale,
+    shape.openingScale,
+    shape.irisRadius,
+    shape.pupilRadius,
+    shape.surfaceRadius,
+    shape.cornealRadius,
+    shape.cornealThickness,
+    shape.cornealRimLift,
+  ];
+  const nonnegative = [
+    shape.blendReach,
+    shape.foldWidth,
+    shape.foldDepth,
+    shape.upperLidVolume,
+    shape.lowerLidWidth,
+    shape.lowerLidVolume,
+    shape.lidThickness,
+  ];
+  const counts = [
+    shape.browFibres,
+    shape.upperLashes,
+    ...Object.values(shape.sampling),
+  ];
+  if (
+    positive.some((v) => !Number.isFinite(v) || v <= 0) ||
+    nonnegative.some((v) => !Number.isFinite(v) || v < 0) ||
+    counts.some((v) => !Number.isInteger(v) || v < 1) ||
+    !Number.isFinite(shape.socketLift) ||
+    !Number.isFinite(shape.outerCornerLift) ||
+    shape.pupilRadius >= shape.irisRadius ||
+    shape.cornealRadius <= shape.irisRadius ||
+    shape.cornealRadius > shape.surfaceRadius ||
+    shape.cornealRimLift <= shape.cornealThickness + 0.055 ||
+    shape.sampling.eyeColumns < 2 ||
+    shape.sampling.irisColumns < 3
+  )
+    throw new Error(
+      "Eye dimensions must be finite, with a positive aperture and pupil inside the iris.",
+    );
+  return {
+    id: socket.name + "-eye",
+    // Each optical volume owns its material so changing one shell's thickness
+    // cannot leave a shared global thickness behind on either eye.
+    materials: [
+      {
+        id: socket.name + "-cornea",
+        name: socket.name + " corneal surface",
+        baseColor: { r: 1, g: 1, b: 1, a: 1, hex: null },
+        roughness: 0.035,
+        metallic: 0,
+        opacity: 1,
+        emissive: null,
+        baseColorTexture: null,
+        doubleSided: true,
+        transmission: 1,
+        ior: 1.376,
+        thickness: shape.cornealThickness / 1000,
+      },
+    ],
+    fit: (host) => {
+      const loop = loopOf(socket);
+      const points = loop.map((id) => host.positions[id]);
+      const left = Math.min(...points.map((p) => p[0])),
+        right = Math.max(...points.map((p) => p[0]));
+      const middleX = (left + right) / 2;
+      const middleY =
+        (Math.min(...points.map((p) => p[1])) +
+          Math.max(...points.map((p) => p[1]))) /
+        2;
+      const aperture = host.positions.map((point) => [...point]);
+      for (const id of loop) {
+        const point = host.positions[id],
+          u = (point[0] - left) / (right - left);
+        const outer = socket.name === "left" ? u : 1 - u;
+        aperture[id] = [
+          middleX + (point[0] - middleX) * shape.widthScale,
+          middleY +
+            (point[1] - middleY) * shape.openingScale +
+            shape.outerCornerLift * outer,
+          point[2],
+        ].map((value, axis) => value + shape.socketLift * host.viewRay[axis]);
+      }
+      aperture[socket.iris] = host.positions[socket.iris].map(
+        (value, axis) => value + shape.socketLift * host.viewRay[axis],
+      );
+      const direction = p(host.viewRay[0], host.viewRay[1], host.viewRay[2]);
+      const pointAt = (id: number): Point =>
+        p(aperture[id][0], aperture[id][1], aperture[id][2]);
+      const sphere = fitPortraitEyeSphere(
+        socket.top.map(pointAt),
+        socket.bottom.map(pointAt),
+        direction,
+        shape.surfaceRadius,
+      );
+      for (const id of loop) {
+        const contact = portraitEyeSphereIntersection(
+          sphere,
+          pointAt(id),
+          direction,
+        );
+        aperture[id] = [contact.x, contact.y, contact.z];
+      }
+      return {
+        constraints: [
+          ...lidRows(aperture, socket, shape).map((row) => ({
+            vertex: row.id,
+            target: row.outer,
+            reach: shape.blendReach,
+          })),
+          { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
+        ],
+        cutFaces: portraitFacesInsideLoop(host, loop),
+        attach: (cage) => {
+          const margins = appendPortraitEyeMargins(
+            cage,
+            aperture,
+            socket,
+            shape,
+          );
+          return {
+            openings: [loopOf(socket).map((id) => margins.get(id)!)],
+            finish: (refined) =>
+              buildPortraitEye(
+                refined.positions,
+                refined,
+                margins,
+                host.viewRay,
+                socket,
+                shape,
+                sphere,
+              ),
+          };
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Attach the lid rows to the already fitted shared outer rim. New inner vertex
+ * identities are returned for the eyeball to read after common subdivision.
+ */
+export function appendPortraitEyeMargins(
+  cage: IControlMesh,
+  aperture: number[][],
+  socket: IPortraitEyeSocket,
+  shape: IPortraitEyeShape,
+): Map<number, number> {
+  const rows = lidRows(aperture, socket, shape);
+  const margins = new Map<number, number>();
+  const rings = [rows.map((row) => row.id)];
+  for (const name of [
+    "hoodUpper",
+    "hoodEdge",
+    "creaseOuter",
+    "creaseInner",
+    "tarsal",
+    "ridge",
+    "inner",
+  ] as const)
+    rings.push(rows.map((row) => cage.positions.push(row[name]) - 1));
+  for (let i = 0; i < rows.length; i++)
+    margins.set(rows[i].id, rings[rings.length - 1][i]);
+  for (let ring = 0; ring < rings.length - 1; ring++)
+    for (let i = 0; i < rows.length; i++) {
+      const j = (i + 1) % rows.length;
+      cage.indices.push(
+        rings[ring][i],
+        rings[ring][j],
+        rings[ring + 1][i],
+        rings[ring][j],
+        rings[ring + 1][j],
+        rings[ring + 1][i],
+      );
+      cage.groups.push(0, 0);
+    }
+  return margins;
+}
+
+/** Build the sclera, gaze, iris, lashes and brow against this eye's refined rim. */
+export function buildPortraitEye(
+  source: number[][],
+  refined: IControlMesh,
+  eyeMargins: ReadonlyMap<number, number>,
+  viewRay: number[],
+  socket: IPortraitEyeSocket,
+  shape: IPortraitEyeShape,
+  sphere: IPortraitEyeSphere,
+): IAutoMovieModelPart[] {
+  const parts: IAutoMovieModelPart[] = [];
+  const add = (
+    id: string,
+    mesh: Parameters<typeof portraitPart>[1],
+    finish: string,
+  ): void => {
+    parts.push(portraitPart(id, mesh, finish));
+  };
+  const landmark = (id: number): Point =>
+    p(source[id][0], source[id][1], source[id][2]);
+  const white = "sclera",
+    pupil = "pupil",
+    brow = "brows";
+  const eye = socket;
+  {
+    const margin = (id: number): Point => {
+      const point = refined.positions[eyeMargins.get(id)!];
+      return p(point[0], point[1], point[2]);
+    };
+    const upper = eye.top.map(margin),
+      lower = eye.bottom.map(margin);
+    const lidSamples = [lower, upper].map((points) =>
+      Array.from({ length: 257 }, (_, i) => {
+        const x = mix(points[0].x, points[points.length - 1].x, i / 256);
+        let low = 0,
+          high = 1;
+        for (let iteration = 0; iteration < 18; iteration++) {
+          const t = (low + high) / 2;
+          if (interpolate(points, t).x < x) low = t;
+          else high = t;
+        }
+        return interpolate(points, (low + high) / 2);
+      }),
+    );
+    const lidAt = (x: number, points: Point[]): Point => {
+      const samples = lidSamples[points === lower ? 0 : 1];
+      const t = Math.max(
+        0,
+        Math.min(
+          256,
+          (256 * (x - points[0].x)) /
+            (points[points.length - 1].x - points[0].x),
+        ),
+      );
+      const i = Math.min(255, Math.floor(t));
+      return p(
+        x,
+        mix(samples[i].y, samples[i + 1].y, t - i),
+        mix(samples[i].z, samples[i + 1].z, t - i),
+      );
+    };
+    // A sine dome tied curvature to aperture height: narrowing the lid also
+    // sharpened the eyeball and its reflections. A sphere keeps curvature
+    // isotropic while the fitted lid alone determines the visible opening.
+    const eyeZ = (x: number, y: number): number =>
+      portraitEyeSphereHeight(sphere, x, y);
+    add(
+      `${eye.name}-sclera`,
+      patch(
+        (u, v) => {
+          const top = interpolate(upper, u),
+            bottom = interpolate(lower, u);
+          const x = mix(bottom.x, top.x, v),
+            y = mix(bottom.y, top.y, v);
+          return p(x, y, eyeZ(x, y));
+        },
+        shape.sampling.eyeColumns,
+        shape.sampling.eyeRows,
+      ),
+      white,
+    );
+    // The detector's iris depth differs from the eye surface depth. Simply
+    // replacing Z moves the apparent gaze in the reference camera. Intersect
+    // its measured ray instead, retaining the photographed iris centre in XY.
+    const center = portraitEyeSphereIntersection(
+      sphere,
+      landmark(eye.iris),
+      p(viewRay[0], viewRay[1], viewRay[2]),
+    );
+    for (const [name, radius] of [
+      ["iris", shape.irisRadius],
+      ["pupil", shape.pupilRadius],
+    ] as const) {
+      // All radial samples on one ray share the same clipped endpoint. Solve
+      // it once per angular column, retaining the exact same ray and bisection.
+      const extents = Array.from(
+        { length: shape.sampling.irisColumns + 1 },
+        (_, column) => {
+          const angle = tau * (column / shape.sampling.irisColumns);
+          const inside = (r: number): boolean => {
+            const x = center.x + r * Math.cos(angle),
+              y = center.y - r * Math.sin(angle);
+            return (
+              y >= lidAt(x, lower).y + 0.15 && y <= lidAt(x, upper).y - 0.15
+            );
+          };
+          let extent: number = radius;
+          if (!inside(radius)) {
+            let low = 0,
+              high: number = radius;
+            for (let i = 0; i < 24; i++) {
+              const r = (low + high) / 2;
+              if (inside(r)) low = r;
+              else high = r;
+            }
+            extent = (low + high) / 2;
+          }
+          return extent;
+        },
+      );
+      const mesh = patch(
+        (u, v) => {
+          const angle = tau * u;
+          const extent = extents[Math.round(u * shape.sampling.irisColumns)];
+          const x = center.x + extent * (0.0001 + 0.9999 * v) * Math.cos(angle),
+            y = center.y - extent * (0.0001 + 0.9999 * v) * Math.sin(angle);
+          return p(x, y, eyeZ(x, y) + (name === "pupil" ? 0.09 : 0.055));
+        },
+        shape.sampling.irisColumns,
+        shape.sampling.irisRows,
+      );
+      if (name === "pupil") add(`${eye.name}-pupil`, mesh, pupil);
+      else {
+        add(
+          `${eye.name}-cornea`,
+          buildPortraitCornea({
+            center,
+            radius: shape.irisRadius,
+            curvature: shape.cornealRadius,
+            globeRadius: shape.surfaceRadius,
+            thickness: shape.cornealThickness,
+            rimLift: shape.cornealRimLift,
+            extents: extents.slice(0, -1),
+            radialSamples: shape.sampling.irisRows,
+            surface: eyeZ,
+          }),
+          eye.name + "-cornea",
+        );
+        // Pigment follows radial fibres. The outer 13 percent forms a dark
+        // limbal ring; the inner bands vary in brown. All regions retain the
+        // exact same positions and normals, so this edit cannot enlarge an eye.
+        const regions = Array.from({ length: 8 }, () => [] as number[]);
+        for (let i = 0; i < mesh.indices!.length; i += 6) {
+          const cell = i / 6;
+          const angle =
+            (tau * ((cell % shape.sampling.irisColumns) + 0.5)) /
+            shape.sampling.irisColumns;
+          const radius =
+            (Math.floor(cell / shape.sampling.irisColumns) + 0.5) /
+            shape.sampling.irisRows;
+          const fiber =
+            0.48 +
+            0.23 * Math.sin(angle * 37 + radius * 7) +
+            0.17 * Math.sin(angle * 71 - radius * 11) +
+            0.12 * Math.cos(angle * 13);
+          const group =
+            radius > 0.87 ? 0 : Math.max(0, Math.min(7, Math.floor(fiber * 8)));
+          regions[group].push(...mesh.indices!.slice(i, i + 6));
+        }
+        regions.forEach((indices, group) =>
+          add(
+            `${eye.name}-iris-${group}`,
+            portraitRegion(mesh.positions, mesh.normals!, indices),
+            `iris-${group}`,
+          ),
+        );
+      }
+    }
+    add(
+      `${eye.name}-lash-line`,
+      tube(
+        (t) => {
+          const point = interpolate(upper, t);
+          return p(point.x, point.y, point.z + 0.04);
+        },
+        (t) => 0.06 + 0.16 * Math.sin(pi * t),
+        70,
+      ),
+      brow,
+    );
+    // Short curled upper lashes belong to the eyelid, not the deferred scalp
+    // hairstyle. They project in front of the measured rim, so their shadows
+    // affect the eye without changing the opening's geometric silhouette.
+    const outward = eye.name === "left" ? 1 : -1;
+    for (let i = 0; i < shape.upperLashes; i++) {
+      const u = 0.04 + (0.92 * (i + 0.5)) / shape.upperLashes;
+      const origin = interpolate(upper, u);
+      const length = 0.5 + (eye.name === "left" ? u : 1 - u);
+      add(
+        `${eye.name}-upper-lash-${i}`,
+        tube(
+          (t) =>
+            p(
+              origin.x + outward * 0.25 * length * t,
+              origin.y + 0.45 * length * t * t,
+              origin.z + 0.05 + length * t,
+            ),
+          (t) => 0.055 * (1 - 0.9 * t),
+          6,
+        ),
+        brow,
+      );
+    }
+    const top = eye.browTop.map(landmark),
+      bottom = eye.browBottom.map(landmark);
+    // Fibre count sets coverage across the two skin-bound brow curves. The
+    // deterministic stagger varies roots and tips without a texture or RNG.
+    for (let i = 0; i < shape.browFibres; i++) {
+      const u = (i + 0.5) / shape.browFibres;
+      const a = interpolate(bottom, u),
+        b = interpolate(top, u);
+      const start = 0.3 * ((i * 0.61803398875) % 1);
+      const end = 0.5 + 0.45 * ((i * 0.41421356237) % 1);
+      add(
+        `${eye.name}-brow-hair-${i}`,
+        tube(
+          (t) => {
+            const v = mix(start, end, t);
+            return p(
+              mix(a.x, b.x, v) + outward * 1.2 * t * t,
+              mix(a.y, b.y, v),
+              mix(a.z, b.z, v) + 0.25 + 0.15 * Math.sin(pi * t),
+            );
+          },
+          (t) => (0.07 + (i % 3) * 0.02) * (1 - 0.8 * t),
+          5,
+        ),
+        brow,
+      );
+    }
+  }
+  return parts;
+}

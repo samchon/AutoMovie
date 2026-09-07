@@ -30,6 +30,7 @@
     "onnxruntime-node": "catalog:media",
     "pngjs": "catalog:media",
     "@gltf-transform/core": "catalog:gltf",
+    "@gltf-transform/extensions": "catalog:gltf",
     "three": "catalog:three",
     "@nestia/e2e": "catalog:samchon"
   },

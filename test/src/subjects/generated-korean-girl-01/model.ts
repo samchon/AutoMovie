@@ -1,0 +1,81 @@
+import type { IAutoMovieModel } from "@automovie/interface";
+
+import { portraitPart } from "../geometry";
+import type { IPortraitComponent } from "../portraitComponents";
+import type { IPortraitSurfaceLayer } from "../portraitSurface";
+import { referenceControlNet } from "./controlNet";
+import { buildPortraitEars } from "./ears";
+import { buildPortraitHead } from "./head";
+import { createPortraitMaterials } from "./materials";
+import type { portraitReview } from "./review";
+
+/**
+ * Assemble this one reference face from independently inspectable anatomical
+ * builders. This direct study has no dependency on a human parameter module.
+ * Construction coordinates
+ * are millimetres, +Y is up and +Z points out of the face. Anatomical left is +X.
+ *
+ * The control net owns measurement provenance. Replaceable components supply
+ * exact skin attachments; the host adapts surrounding skin and refines their
+ * common surface before each component finishes against its actual opening.
+ * Every part crosses the same engine-owned metre conversion in portraitPart before becoming AutoMovie
+ * model data. Hair and torso remain deferred under the user's current scope.
+ *
+ * The caller chooses components and optional refined-skin layers. Empty layers
+ * preserve the subdivided skin. Eye-owned optical materials are collected with
+ * the shared palette, while the ear builder samples the final skin in metres.
+ * See ../README.md for the tracked export, capture and verification entrypoints.
+ *
+ * @evidence src/subjects/generated-korean-girl-01/review.md#front Supplies the assembled eyes, nose and dental row inspected from the front.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#left-oblique Supplies the nasal projection and left pinna relationship inspected at positive yaw.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#right-oblique Supplies the opposite cheek, eye occlusion and mouth depth inspected at negative yaw.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#left-profile Supplies the forehead-to-chin silhouette inspected from the anatomical left.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#right-profile Supplies the opposite profile and mirrored ear inspected from the anatomical right.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#back Supplies the inferred closed rear skull and neck attachment inspected from behind.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#reference Supplies the geometry compared against the photograph in its recorded camera pose.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#clay Supplies the shared surface inspected independently of its material colours.
+ * @evidence src/subjects/generated-korean-girl-01/review.md#component-replacement Assembles the component selections exercised by the replacement tests; fresh alternate-assembly captures remain pending for this revision.
+ * @evidence {@link portraitReview} Retains the construction review carrier for this assembled face; its written observations do not accept the likeness.
+ */
+export function buildReferencePortrait(assembly: {
+  components: IPortraitComponent[];
+  subdivisionRounds: number;
+  surfaceLayers?: readonly IPortraitSurfaceLayer[];
+}): IAutoMovieModel {
+  const head = buildPortraitHead(
+    {
+      positions: referenceControlNet.positions,
+      indices: referenceControlNet.indices,
+      viewRay: referenceControlNet.viewRay,
+    },
+    assembly.components,
+    assembly.subdivisionRounds,
+    assembly.surfaceLayers,
+  );
+  const skin = portraitPart(
+    "ear-attachment-basis",
+    {
+      positions: head.refined.positions.flat(),
+      indices: head.refined.indices,
+      normals: null,
+      uvs: null,
+      skin: null,
+    },
+    "skin",
+  ).geometry;
+  // portraitPart preserves mesh geometry while applying the same metre boundary
+  // used by the GLTF exporter; the ear sampler therefore reads renderer units.
+  return {
+    id: "generated-korean-girl-01",
+    name: "Measured reference face study",
+    origin: "generated",
+    parts: [...head.parts, ...buildPortraitEars(skin.mesh)],
+    materials: [
+      ...createPortraitMaterials(),
+      ...assembly.components.flatMap((component) => component.materials ?? []),
+    ],
+    skeleton: null,
+    body: null,
+    asset: null,
+  };
+}

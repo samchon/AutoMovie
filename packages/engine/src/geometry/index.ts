@@ -3,3 +3,6 @@ export * from "./regionFace";
 export * from "./tessellate";
 export * from "./surfaceMesh";
 export * from "./proceduralMesh";
+export * from "./selectTriangleRegion";
+export * from "./meshDeformation";
+export * from "./meshDepthSampler";

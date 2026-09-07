@@ -205,6 +205,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `autoMovieStoryInterval` | story 범위를 정규화된 시간 구간으로 변환 |
 | `fluidStateDigest` | 유체 상태의 재현 가능한 digest |
 | `tessellateToMesh` | parametric geometry를 검증 가능한 mesh로 tessellate |
+| `createAutoMovieMeshDepthSampler` | 실제 mesh의 X/Y/Z 방향 표면 깊이를 반복 조회해 부착 형상을 호스트 표면에 맞춤. 직접 얼굴 연구의 귀 부착에서 사용 |
 | `resolveAffordanceSeat` | 착석 affordance의 지지 자세 해석 |
 | `pointSegmentDistance` | 공간 검증기가 공유하는 점-선분 거리 계산 |
 | `motionToClip` | motion 계약을 재생 가능한 clip으로 변환 |
