@@ -11,13 +11,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
   "include": [
     "src",
     "scripts",
     "vendor/sharp-disabled/index.ts",
-    "viewer/src",
+    "viewer",
     "repaintSelectionReviews.ts",
     "vite.config.ts",
     "lint.config.ts"

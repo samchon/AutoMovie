@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>AutoMovie source preview</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #202020;
+      }
+      #view {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #notice,
+      #keys,
+      #status {
+        position: fixed;
+        color: #e8edf2;
+        font: 12px/1.45 monospace;
+        text-shadow: 0 1px 3px #000;
+        pointer-events: none;
+      }
+      #notice {
+        left: 16px;
+        right: 340px;
+        top: 14px;
+        color: #ffd479;
+        max-width: 42em;
+      }
+      #keys {
+        right: 16px;
+        top: 14px;
+        text-align: right;
+      }
+      #status {
+        left: 16px;
+        bottom: 14px;
+        max-width: 90vw;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 640px) {
+        #notice {
+          right: 16px;
+        }
+        #keys {
+          left: 16px;
+          top: 88px;
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="notice">
+      SOURCE PREVIEW. Working source without type checking or production
+      compilation. Not review or delivery evidence.
+    </div>
+    <div id="keys">
+      Drag: orbit · right drag: pan · wheel: zoom<br />W A S D: move · Space /
+      C: rise / descend<br />Q / E: slower / faster · Shift: fast
+    </div>
+    <div id="status">Loading current source...</div>
+    <script type="module" src="/viewer/src/preview.ts"></script>
+  </body>
+</html>
