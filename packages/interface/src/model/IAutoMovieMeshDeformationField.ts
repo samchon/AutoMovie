@@ -5,8 +5,8 @@ import type { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
  * influence outside its radii and fades with a continuous derivative at the
  * boundary, so neighbouring anatomy remains part of one deformation function.
  *
- * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Describes a spatial displacement and stretch that can be composed over resident mesh geometry.
- * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Carries the local frame and metric support of a deformation that retains mesh connectivity and transforms its normal field.
+ * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines displacement and stretch inputs for shaping authored resident freeform geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries mesh-local metric centres, support radii, translation and dimensionless stretch as explicit geometry inputs.
  * @author Samchon
  */
 export interface IAutoMovieMeshDeformationField {
