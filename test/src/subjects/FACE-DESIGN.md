@@ -77,6 +77,8 @@ The implemented optional `mouth.band.upper` and `mouth.band.lower` refine vertic
 
 The mouth corner is a shared lip/cheek junction. Its relief is reviewed with the surfaces on both sides, the nasolabial transition and the oral opening. Adding a dark crease cannot replace the raised cheek and lower perioral surface that give the crease meaning.
 
+Optional `mouth.borderRefinement: "curve"` makes the closed cutaneous-vermilion border own its one-dimensional subdivision, with the cubic 3/4, 1/8, 1/8 vertex rule and edge midpoints. The surrounding skin and lip faces share those vertices; final normals still use the whole connected surface. Omission or `surface` retains ordinary Loop weights. This separates the anatomical border from irregular opposite triangle vertices, but it can change the adjacent surface section and must be judged in clay as well as colour. It does not independently repaint, project or overlay the lip.
+
 Individual crowns may differ in mesial/distal contour, incisal/cusp form, cervical section and labial/lingual surface. The arch owns their arrangement. A richer crown representation preserves the group's placement and recalculates any affected spacing/contact through that common arrangement. Gingiva, mucosa, lower teeth or tongue are added where the actual visible target or behavior requires them. They are not generic filler for unexplained dark gaps.
 
 ## Defaults, detail and later semantic controls {#control-resolution}

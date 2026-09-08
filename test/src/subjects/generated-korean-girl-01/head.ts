@@ -105,7 +105,11 @@ export function buildPortraitHead(
   ]);
   const refined = applyPortraitFinalSurfaces(
     applyPortraitSurfaceLayers(
-      subdivideControlMesh(cage, rounds),
+      subdivideControlMesh(
+        cage,
+        rounds,
+        finishers.flatMap((attached) => attached.curves ?? []),
+      ),
       surfaceLayers,
     ),
     finishers.flatMap((attached, index) =>

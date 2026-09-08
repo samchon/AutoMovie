@@ -79,6 +79,13 @@ export interface IPortraitMouthShape {
     upper?: number | readonly IPortraitLipBandKnot[];
     lower?: number | readonly IPortraitLipBandKnot[];
   };
+  /**
+   * Optional cutaneous-vermilion boundary refinement. `curve` gives this
+   * closed boundary its own cubic subdivision rule while sharing it with the
+   * adjoining skin. Omission or `surface` uses the general surface weights.
+   * This does not alter the inner oral boundary or introduce a pigment overlay.
+   */
+  borderRefinement?: "surface" | "curve";
   /** Geodesic reach of surrounding skin adaptation. */
   blendReach: number;
   /** Recession of the oral cavity behind the actual refined opening. */
@@ -178,6 +185,12 @@ export function createPortraitMouthComponent(
       : createPortraitLipSection(inputShape.section);
   const upperBand = createPortraitLipBandScale(inputShape.band?.upper);
   const lowerBand = createPortraitLipBandScale(inputShape.band?.lower);
+  if (
+    shape.borderRefinement !== undefined &&
+    shape.borderRefinement !== "surface" &&
+    shape.borderRefinement !== "curve"
+  )
+    throw new Error("Lip border refinement must be surface or curve.");
   for (const crown of shape.crowns)
     assertPortraitDentalCrown({
       ...crown,
@@ -282,6 +295,8 @@ export function createPortraitMouthComponent(
               cage.groups[i / 3] = group;
           return {
             openings: [inner],
+            curves:
+              shape.borderRefinement === "curve" ? [socket.outer] : undefined,
             finish: (refined) =>
               buildPortraitMouth(refined.positions, socket, shape),
           };

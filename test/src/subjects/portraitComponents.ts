@@ -58,6 +58,8 @@ export interface IPortraitComponentPlan {
   ) => {
     /** Deliberately open skin rims, such as the inner eyelid, in boundary order. */
     openings: number[][];
+    /** Optional closed anatomical curves with their own shared subdivision rule. */
+    curves?: readonly (readonly number[])[];
     /** Propose shared final positions from the immutable post-layer surface. */
     finalSurface?: IPortraitFinalSurface;
     /** Build independent interior parts against the shared refined skin. */

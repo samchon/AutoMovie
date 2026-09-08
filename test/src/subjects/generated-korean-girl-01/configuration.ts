@@ -253,6 +253,9 @@ export const portraitMouthSocket: IPortraitMouthSocket = {
 
 /** Subject-owned smile fit. Crown dimensions remain authored estimates, not a scan. */
 export const portraitMouthShape: IPortraitMouthShape = {
+  // The outer vermilion is an anatomical curve shared with neighbouring skin.
+  // Its refinement should not inherit zigzags from opposite triangle vertices.
+  borderRefinement: "curve",
   widthScale: 1,
   openingScale: 1,
   cornerLift: 0,
