@@ -191,10 +191,8 @@ export const portraitNasalSection: IPortraitNasalSection = {
 /** Subject-owned nasal offsets and cavity dimensions; see IPortraitNoseShape for units. */
 export const portraitNoseShape: IPortraitNoseShape = {
   widthScale: 1,
-  section: portraitNasalSection,
-  // Zero legacy offsets retain the selected section's depth. Omitting the
-  // section retains the inferred host depth instead. The nostril frame controls
-  // aperture shape and orientation independently of those additional offsets.
+  // Zero offsets preserve the control net's inferred tip and alar depths.
+  // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
   alarProjection: 0,
   // The source-pose inspection sees substantially less dark aperture than the
@@ -211,31 +209,16 @@ export const portraitNoseShape: IPortraitNoseShape = {
   rimSupport: 0.1,
   // Blend the sparse cut boundary towards its own fitted ellipse. The shared
   // skin and lining receive that same rim; orientation, centroid and connectivity
-  // remain owned by the original opening. The shared section loft owns the
-  // exterior alar body; aperture size does not stand in for that tissue volume.
+  // remain owned by the original opening. Exterior alar volume is a separate
+  // named support in portraitNasalRelief, rather than a larger black aperture.
   rimRoundness: 0.55,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };
 
-/**
- * Alternate nasal width/aperture and left alar section for replacement review.
- * Add one millimetre to the positive-X outer alar control poles; the central
- * and anatomical-right poles remain unchanged. The common spline and outer
- * transition still own the join, rather than separately placing another ala.
- */
+/** A narrower, less projecting nose with smaller inferior openings. */
 export const alternatePortraitNose: IPortraitNoseShape = {
   ...portraitNoseShape,
-  section: {
-    ...portraitNasalSection,
-    stations: portraitNasalSection.stations.map((station) => ({
-      ...station,
-      depths: station.depths.map(
-        (depth, index) =>
-          depth + (portraitNasalSection.transverse[index] >= 12 ? 1 : 0),
-      ),
-    })),
-  },
   widthScale: 0.94,
   tipProjection: -4,
   alarProjection: 1,
