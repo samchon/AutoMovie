@@ -505,21 +505,27 @@ export function buildPortraitEye(
     // fitted lid alone determines how much of that surface remains visible.
     const eyeZ = (x: number, y: number): number =>
       portraitEyeSphereHeight(sphere, x, y);
-    add(
-      `${eye.name}-sclera`,
-      patch(
-        (u, v) => {
-          const top = interpolate(upper, u),
-            bottom = interpolate(lower, u);
-          const x = mix(bottom.x, top.x, v),
-            y = mix(bottom.y, top.y, v);
-          return p(x, y, eyeZ(x, y));
-        },
-        shape.sampling.eyeColumns,
-        shape.sampling.eyeRows,
-      ),
-      white,
+    const sclera = patch(
+      (u, v) => {
+        const top = interpolate(upper, u),
+          bottom = interpolate(lower, u);
+        const x = mix(bottom.x, top.x, v),
+          y = mix(bottom.y, top.y, v);
+        return p(x, y, eyeZ(x, y));
+      },
+      shape.sampling.eyeColumns,
+      shape.sampling.eyeRows,
     );
+    // The sclera owns an exact spherical surface: grad(|p-c|^2-r^2)
+    // points along p-c, and |p-c|=r. Divide construction millimetres by
+    // radius millimetres to obtain dimensionless outward unit normals. This
+    // remains defined at a collapsed canthal row where triangle-area averaging
+    // has no direction, and avoids a sampling-dependent optical normal field.
+    const sphereCenter = [sphere.center.x, sphere.center.y, sphere.center.z];
+    sclera.normals = sclera.positions.map(
+      (value, index) => (value - sphereCenter[index % 3]) / sphere.radius,
+    );
+    add(`${eye.name}-sclera`, sclera, white);
     if (tissues !== undefined) {
       const surfaces = tissues({
         side: eye.name,

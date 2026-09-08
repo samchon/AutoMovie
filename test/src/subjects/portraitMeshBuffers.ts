@@ -91,6 +91,19 @@ export function portraitMeshBuffers(mesh: IAutoMovieMesh): {
     throw new Error(
       "Portrait Float32 buffers must contain only finite components.",
     );
+  if (normals !== null)
+    for (let offset = 0; offset < normals.length; offset += 3) {
+      // glTF NORMAL is a unit direction, including redundant-pole vertices.
+      // One Float32 epsilon permits component rounding of an authored unit
+      // vector; neither topology redundancy nor finite zero supplies direction.
+      const length = Math.hypot(
+        normals[offset],
+        normals[offset + 1],
+        normals[offset + 2],
+      );
+      if (Math.abs(length - 1) > 2 ** -23)
+        throw new Error("Portrait GLTF NORMAL values must be unit directions.");
+    }
   const redundant = new Set(topology.degenerateTriangles);
   for (let face = 0; face < indices.length; face += 3) {
     if (redundant.has(face / 3)) continue;
