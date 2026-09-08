@@ -78,6 +78,12 @@ export interface IPortraitNoseShape {
   rimSupport: number;
   /** Blend from the measured rim to its fitted smooth ellipse, in [0,1]. */
   rimRoundness: number;
+  /**
+   * Optional shared anatomical-curve refinement of each aperture. Omission or
+   * surface retains general Loop weights; curve uses the host's existing 1D
+   * rule on the same skin/lining vertices, without creating a normal crease.
+   */
+  rimRefinement?: "surface" | "curve";
   /** Cavity floor offset in host XYZ millimetres, rotated with the nostril tilt. */
   cavityOffset: number[];
   /** Reach of adjacent skin adaptation along the original mesh, in mm. */
@@ -184,6 +190,11 @@ export function createPortraitNoseComponent(
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
   const bindLobules = createPortraitNasalLobules(inputShape.lobules);
+  if (
+    (shape.rimRefinement ?? "surface") !== "surface" &&
+    shape.rimRefinement !== "curve"
+  )
+    throw new Error("Nasal rim refinement must be surface or curve.");
   const body =
     inputShape.body === undefined
       ? undefined
@@ -356,6 +367,15 @@ export function createPortraitNoseComponent(
           appendPortraitNostrils(cage, openings, shape, liningGroup);
           return {
             openings: [],
+            // Both exterior and vestibule share these actual fitted rim IDs.
+            // Opposite triangles may be asymmetric; they must not pull a
+            // deliberately smooth aperture contour back into a pinched edge.
+            curves:
+              shape.rimRefinement === "curve"
+                ? openings.map((faces) =>
+                    portraitCutBoundary(faces).map((edge) => edge.a),
+                  )
+                : undefined,
             finalSurface:
               body === undefined
                 ? undefined

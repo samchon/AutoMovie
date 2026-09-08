@@ -286,7 +286,11 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // skin and lining receive that same rim; orientation, centroid and connectivity
   // remain owned by the original opening. An optional final section grid cannot
   // move or independently reinterpret this aperture boundary.
-  rimRoundness: 0.55,
+  // A complete fitted ellipse removes concavity already in the sparse cut.
+  // Its common curve refinement prevents exterior/lining triangles from
+  // reintroducing angular peaks into that same contour after fitting.
+  rimRoundness: 1,
+  rimRefinement: "curve",
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };
