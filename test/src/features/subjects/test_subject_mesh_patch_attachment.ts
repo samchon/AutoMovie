@@ -1,8 +1,10 @@
 import { TestValidator } from "@nestia/e2e";
 
 import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
+import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
 import { createPortraitMeshPatchComponent } from "../../subjects/portraitMeshPatch";
 import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
+import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { nclose } from "../internal/predicates";
 
 /**
@@ -13,6 +15,9 @@ import { nclose } from "../internal/predicates";
  *    contains the smaller donor patch. The fitted boundary reaches z=2, its
  *    remote pole is fixed with reach zero, and the assembled surface is closed.
  * 2. Later caller changes cannot replace the group's owned attachment settings.
+ * 3. After subdivision, a one-mm displaced join returns to the source plane.
+ *    The native core and remote skin stay exact; shared topology is preserved.
+ *    A host without join faces yields no final proposal.
  */
 export const test_subject_mesh_patch_attachment = (): void => {
   const host = {
@@ -71,6 +76,48 @@ export const test_subject_mesh_patch_attachment = (): void => {
     indices: host.indices.slice(12),
     groups: [0, 0, 0, 0],
   };
-  plan.attach(cage, positions, () => 1);
+  const attached = plan.attach(cage, positions, (id) =>
+    id === "plane" ? 1 : 2,
+  );
   assertPortraitSkinTopology(cage, []);
+  const refined = subdivideControlMesh(cage, 2);
+  const join = new Set<number>();
+  for (let face = 0; face < refined.groups.length; face++)
+    if (refined.groups[face] === 2)
+      refined.indices.slice(face * 3, face * 3 + 3).forEach((v) => join.add(v));
+  TestValidator.predicate("new join samples exist", join.size > 8);
+  refined.positions = refined.positions.map((p, id) =>
+    join.has(id) ? [p[0], p[1], 3] : p,
+  );
+  const final = applyPortraitFinalSurfaces(refined, [
+    { id: "plane", propose: attached.finalSurface! },
+  ]);
+  for (let id = 0; id < final.positions.length; id++)
+    if (join.has(id))
+      TestValidator.predicate(
+        "refined join reaches plane",
+        nclose(final.positions[id][2], 2),
+      );
+    else
+      TestValidator.equals(
+        "core and remote positions retained",
+        final.positions[id],
+        refined.positions[id],
+      );
+  assertPortraitSkinTopology(final, []);
+  TestValidator.equals(
+    "input remains displaced",
+    [...join].map((id) => refined.positions[id][2]),
+    [...join].map(() => 3),
+  );
+  TestValidator.equals(
+    "no resident join is neutral",
+    attached.finalSurface!({
+      positions: [],
+      indices: [],
+      groups: [],
+      normals: [],
+    }),
+    [],
+  );
 };
