@@ -4,6 +4,10 @@ import {
 } from "@automovie/engine";
 
 import type { IPortraitComponent } from "./portraitComponents";
+import {
+  type IPortraitPatchAttachment,
+  fitPortraitPatchBoundary,
+} from "./portraitPatchAttachment";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /** A source patch in the host's millimetre frame, with an oriented boundary. */
@@ -26,13 +30,19 @@ export interface IPortraitMeshPatch {
  * placement and a suitable nested boundary arrangement. Connectivity admission
  * does not certify a smooth outer join or absence of geometric intersections;
  * those require actual geometry measurement and rendered inspection.
+ * Optional attachment first places the host boundary on the complete source
+ * surface along the view ray. Its constraints use the existing host skin blend;
+ * omission leaves the original host controls unchanged.
  */
 export function createPortraitMeshPatchComponent(
   id: string,
   inputBoundary: readonly number[],
   provide: () => IPortraitMeshPatch,
+  inputAttachment?: IPortraitPatchAttachment,
 ): IPortraitComponent {
   const boundary = [...inputBoundary];
+  const attachment =
+    inputAttachment === undefined ? undefined : { ...inputAttachment };
   if (
     id.trim().length === 0 ||
     boundary.length < 3 ||
@@ -78,7 +88,10 @@ export function createPortraitMeshPatchComponent(
       validateEdges(boundary.map((v) => host.positions[v]));
       validateEdges(source.boundary.map((v) => source.mesh.positions[v]));
       return {
-        constraints: [],
+        constraints:
+          attachment === undefined
+            ? []
+            : fitPortraitPatchBoundary(host, boundary, source.mesh, attachment),
         cutFaces: selectAutoMovieTriangleRegion({
           indices: host.indices,
           boundary,

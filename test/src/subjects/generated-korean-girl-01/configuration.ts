@@ -1,5 +1,6 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import { createPortraitMeshPatchComponent } from "../portraitMeshPatch";
+import type { IPortraitPatchAttachment } from "../portraitPatchAttachment";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
@@ -556,6 +557,12 @@ export const measuredPortraitAssembly = {
   ],
 };
 
+/** Outer nasal boundary uses the same source surface with connected-skin adaptation. */
+export const portraitNasalReferenceAttachment: IPortraitPatchAttachment = {
+  reach: 12,
+  travel: 40,
+};
+
 /**
  * Active measured-surface assembly with a grouped dental interior. The skin
  * components own openings; the dental component attaches after shared skin
@@ -579,6 +586,7 @@ export const portraitAssembly = {
       "nose-reference",
       nasalReferenceBinding.hostBoundary,
       buildPortraitNasalReference,
+      portraitNasalReferenceAttachment,
     ),
     createPortraitDentalComponent(
       portraitDentalSocket,

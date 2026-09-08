@@ -11,6 +11,7 @@ import type * as Sphere from "../portraitEyeSphere";
 import type * as FitBasis from "../portraitFitBasis";
 import type * as Buffers from "../portraitMeshBuffers";
 import type * as MeshPatch from "../portraitMeshPatch";
+import type * as PatchAttachment from "../portraitPatchAttachment";
 import type * as Relief from "../portraitRelief";
 import type * as Topology from "../portraitSkinTopology";
 import type * as Surface from "../portraitSurface";
@@ -43,6 +44,10 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
  * intermediate account does not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link PatchAttachment.IPortraitPatchAttachment} Gives the patch group physical skin reach and a bounded view-ray search interval.
+ * @evidenceReview {@link PatchAttachment.IPortraitPatchAttachment} Read nonnegative reach separately from positive travel in millimetres. Reach zero still places boundary targets but leaves unbound skin fixed; travel limits root search and is not a nasal projection parameter.
+ * @evidence {@link PatchAttachment.fitPortraitPatchBoundary} Places host boundary controls on the full reference surface without changing their recorded image-plane coordinates.
+ * @evidenceReview {@link PatchAttachment.fitPortraitPatchBoundary} Traced unit-ray normalization, existing metre conversion/depth sampling and the shared ray intersection. A z=2 hand plane gives [3,2,2] from [1,2,0] on [1,0,1], preserving x-z. Missed/unbracketed surfaces refuse. The real patch consumer supplies these targets to the existing connected skin blend; no additional smoothing field is introduced.
  * @evidence {@link MeshPatch.IPortraitMeshPatch} Names the source mesh and its oriented, anatomically phased attachment loop.
  * @evidenceReview {@link MeshPatch.IPortraitMeshPatch} Read the common millimetre frame and strict XY containment of the source boundary inside the host. The provider supplies native nasal skin; connectivity selects only the declared patch. Boundary placement and matching winding remain group obligations rather than assumptions supplied by a closed topology check.
  * @evidence {@link MeshPatch.createPortraitMeshPatchComponent} Replaces the enclosed host region with a selected patch and an engine-triangulated annulus.
