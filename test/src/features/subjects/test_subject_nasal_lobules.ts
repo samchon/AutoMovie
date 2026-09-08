@@ -13,6 +13,7 @@ import { nclose, throwsError } from "../internal/predicates";
  * Scenarios:
  * 1. A radius-five section has height four at x=3. Its apex, exterior and
  *    translated/owned inputs pin local geometry and neutral/default behavior.
+ *    Independent X/Y tangent slopes add their hand-computed plane heights.
  * 2. Two coincident sections average their depths, regardless of order; the
  *    annular midpoint has half influence. Boundary slope converges to zero.
  * 3. Invalid dimensions, datums, samples and overflowing frames refuse, while
@@ -52,6 +53,25 @@ export const test_subject_nasal_lobules = (): void => {
   TestValidator.equals("owned shape and datum", sample([0, 0, 0]), 5);
   const a = { ...shape, offset: [0, 0, 5] },
     b = { ...shape, offset: [0, 0, 9] };
+  const slope = [0.5, -0.25];
+  const inclined = createPortraitNasalLobules([{ ...a, slope }])([[0, 0, 0]]);
+  TestValidator.predicate(
+    "inclined x section",
+    nclose(inclined([3, 0, 0]), 5.5),
+  );
+  TestValidator.predicate(
+    "inclined y section",
+    nclose(inclined([0, 3, 0]), 3.25),
+  );
+  slope[0] = 50;
+  TestValidator.predicate("owned tangent", nclose(inclined([3, 0, 0]), 5.5));
+  TestValidator.equals(
+    "zero tangent identity",
+    createPortraitNasalLobules([{ ...a, slope: [0, 0] }])([[0, 0, 0]])([
+      3, 0, 0,
+    ]),
+    sample([3, 0, 0]),
+  );
   TestValidator.equals(
     "overlap mean",
     createPortraitNasalLobules([a, b])([[0, 0, 0]])([0, 0, 0]),
@@ -93,6 +113,8 @@ export const test_subject_nasal_lobules = (): void => {
     { core: -0.1 },
     { core: 1 },
     { core: NaN },
+    { slope: [] },
+    { slope: [0, NaN] },
   ])
     TestValidator.predicate(
       "invalid section",

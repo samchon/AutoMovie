@@ -2,18 +2,22 @@
 export interface IPortraitNasalLobule {
   /** Resident skin datum; the group supplies its already scaled XYZ position. */
   anchor: number;
-  /** Apex displacement from that datum in head XYZ millimetres. */
+  /** Anterior section pole offset from the datum in head XYZ millimetres. */
   offset: readonly number[];
-  /** Positive transverse, vertical and depth radii in millimetres. */
+  /** Positive X/Y half-extents and depth radius relative to the tangent, in mm. */
   radii: readonly number[];
   /** Inner elliptical radius in [0,1). Inside it, the section owns full depth. */
   core: number;
+  /** Optional local tangent dz/dx and dz/dy, in mm/mm; omission is [0,0]. */
+  slope?: readonly number[];
 }
 
 /**
  * Own anterior ellipsoid sections rather than adding scalar inflation to a
  * sparse inferred tip. For q=(x/rx)^2+(y/ry)^2<1 the section depth is
- * apexZ-rz*(1-sqrt(1-q)). Width, height and anterior curvature are independent.
+ * apexZ+sx*dx+sy*dy-rz*(1-sqrt(1-q)). Width, height, anterior curvature
+ * and the supporting tangent are independent. The affine tangent term lets
+ * a sidewall section incline instead of forcing every ala to face forward.
  * A cubic annular fade joins both value and slope to the supplied host at q=1.
  * Its quadratic vanishing dominates the ellipsoid's square-root edge slope.
  *
@@ -32,6 +36,7 @@ export function createPortraitNasalLobules(
     ...shape,
     offset: [...shape.offset],
     radii: [...shape.radii],
+    slope: [...(shape.slope ?? [0, 0])],
   }));
   if (
     shapes.length > 32 ||
@@ -43,6 +48,8 @@ export function createPortraitNasalLobules(
         !s.offset.every(Number.isFinite) ||
         s.radii.length !== 3 ||
         s.radii.some((r) => !Number.isFinite(r) || r <= 0) ||
+        s.slope.length !== 2 ||
+        !s.slope.every(Number.isFinite) ||
         !Number.isFinite(s.core) ||
         s.core < 0 ||
         s.core >= 1,
@@ -83,7 +90,10 @@ export function createPortraitNasalLobules(
         // Factored complement stays nonnegative near the outer edge.
         const weight = (1 - t) ** 2 * (1 + 2 * t);
         const depth =
-          section.apex[2] - section.radii[2] * (1 - Math.sqrt(1 - q));
+          section.apex[2] +
+          section.slope[0] * (point[0] - section.apex[0]) +
+          section.slope[1] * (point[1] - section.apex[1]) -
+          section.radii[2] * (1 - Math.sqrt(1 - q));
         // A running weighted mean avoids summing 32 potentially large depths.
         const ratio = weight / (total + weight);
         target = target * (1 - ratio) + depth * ratio;

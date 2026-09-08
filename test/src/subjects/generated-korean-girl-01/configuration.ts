@@ -250,8 +250,24 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // extents are fitting hypotheses, not measured cartilage dimensions.
   lobules: [
     { anchor: 4, offset: [0, -2, 1], radii: [12, 12, 10], core: 0.65 },
-    { anchor: 49, offset: [0, -2, 4], radii: [8, 9, 7], core: 0.6 },
-    { anchor: 279, offset: [0, -2, 4], radii: [8, 9, 7], core: 0.6 },
+    // Neighbour-based slopes on the support-scaled host are approximately
+    // right [1.69,-0.69], left [-1.29,-0.41] mm/mm. The paired authored
+    // [±1.5,-0.5] fit inclines the alar section into its actual nasal sidewall.
+    // Radii/offsets stay fixed for this tangent-only rendered comparison.
+    {
+      anchor: 49,
+      offset: [0, -2, 4],
+      radii: [8, 9, 7],
+      core: 0.6,
+      slope: [1.5, -0.5],
+    },
+    {
+      anchor: 279,
+      offset: [0, -2, 4],
+      radii: [8, 9, 7],
+      core: 0.6,
+      slope: [-1.5, -0.5],
+    },
   ],
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
