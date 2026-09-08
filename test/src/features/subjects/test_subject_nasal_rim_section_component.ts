@@ -48,6 +48,7 @@ export const test_subject_nasal_rim_section_component = (): void => {
     nostrilHeightScale: 1,
     nostrilTilt: 0,
     rimRoundness: 0,
+    rimRefinement: "curve" as const,
     rimSection,
     cavityOffset: [0, 0, -2],
   };

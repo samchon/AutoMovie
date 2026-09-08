@@ -125,7 +125,7 @@ Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek 
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
 
-The optional [nasal lobule sections](generated-korean-girl-01/nasalLobule.ts) prescribe anterior depth through independent transverse, vertical and depth radii on retained skin datums. The nose applies them to exterior and aperture samples together. The active trial replaces the prior nasal inflation layer with three sections; omission or an empty section list preserves the component's basic depth calculation. A complete section/body basis cannot be selected simultaneously. This trial still requires visual acceptance.
+The optional [nasal lobule sections](generated-korean-girl-01/nasalLobule.ts) prescribe anterior depth through transverse, vertical and depth extents, retained skin datums and optional local tangents. The nose applies them to exterior and aperture samples together. `rimRefinement` can preserve an aperture curve, and [rim sections](generated-korean-girl-01/nasalRimSection.ts) can supply an exterior tissue band from actual skin normals. Their tested presets retained pinches or introduced a double outline, so the active assembly omits these alternatives and restores the basic nasal supports. Omission/empty lobules preserve basic depth; rim-section omission reproduces the previous complete model exactly. A complete section/body basis cannot be selected together with active lobules. Available controls do not constitute an accepted nasal fit.
 
 ## Export a GLTF
 

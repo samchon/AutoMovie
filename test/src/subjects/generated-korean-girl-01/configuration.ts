@@ -245,30 +245,9 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // support so tip, sidewall and rim samples follow one projection relationship.
   // This fitting trial changes depth, not a claim that tip roundness is solved.
   depthScale: 0.78,
-  // Actual anterior sections replace the basic nasal inflation layer below.
-  // The central tip and each ala share the support-scaled host frame. Their
-  // extents are fitting hypotheses, not measured cartilage dimensions.
-  lobules: [
-    { anchor: 4, offset: [0, -2, 1], radii: [12, 12, 10], core: 0.65 },
-    // Neighbour-based slopes on the support-scaled host are approximately
-    // right [1.69,-0.69], left [-1.29,-0.41] mm/mm. The paired authored
-    // [±1.5,-0.5] fit inclines the alar section into its actual nasal sidewall.
-    // Radii/offsets stay fixed for this tangent-only rendered comparison.
-    {
-      anchor: 49,
-      offset: [0, -2, 4],
-      radii: [8, 9, 7],
-      core: 0.6,
-      slope: [1.5, -0.5],
-    },
-    {
-      anchor: 279,
-      offset: [0, -2, 4],
-      radii: [8, 9, 7],
-      core: 0.6,
-      slope: [-1.5, -0.5],
-    },
-  ],
+  // Local lobules, curve refinement and an exterior rim band remain optional.
+  // Their tested presets did not improve the complete nasal surface, so the
+  // active fit uses the prior basic construction rather than its pinched trial.
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
@@ -286,12 +265,7 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // skin and lining receive that same rim; orientation, centroid and connectivity
   // remain owned by the original opening. An optional final section grid cannot
   // move or independently reinterpret this aperture boundary.
-  // A complete fitted ellipse removes concavity already in the sparse cut.
-  // Its common curve refinement prevents exterior/lining triangles from
-  // reintroducing angular peaks into that same contour after fitting.
-  rimRoundness: 1,
-  rimRefinement: "curve",
-  rimSection: { width: 1.2, crest: 0.35 },
+  rimRoundness: 0.55,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };
@@ -549,11 +523,9 @@ export const portraitOrbitalSupportShapes: readonly {
   },
 }));
 
-/** Explicit empty relief: local nasal sections replace the former inflation layer. */
-export const portraitNasalSupportDetail: IPortraitNasalDetail = {
-  radius: 22,
-  controls: [],
-};
+/** Omission selects basic nasal supports; no rejected local-section fit is active. */
+export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined =
+  undefined;
 
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
@@ -566,8 +538,7 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
-    // The selected lobule construction owns nasal volume. Do not compound it
-    // with the former tip/ala displacement envelopes on the refined surface.
+    // The basic nasal supports are selected by omission of a replacement field.
     portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
