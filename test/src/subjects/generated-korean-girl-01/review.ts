@@ -15,6 +15,7 @@ import type * as PatchAttachment from "../portraitPatchAttachment";
 import type * as Relief from "../portraitRelief";
 import type * as Topology from "../portraitSkinTopology";
 import type * as Surface from "../portraitSurface";
+import type * as Fairing from "../portraitSurfaceFairing";
 import type * as SurfaceFit from "../portraitSurfaceFit";
 import type * as Loop from "../subdivideControlMesh";
 import type * as Quads from "../subdividePortraitQuads";
@@ -44,6 +45,8 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
  * intermediate account does not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link Fairing.fairPortraitSurface} Shapes the annulus interior against both fixed neighbouring skin regions while preserving the recorded image ray.
+ * @evidenceReview {@link Fairing.fairPortraitSurface} Read region-interior selection, boundary-adjacent rows, cotangent weights and lumped areas, the scalar ray-offset energy and conditioned conjugate-gradient solve. Single and nine-point plane oracles recover fixed surrounding heights; zero/one-step budgets refuse incomplete solves and suppressing offsets fails the plane oracle. The full b3306ba5 and nasal close images show softer bridge/sidewall joins but a persistent lower nasal line. This does not certify exact C1 continuity or anatomical likeness.
  * @evidence {@link PatchAttachment.IPortraitPatchAttachment} Gives the patch group physical skin reach and a bounded view-ray search interval.
  * @evidenceReview {@link PatchAttachment.IPortraitPatchAttachment} Read nonnegative reach separately from positive travel in millimetres. Reach zero still places boundary targets but leaves unbound skin fixed; travel limits root search and is not a nasal projection parameter.
  * @evidence {@link PatchAttachment.fitPortraitPatchBoundary} Places host boundary controls on the full reference surface without changing their recorded image-plane coordinates.
@@ -51,9 +54,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link MeshPatch.IPortraitMeshPatch} Names the source mesh and its oriented, anatomically phased attachment loop.
  * @evidenceReview {@link MeshPatch.IPortraitMeshPatch} Read the common millimetre frame and strict XY containment of the source boundary inside the host. The provider supplies native nasal skin; connectivity selects only the declared patch. Boundary placement and matching winding remain group obligations rather than assumptions supplied by a closed topology check.
  * @evidence {@link MeshPatch.createPortraitMeshPatchComponent} Replaces the enclosed host region with a selected patch and an engine-triangulated annulus.
- * @evidenceReview {@link MeshPatch.createPortraitMeshPatchComponent} Traced connectivity selection, copied source data, metre XY projection and exact coordinate-to-vertex remapping. The engine refuses crossing/touching or nonnested rings; a separate orientation check precedes any cage mutation. A nonplanar pentagon retains its Z=100 witness while every bridge triangle has positive XY area. The prior zipper fails that test and its e50b4ea4 render is rejected; smooth 3D joining still needs the next actual render.
+ * @evidenceReview {@link MeshPatch.createPortraitMeshPatchComponent} Traced copied source selection, exact XY identity remapping and orientation admission before cage mutation. The attached annulus retains a separate face label through subdivision, then its final provider calls fairPortraitSurface with native core and host boundaries fixed. Omission retains the original unfaired patch path. Nonplanar triangulation and assembled plane tests exercise both paths; b3306ba5 improves the bridge while leaving the nasal base unfinished.
  * @evidence {@link NasalReference.buildPortraitNasalReference} Reconstructs and admits the exact existing CC0 fitted nasal source before its boundary is consumed.
- * @evidenceReview {@link NasalReference.buildPortraitNasalReference} Read the original fit's source/target byte checks and the separate fitted-skin digest check. Changing source refinement while keeping the recorded binding refuses. The provider imports committed source assets and fit data, not ignored captures. Actual native nose shape and the bridge's rendering remain to be inspected.
+ * @evidenceReview {@link NasalReference.buildPortraitNasalReference} Read the original fit's source/target byte checks and the separate fitted-skin digest check. Changing source refinement while retaining the binding refuses. The provider imports committed assets and fit data rather than captures. The b3306ba5 full and close views retain a compact native tip with unresolved alar/underside form; provenance admission is not shape acceptance.
  * @evidence {@link NasalSupport.createPortraitNasalSupport} Resolves nasal projection from one subject-bound facial support plane.
  * @evidenceReview {@link NasalSupport.createPortraitNasalSupport} Read positive ratio admission, exact neutral return, owned datums, normalized plane solution and finite query/displacement refusal. The independent z=y/2 case retains support points and scales a four-millimetre height by one half under translation. This is a projection relationship, not tip curvature or recovered anatomical depth.
  * @evidence {@link Nasal.IPortraitNoseSocket.supportPlane} Supplies the shared nasal root and facial-base reference identities.
@@ -162,7 +165,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Anatomy.IPortraitNasalDetail.controls} Supplies the complete named nasal target population, including stationary anchors.
  * @evidenceReview {@link Anatomy.IPortraitNasalDetail.controls} Compared active dorsal, tip, columellar and alar-facial handles with the solver's zero constraints. No control is discarded before solving merely because its displacement is zero; only solved zero coefficients produce no field.
  * @evidence {@link Anatomy.portraitNasalLayerFor} Selects exactly one basic or coupled nasal surface authority.
- * @evidenceReview {@link Anatomy.portraitNasalLayerFor} Read both branches and their shared layer identity. The omission test matches the original relief fields. After the lobule/rim trials failed visual acceptance, the active assembly again selects omission and the basic supports. An explicit empty replacement remains the way to disable that layer when testing a different full nasal construction.
+ * @evidenceReview {@link Anatomy.portraitNasalLayerFor} Read both branches and their shared layer identity. Omission matches the original basic relief fields. The active native-patch assembly supplies an explicit empty control population to disable those old nasal supports, retaining one source of nasal form. Other anatomical layers still act on the assembled surface and require separate sensitivity checks.
  * @evidence {@link Anatomy.portraitNasalDetail} Records the rejected coupled nasal fitting hypothesis for explicit replacement experiments.
  * @evidenceReview {@link Anatomy.portraitNasalDetail} Read each named datum, zero offset and signed three-axis movement with its frozen 0af74958 configuration. Eleven controls share a 22 mm support. Both image reviewers found a broad flat tip, so the preset is absent from the active assembly and is not an accepted anatomical fit.
  * @evidence {@link LipSection.IPortraitLipBandKnot} Defines one thickness-ratio witness along the curved oral span.
@@ -389,9 +392,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  */
 export const portraitReview = {
   directory: ".shots/face-experiment/preview",
-  sourceCommit: "6ff01c06",
+  sourceCommit: "542e22ed",
   gltfSha256:
-    "ea17fbcacc8f7af680dcc6be9955230ba0b00ab4c69088d24b56e7a6013e8dbb",
+    "b3306ba5e2f781f9f06c974b22ea5d09633b6f267009bdf1c6dadc4bef41ec90",
   profileSha256:
     "d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145",
 };
