@@ -102,6 +102,13 @@ export interface IPortraitEyeShape {
   cornealThickness: number;
   /** Corneal rim's lift above the globe, in mm; clears the underlying iris surface. */
   cornealRimLift: number;
+  /**
+   * Closed optical boundary: omission or aperture retains visible-aperture
+   * clipping; limbus keeps the complete circular cornea behind the eyelids.
+   * The latter separates optical anatomy from visibility. It does not itself
+   * refit lid contact to the larger volume, which requires rendered inspection.
+   */
+  cornealBoundary?: "aperture" | "limbus";
   /** Iris radius in mm before clipping against the fitted eyelid. */
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
@@ -235,6 +242,14 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitOcularTissues(shape.tissues);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (
+    shape.cornealBoundary !== undefined &&
+    shape.cornealBoundary !== "aperture" &&
+    shape.cornealBoundary !== "limbus"
+  )
+    throw new Error(
+      "Corneal boundary must be aperture or limbus when supplied.",
+    );
   const positive = [
     shape.widthScale,
     shape.openingScale,
@@ -619,7 +634,10 @@ export function buildPortraitEye(
             globeRadius: shape.surfaceRadius,
             thickness: shape.cornealThickness,
             rimLift: shape.cornealRimLift,
-            extents: extents.slice(0, -1),
+            extents:
+              shape.cornealBoundary === "limbus"
+                ? new Array(shape.sampling.irisColumns).fill(shape.irisRadius)
+                : extents.slice(0, -1),
             radialSamples: shape.sampling.irisRows,
             surface: eyeZ,
           }),

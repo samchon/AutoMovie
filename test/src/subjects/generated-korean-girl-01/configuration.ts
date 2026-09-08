@@ -85,6 +85,10 @@ export const portraitEyeShape: IPortraitEyeShape = {
   cornealRadius: 7.8,
   cornealThickness: 0.55,
   cornealRimLift: 0.65,
+  // Keep a circular optical boundary while the eyelids determine visibility.
+  // This trial must inspect their contact: clipping a thick closed cornea to
+  // the visible opening produced a raised flattened glass rim in close views.
+  cornealBoundary: "limbus",
   // The observed iris-rim markers give horizontal radii of 6.36–6.47 mm after
   // pose removal. One radius fits this subject's two independently bound eyes.
   irisRadius: 6.4,
