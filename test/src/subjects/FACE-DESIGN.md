@@ -55,6 +55,8 @@ The assembler distinguishes continuity obligations. Homogeneous visible skin req
 
 ## Nasal construction {#nasal-construction}
 
+Optional `nose.depthScale` scales signed anterior height from a common skin-support plane through the nasal root and two facial-base datums. Those subject-owned identities live in `noseSocket.supportPlane`. The same calculation precedes both exterior fitting and nostril-rim fitting, so aperture and lining respond to the changed projection basis. Omission or one preserves the basic geometry; another section/body replacement cannot be selected simultaneously with nonidentity depth scaling. This controls projection, not tip/alar curvature, and a smaller depth alone does not complete the nose's rounded form.
+
 Detailed nasal form owns the outer nose, nostril rim and vestibular transition together. The dorsum, paired tip and alar sections, columella and nasal sill have distinct geometric controls, but adjacent sections share their position and derivative data. The surrounding face connects through the group's outer perimeter. A preserved old aperture is not automatically the correct boundary for every new outer shape.
 
 Aperture width, height, position and orientation are explicit group facts. Changing an exterior volume does not silently refit their plane. When the authored nose changes both exterior and aperture, the group resolves both from the selected input and rebuilds their common joins. The vestibular meridian starts at the same rim jet consumed by the exterior; it does not independently reconstruct the rim from a centroid and guessed offset.

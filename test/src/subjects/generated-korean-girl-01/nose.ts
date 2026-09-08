@@ -6,6 +6,7 @@ import {
   type IPortraitNasalSection,
   createPortraitNasalSection,
 } from "./nasalSection";
+import { createPortraitNasalSupport } from "./nasalSupport";
 import { fitPortraitNostrilRim, resizePortraitNostrilRim } from "./nostrilRim";
 
 /**
@@ -33,6 +34,8 @@ export interface IPortraitNoseSocket {
   nostrils: number[][];
   /** Optional retained vertex supplying the local section loft's XYZ datum. */
   sectionAnchor?: number;
+  /** Three retained skin datums spanning the nasal root and paired facial base. */
+  supportPlane?: readonly number[];
 }
 
 /**
@@ -44,6 +47,13 @@ export interface IPortraitNoseSocket {
 export interface IPortraitNoseShape {
   /** Width multiplier about the socket midline. */
   widthScale: number;
+  /**
+   * Optional projection ratio relative to the socket's common skin support
+   * plane. Omission/one is identity. Positive smaller values reduce the entire
+   * nose's inferred depth, including the samples used by rim fitting. This is
+   * a basis replacement and cannot combine with another section/body basis.
+   */
+  depthScale?: number;
   /** Tip displacement along host Z, in mm. */
   tipProjection: number;
   /** Alar displacement along host Z, in mm. */
@@ -161,6 +171,10 @@ export function createPortraitNoseComponent(
     tipRadius: [...inputSocket.tipRadius] as [number, number],
     surface: [...inputSocket.surface],
     nostrils: inputSocket.nostrils.map((faces) => [...faces]),
+    supportPlane:
+      inputSocket.supportPlane === undefined
+        ? undefined
+        : [...inputSocket.supportPlane],
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
   const body =
@@ -171,6 +185,13 @@ export function createPortraitNoseComponent(
     throw new Error(
       "Choose one pre-fit or final nasal section basis, not two stacked constructions.",
     );
+  if (
+    (shape.depthScale ?? 1) !== 1 &&
+    (inputShape.section !== undefined || body !== undefined)
+  )
+    throw new Error("Choose one nasal depth-scale or section/body basis.");
+  if (!Number.isFinite(shape.depthScale ?? 1) || (shape.depthScale ?? 1) <= 0)
+    throw new Error("Nasal depth scale must be finite and positive.");
   const section =
     inputShape.section === undefined
       ? undefined
@@ -205,6 +226,21 @@ export function createPortraitNoseComponent(
   return {
     id: "nose",
     fit: (host) => {
+      const supportIds = socket.supportPlane ?? [];
+      if (
+        (shape.depthScale ?? 1) !== 1 &&
+        supportIds.some(
+          (id) =>
+            !Number.isInteger(id) || id < 0 || id >= host.positions.length,
+        )
+      )
+        throw new Error("Nasal support plane must name resident skin datums.");
+      const support = createPortraitNasalSupport(
+        (shape.depthScale ?? 1) === 1
+          ? []
+          : supportIds.map((id) => host.positions[id]),
+        shape.depthScale,
+      );
       const datum =
         socket.sectionAnchor === undefined
           ? undefined
@@ -225,6 +261,7 @@ export function createPortraitNoseComponent(
       // and alar controls remain explicit additional signed offsets. The lining
       // later reads the actual fitted rim, so it cannot retain a stale basis.
       const depth = (point: number[]): number =>
+        support(point) +
         portraitNoseDepth(point, socket, shape) +
         (section === undefined ? 0 : section(point, datum!));
       const openings = socket.nostrils.map((ordinals) =>

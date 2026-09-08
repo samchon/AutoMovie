@@ -19,6 +19,7 @@ import {
   portraitEyeShape,
   portraitMouthShape,
   portraitNoseShape,
+  portraitNoseSocket,
   portraitOrbitalSupportShapes,
 } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
@@ -68,6 +69,7 @@ async function main() {
       rightEye: portraitEyeShape,
       leftEye: portraitEyeShape,
       nose: portraitNoseShape,
+      noseSocket: portraitNoseSocket,
       mouth: { ...portraitMouthShape, crowns: [] },
       ears: portraitEarShape,
       nasalRelief: portraitNasalRelief,

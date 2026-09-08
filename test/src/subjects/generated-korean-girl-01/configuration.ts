@@ -161,6 +161,8 @@ export const alternatePortraitEye: IPortraitEyeShape = {
 
 /** Measured nasal binding. Its original cut population remains stable across shapes. */
 export const portraitNoseSocket: IPortraitNoseSocket = {
+  // Nasal root and paired alar-facial support, rather than an arbitrary origin.
+  supportPlane: [6, 129, 358],
   midline: 0,
   tipY: -6,
   tipRadius: [8, 9],
@@ -238,6 +240,10 @@ export const portraitNasalSection: IPortraitNasalSection = {
 /** Subject-owned nasal offsets and cavity dimensions; see IPortraitNoseShape for units. */
 export const portraitNoseShape: IPortraitNoseShape = {
   widthScale: 1,
+  // The original monocular depth is inferred. Scale it from the common facial
+  // support so tip, sidewall and rim samples follow one projection relationship.
+  // This fitting trial changes depth, not a claim that tip roundness is solved.
+  depthScale: 0.78,
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,

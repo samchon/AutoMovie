@@ -21,6 +21,9 @@ import { throwsError } from "../internal/predicates";
  *    assembled result. A missing body datum refuses before attachment.
  */
 export const test_subject_nasal_body_assembly = (): void => {
+  // This scenario isolates the complete final-body basis. Another subject's
+  // selected depth-scale basis must not be stacked beneath it.
+  const baseShape = { ...portraitNoseShape, depthScale: 1 };
   const host = {
     positions: referenceControlNet.positions,
     indices: referenceControlNet.indices,
@@ -46,14 +49,14 @@ export const test_subject_nasal_body_assembly = (): void => {
   };
   const body = { shape, joinWidth: 8, depthReach: 42 };
   const nose = createPortraitNoseComponent(portraitNoseSocket, {
-    ...portraitNoseShape,
+    ...baseShape,
     body,
   });
   const baseline = buildPortraitHead(
     host,
     [
       createPortraitNoseComponent(portraitNoseSocket, {
-        ...portraitNoseShape,
+        ...baseShape,
         body: undefined,
       }),
     ],
@@ -94,7 +97,7 @@ export const test_subject_nasal_body_assembly = (): void => {
       () =>
         createPortraitNoseComponent(
           { ...portraitNoseSocket, sectionAnchor: undefined },
-          { ...portraitNoseShape, body },
+          { ...baseShape, body },
         ).fit(host),
       "resident finite socket datum",
     ),
