@@ -1,7 +1,11 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
-import { portraitOrbitalRelief, portraitPerioralRelief } from "./anatomy";
+import {
+  portraitNasalRelief,
+  portraitOrbitalRelief,
+  portraitPerioralRelief,
+} from "./anatomy";
 import {
   type IPortraitCheekShape,
   type IPortraitCheekSocket,
@@ -210,36 +214,6 @@ export const portraitNoseShape: IPortraitNoseShape = {
   rimRoundness: 0.55,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
-  // Post-refinement sections replace the former overlapping nasal support
-  // envelopes. The retained tip datum locates this part; its aperture remains
-  // an independent, fixed position/tangent boundary. These are authored mm
-  // offsets, to be judged in the complete actual GLTF capture.
-  body: {
-    joinWidth: 8,
-    depthReach: 42,
-    shape: {
-      stations: [
-        { height: -20, centre: 0, shoulder: 0, ala: 0 },
-        { height: -13, centre: 1.2, shoulder: 0.3, ala: 0.3 },
-        { height: -8, centre: 3.8, shoulder: 0.4, ala: 2.8 },
-        { height: -3, centre: 4.5, shoulder: 0.4, ala: 3.8 },
-        { height: 2, centre: 1.2, shoulder: 0.3, ala: 1.7 },
-        { height: 12, centre: 0, shoulder: 0, ala: 0 },
-      ],
-      // A broad central body owns the convex tip. Smaller paired shoulders
-      // blend into it; they must not form two peaks above a recessed centre.
-      centreWidth: 12,
-      shoulderOffset: 4,
-      shoulderWidth: 7,
-      alarOffset: 15,
-      alarWidth: 9,
-      fullness: [0, 0],
-      spread: [0.35, 0.35],
-      creaseOffset: 6,
-      creaseWidth: 4,
-      crease: [0, 0],
-    },
-  },
 };
 
 /** A narrower, less projecting nose with smaller inferior openings. */
@@ -429,6 +403,7 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
+    createPortraitReliefLayer("nasal-subunits", portraitNasalRelief),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
   ],

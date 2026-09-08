@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import {
+  portraitNasalRelief,
   portraitOrbitalRelief,
   portraitPerioralRelief,
 } from "../../src/subjects/generated-korean-girl-01/anatomy";
@@ -68,6 +69,7 @@ async function main() {
       nose: portraitNoseShape,
       mouth: { ...portraitMouthShape, crowns: [] },
       ears: portraitEarShape,
+      nasalRelief: portraitNasalRelief,
       orbitalRelief: portraitOrbitalRelief,
       perioralRelief: portraitPerioralRelief,
       cheeks: {
