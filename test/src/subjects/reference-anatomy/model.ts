@@ -1,4 +1,4 @@
-import type { IAutoMovieModel } from "@automovie/interface";
+import type { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
 
 import {
   appendPortraitNeck,
@@ -245,6 +245,28 @@ export function buildAnatomicalStudy(
       ),
     );
   }
+  // Each optical patch is spherical, even where its UV parameterization
+  // collapses to a pole. Its implicit-surface gradient supplies a direction
+  // when triangle-area averaging does not. Iris/pupil lift translates the
+  // sphere centre along Z; it does not change the spherical derivative.
+  const opticalPart = (
+    id: string,
+    mesh: IAutoMovieMesh,
+    centre: number[],
+    material: string,
+  ) =>
+    portraitPart(
+      id,
+      {
+        ...mesh,
+        // Positions, centre and radius share construction millimetres. The ratio
+        // is dimensionless and portraitPart retains its direction at metre export.
+        normals: mesh.positions.map(
+          (value, index) => (value - centre[index % 3]) / shape.eyeRadius,
+        ),
+      },
+      material,
+    );
   for (let side = 0; side < 2; side++) {
     const [x, y, z] = centres[side];
     const gaze = fit?.gazeOrigins?.[side];
@@ -257,7 +279,7 @@ export function buildAnatomicalStudy(
             portraitPoint(...(fit!.viewRay as [number, number, number])),
           );
     parts.push(
-      portraitPart(
+      opticalPart(
         "study-globe-" + side,
         portraitPatch(
           (u, v) => {
@@ -272,6 +294,7 @@ export function buildAnatomicalStudy(
           48,
           24,
         ),
+        [x, y, z],
         "sclera",
       ),
     );
@@ -280,7 +303,7 @@ export function buildAnatomicalStudy(
       ["pupil", shape.pupilRadius, 0.07],
     ] as const)
       parts.push(
-        portraitPart(
+        opticalPart(
           "study-" + name + "-" + side,
           portraitPatch(
             (u, v) => {
@@ -301,6 +324,7 @@ export function buildAnatomicalStudy(
             48,
             12,
           ),
+          [x, y, z + lift],
           name,
         ),
       );
