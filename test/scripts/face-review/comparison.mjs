@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-import { chromium } from "../../node_modules/playwright/index.mjs";
+import { chromium } from "playwright";
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const directory = resolve(process.argv[2] ?? ".shots/face-experiment/preview");

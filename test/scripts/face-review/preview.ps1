@@ -31,9 +31,11 @@ try {
     if ((Test-Path -LiteralPath $parentPath) -and (((Get-Item -LiteralPath $parentPath).Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) { throw "Preview roots must be real workspace directories." }
   }
   New-Item -ItemType Directory -Path $captureRoot -Force | Out-Null
-  # Only one publisher owns the fixed pending/previous paths at a time. The
-  # operating system removes this lock file when its owning handle closes.
-  $captureLock = [System.IO.FileStream]::new((Join-Path $captureRoot 'preview.lock'), [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None, 1, [System.IO.FileOptions]::DeleteOnClose)
+  # Publishers and diagnostic writers share an exclusive-create lease. CreateNew
+  # also refuses a Node diagnostic's existing lock, even after its handle closes
+  # and before it unlinks the file. Never steal an interrupted owner's lease.
+  # The operating system removes this publisher's lease when its handle closes.
+  $captureLock = [System.IO.FileStream]::new((Join-Path $captureRoot 'preview.lock'), [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None, 1, [System.IO.FileOptions]::DeleteOnClose)
   Recycle-Capture $pendingPath
   Recycle-Capture $previousPath
   Assert-CapturePath $previewPath

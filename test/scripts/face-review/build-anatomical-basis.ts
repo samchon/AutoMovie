@@ -2,8 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
-
-import { chromium } from "../../node_modules/playwright";
+import { chromium } from "playwright";
 
 /**
  * Freeze only the head/upper-neck portion of the pinned CC0 MakeHuman asset and
