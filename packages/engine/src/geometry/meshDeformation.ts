@@ -1,6 +1,7 @@
 import type {
   IAutoMovieMesh,
   IAutoMovieMeshDeformationField,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
@@ -19,6 +20,15 @@ import { Vector3 } from "../math/Vector3";
  * by the three vertex Jacobians. This is a tessellation check, not a global
  * self-intersection test or proof of the field between its sampled vertices.
  *
+ * An optional influence sample supplies a scalar mask and its spatial gradient
+ * at each resident vertex. For displacement d and mask f, the composed map is
+ * p + f*d and its Jacobian is I + f*(J-I) + outer(d, gradient(f)). Gradients
+ * use inverse metres in the same local frame. Apply an attachment mask here,
+ * before orientation checks, rather than multiplying returned displacement
+ * afterwards and silently invalidating the checked geometry. Mask samples are
+ * caller-owned differential observations; the operation validates their shape
+ * and finite domain, not their provenance or unsampled interpolation.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies composable spatial displacement and stretch fields to resident geometry without changing its triangle population.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves connectivity and shared normals through one analytic deformation, rejecting local folds instead of emitting inverted surface patches.
  * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Refuses malformed resident triangles and deformation output whose area collapses or opposes its transported face orientation.
@@ -27,7 +37,10 @@ import { Vector3 } from "../math/Vector3";
  */
 export function createAutoMovieMeshDeformer(
   fields: readonly IAutoMovieMeshDeformationField[],
-): (mesh: IAutoMovieMesh) => IAutoMovieMesh {
+): (
+  mesh: IAutoMovieMesh,
+  influence?: readonly { weight: number; gradient: IAutoMovieVector3 }[],
+) => IAutoMovieMesh {
   const packed = fields.map((field) => {
     const vector = (value: { x: number; y: number; z: number }): number[] => [
       value.x,
@@ -49,7 +62,7 @@ export function createAutoMovieMeshDeformer(
       );
     return { center, radius, displacement, stretch };
   });
-  return (mesh) => {
+  return (mesh, influence) => {
     const indices =
       mesh.indices ??
       Array.from({ length: mesh.positions.length / 3 }, (_v, i) => i);
@@ -69,6 +82,21 @@ export function createAutoMovieMeshDeformer(
     )
       throw new Error(
         "Mesh deformation needs finite complete positions, aligned normals and resident triangle indices.",
+      );
+    if (
+      influence !== undefined &&
+      (influence.length !== mesh.positions.length / 3 ||
+        influence.some(
+          ({ weight, gradient }) =>
+            ![weight, gradient.x, gradient.y, gradient.z].every(
+              Number.isFinite,
+            ) ||
+            weight < 0 ||
+            weight > 1,
+        ))
+    )
+      throw new Error(
+        "Mesh influence needs one bounded weight and finite inverse-metre gradient per vertex.",
       );
     const positions: number[] = [];
     const normals: number[] | null = mesh.normals === null ? null : [];
@@ -112,6 +140,25 @@ export function createAutoMovieMeshDeformer(
           for (let column = 0; column < 3; column++)
             jacobian[row * 3 + column] += movement * gradient[column];
           jacobian[row * 3 + row] += weight * field.stretch[row];
+        }
+      }
+      if (influence !== undefined) {
+        const sample = influence[vertex / 3];
+        const gradient = [
+          sample.gradient.x,
+          sample.gradient.y,
+          sample.gradient.z,
+        ];
+        for (let row = 0; row < 3; row++) {
+          const displacement = target[row] - point[row];
+          target[row] = point[row] + sample.weight * displacement;
+          for (let column = 0; column < 3; column++) {
+            const identity = row === column ? 1 : 0;
+            jacobian[3 * row + column] =
+              identity +
+              sample.weight * (jacobian[3 * row + column] - identity) +
+              displacement * gradient[column];
+          }
         }
       }
       const a = Vector3.create(jacobian[0], jacobian[3], jacobian[6]);

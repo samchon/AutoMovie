@@ -8,7 +8,7 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 
 The active `portraitAssembly` uses the measured component surface with a grouped upper dentition. Read `configuration.ts`, `model.ts`, `head.ts`, then `dentalComponent.ts`. The original image measurements own the facial identities; each eye/nose/mouth component supplies shared-skin attachments. The dental component supplies no skin cut and reads the final refined oral anchors after the mouth has constructed its opening. The mouth's legacy crowns are disabled in this assembly, giving dentition exactly one owner.
 
-`measuredPortraitAssembly` retains the independent baseline with the original dental placement for controlled comparisons. The attributed CC0 [anatomical reference study](reference-anatomy/README.md) and recorded `fittedModel.ts` remain separate experiments. Their target fit does not establish likeness and is not the active export. No source photograph is projected onto either model as a texture.
+`measuredPortraitAssembly` selects the current subject settings with the legacy dental placement for component comparisons. It is not an immutable checkpoint: later edits to its referenced settings also change that assembly. The attributed CC0 [anatomical reference study](reference-anatomy/README.md) and recorded `fittedModel.ts` remain separate experiments. Their target fit does not establish likeness and is not the active export. No source photograph is projected onto either model as a texture.
 
 | Source | Responsibility |
 | --- | --- |
@@ -38,6 +38,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `portraitRelief.ts` | Bind named support regions to the actual refined skin and convert their metric fields |
 | `geometry.ts` and `subdivideControlMesh.ts` | Sampling, interpolation, subdivision, shared normals and metric conversion |
 | `portraitDocument.ts` | Static GLTF conversion preserving resident buffers and supported material factors |
+| `portraitMeshBuffers.ts` | Placement and Float32 face-preservation checks using the engine's existing transform and welded-pole policy |
 | `captureProfile.ts` | Fixed camera, crop and area-light conditions for inspection |
 
 Construction coordinates are millimetres, with +Y up and +Z in front of the face. Anatomical left is +X. `portraitPart` converts completed meshes into metre-valued model parts. Transient surface-deformation commands also use engine metres; their adapter returns displacements to construction millimetres before model parts are created. Skin, lips and nasal lining share the same refined cage and normal field; material regions retain only their referenced vertices. Eye geometry reads the refined lid boundary, so it cannot independently invent a second aperture.
@@ -67,6 +68,8 @@ The order is part of the attachment contract:
 3. Join the cranium and neck, validate declared openings, and subdivide the complete cage once.
 4. Evaluate optional surface layers against the same refined host. Their engine fields use metres; the adapter returns millimetres and fades displacement at open rims.
 5. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface.
+
+The aperture fade supplies both a bounded scalar weight and its spatial gradient to the engine deformation. A faded displacement has a different Jacobian from its unfaded field, so orientation checks run on that complete map. Vertex gradients are area-weighted observations of the distance field on the refined mesh, with the quintic derivative and millimetre/metre conversion explicit in `portraitSurface.ts`. The engine also checks emitted triangle orientation against transported source-face directions. These checks preserve supported large turns; they are not a global self-intersection proof.
 
 The `measuredPortraitAssembly` supplies paired cheek layers plus named nasal, orbital and perioral supports. Each region carries its attachment, offset, XYZ support radii and signed displacement. The nasal layer distinguishes tip domes, alar lobules, their facial boundaries and columellar support; the perioral layer distinguishes philtral columns, their groove and the lip-to-chin transition. These are compact surface envelopes, not reconstructed internal tissues or a muscle simulation. A shallow nasolabial relief follows the current smile; the medial tear-trough depression is disabled. These are authored shape choices, not age measurements. Fine wrinkles remain deferred. Ear roots are embedded separate shells, not welded to the skin.
 
@@ -114,6 +117,8 @@ Run the tracked exporter from the repository root after installing the workspace
 ```
 
 The GLB is self-contained. The JSON GLTF uses its sibling `portrait.bin`. `portraitDocument` preserves metallic/roughness colour, emission, alpha mode, sidedness and the supported scalar transmission, IOR, volume and clearcoat extensions. Every GLTF reader or writer must register `portraitGltfExtensions`; an unregistered SDK writer can discard extension data. The converter refuses rigs and texture assets. Positive material thickness requires a closed manifold mesh.
+
+Export checks actual representation precision. Each part's placement is compared with the same engine transform applied to translation-free face coordinates, preventing a large origin from silently erasing a face before Float32 conversion. The converter then checks each nonredundant placed face at Float32 precision and validates every final material group's manifold/winding, with closure additionally required for optical volume. Original pole/seam redundancy uses the engine's existing welded triangle identities. It is not a subject-specific area allowance, and equal before/after degenerate counts cannot excuse a different newly lost face.
 
 ## Inspect and revise
 

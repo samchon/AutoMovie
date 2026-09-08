@@ -1,7 +1,6 @@
 import {
   mergeAutoMovieMeshes,
   tessellate,
-  transformAutoMovieMesh,
   validateMeshTopology,
   validateModel,
 } from "@automovie/engine";
@@ -13,6 +12,8 @@ import {
   KHRMaterialsTransmission,
   KHRMaterialsVolume,
 } from "@gltf-transform/extensions";
+
+import { placePortraitMesh, portraitMeshBuffers } from "./portraitMeshBuffers";
 
 /** Register this supported optical material set on every glTF reader and writer. */
 export const portraitGltfExtensions = [
@@ -28,6 +29,8 @@ export const portraitGltfExtensions = [
  * fields are preserved. Rigs and texture resources are refused. Positive volume
  * thickness requires a closed manifold. Writers must register the exported
  * extension set; clients must support every optical extension used by a model.
+ * Geometry and closed optical volumes are checked again at the actual Float32
+ * output boundary; a valid double-precision source can lose a face on export.
  * This stays an experiment utility, not a product scene-export API.
  */
 export function portraitDocument(model: IAutoMovieModel): Document {
@@ -62,7 +65,7 @@ export function portraitDocument(model: IAutoMovieModel): Document {
             };
       if (part.attachedBone !== null || mesh.skin !== null)
         throw new Error("Portrait export does not flatten bone bindings.");
-      return transformAutoMovieMesh(
+      return placePortraitMesh(
         mesh,
         part.transform === null
           ? {}
@@ -74,12 +77,18 @@ export function portraitDocument(model: IAutoMovieModel): Document {
       );
     });
     const mesh = mergeAutoMovieMeshes(meshes);
+    const packed = portraitMeshBuffers(mesh);
+    // Quantization can merge separate edges even while every individual face
+    // retains its area. Check all final material groups for manifold/winding
+    // agreement; only a positive optical thickness additionally requires closure.
     if (
-      (finish.thickness ?? 0) > 0 &&
-      !validateMeshTopology({ mesh, expectClosed: true }).success
+      !validateMeshTopology({
+        mesh: { ...mesh, positions: Array.from(packed.positions) },
+        expectClosed: (finish.thickness ?? 0) > 0,
+      }).success
     )
       throw new Error(
-        "An optical volume needs closed, consistently wound geometry: " +
+        "Portrait Float32 material geometry must preserve its required topology: " +
           finish.id,
       );
     const alphaModes = {
@@ -150,25 +159,25 @@ export function portraitDocument(model: IAutoMovieModel): Document {
     const positions = document
       .createAccessor()
       .setType("VEC3")
-      .setArray(new Float32Array(mesh.positions))
+      .setArray(packed.positions)
       .setBuffer(buffer);
     const indices = document
       .createAccessor()
       .setType("SCALAR")
-      .setArray(new Uint32Array(mesh.indices!))
+      .setArray(packed.indices)
       .setBuffer(buffer);
     const primitive = document
       .createPrimitive()
       .setAttribute("POSITION", positions)
       .setIndices(indices)
       .setMaterial(material);
-    if (mesh.normals !== null)
+    if (packed.normals !== null)
       primitive.setAttribute(
         "NORMAL",
         document
           .createAccessor()
           .setType("VEC3")
-          .setArray(new Float32Array(mesh.normals))
+          .setArray(packed.normals)
           .setBuffer(buffer),
       );
     scene.addChild(

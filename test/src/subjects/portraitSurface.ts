@@ -1,4 +1,5 @@
 import {
+  Vector3,
   compareCodeUnits,
   createAutoMovieMeshDeformer,
 } from "@automovie/engine";
@@ -44,9 +45,10 @@ export interface IPortraitSurfaceLayer {
  * Unreferenced gaze markers remain unchanged. Zero layers/fields are identity.
  *
  * attachmentFade and the returned cage use millimetres. Layer factories emit
- * metre-valued engine fields. Convert only at the deformer boundary, then add
- * its displacement back to the original millimetre coordinates. This avoids
- * rescaling vertices that have zero influence.
+ * metre-valued engine fields. The fade and its derivative are supplied to that
+ * same deformation operation, so its Jacobian and emitted-triangle checks see
+ * the final masked map. Convert only at that boundary, then add its displacement
+ * back to the original millimetre coordinates. Zero influence remains exact.
  *
  * Every layer reads the same host; stable ID sorting fixes summation order.
  * The host has already passed topology validation. This helper preserves its
@@ -89,8 +91,6 @@ export function applyPortraitSurfaceLayers(
     },
     "skin",
   ).geometry.mesh;
-  const changed = createAutoMovieMeshDeformer(fields)(metric);
-
   // Count undirected edges on the complete skin, before material separation.
   // A one-face edge is an intentional free rim, so colour seams do not become
   // artificial deformation barriers. Edge lengths use construction millimetres.
@@ -150,23 +150,74 @@ export function applyPortraitSurfaceLayers(
       }
     }
   }
-  // Smoothstep has zero first and second derivatives at both ends. Isolated
-  // gaze markers receive zero influence; closed components outside every rim's
-  // reachable neighbourhood receive full influence. Only positions are replaced.
+  // Distances are linearly interpolated over each original refined triangle.
+  // At a shared vertex that piecewise field has several one-sided gradients;
+  // their area-weighted mean is the declared vertex differential used by the
+  // sampled deformation guard. Clamping distance before differentiation keeps
+  // the full-influence region finite and constant. It does not claim an exact
+  // continuous geodesic solver between the mesh samples.
+  const clamped = Array.from(distances, (distance) =>
+    Math.min(attachmentFade, distance),
+  );
+  const gradients = mesh.positions.map(() => Vector3.create());
+  const areas = new Float64Array(mesh.positions.length);
+  for (let i = 0; i < mesh.indices.length; i += 3) {
+    const [a, b, c] = mesh.indices.slice(i, i + 3);
+    const point = (id: number) =>
+      Vector3.create(
+        mesh.positions[id][0],
+        mesh.positions[id][1],
+        mesh.positions[id][2],
+      );
+    const ab = Vector3.subtract(point(b), point(a));
+    const ac = Vector3.subtract(point(c), point(a));
+    const cross = Vector3.cross(ab, ac);
+    const area = Math.hypot(cross.x, cross.y, cross.z);
+    if (!Number.isFinite(area) || area === 0)
+      throw new Error(
+        "Portrait attachment gradients require finite nondegenerate host triangles.",
+      );
+    const normal = Vector3.scale(cross, 1 / area);
+    // This is gradient(distance) multiplied by double area. The dual edge
+    // vectors avoid squaring the area, which needlessly loses very small faces.
+    const weighted = Vector3.add(
+      Vector3.scale(Vector3.cross(ac, normal), clamped[b] - clamped[a]),
+      Vector3.scale(Vector3.cross(normal, ab), clamped[c] - clamped[a]),
+    );
+    for (const vertex of [a, b, c]) {
+      gradients[vertex] = Vector3.add(gradients[vertex], weighted);
+      areas[vertex] += area;
+    }
+  }
+  // Quintic smoothstep has zero first and second derivatives at both ends.
+  // Its derivative is 30*t^2*(1-t)^2. Distances/areas above use mm, so multiply
+  // the resulting inverse-mm mask gradient by 1000 for the engine's metre frame.
+  // Isolated gaze markers receive zero mask; closed regions receive one.
+  const influence = mesh.positions.map((_point, id) => {
+    const t = neighbours[id].length === 0 ? 0 : clamped[id] / attachmentFade;
+    // Evaluate the nearer half and reflect it. The direct polynomial can
+    // round above one just below t=1, contradicting the mask's bounded domain.
+    const half = Math.min(t, 1 - t);
+    const value = half * half * half * (10 + half * (-15 + 6 * half));
+    const weight = t <= 0.5 ? value : 1 - value;
+    const derivative = 30 * t * t * (1 - t) ** 2;
+    const gradient =
+      areas[id] === 0
+        ? Vector3.create()
+        : Vector3.scale(
+            gradients[id],
+            (1000 * derivative) / (attachmentFade * areas[id]),
+          );
+    return { weight, gradient };
+  });
+  const changed = createAutoMovieMeshDeformer(fields)(metric, influence);
   return {
     ...mesh,
     positions: mesh.positions.map((point, id) => {
-      const t =
-        neighbours[id].length === 0
-          ? 0
-          : Math.min(1, distances[id] / attachmentFade);
-      const influence = t * t * t * (10 + t * (-15 + 6 * t));
       return point.map(
         (value, axis) =>
           value +
-          influence *
-            (changed.positions[3 * id + axis] -
-              metric.positions[3 * id + axis]) *
+          (changed.positions[3 * id + axis] - metric.positions[3 * id + axis]) *
             1000,
       );
     }),
