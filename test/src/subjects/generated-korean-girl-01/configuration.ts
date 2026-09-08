@@ -220,15 +220,17 @@ export const portraitNoseShape: IPortraitNoseShape = {
     shape: {
       stations: [
         { height: -20, centre: 0, shoulder: 0, ala: 0 },
-        { height: -13, centre: -1.8, shoulder: 1.4, ala: 0.4 },
-        { height: -8, centre: -0.8, shoulder: 2.5, ala: 3.8 },
-        { height: -3, centre: 0.7, shoulder: 2.0, ala: 5.5 },
-        { height: 2, centre: 0.4, shoulder: 0.7, ala: 2.2 },
+        { height: -13, centre: 1.2, shoulder: 0.3, ala: 0.3 },
+        { height: -8, centre: 3.8, shoulder: 0.4, ala: 2.8 },
+        { height: -3, centre: 4.5, shoulder: 0.4, ala: 3.8 },
+        { height: 2, centre: 1.2, shoulder: 0.3, ala: 1.7 },
         { height: 12, centre: 0, shoulder: 0, ala: 0 },
       ],
-      centreWidth: 5,
-      shoulderOffset: 5,
-      shoulderWidth: 6,
+      // A broad central body owns the convex tip. Smaller paired shoulders
+      // blend into it; they must not form two peaks above a recessed centre.
+      centreWidth: 12,
+      shoulderOffset: 4,
+      shoulderWidth: 7,
       alarOffset: 15,
       alarWidth: 9,
       fullness: [0, 0],
