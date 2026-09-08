@@ -31,6 +31,8 @@ import { nclose, throwsError } from "../internal/predicates";
  *    classification. Linear enlargement can make an original sub-weld face
  *    real, while deliberate shrinking retains the established pole policy.
  *    Proper rotations and mirrors remain supported through the same transform.
+ * 6. Adjacent inverse Z scales 1e-150 and 1e-155 preserve unit-Z normals
+ *    through the actual transform, Float32 packing and binary GLB round trip.
  */
 export const test_subject_gltf_precision = async (): Promise<void> => {
   const mesh = (positions: number[]): IAutoMovieMesh => ({
@@ -228,4 +230,27 @@ export const test_subject_gltf_precision = async (): Promise<void> => {
     placePortraitMesh(mesh([]), {}).positions,
     [],
   );
+  for (const scaleZ of [1e-150, 1e-155]) {
+    const withNormals = { ...unit(0), normals: [0, 0, 1, 0, 0, 1, 0, 0, 1] };
+    const exported = await io.readBinary(
+      await io.writeBinary(
+        document(withNormals, {
+          ...IDENTITY_TRANSFORM,
+          scale: { x: 1, y: 1, z: scaleZ },
+        }),
+      ),
+    );
+    TestValidator.equals(
+      "inverse-scale normal survives actual Float32 export",
+      Array.from(
+        exported
+          .getRoot()
+          .listMeshes()[0]
+          .listPrimitives()[0]
+          .getAttribute("NORMAL")!
+          .getArray()!,
+      ),
+      withNormals.normals,
+    );
+  }
 };
