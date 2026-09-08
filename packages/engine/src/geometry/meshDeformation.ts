@@ -122,23 +122,25 @@ export function createAutoMovieMeshDeformer(
         )
           continue;
         const delta = [dx, dy, dz];
-        const squared = delta.reduce(
-          (sum, value, axis) => sum + (value / field.radius[axis]) ** 2,
-          0,
+        const coordinates = delta.map(
+          (value, axis) => value / field.radius[axis],
         );
+        const squared = coordinates.reduce((sum, value) => sum + value ** 2, 0);
         if (squared >= 1) continue;
         const remaining = 1 - squared,
           weight = remaining ** 3;
-        const gradient = delta.map(
-          (value, axis) =>
-            (-6 * remaining ** 2 * value) / field.radius[axis] ** 2,
-        );
+        const derivative = -6 * remaining ** 2;
         for (let row = 0; row < 3; row++) {
           const movement =
             field.displacement[row] + field.stretch[row] * delta[row];
           target[row] += weight * movement;
           for (let column = 0; column < 3; column++)
-            jacobian[row * 3 + column] += movement * gradient[column];
+            // Form movement*gradient(weight) as a dimensionless ratio. A
+            // physical radius squared can underflow/overflow even when this
+            // product is finite, including a neutral field's exact zero term.
+            jacobian[row * 3 + column] +=
+              derivative *
+              ((movement * coordinates[column]) / field.radius[column]);
           jacobian[row * 3 + row] += weight * field.stretch[row];
         }
       }
