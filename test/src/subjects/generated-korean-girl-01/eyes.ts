@@ -38,6 +38,11 @@ import {
   createPortraitIrisMaterials,
 } from "./irisPigment";
 import {
+  type IPortraitLowerLidProfile,
+  type IPortraitLowerLidSection,
+  createPortraitLowerLidProfile,
+} from "./lowerLidSection";
+import {
   type IPortraitOcularTissueShape,
   createPortraitOcularTissues,
 } from "./ocularTissues";
@@ -94,6 +99,13 @@ export interface IPortraitEyeShape {
   lowerLidWidth: number;
   /** Peak lower-lid roll projection, in mm; independent of the upper fold. */
   lowerLidVolume: number;
+  /**
+   * Optional complete lower-tissue sections, ordered medial to lateral. The
+   * section owns pretarsal body, subtarsal boundary and preseptal transition.
+   * A sine fade blends it to the basic canthi; omission is the exact basic row
+   * formula. Optical contact remains a separate final assembly operation.
+   */
+  lowerLidProfile?: IPortraitLowerLidProfile;
   /** Forward projection of the inner lid margin, in mm. */
   lidThickness: number;
   /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
@@ -155,6 +167,7 @@ const lidRows = (
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
   outerDepths?: ReadonlyMap<number, number>,
+  lowerProfile?: ReturnType<typeof createPortraitLowerLidProfile>,
 ) => {
   const loop = loopOf(socket);
   const left = Math.min(...loop.map((id) => source[id][0]));
@@ -172,7 +185,22 @@ const lidRows = (
     const weight = socket.top.includes(id)
       ? Math.sin((pi * (point[0] - left)) / (right - left))
       : 0;
-    const at = (offset: number, depth: number): number[] => {
+    const progress = (point[0] - left) / (right - left);
+    const detail = socket.top.includes(id)
+      ? undefined
+      : lowerProfile?.(socket.name === "left" ? progress : 1 - progress);
+    const at = (
+      offset: number,
+      depth: number,
+      role?: Exclude<keyof IPortraitLowerLidSection, "attachment">,
+    ): number[] => {
+      if (detail !== undefined && role !== undefined) {
+        // Replace this section point within the canthal boundary blend. The
+        // old lower-roll depth is not added to the new anatomical projection.
+        offset = offset * (1 - lowerWeight) + detail[role].offset * lowerWeight;
+        depth =
+          depth * (1 - lowerWeight) + detail[role].projection * lowerWeight;
+      }
       const t = Math.min(1, offset / outerWidth),
         blend = t * t * (3 - 2 * t);
       return [
@@ -198,25 +226,33 @@ const lidRows = (
     // the missing detailed section and its lid/cheek boundary responsibilities.
     const lowerWidth = shape.lowerLidWidth * lowerWeight;
     const lowerVolume = shape.lowerLidVolume * lowerWeight;
-    const outerWidth = 1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth;
+    const basicWidth = 1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth;
+    const outerWidth =
+      detail === undefined
+        ? basicWidth
+        : basicWidth * (1 - lowerWeight) + detail.attachment * lowerWeight;
     return {
       id,
       outer: at(outerWidth, -0.4 + 0.2 * weight),
       hoodUpper: at(
         1.0 + (shape.foldWidth + 1.1) * weight + 0.9 * lowerWidth,
         shape.lidThickness + 0.45 * depth + 0.1 * lowerVolume,
+        "preseptal",
       ),
       hoodEdge: at(
         0.85 + fold + 0.75 * lowerWidth,
         shape.lidThickness + 0.5 * depth + 0.3 * lowerVolume,
+        "subtarsalOuter",
       ),
       creaseOuter: at(
         0.65 + fold + 0.6 * lowerWidth,
         shape.lidThickness - depth + 0.6 * lowerVolume,
+        "subtarsalInner",
       ),
       creaseInner: at(
         0.4 + fold + 0.45 * lowerWidth,
         shape.lidThickness - depth + lowerVolume,
+        "pretarsalLower",
       ),
       tarsal: at(
         0.35 + 0.55 * fold + 0.3 * lowerWidth,
@@ -224,8 +260,9 @@ const lidRows = (
           0.2 * depth +
           shape.upperLidVolume * weight +
           lowerVolume,
+        "pretarsalCrest",
       ),
-      ridge: at(0.18, shape.lidThickness + 0.08),
+      ridge: at(0.18, shape.lidThickness + 0.08, "margin"),
       inner: [point[0], point[1], point[2] + shape.lidThickness],
     };
   });
@@ -258,6 +295,10 @@ export function createPortraitEyeComponent(
     shape.tissues === undefined
       ? undefined
       : createPortraitOcularTissues(shape.tissues);
+  const lowerProfile =
+    inputShape.lowerLidProfile === undefined
+      ? undefined
+      : createPortraitLowerLidProfile(inputShape.lowerLidProfile);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
   if (
     shape.lidContactReach !== undefined &&
@@ -407,22 +448,24 @@ export function createPortraitEyeComponent(
       );
       return {
         constraints: [
-          ...lidRows(aperture, socket, shape).map((row) => {
-            const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
-            if (hit === null)
-              throw new Error(
-                "An eyelid's outer attachment must remain on supporting skin.",
-              );
-            return {
-              vertex: row.id,
-              target: [
-                row.outer[0],
-                row.outer[1],
-                hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
-              ],
-              reach: shape.blendReach,
-            };
-          }),
+          ...lidRows(aperture, socket, shape, undefined, lowerProfile).map(
+            (row) => {
+              const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
+              if (hit === null)
+                throw new Error(
+                  "An eyelid's outer attachment must remain on supporting skin.",
+                );
+              return {
+                vertex: row.id,
+                target: [
+                  row.outer[0],
+                  row.outer[1],
+                  hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
+                ],
+                reach: shape.blendReach,
+              };
+            },
+          ),
           { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
         ],
         cutFaces: portraitFacesInsideLoop(host, loop),
@@ -437,6 +480,7 @@ export function createPortraitEyeComponent(
             socket,
             shape,
             lidGroup,
+            lowerProfile,
           );
           return {
             openings: [loopOf(socket).map((id) => margins.get(id)!)],
@@ -537,12 +581,16 @@ export function appendPortraitEyeMargins(
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
   group = 0,
+  lowerProfile = shape.lowerLidProfile === undefined
+    ? undefined
+    : createPortraitLowerLidProfile(shape.lowerLidProfile),
 ): Map<number, number> {
   const rows = lidRows(
     aperture,
     socket,
     shape,
     new Map(loopOf(socket).map((id) => [id, cage.positions[id][2]])),
+    lowerProfile,
   );
   const margins = new Map<number, number>();
   const rings = [rows.map((row) => row.id)];

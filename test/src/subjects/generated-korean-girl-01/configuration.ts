@@ -77,6 +77,24 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // These offsets reshape surrounding tissue; the aperture remains its own rim.
   lowerLidWidth: 4.6,
   lowerLidVolume: 0.35,
+  // Explicit tissue sections replace the two-control lower envelope within a
+  // canthal fade. The roll, its lower boundary and the preseptal transition
+  // have separate positions/projections. These mm values are a render-study
+  // hypothesis, not adult anatomical averages or accepted subject dimensions.
+  lowerLidProfile: {
+    sections: [0, 1].map((at) => ({
+      at,
+      section: {
+        margin: { offset: 0.22, projection: 0.2 },
+        pretarsalCrest: { offset: 1.9, projection: 0.75 },
+        pretarsalLower: { offset: 3.4, projection: 0.45 },
+        subtarsalInner: { offset: 4.2, projection: -0.12 },
+        subtarsalOuter: { offset: 4.7, projection: -0.15 },
+        preseptal: { offset: 6.4, projection: -0.05 },
+        attachment: 8.5,
+      },
+    })),
+  },
   lidThickness: 0.18,
   surfaceRadius: 18,
   // Schematic-eye optical dimensions, not measurements recovered from this

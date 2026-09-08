@@ -57,6 +57,9 @@ export const test_subject_eyelid_volume = (): void => {
   };
   const neutral = {
     ...portraitEyeShape,
+    // This scenario pins the basic scalar path, independently of a subject's
+    // selected detailed section. Profile replacement has its own scenarios.
+    lowerLidProfile: undefined,
     foldWidth: 0,
     foldDepth: 0,
     upperLidVolume: 0,
