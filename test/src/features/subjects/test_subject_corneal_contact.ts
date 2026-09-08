@@ -25,6 +25,8 @@ import { throwsError } from "../internal/predicates";
  * 2. The cornea itself and a remote chin vertex stay unchanged. Omitted contact
  *    exactly matches explicit globe mode; incompatible/unknown modes refuse.
  * 3. Standalone margin attachment without a group retains the base skin region.
+ * 4. Default reach adapts neighbouring tissue; zero keeps pointwise contact, an
+ *    empty contact population is identity, and invalid reach values refuse.
  */
 export const test_subject_corneal_contact = (): void => {
   const host = { ...referenceControlNet, viewRay: [0, 0, 1] };
@@ -32,6 +34,7 @@ export const test_subject_corneal_contact = (): void => {
     ...portraitEyeShape,
     cornealBoundary: "limbus",
     lidContact: undefined,
+    lidContactReach: undefined,
     browFibres: 0,
     upperLashes: 1,
     sampling: { eyeColumns: 8, eyeRows: 4, irisColumns: 24, irisRows: 4 },
@@ -59,6 +62,33 @@ export const test_subject_corneal_contact = (): void => {
     );
   const before = build(shape),
     after = build({ ...shape, lidContact: "cornea" });
+  const pointwise = build({
+    ...shape,
+    lidContact: "cornea",
+    lidContactReach: 0,
+  });
+  const changedCount = (result: typeof before) =>
+    result.refined.positions.filter((point, i) =>
+      point.some(
+        (value, axis) =>
+          Math.abs(value - before.refined.positions[i][axis]) > 1e-8,
+      ),
+    ).length;
+  TestValidator.predicate(
+    "contact adaptation reaches neighbouring tissue",
+    changedCount(after) > changedCount(pointwise),
+  );
+  const tiny = {
+    ...shape,
+    irisRadius: 0.1,
+    pupilRadius: 0.05,
+    lidContact: "cornea" as const,
+  };
+  TestValidator.equals(
+    "no intersecting lid samples means no displacement",
+    build(tiny).refined.positions,
+    build({ ...tiny, lidContact: "globe" }).refined.positions,
+  );
   TestValidator.equals(
     "omitted contact preserves globe mode",
     before,
@@ -117,6 +147,18 @@ export const test_subject_corneal_contact = (): void => {
             ...change,
           }),
         "Corneal lid contact",
+      ),
+    );
+  for (const lidContactReach of [-1, NaN])
+    TestValidator.predicate(
+      "invalid contact reach refuses",
+      throwsError(
+        () =>
+          createPortraitEyeComponent(portraitEyeSockets[0], {
+            ...shape,
+            lidContactReach,
+          }),
+        "Lid contact reach",
       ),
     );
 };

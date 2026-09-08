@@ -4,6 +4,7 @@ import type {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { blendPortraitSkin } from "../blendPortraitSkin";
 import {
   portraitSpline as interpolate,
   portraitMix as mix,
@@ -117,6 +118,8 @@ export interface IPortraitEyeShape {
    * limbus boundary and retains the image-plane coordinates of each contact.
    */
   lidContact?: "globe" | "cornea";
+  /** Post-contact skin adaptation distance in mm; omission uses 3, zero retains pointwise contact. */
+  lidContactReach?: number;
   /** Iris radius in mm before clipping against the fitted eyelid. */
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
@@ -250,6 +253,11 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitOcularTissues(shape.tissues);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (
+    shape.lidContactReach !== undefined &&
+    (!Number.isFinite(shape.lidContactReach) || shape.lidContactReach < 0)
+  )
+    throw new Error("Lid contact reach must be finite and nonnegative.");
   if (
     (shape.lidContact !== undefined &&
       shape.lidContact !== "globe" &&
@@ -454,7 +462,7 @@ export function createPortraitEyeComponent(
                           3 * i + 3,
                         ))
                           vertices.add(vertex);
-                    return [...vertices].flatMap((vertex) => {
+                    const constraints = [...vertices].flatMap((vertex) => {
                       const source = final.positions[vertex];
                       const point = p(
                         source[0] / 1000,
@@ -467,6 +475,7 @@ export function createPortraitEyeComponent(
                         : [
                             {
                               vertex,
+                              reach: shape.lidContactReach ?? 3,
                               target: [
                                 target.x * 1000,
                                 target.y * 1000,
@@ -475,6 +484,23 @@ export function createPortraitEyeComponent(
                             },
                           ];
                     });
+                    // Contact fixes the required points; the same geodesic skin
+                    // adapter used by initial component fitting carries their
+                    // movement into surrounding tissue. A pointwise clamp alone
+                    // leaves a hard platform at the optical footprint boundary.
+                    const adapted = blendPortraitSkin(
+                      final.positions.map((point) => [...point]),
+                      [...final.indices],
+                      constraints,
+                    );
+                    return adapted.flatMap((target, vertex) =>
+                      target.some(
+                        (value, axis) =>
+                          value !== final.positions[vertex][axis],
+                      )
+                        ? [{ vertex, target }]
+                        : [],
+                    );
                   },
             finish: (refined) =>
               buildPortraitEye(

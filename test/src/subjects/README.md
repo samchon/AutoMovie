@@ -32,6 +32,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `generated-korean-girl-01/cheeks.ts` | Skin-bound malar, medial/buccal cheek and mouth-corner relief, with a separately controlled nasolabial groove |
 | `portraitEyeSphere.ts` | Socket-oriented spherical curvature and camera-ray contact fitting, independent of gaze |
 | `portraitCornea.ts` | Closed transparent optical shell with independently controlled curvature and axial thickness |
+| `portraitDirectionalContact.ts` | Directional contact against the same resident triangles used by an attached optical surface |
 | `generated-korean-girl-01/ears.ts` | Inferred helix, antihelix, concha and pinna attachment |
 | `generated-korean-girl-01/cranium.ts` | Shared cranial continuation, posterior cap and cropped neck; hidden anatomy is inferred |
 | `portraitComponents.ts` | Fit, shared attachment and refined-interior protocol for replaceable parts |
@@ -50,7 +51,7 @@ For the procedural assembly, read `configuration.ts`, `model.ts`, then `head.ts`
 
 The image supplies image-plane landmarks. Depth, rear skull and occluded anatomy remain estimates. See [measurement provenance and attribution](generated-korean-girl-01/NOTICE.md). No source photograph is projected onto the model as a texture.
 
-The corneal curvature radius of 7.8 mm, axial thickness of 0.55 mm and refractive index of 1.376 are schematic rendering assumptions from the [eye-model table](https://pmc.ncbi.nlm.nih.gov/articles/PMC4646557/), not measurements of this subject. The fitted globe and clipped corneal shell approximate the visible eye; optical parameters do not establish physiological accuracy.
+The corneal curvature radius of 7.8 mm, axial thickness of 0.55 mm and refractive index of 1.376 are schematic rendering assumptions from the [eye-model table](https://pmc.ncbi.nlm.nih.gov/articles/PMC4646557/), not measurements of this subject. The fitted globe and corneal shell approximate the visible eye; optical parameters do not establish physiological accuracy. Omitted `cornealBoundary` retains the earlier aperture clipping, while `limbus` preserves a complete circular boundary. Optional `lidContact: "cornea"` requires that full boundary and projects the shared refined eyelid region against its actual mesh using the recorded view direction and `lidThickness` clearance. This preserves projected positions but still needs contact and section inspection; a full cornea without that tissue relationship protruded through the previous lids.
 
 The optional eye `tissues` profile supplies `cornerLength`, `caruncleProjection`, `plicaProjection`, `lowerMarginWidth` and `lowerMarginLift`, all in millimetres. A common medial patch places the plica lateral to the caruncular mound, following the [Kellogg Eye Center's external-eye anatomy](https://kellogg.umich.edu/theeyeshaveit/anatomy/external-eye.html). The eye supplies its actual refined upper/lower curves and spherical surface; neither tissue owns a second aperture. The lower margin is clipped to half the local opening and fades at the canthi. Omission disables both surfaces; zero corner length or margin width disables that surface independently. The factory copies the dimensions. The active dimensions and vascular PBR finishes are provisional authored fits, not measured anatomy or a physiological optical simulation.
 
@@ -70,7 +71,8 @@ The order is part of the attachment contract:
 2. Blend the surrounding skin, remove the declared original triangle ordinals, and attach each component using shared vertex identities.
 3. Join the cranium and neck, validate declared openings, and subdivide the complete cage once.
 4. Evaluate optional surface layers against the same refined host. Their engine fields use metres; the adapter returns millimetres and fades displacement at open rims.
-5. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface.
+5. Collect optional final component proposals against one immutable refined surface. Corneal lid contact uses this stage; conflicting requests for the same shared vertex are refused.
+6. Recompute common normals, split material regions, and build component interiors against the final refined boundary. Attach ears by sampling that actual head surface. Coarse hair fits the scalp's height/depth and adds lateral clearance for resident ears separately.
 
 The aperture fade supplies both a bounded scalar weight and its spatial gradient to the engine deformation. A faded displacement has a different Jacobian from its unfaded field, so orientation checks run on that complete map. Vertex gradients are area-weighted observations of the distance field on the refined mesh, with the quintic derivative and millimetre/metre conversion explicit in `portraitSurface.ts`. The engine also checks emitted triangle orientation against transported source-face directions. These checks preserve supported large turns; they are not a global self-intersection proof.
 
