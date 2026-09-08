@@ -1,7 +1,11 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
-import { portraitOrbitalRelief, portraitPerioralRelief } from "./anatomy";
+import {
+  portraitNasalRelief,
+  portraitOrbitalRelief,
+  portraitPerioralRelief,
+} from "./anatomy";
 import {
   type IPortraitCheekShape,
   type IPortraitCheekSocket,
@@ -162,13 +166,14 @@ export const portraitNoseSocket: IPortraitNoseSocket = {
  * alar/dome body and lower dorsum. Every value is an authored millimetre fit.
  * These are cubic shape poles, not sampled anatomy or population dimensions.
  *
- * The grid is evaluated on the final refined exterior. Its absolute head-Z
+ * When selected, the grid is evaluated on the final refined exterior. Its absolute head-Z
  * target expresses the lower turn and paired alar sections directly, rather
  * than summing extra tip/ala inflation. The four-millimetre rectangular edge
  * transition joins the surrounding host. A separate six-millimetre collar
  * preserves the already fitted aperture's position and first derivative.
  * Aperture sizing and lining precede this exterior-only operation, so changing
- * these poles cannot refit their plane. Final shape still requires inspection.
+ * these poles cannot refit their plane. This optional study profile is not
+ * selected by the current assembly and has no accepted likeness claim.
  */
 export const portraitNasalSection: IPortraitNasalSection = {
   transverse: [-22, -18, -12, -6, 0, 6, 12, 18, 22],
@@ -200,27 +205,22 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
   alarProjection: 0,
-  // Independent aperture proportions reduce the long-slit contour while its
-  // complete rim and lining retain one eight-degree downward orientation.
+  // Aperture width/height are independent from its complete rim and lining's
+  // shared eight-degree downward orientation. The current contour is provisional.
   // These are source-guided authored ratios, not measured airway dimensions.
-  nostrilWidthScale: 0.8,
-  nostrilHeightScale: 0.9,
+  nostrilWidthScale: 0.88,
+  nostrilHeightScale: 0.65,
   nostrilRise: 0,
   nostrilTilt: 8,
   cavityContraction: 0.6,
   rimSupport: 0.1,
   // Blend the sparse cut boundary towards its own fitted ellipse. The shared
   // skin and lining receive that same rim; orientation, centroid and connectivity
-  // remain owned by the original opening. The exterior section grid below
-  // cannot move or independently reinterpret this aperture boundary.
+  // remain owned by the original opening. An optional final section grid cannot
+  // move or independently reinterpret this aperture boundary.
   rimRoundness: 0.55,
   cavityOffset: [0, 3, -5],
   blendReach: 14,
-  body: {
-    shape: { section: portraitNasalSection },
-    joinWidth: 6,
-    depthReach: 42,
-  },
 };
 
 /** A narrower, less projecting nose with smaller inferior openings. */
@@ -410,6 +410,7 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
+    createPortraitReliefLayer("nasal-subunits", portraitNasalRelief),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
   ],

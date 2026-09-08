@@ -6,6 +6,8 @@ The current subject, `generated-korean-girl-01`, is unfinished. Its [inspection 
 
 ## Construction
 
+The [anatomical construction design](FACE-DESIGN.md) defines the basic/detail relationship, component and group responsibilities, complete surface replacement, review obligations and the later `human` extraction equivalence. It distinguishes demonstrated mechanisms from unresolved portrait form.
+
 The active `portraitAssembly` uses the measured component surface with a grouped upper dentition. Read `configuration.ts`, `model.ts`, `head.ts`, then `dentalComponent.ts`. The original image measurements own the facial identities; each eye/nose/mouth component supplies shared-skin attachments. The dental component supplies no skin cut and reads the final refined oral anchors after the mouth has constructed its opening. The mouth's legacy crowns are disabled in this assembly, giving dentition exactly one owner.
 
 `measuredPortraitAssembly` selects the current subject settings with the legacy dental placement for component comparisons. It is not an immutable checkpoint: later edits to its referenced settings also change that assembly. The attributed CC0 [anatomical reference study](reference-anatomy/README.md) and recorded `fittedModel.ts` remain separate experiments. Their target fit does not establish likeness and is not the active export. No source photograph is projected onto either model as a texture.
@@ -26,7 +28,7 @@ The active `portraitAssembly` uses the measured component surface with a grouped
 | `generated-korean-girl-01/dentalArc.ts` | Metric dental placement along the horizontal arch, with inferred posterior continuations |
 | `generated-korean-girl-01/dentalCrown.ts` | Closed enamel lofts with cervical narrowing and independently shaped cutting edges |
 | `generated-korean-girl-01/anatomy.ts` | Subject-owned nasal, orbital and perioral tissue supports |
-| `generated-korean-girl-01/hairProxy.ts` | Active coarse cap/curtain with the photograph's right ear exposed; optional fringe attachment remains a separate unaccepted study |
+| `generated-korean-girl-01/hairProxy.ts` | One connected coarse cap/frontal boundary/curtain following the current scalp and forehead, with the photograph-right ear exposed |
 | `generated-korean-girl-01/cheeks.ts` | Skin-bound malar, medial/buccal cheek and mouth-corner relief, with a separately controlled nasolabial groove |
 | `portraitEyeSphere.ts` | Socket-oriented spherical curvature and camera-ray contact fitting, independent of gaze |
 | `portraitCornea.ts` | Closed transparent optical shell with independently controlled curvature and axial thickness |
