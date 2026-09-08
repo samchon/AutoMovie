@@ -17,11 +17,16 @@ source_bytes = (WORK / "model.json").read_bytes()
 source = json.loads(source_bytes)
 receipt = json.loads((CAPTURE / "capture.json").read_text())
 measurement = json.loads((WORK / "measurement.json").read_text())
-target = json.loads((WORK / "target.json").read_text())
+target_bytes = (WORK / "target.json").read_bytes()
+target = json.loads(target_bytes)
+configuration_bytes = (WORK / "configuration.json").read_bytes()
+configuration = json.loads(configuration_bytes)
 profile = json.loads((CAPTURE / "capture-profile.json").read_text())
 digest = lambda value: hashlib.sha256(value).hexdigest()
 if digest(source_bytes) != receipt["artifact"]["model"]:
     raise ValueError("The measured image and source model have different bases")
+if digest(configuration_bytes) != receipt["artifact"]["configuration"]:
+    raise ValueError("The measured source configuration is stale")
 if digest((CAPTURE / "front.png").read_bytes()) != measurement["imageSha256"]:
     raise ValueError("The source landmark image is stale")
 observed = measurement["observation"]["result"]["faceLandmarks"][0]
@@ -136,5 +141,11 @@ output = {
     "basis":{"sourceModelSha256":digest(source_bytes),"sourceGltfSha256":receipt["artifact"]["gltf"],"sourceImageSha256":measurement["imageSha256"],"targetInputSha256":target["inputSha256"],"smoothing":smoothing,"depth":"anatomical prior preserved","rayFallbacks":fallbacks,"sourceCorrespondencePixelError":{"maximum":max(source_pixel_errors),"rms":float(np.sqrt(np.mean(np.square(source_pixel_errors))))},"correspondencePolicy":"anterior optical hemisphere for lids; lip material for oral rims; nearest projected semantic surface on an aperture miss","xyResidualMmRms":np.sqrt(np.mean(residual**2,axis=0)).tolist()},
 }
 destination = ROOT / "test/src/subjects/generated-korean-girl-01/surfaceFit.json"
+output["basis"].update({
+    "sourceSubdivisionRounds": configuration["shape"].get("subdivisionRounds", 1),
+    "sourceConfigurationSha256": digest(configuration_bytes),
+    "targetControlNetSha256": digest(target_bytes),
+    "measurementRuntime": {key: measurement[key] for key in ["version", "browser", "renderer", "provenance"]},
+})
 destination.write_text(json.dumps(output,separators=(",",":")),encoding="utf8")
 print("Fitted",len(origins),"observations;",len(fallbacks),"fallback rays; XY RMS mm",output["basis"]["xyResidualMmRms"])

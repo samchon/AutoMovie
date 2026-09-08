@@ -2,6 +2,7 @@ import { mergeAutoMovieMeshes } from "@automovie/engine";
 import type { IAutoMovieModel } from "@automovie/interface";
 
 import { portraitPart, portraitPoint } from "../geometry";
+import { assertPortraitFitBasis } from "../portraitFitBasis";
 import {
   anatomicalStudyShape,
   buildAnatomicalStudy,
@@ -31,6 +32,20 @@ import fit from "./surfaceFit.json";
 export function buildFittedReferencePortrait(
   subdivisionRounds = 1,
 ): IAutoMovieModel {
+  // The continuous fitted field can be evaluated at another tessellation, but
+  // it remains defined against the exact captured source sampling and current
+  // construction/target. Rebuild that basis for admission; a stale residual
+  // must not silently survive an upstream geometry or observation change.
+  const sourceBasis = buildAnatomicalStudy({
+    ...anatomicalStudyShape,
+    subdivisionRounds: fit.basis.sourceSubdivisionRounds,
+  });
+  const encoder = new TextEncoder();
+  assertPortraitFitBasis(
+    fit.basis,
+    encoder.encode(JSON.stringify(sourceBasis)),
+    encoder.encode(JSON.stringify(referenceControlNet)),
+  );
   const model = buildAnatomicalStudy(
     { ...anatomicalStudyShape, subdivisionRounds },
     fit,
