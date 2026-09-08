@@ -1,5 +1,7 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import type { IControlMesh } from "../subdivideControlMesh";
+import type { IPortraitNasalBodyShape } from "./nasalBody";
+import { createPortraitNasalBodySurface } from "./nasalBodySurface";
 import {
   type IPortraitNasalSection,
   createPortraitNasalSection,
@@ -66,6 +68,12 @@ export interface IPortraitNoseShape {
   blendReach: number;
   /** Optional connected depth basis for the lower nasal body; omission is identity. */
   section?: IPortraitNasalSection;
+  /** Optional refined exterior volume; aperture position and tangent stay fixed. */
+  body?: {
+    shape: IPortraitNasalBodyShape;
+    joinWidth: number;
+    depthReach: number;
+  };
 }
 
 /** Smooth nasal volume controls evaluated in the subject-owned socket frame. */
@@ -149,6 +157,21 @@ export function createPortraitNoseComponent(
     nostrils: inputSocket.nostrils.map((faces) => [...faces]),
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
+  const body =
+    inputShape.body === undefined
+      ? undefined
+      : {
+          ...inputShape.body,
+          shape: {
+            ...inputShape.body.shape,
+            stations: inputShape.body.shape.stations.map((station) => ({
+              ...station,
+            })),
+            fullness: [...inputShape.body.shape.fullness] as [number, number],
+            spread: [...inputShape.body.shape.spread] as [number, number],
+            crease: [...inputShape.body.shape.crease] as [number, number],
+          },
+        };
   const section =
     inputShape.section === undefined
       ? undefined
@@ -188,7 +211,7 @@ export function createPortraitNoseComponent(
           ? undefined
           : host.positions[socket.sectionAnchor];
       if (
-        section !== undefined &&
+        (section !== undefined || body !== undefined) &&
         (!Number.isInteger(socket.sectionAnchor) ||
           socket.sectionAnchor! < 0 ||
           datum === undefined ||
@@ -268,13 +291,23 @@ export function createPortraitNoseComponent(
         })),
         cutFaces: socket.nostrils.flat(),
         attach: (cage, _adapted, region) => {
-          appendPortraitNostrils(
-            cage,
-            openings,
-            shape,
-            region("nostril-interiors", "nasal-interior"),
-          );
-          return { openings: [], finish: () => [] };
+          const liningGroup = region("nostril-interiors", "nasal-interior");
+          appendPortraitNostrils(cage, openings, shape, liningGroup);
+          return {
+            openings: [],
+            finalSurface:
+              body === undefined
+                ? undefined
+                : createPortraitNasalBodySurface(
+                    body.shape,
+                    socket.sectionAnchor!,
+                    liningGroup,
+                    host.viewRay,
+                    body.joinWidth,
+                    body.depthReach,
+                  ),
+            finish: () => [],
+          };
         },
       };
     },

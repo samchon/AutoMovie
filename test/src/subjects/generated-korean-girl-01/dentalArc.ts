@@ -13,7 +13,7 @@ import { portraitPoint as p, portraitSpline } from "../geometry";
 export interface IPortraitDentalArc {
   /** Total horizontal arc length, including the posterior continuations. */
   length: number;
-  /** Arc distance at the central sample of the upper inner lip. */
+  /** Arc distance at the central parameter sample of the supplied guide. */
   center: number;
   /** Position and horizontal unit tangent at a distance on the guide. */
   sample: (distance: number) => {
@@ -23,9 +23,10 @@ export interface IPortraitDentalArc {
 }
 
 /**
- * Fit the visible arch to the refined oral rim and continue it into the mouth.
- * Sampling uses cumulative XZ distance: equal crown widths remain equal when
- * the arch turns, while lip height still determines their vertical placement.
+ * Parameterize an ordered spatial guide and continue its ends posteriorly.
+ * Sampling uses cumulative XZ distance, independent of any Y variation. The
+ * current dental row supplies a planar elliptical guide and owns its common
+ * gingival height; this sampler does not attach individual teeth to lip points.
  */
 export function createPortraitDentalArc(
   upper: IAutoMovieVector3[],

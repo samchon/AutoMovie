@@ -4,6 +4,7 @@ import type {
   IAutoMovieModelPart,
 } from "@automovie/interface";
 
+import type { IPortraitFinalSurface } from "./portraitFinalSurface";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /**
@@ -57,6 +58,8 @@ export interface IPortraitComponentPlan {
   ) => {
     /** Deliberately open skin rims, such as the inner eyelid, in boundary order. */
     openings: number[][];
+    /** Propose shared final positions from the immutable post-layer surface. */
+    finalSurface?: IPortraitFinalSurface;
     /** Build independent interior parts against the shared refined skin. */
     finish: (refined: IControlMesh) => IAutoMovieModelPart[];
   };

@@ -6,6 +6,7 @@ import {
   type IPortraitComponent,
   type IPortraitComponentHost,
 } from "../portraitComponents";
+import { applyPortraitFinalSurfaces } from "../portraitFinalSurface";
 import { assertPortraitSkinTopology } from "../portraitSkinTopology";
 import {
   type IPortraitSurfaceLayer,
@@ -102,9 +103,21 @@ export function buildPortraitHead(
     neckCrop,
     ...finishers.flatMap((attached) => attached.openings),
   ]);
-  const refined = applyPortraitSurfaceLayers(
-    subdivideControlMesh(cage, rounds),
-    surfaceLayers,
+  const refined = applyPortraitFinalSurfaces(
+    applyPortraitSurfaceLayers(
+      subdivideControlMesh(cage, rounds),
+      surfaceLayers,
+    ),
+    finishers.flatMap((attached, index) =>
+      attached.finalSurface === undefined
+        ? []
+        : [
+            {
+              id: components[index].id,
+              propose: attached.finalSurface,
+            },
+          ],
+    ),
   );
   const packed = refined.positions.flat(),
     normals = portraitNormals(packed, refined.indices);
