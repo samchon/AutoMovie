@@ -25,6 +25,8 @@ import { throwsError } from "../internal/predicates";
  * 3. Standalone margin attachment without a group retains the base skin region.
  * 4. Default reach adapts neighbouring tissue; zero keeps pointwise contact, an
  *    empty contact population is identity, and invalid reach values refuse.
+ * 5. The authored inner boundary already clears the same resident cornea before
+ *    subdivision/final projection. The globe-only twin still penetrates there.
  */
 export const test_subject_corneal_contact = (): void => {
   // Contact consumes an eye and its shared support, not a cranium, ears or
@@ -103,13 +105,20 @@ export const test_subject_corneal_contact = (): void => {
       groups: new Array(indices.length / 3).fill(0),
     };
     const attached = plan.attach(cage, positions, () => 1);
+    const beforeFinal = subdivideControlMesh(cage, 1);
     const refined = applyPortraitFinalSurfaces(
-      subdivideControlMesh(cage, 1),
+      beforeFinal,
       attached.finalSurface === undefined
         ? []
         : [{ id: "eye", propose: attached.finalSurface }],
     );
-    return { refined, parts: attached.finish(refined) };
+    return {
+      refined,
+      beforeFinal,
+      prepared: cage,
+      openings: attached.openings,
+      parts: attached.finish(refined),
+    };
   };
   const before = build(shape),
     after = build({ ...shape, lidContact: "cornea" });
@@ -122,7 +131,7 @@ export const test_subject_corneal_contact = (): void => {
     result.refined.positions.filter((point, i) =>
       point.some(
         (value, axis) =>
-          Math.abs(value - before.refined.positions[i][axis]) > 1e-8,
+          Math.abs(value - result.beforeFinal.positions[i][axis]) > 1e-8,
       ),
     ).length;
   TestValidator.predicate(
@@ -161,6 +170,24 @@ export const test_subject_corneal_contact = (): void => {
     before.refined.positions[5],
   );
   const sample = createAutoMovieMeshDepthSampler(optical.geometry.mesh, "z");
+  let preparedContacts = 0,
+    unpreparedPenetrations = 0;
+  for (const id of after.openings.flat()) {
+    const point = after.prepared.positions[id];
+    const hit = sample(point[0] / 1000, point[1] / 1000);
+    if (hit === null) continue;
+    preparedContacts++;
+    TestValidator.predicate(
+      "inner tissue boundary starts at actual corneal contact",
+      point[2] / 1000 >= hit.maximum + shape.lidThickness / 1000 - 1e-10,
+    );
+    if (before.prepared.positions[id][2] / 1000 < hit.maximum)
+      unpreparedPenetrations++;
+  }
+  TestValidator.predicate(
+    "nonempty preconstruction contact and negative twin",
+    preparedContacts > 0 && unpreparedPenetrations > 0,
+  );
   let covered = 0,
     penetrating = 0;
   const lidVertices = new Set<number>();

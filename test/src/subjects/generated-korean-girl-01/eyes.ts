@@ -103,7 +103,8 @@ export interface IPortraitEyeShape {
    * Optional complete lower-tissue sections, ordered medial to lateral. The
    * section owns pretarsal body, subtarsal boundary and preseptal transition.
    * A sine fade blends it to the basic canthi; omission is the exact basic row
-   * formula. Optical contact remains a separate final assembly operation.
+   * formula. Ocular contact owns its inner support; a separate final check
+   * resolves residual penetration after shared refinement and surface layers.
    */
   lowerLidProfile?: IPortraitLowerLidProfile;
   /** Forward projection of the inner lid margin, in mm. */
@@ -124,10 +125,11 @@ export interface IPortraitEyeShape {
    */
   cornealBoundary?: "aperture" | "limbus";
   /**
-   * Optional final eyelid contact. Omission or globe retains the basic rows;
-   * cornea projects the shared refined eyelid surface clear of the actual full
-   * corneal mesh along viewRay, using lidThickness as clearance. It requires
-   * limbus boundary and retains the image-plane coordinates of each contact.
+   * Optional ocular contact basis. Omission or globe retains the basic rows;
+   * cornea first places the inner section support on the actual full corneal
+   * mesh along viewRay, then resolves residual refined-skin penetration with
+   * lidThickness clearance. It requires limbus boundary and preserves the
+   * recorded projection coordinates of each boundary contact.
    */
   lidContact?: "globe" | "cornea";
   /** Post-contact skin adaptation distance in mm; omission uses 3, zero retains pointwise contact. */
@@ -168,24 +170,27 @@ const lidRows = (
   shape: IPortraitEyeShape,
   outerDepths?: ReadonlyMap<number, number>,
   lowerProfile?: ReturnType<typeof createPortraitLowerLidProfile>,
+  guide?: readonly (readonly number[])[],
 ) => {
   const loop = loopOf(socket);
-  const left = Math.min(...loop.map((id) => source[id][0]));
-  const right = Math.max(...loop.map((id) => source[id][0]));
+  const frame = guide ?? source;
+  const left = Math.min(...loop.map((id) => frame[id][0]));
+  const right = Math.max(...loop.map((id) => frame[id][0]));
   return loop.map((id, index) => {
     const point = source[id];
+    const nominal = frame[id];
     // The rim expands along its own planar normal, independently of gaze.
     // Counterclockwise boundary order gives the outward normal directly; the
     // iris marker does not participate in the surrounding skin's shape.
-    const before = source[loop[(index + loop.length - 1) % loop.length]];
-    const after = source[loop[(index + 1) % loop.length]];
+    const before = frame[loop[(index + loop.length - 1) % loop.length]];
+    const after = frame[loop[(index + 1) % loop.length]];
     const nx = after[1] - before[1];
     const ny = before[0] - after[0];
     const distance = Math.hypot(nx, ny);
     const weight = socket.top.includes(id)
-      ? Math.sin((pi * (point[0] - left)) / (right - left))
+      ? Math.sin((pi * (nominal[0] - left)) / (right - left))
       : 0;
-    const progress = (point[0] - left) / (right - left);
+    const progress = (nominal[0] - left) / (right - left);
     const detail = socket.top.includes(id)
       ? undefined
       : lowerProfile?.(socket.name === "left" ? progress : 1 - progress);
@@ -204,8 +209,16 @@ const lidRows = (
       const t = Math.min(1, offset / outerWidth),
         blend = t * t * (3 - 2 * t);
       return [
-        point[0] + (offset * nx) / distance,
-        point[1] + (offset * ny) / distance,
+        guide === undefined
+          ? point[0] + (offset * nx) / distance
+          : nominal[0] +
+            (offset * nx) / distance +
+            (point[0] - nominal[0]) * (1 - blend),
+        guide === undefined
+          ? point[1] + (offset * ny) / distance
+          : nominal[1] +
+            (offset * ny) / distance +
+            (point[1] - nominal[1]) * (1 - blend),
         mix(point[2], outerDepths?.get(id) ?? point[2], blend) + depth,
       ];
     };
@@ -217,7 +230,7 @@ const lidRows = (
     const depth = shape.foldDepth * weight;
     const lowerWeight = socket.top.includes(id)
       ? 0
-      : Math.sin((pi * (point[0] - left)) / (right - left));
+      : Math.sin((pi * (nominal[0] - left)) / (right - left));
     // This basic lower branch is only a two-control envelope. Its shared row
     // names below come from the upper-lid construction; they do not imply an
     // independently authored pretarsal body, subtarsal boundary or preseptal
@@ -421,16 +434,67 @@ export function createPortraitEyeComponent(
         direction,
         shape.surfaceRadius,
       );
+      // The lid section starts at its actual ocular contact, not at a lower
+      // globe surface that will later be pushed through a raised cornea. A
+      // post-refinement collision correction alone leaves a local platform:
+      // its movement never informed the tissue bridge constructed below.
+      // Use the same resident optical builder and recorded projection ray as
+      // the final contact check. Section thickness is added by the lid rows,
+      // so this boundary query uses zero extra clearance, avoiding two copies.
+      const contactBoundary =
+        shape.lidContact !== "cornea"
+          ? undefined
+          : createPortraitDirectionalContact(
+              portraitPart(
+                "corneal-attachment-basis",
+                eyeCornea(
+                  portraitEyeSphereIntersection(
+                    sphere,
+                    pointAt(socket.iris),
+                    direction,
+                  ),
+                  sphere,
+                  shape,
+                  [],
+                ),
+                "skin",
+              ).geometry.mesh,
+              direction,
+            );
+      // Corneal contact must not redefine the gaze-independent outer seam.
+      // Retain the sphere-projected aperture as its planar guide, then fade
+      // inner contact's XY movement to zero across the tissue bridge.
+      const apertureGuide =
+        contactBoundary === undefined
+          ? undefined
+          : aperture.map((point) => [...point]);
       for (const id of loop) {
         const contact = portraitEyeSphereIntersection(
           sphere,
           pointAt(id),
           direction,
         );
-        aperture[id] = [contact.x, contact.y, contact.z];
+        if (apertureGuide !== undefined)
+          apertureGuide[id] = [contact.x, contact.y, contact.z];
+        if (contactBoundary === undefined)
+          aperture[id] = [contact.x, contact.y, contact.z];
+        else {
+          const metric = p(
+            contact.x / 1000,
+            contact.y / 1000,
+            contact.z / 1000,
+          );
+          const boundary = contactBoundary(metric);
+          // A missed/clear sample keeps the original double coordinates
+          // exactly, rather than introducing an unnecessary unit round trip.
+          aperture[id] =
+            boundary === metric
+              ? [contact.x, contact.y, contact.z]
+              : [boundary.x * 1000, boundary.y * 1000, boundary.z * 1000];
+        }
       }
       // The outer eyelid attaches to the actual supporting skin. Its section
-      // bridges that depth to the fitted globe instead of extruding a flat
+      // bridges that depth to the fitted ocular contact instead of extruding a flat
       // annulus from the aperture. The two boundaries keep distinct ownership.
       const support = createAutoMovieMeshDepthSampler(
         portraitPart(
@@ -448,24 +512,29 @@ export function createPortraitEyeComponent(
       );
       return {
         constraints: [
-          ...lidRows(aperture, socket, shape, undefined, lowerProfile).map(
-            (row) => {
-              const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
-              if (hit === null)
-                throw new Error(
-                  "An eyelid's outer attachment must remain on supporting skin.",
-                );
-              return {
-                vertex: row.id,
-                target: [
-                  row.outer[0],
-                  row.outer[1],
-                  hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
-                ],
-                reach: shape.blendReach,
-              };
-            },
-          ),
+          ...lidRows(
+            aperture,
+            socket,
+            shape,
+            undefined,
+            lowerProfile,
+            apertureGuide,
+          ).map((row) => {
+            const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
+            if (hit === null)
+              throw new Error(
+                "An eyelid's outer attachment must remain on supporting skin.",
+              );
+            return {
+              vertex: row.id,
+              target: [
+                row.outer[0],
+                row.outer[1],
+                hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
+              ],
+              reach: shape.blendReach,
+            };
+          }),
           { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
         ],
         cutFaces: portraitFacesInsideLoop(host, loop),
@@ -481,6 +550,7 @@ export function createPortraitEyeComponent(
             shape,
             lidGroup,
             lowerProfile,
+            apertureGuide,
           );
           return {
             openings: [loopOf(socket).map((id) => margins.get(id)!)],
@@ -574,6 +644,9 @@ export function createPortraitEyeComponent(
  * Attach the lid rows to the already fitted shared outer rim. New inner vertex
  * identities are returned for the eyeball to read after common subdivision.
  * The optional group is a registered host skin region; omission retains zero.
+ * An optional sphere-projected guide retains the gaze-independent outer seam
+ * while the supplied aperture carries the inner ocular contact. Their XY
+ * difference fades to zero across the same section bridge as its depth.
  */
 export function appendPortraitEyeMargins(
   cage: IControlMesh,
@@ -584,6 +657,7 @@ export function appendPortraitEyeMargins(
   lowerProfile = shape.lowerLidProfile === undefined
     ? undefined
     : createPortraitLowerLidProfile(shape.lowerLidProfile),
+  guide?: readonly (readonly number[])[],
 ): Map<number, number> {
   const rows = lidRows(
     aperture,
@@ -591,6 +665,7 @@ export function appendPortraitEyeMargins(
     shape,
     new Map(loopOf(socket).map((id) => [id, cage.positions[id][2]])),
     lowerProfile,
+    guide,
   );
   const margins = new Map<number, number>();
   const rings = [rows.map((row) => row.id)];
