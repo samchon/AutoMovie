@@ -1,12 +1,6 @@
 import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  measuredPortraitAssembly,
-  portraitComponentsFor,
-  portraitEyeShape,
-  portraitNoseShape,
-} from "../../subjects/generated-korean-girl-01/configuration";
 import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/model";
 
 /**
@@ -14,23 +8,19 @@ import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/
  * absence from the envelope previously left the helix outside the curtain.
  *
  * Scenarios:
- * 1. Build the complete coarse portrait with resident ears and inspect every
+ * 1. Build a coarse supporting head with resident ears and inspect every
  *    right-pinna vertex through the actual hair mesh's lateral depth sampler.
  *    Every sample has hair outside it in the anatomical-right profile.
  * 2. Translate the same ear 20 mm outward as a negative twin. The sampler must
  *    now detect uncovered points instead of passing an empty population.
  */
 export const test_subject_hair_ear_enclosure = (): void => {
-  const eye = {
-    ...portraitEyeShape,
-    browFibres: 2,
-    upperLashes: 2,
-    sampling: { eyeColumns: 8, eyeRows: 4, irisColumns: 8, irisRows: 4 },
-  };
   const model = buildReferencePortrait({
-    ...measuredPortraitAssembly,
-    subdivisionRounds: 1,
-    components: portraitComponentsFor(eye, eye, portraitNoseShape),
+    // This module boundary is head/ear/hair enclosure. Eye optics, dentition
+    // and expression layers do not participate in the measured relationship.
+    hairProxy: true,
+    components: [],
+    subdivisionRounds: 0,
   });
   const hair = model.parts.find((p) => p.id === "hair-mass");
   const ear = model.parts.find((p) => p.id === "right-pinna");

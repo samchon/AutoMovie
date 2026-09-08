@@ -1,17 +1,15 @@
 import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitEyeShape,
-  portraitEyeSockets,
-} from "../../subjects/generated-korean-girl-01/configuration";
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
+import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
+import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
 import {
   type IPortraitEyeShape,
   appendPortraitEyeMargins,
   createPortraitEyeComponent,
 } from "../../subjects/generated-korean-girl-01/eyes";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
+import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
+import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { throwsError } from "../internal/predicates";
 
 /**
@@ -19,19 +17,59 @@ import { throwsError } from "../internal/predicates";
  * separate decorative strip would leave the original skin penetrating the lens.
  *
  * Scenarios:
- * 1. A frontal eye's complete refined lid region clears its resident cornea by
+ * 1. A frontal eye on a small supporting annulus clears its resident cornea by
  *    the declared thickness. Independent Z-depth queries verify the actual
  *    triangles, and the untouched twin has measurable penetrating vertices.
- * 2. The cornea itself and a remote chin vertex stay unchanged. Omitted contact
+ * 2. The cornea itself and a remote support vertex stay unchanged. Omitted contact
  *    exactly matches explicit globe mode; incompatible/unknown modes refuse.
  * 3. Standalone margin attachment without a group retains the base skin region.
  * 4. Default reach adapts neighbouring tissue; zero keeps pointwise contact, an
  *    empty contact population is identity, and invalid reach values refuse.
  */
 export const test_subject_corneal_contact = (): void => {
-  const host = { ...referenceControlNet, viewRay: [0, 0, 1] };
+  // Contact consumes an eye and its shared support, not a cranium, ears or
+  // unrelated facial regions. The annulus keeps all positive/negative contact
+  // populations while making repeated mode comparisons small pure units.
+  const host = {
+    positions: [
+      [-10, 0, 0],
+      [0, 4, 0],
+      [10, 0, 0],
+      [0, -4, 0],
+      [0, 0, 0],
+      [-30, -20, 0],
+      [30, -20, 0],
+      [30, 20, 0],
+      [-30, 20, 0],
+    ],
+    indices: [0, 3, 4, 3, 2, 4, 2, 1, 4, 1, 0, 4],
+    viewRay: [0, 0, 1],
+  };
+  const inner = [0, 3, 2, 1],
+    outer = [5, 6, 7, 8];
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    host.indices.push(
+      outer[i],
+      outer[j],
+      inner[i],
+      outer[j],
+      inner[j],
+      inner[i],
+    );
+  }
+  const socket = {
+    name: "right" as const,
+    top: [0, 1, 2],
+    bottom: [0, 3, 2],
+    iris: 4,
+    browTop: [0, 1, 2],
+    browBottom: [0, 3, 2],
+  };
   const shape: IPortraitEyeShape = {
     ...portraitEyeShape,
+    // Isolate contact from the subject's optional tissue-section replacement.
+    lowerLidProfile: undefined,
     cornealBoundary: "limbus",
     lidContact: undefined,
     lidContactReach: undefined,
@@ -40,26 +78,39 @@ export const test_subject_corneal_contact = (): void => {
     sampling: { eyeColumns: 8, eyeRows: 4, irisColumns: 24, irisRows: 4 },
   };
   const cage = {
-    positions: referenceControlNet.positions.map((point) => [...point]),
+    positions: host.positions.map((point) => [...point]),
     indices: [] as number[],
     groups: [] as number[],
   };
-  appendPortraitEyeMargins(
-    cage,
-    referenceControlNet.positions,
-    portraitEyeSockets[0],
-    shape,
-  );
+  appendPortraitEyeMargins(cage, host.positions, socket, shape);
   TestValidator.predicate(
     "standalone margins retain the base skin region",
     cage.groups.length > 0 && cage.groups.every((group) => group === 0),
   );
-  const build = (s: IPortraitEyeShape) =>
-    buildPortraitHead(
-      host,
-      [createPortraitEyeComponent(portraitEyeSockets[0], s)],
-      1,
+  const build = (s: IPortraitEyeShape) => {
+    const plan = createPortraitEyeComponent(socket, s).fit(host);
+    const positions = blendPortraitSkin(
+      host.positions,
+      host.indices,
+      plan.constraints,
     );
+    const indices = host.indices.filter(
+      (_v, i) => !plan.cutFaces.includes(Math.floor(i / 3)),
+    );
+    const cage = {
+      positions,
+      indices,
+      groups: new Array(indices.length / 3).fill(0),
+    };
+    const attached = plan.attach(cage, positions, () => 1);
+    const refined = applyPortraitFinalSurfaces(
+      subdivideControlMesh(cage, 1),
+      attached.finalSurface === undefined
+        ? []
+        : [{ id: "eye", propose: attached.finalSurface }],
+    );
+    return { refined, parts: attached.finish(refined) };
+  };
   const before = build(shape),
     after = build({ ...shape, lidContact: "cornea" });
   const pointwise = build({
@@ -94,9 +145,8 @@ export const test_subject_corneal_contact = (): void => {
     before,
     build({ ...shape, lidContact: "globe" }),
   );
-  const optical = after.parts.find((p) => p.id === "right-cornea"),
-    lid = after.parts.find((p) => p.id === "right-eyelids");
-  if (optical?.geometry.type !== "mesh" || lid?.geometry.type !== "mesh")
+  const optical = after.parts.find((p) => p.id === "right-cornea");
+  if (optical?.geometry.type !== "mesh")
     throw new Error(
       "The contacted eye needs resident optical and lid surfaces.",
     );
@@ -106,14 +156,21 @@ export const test_subject_corneal_contact = (): void => {
     before.parts.find((p) => p.id === "right-cornea"),
   );
   TestValidator.equals(
-    "remote face stays unchanged",
-    after.refined.positions[152],
-    before.refined.positions[152],
+    "remote supporting skin stays unchanged",
+    after.refined.positions[5],
+    before.refined.positions[5],
   );
   const sample = createAutoMovieMeshDepthSampler(optical.geometry.mesh, "z");
   let covered = 0,
     penetrating = 0;
-  const positions = lid.geometry.mesh.positions;
+  const lidVertices = new Set<number>();
+  for (let face = 0; face < after.refined.groups.length; face++)
+    if (after.refined.groups[face] === 1)
+      for (const id of after.refined.indices.slice(face * 3, face * 3 + 3))
+        lidVertices.add(id);
+  const positions = [...lidVertices].flatMap((id) =>
+    after.refined.positions[id].map((v) => v / 1000),
+  );
   for (let i = 0; i < positions.length; i += 3) {
     const hit = sample(positions[i], positions[i + 1]);
     if (hit === null) continue;
@@ -142,7 +199,7 @@ export const test_subject_corneal_contact = (): void => {
       "incoherent contact mode refuses",
       throwsError(
         () =>
-          createPortraitEyeComponent(portraitEyeSockets[0], {
+          createPortraitEyeComponent(socket, {
             ...shape,
             ...change,
           }),
@@ -154,7 +211,7 @@ export const test_subject_corneal_contact = (): void => {
       "invalid contact reach refuses",
       throwsError(
         () =>
-          createPortraitEyeComponent(portraitEyeSockets[0], {
+          createPortraitEyeComponent(socket, {
             ...shape,
             lidContactReach,
           }),

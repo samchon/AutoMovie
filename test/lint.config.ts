@@ -13,8 +13,10 @@ const sharedSources = [
  * A model owes every recorded view, and that review owes the complete current
  * construction source. Review fingerprints expire on referenced declarations;
  * they record inspection, not a compiler judgment that the face looks correct.
- * Missing or stale reviews warn: rendering must run before a fresh visual
- * review can be written, including when ttsx checks this project at startup.
+ * Coverage, carrier cardinality and nonvisual source inspection remain errors.
+ * Only a separate rendered-view freshness reference may warn while a first
+ * capture is being produced. Its structural twin retains the exact population
+ * and acknowledgement constraints; a warning never accepts the face's likeness.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: subjects.flatMap((subject): ITtscEvidenceGraphConfig["claims"] => [
@@ -23,13 +25,25 @@ const graph: ITtscEvidenceGraphConfig = {
       type: "typescript" as const,
       files: [`src/subjects/${subject}/model.ts`],
       symbol: "function" as const,
-      reference: {
-        type: "markdown" as const,
-        files: [`src/subjects/${subject}/review.md`],
-        symbol: "h2" as const,
-        checklist: true,
-        noEvidenceExclude: true,
-      },
+      reference: [
+        {
+          type: "markdown" as const,
+          files: [`src/subjects/${subject}/review.md`],
+          symbol: "h2" as const,
+          checklist: true,
+          noEvidenceExclude: true,
+          severity: "error" as const,
+        },
+        {
+          type: "markdown" as const,
+          files: [`src/subjects/${subject}/review.md`],
+          symbol: "h2" as const,
+          checklist: true,
+          noEvidenceExclude: true,
+          requireReview: true,
+          severity: "warning" as const,
+        },
+      ],
     },
     {
       name: `${subject}: reviewed construction basis`,
@@ -68,5 +82,5 @@ const graph: ITtscEvidenceGraphConfig = {
 export default {
   extends: "../config/lint.config.ts",
   plugins: { evidence },
-  rules: { "evidence/graph": ["warning", graph] },
+  rules: { "evidence/graph": ["error", graph] },
 } satisfies ITtscLintConfig;

@@ -29,7 +29,9 @@ export const test_subject_portrait_model = (): void => {
   const model = buildReferencePortrait({
     hairProxy: true,
     components: portraitComponentsFor(eye, eye, portraitNoseShape),
-    subdivisionRounds: 1,
+    // This scenario owns complete part/material wiring and units. Refinement
+    // and refined contact are covered by their smaller mechanism scenarios.
+    subdivisionRounds: 0,
     surfaceLayers: measuredPortraitAssembly.surfaceLayers,
   });
   TestValidator.equals(
