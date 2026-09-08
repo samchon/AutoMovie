@@ -16,6 +16,7 @@ import {
 } from "../portraitComponents";
 import { createPortraitDentalArc } from "./dentalArc";
 import {
+  type IPortraitDentalCrown,
   assertPortraitDentalCrown,
   buildPortraitDentalCrown,
 } from "./dentalCrown";
@@ -86,6 +87,8 @@ export interface IPortraitMouthShape {
     height: number;
     cervicalWidth?: number;
     edgeRise?: number;
+    /** Optional proximal detail, oriented by the common dental arch. */
+    contour?: IPortraitDentalCrown["contour"];
   }[];
 }
 
@@ -155,7 +158,7 @@ export function createPortraitMouthComponent(
   };
   const shape = {
     ...inputShape,
-    crowns: inputShape.crowns.map((crown) => ({ ...crown })),
+    crowns: structuredClone(inputShape.crowns),
   };
   const section =
     inputShape.section === undefined
@@ -318,16 +321,21 @@ export function buildPortraitMouth(
   let cursor = arch.center + shape.dentalOffset - rowLength / 2;
   for (let i = 0; i < shape.crowns.length; i++) {
     const { width, height } = shape.crowns[i];
-    const { position: at, tangent } = arch.sample(cursor + width / 2);
+    const distance = cursor + width / 2;
+    const { position: at, tangent } = arch.sample(distance);
     cursor += width + shape.toothGap;
     const angleY = -Math.atan2(tangent.z, tangent.x);
-    const crown = buildPortraitDentalCrown({
-      width,
-      height,
-      depth: shape.dentalDepth,
-      cervicalWidth: shape.crowns[i].cervicalWidth ?? 0.78,
-      edgeRise: shape.crowns[i].edgeRise ?? 0.035 * height,
-    });
+    const crown = buildPortraitDentalCrown(
+      {
+        width,
+        height,
+        depth: shape.dentalDepth,
+        cervicalWidth: shape.crowns[i].cervicalWidth ?? 0.78,
+        edgeRise: shape.crowns[i].edgeRise ?? 0.035 * height,
+        contour: shape.crowns[i].contour,
+      },
+      distance <= arch.center ? 1 : -1,
+    );
     // Placement and normals use the same rigid arch rotation. The local crown
     // profile therefore cannot silently change measured interdental clearance.
     for (let vertex = 0; vertex < crown.positions.length; vertex += 3) {

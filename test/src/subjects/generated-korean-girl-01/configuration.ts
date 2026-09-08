@@ -278,10 +278,49 @@ export const portraitMouthShape: IPortraitMouthShape = {
     { width: 4.4, height: 8.5 },
     { width: 5.1, height: 8.8 },
     { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
-    { width: 6.8, height: 9.8, cervicalWidth: 0.76, edgeRise: 0.5 },
-    { width: 8.1, height: 10.4, cervicalWidth: 0.82, edgeRise: 0.22 },
-    { width: 8.1, height: 10.5, cervicalWidth: 0.82, edgeRise: 0.3 },
-    { width: 6.8, height: 9.8, cervicalWidth: 0.76, edgeRise: 0.5 },
+    {
+      width: 6.8,
+      height: 9.8,
+      cervicalWidth: 0.76,
+      edgeRise: 0.5,
+      contour: {
+        mesial: { contactHeight: 0.29, incisalRise: 0.25, cervicalWidth: 0.81 },
+        distal: { contactHeight: 0.43, incisalRise: 0.7, cervicalWidth: 0.74 },
+      },
+    },
+    // The central incisors have a sharper mesial and rounder distal corner.
+    // These optional fractions/mm are authored form fits. The arch supplies
+    // mesial orientation, so neither crown owns an independent world placement.
+    {
+      width: 8.1,
+      height: 10.4,
+      cervicalWidth: 0.82,
+      edgeRise: 0.22,
+      contour: {
+        mesial: { contactHeight: 0.22, incisalRise: 0.06, cervicalWidth: 0.85 },
+        distal: { contactHeight: 0.35, incisalRise: 0.4, cervicalWidth: 0.78 },
+      },
+    },
+    {
+      width: 8.1,
+      height: 10.5,
+      cervicalWidth: 0.82,
+      edgeRise: 0.3,
+      contour: {
+        mesial: { contactHeight: 0.2, incisalRise: 0.07, cervicalWidth: 0.84 },
+        distal: { contactHeight: 0.36, incisalRise: 0.42, cervicalWidth: 0.77 },
+      },
+    },
+    {
+      width: 6.8,
+      height: 9.8,
+      cervicalWidth: 0.76,
+      edgeRise: 0.5,
+      contour: {
+        mesial: { contactHeight: 0.29, incisalRise: 0.25, cervicalWidth: 0.81 },
+        distal: { contactHeight: 0.43, incisalRise: 0.7, cervicalWidth: 0.74 },
+      },
+    },
     { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
     { width: 5.1, height: 8.8 },
     { width: 4.4, height: 8.5 },

@@ -5,6 +5,7 @@ import { portraitPoint as p } from "../geometry";
 import { createPortraitDentalArc } from "./dentalArc";
 import {
   type IPortraitDentalCrown,
+  assertPortraitDentalCrown,
   buildPortraitDentalCrown,
 } from "./dentalCrown";
 
@@ -47,10 +48,11 @@ export function buildPortraitDentalRow(
     throw new Error(
       "A dental row needs positive arch dimensions, a nonnegative gap and crowns.",
     );
-  const crowns = shape.crowns.map(buildPortraitDentalCrown);
+  shape.crowns.forEach(assertPortraitDentalCrown);
+  const crowns: IAutoMovieMesh[] = [];
   const length =
     shape.crowns.reduce((sum, crown) => sum + crown.width, 0) +
-    shape.gap * (crowns.length - 1);
+    shape.gap * (shape.crowns.length - 1);
   const guide = Array.from({ length: 33 }, (_v, i) => {
     const theta = Math.PI * (i / 32 - 0.5);
     return p(
@@ -61,10 +63,17 @@ export function buildPortraitDentalRow(
   });
   const arc = createPortraitDentalArc(guide, length);
   let cursor = arc.center - length / 2;
-  for (let tooth = 0; tooth < crowns.length; tooth++) {
-    const mesh = crowns[tooth],
-      profile = shape.crowns[tooth];
-    const { position, tangent } = arc.sample(cursor + profile.width / 2);
+  for (let tooth = 0; tooth < shape.crowns.length; tooth++) {
+    const profile = shape.crowns[tooth];
+    const distance = cursor + profile.width / 2;
+    const { position, tangent } = arc.sample(distance);
+    // The proximal side toward the common arch midpoint is mesial. Resolve it
+    // from arrangement, including unequal crown widths, instead of a tooth ID.
+    const mesh = buildPortraitDentalCrown(
+      profile,
+      distance <= arc.center ? 1 : -1,
+    );
+    crowns.push(mesh);
     cursor += profile.width + shape.gap;
     // The tangent is the crown's local X axis. Its perpendicular in XZ is
     // the anterior normal; this orthonormal rotation preserves enamel width.
