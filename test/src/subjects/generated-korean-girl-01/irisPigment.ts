@@ -9,10 +9,10 @@ import type { IAutoMovieMaterial } from "@automovie/interface";
  * @author Samchon
  */
 export interface IPortraitIrisPigment {
-  /** Linear red/green/blue reflectance at palette progress zero, each in [0,1]. */
-  base: readonly [number, number, number];
-  /** Signed increment at progress one; base+variation must also stay in [0,1]. */
-  variation: readonly [number, number, number];
+  /** Exactly three linear RGB reflectances at progress zero, each in [0,1]. */
+  base: readonly number[];
+  /** Exactly three signed increments; base+variation must also stay in [0,1]. */
+  variation: readonly number[];
 }
 
 /**

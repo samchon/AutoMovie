@@ -276,12 +276,6 @@ export function createPortraitEyeComponent(
     // Each optical volume owns its material so changing one shell's thickness
     // cannot leave a shared global thickness behind on either eye.
     materials: [
-      ...(shape.irisPigment === undefined
-        ? []
-        : createPortraitIrisMaterials(
-            socket.name + "-iris",
-            shape.irisPigment,
-          )),
       {
         id: socket.name + "-cornea",
         name: socket.name + " corneal surface",
@@ -296,6 +290,14 @@ export function createPortraitEyeComponent(
         ior: 1.376,
         thickness: shape.cornealThickness / 1000,
       },
+      // Preserve the optical material's established first slot; additive
+      // pigment ownership appends materials without moving that existing entry.
+      ...(shape.irisPigment === undefined
+        ? []
+        : createPortraitIrisMaterials(
+            socket.name + "-iris",
+            shape.irisPigment,
+          )),
     ],
     fit: (host) => {
       const loop = loopOf(socket);

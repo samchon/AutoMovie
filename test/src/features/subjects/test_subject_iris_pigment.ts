@@ -7,10 +7,7 @@ import {
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
 import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
 import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
-import {
-  type IPortraitIrisPigment,
-  createPortraitIrisMaterials,
-} from "../../subjects/generated-korean-girl-01/irisPigment";
+import { createPortraitIrisMaterials } from "../../subjects/generated-korean-girl-01/irisPigment";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -146,8 +143,7 @@ export const test_subject_iris_pigment = (): void => {
     TestValidator.predicate(
       "invalid pigment domain refuses",
       throwsError(
-        () =>
-          createPortraitIrisMaterials("test", pigment as IPortraitIrisPigment),
+        () => createPortraitIrisMaterials("test", pigment),
         "unit-range RGB",
       ),
     );
