@@ -69,6 +69,8 @@ The final skin boundary and the curves used by ocular interiors must be compared
 
 Upper and lower lips use a curved smile frame. Independent section controls may define upper body, central tubercle, lower body/pads and cutaneous/vermilion/mucosal transitions. The outer skin border, oral aperture and commissures have explicit owners. Detail between fixed borders cannot correct a wrong border, and a border change must rebuild the surrounding skin and interior attachment.
 
+The implemented optional `mouth.band.upper` and `mouth.band.lower` refine vertical vermilion thickness about the locally sampled inner boundary. Omission is identity; a scalar sets a central positive ratio, and an ordered knot array supplies a nonuniform ratio profile. Both retain ratio one at the corners. This changes the outer skin junction without conflating band thickness with opening scale or forward section relief. Host adaptation and final attachment still run after fitting, so final aperture and dental geometry must be checked as well as the control positions.
+
 The mouth corner is a shared lip/cheek junction. Its relief is reviewed with the surfaces on both sides, the nasolabial transition and the oral opening. Adding a dark crease cannot replace the raised cheek and lower perioral surface that give the crease meaning.
 
 Individual crowns may differ in mesial/distal contour, incisal/cusp form, cervical section and labial/lingual surface. The arch owns their arrangement. A richer crown representation preserves the group's placement and recalculates any affected spacing/contact through that common arrangement. Gingiva, mucosa, lower teeth or tongue are added where the actual visible target or behavior requires them. They are not generic filler for unexplained dark gaps.

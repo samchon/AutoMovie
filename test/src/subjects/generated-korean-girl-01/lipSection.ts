@@ -96,6 +96,24 @@ export const createPortraitLipCoordinates = (
   upper: readonly (readonly number[])[],
   lower: readonly (readonly number[])[],
 ): ((point: readonly number[]) => IPortraitLipCoordinate) => {
+  const sample = createPortraitLipBandSampler(outer, upper, lower);
+  return (point) => sample(point).coordinate;
+};
+
+/**
+ * One authoritative curved-band sample supplies both normalized coordinates and
+ * its skin/oral boundaries. A contour edit must not independently guess the
+ * inner Y against which lip thickness is changed. All heights remain in mm.
+ */
+export const createPortraitLipBandSampler = (
+  outer: readonly (readonly number[])[],
+  upper: readonly (readonly number[])[],
+  lower: readonly (readonly number[])[],
+): ((point: readonly number[]) => {
+  coordinate: IPortraitLipCoordinate;
+  innerY: number;
+  outerY: number;
+}) => {
   if (
     outer.length < 3 ||
     upper.length < 2 ||
@@ -193,6 +211,85 @@ export const createPortraitLipCoordinates = (
                 (interior / scale - exterior / scale),
             ),
           );
-    return { side, lateral: 2 * ((x - left) / (right - left)) - 1, across };
+    return {
+      coordinate: {
+        side,
+        lateral: 2 * ((x - left) / (right - left)) - 1,
+        across,
+      },
+      innerY: interior,
+      outerY: exterior,
+    };
   };
 };
+
+/**
+ * One thickness-ratio witness along the right(-1) to left(+1) oral span.
+ *
+ * @author Samchon
+ */
+export interface IPortraitLipBandKnot {
+  at: number;
+  /** Positive ratio of the current band's vertical thickness; one is identity. */
+  scale: number;
+}
+
+/**
+ * Resolve an optional thickness profile independently of the oral aperture.
+ * Omission is identity. A scalar sets the central ratio and joins ratio one at
+ * both corners; an ordered array of two to 64 knots owns the full profile and must preserve
+ * those same endpoint values. Adjacent knots use a cubic smoothstep, so values
+ * stay within their positive endpoint hull with zero slope at the knots.
+ * The function owns copied data; a provided zero or empty array is invalid.
+ */
+export function createPortraitLipBandScale(
+  input?: number | readonly IPortraitLipBandKnot[],
+): (lateral: number) => number {
+  const knots =
+    input === undefined
+      ? [
+          { at: -1, scale: 1 },
+          { at: 1, scale: 1 },
+        ]
+      : typeof input === "number"
+        ? [
+            { at: -1, scale: 1 },
+            { at: 0, scale: input },
+            { at: 1, scale: 1 },
+          ]
+        : input.map((knot) => ({ ...knot }));
+  if (
+    knots.length < 2 ||
+    knots.length > 64 ||
+    knots[0].at !== -1 ||
+    knots.at(-1)!.at !== 1 ||
+    knots[0].scale !== 1 ||
+    knots.at(-1)!.scale !== 1 ||
+    knots.some(
+      (knot, i) =>
+        ![knot.at, knot.scale].every(Number.isFinite) ||
+        knot.scale <= 0 ||
+        (i > 0 && knot.at <= knots[i - 1].at),
+    )
+  )
+    throw new Error(
+      "Lip thickness needs ordered positive ratios from -1 to +1 with identity corners.",
+    );
+  return (lateral) => {
+    if (!Number.isFinite(lateral) || lateral < -1 || lateral > 1)
+      throw new Error("Lip thickness samples must lie in the unit oral span.");
+    if (lateral === -1 || lateral === 1) return 1;
+    const i = knots.findIndex((knot) => knot.at >= lateral),
+      a = knots[i - 1],
+      b = knots[i];
+    const t = (lateral - a.at) / (b.at - a.at),
+      blend = t * t * (3 - 2 * t);
+    return Math.max(
+      Math.min(a.scale, b.scale),
+      Math.min(
+        Math.max(a.scale, b.scale),
+        a.scale * (1 - blend) + b.scale * blend,
+      ),
+    );
+  };
+}

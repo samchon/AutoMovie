@@ -21,8 +21,10 @@ import {
   buildPortraitDentalCrown,
 } from "./dentalCrown";
 import {
+  type IPortraitLipBandKnot,
   type IPortraitLipSection,
-  createPortraitLipCoordinates,
+  createPortraitLipBandSampler,
+  createPortraitLipBandScale,
   createPortraitLipSection,
 } from "./lipSection";
 
@@ -67,6 +69,16 @@ export interface IPortraitMouthShape {
   lowerLipProjection: number;
   /** Optional body and tubercle relief between the existing lip boundaries. */
   section?: IPortraitLipSection;
+  /**
+   * Optional upper/lower thickness ratios over the curved mouth. A scalar sets
+   * the centre; a knot array states a nonuniform profile. Omission is identity.
+   * Both preserve the existing oral opening and corner positions. The outer
+   * cutaneous boundary and neighbouring skin follow the resulting band shape.
+   */
+  band?: {
+    upper?: number | readonly IPortraitLipBandKnot[];
+    lower?: number | readonly IPortraitLipBandKnot[];
+  };
   /** Geodesic reach of surrounding skin adaptation. */
   blendReach: number;
   /** Recession of the oral cavity behind the actual refined opening. */
@@ -164,6 +176,8 @@ export function createPortraitMouthComponent(
     inputShape.section === undefined
       ? undefined
       : createPortraitLipSection(inputShape.section);
+  const upperBand = createPortraitLipBandScale(inputShape.band?.upper);
+  const lowerBand = createPortraitLipBandScale(inputShape.band?.lower);
   for (const crown of shape.crowns)
     assertPortraitDentalCrown({
       ...crown,
@@ -218,7 +232,7 @@ export function createPortraitMouthComponent(
       // A lower-lip point near a raised corner may be above the global centre;
       // its anatomical role is still lower lip. Both borders come from this
       // socket, and section relief is exactly zero on either retained boundary.
-      const coordinate = createPortraitLipCoordinates(
+      const coordinate = createPortraitLipBandSampler(
         socket.outer.map((id) => host.positions[id]),
         socket.upper.map((id) => host.positions[id]),
         socket.lower.map((id) => host.positions[id]),
@@ -226,7 +240,17 @@ export function createPortraitMouthComponent(
       return {
         constraints: [...skin].map((vertex) => {
           const point = host.positions[vertex];
-          const local = coordinate(point);
+          const band = coordinate(point);
+          const local = band.coordinate;
+          const ratio = (local.side === "upper" ? upperBand : lowerBand)(
+            local.lateral,
+          );
+          // Identity keeps the original coordinate exactly. Detail scales the
+          // curved band about its actual oral boundary, not about the head's Y.
+          const height =
+            ratio === 1
+              ? point[1]
+              : band.innerY + (point[1] - band.innerY) * ratio;
           const corner = Math.min(
             1,
             Math.abs((point[0] - centerX) / ((right - left) / 2)),
@@ -236,7 +260,7 @@ export function createPortraitMouthComponent(
             target: [
               centerX + (point[0] - centerX) * shape.widthScale,
               centerY +
-                (point[1] - centerY) * shape.openingScale +
+                (height - centerY) * shape.openingScale +
                 shape.cornerLift * corner ** 2,
               point[2] +
                 (local.side === "upper"
