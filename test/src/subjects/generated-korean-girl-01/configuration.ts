@@ -32,6 +32,7 @@ import {
   createPortraitNoseComponent,
   portraitNostrilContains,
 } from "./nose";
+import { createPortraitOrbitalSupport } from "./orbitalSupport";
 
 /** Subject-specific attachments; component implementations contain no landmark IDs. */
 export const portraitEyeSockets: IPortraitEyeSocket[] = [
@@ -500,6 +501,23 @@ export const measuredPortraitAssembly = {
     portraitNasalLayerFor(),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
+    // Upper orbital support belongs to skin form, independently of brow hair.
+    // Paired small anterior pad sections sit between fixed forehead witnesses
+    // and a shallow superior orbital sulcus. Values are fitting hypotheses.
+    ...(["right", "left"] as const).map((side, i) =>
+      createPortraitOrbitalSupport(side, {
+        radius: 14,
+        stations: (i === 0 ? [107, 105, 70] : [336, 334, 300]).map(
+          (anchor, station) => ({
+            name: ["medial", "middle", "lateral"][station],
+            anchor,
+            forehead: { height: 9, projection: 0 },
+            browProjection: [0.25, 0.7, 0.25][station],
+            sulcus: { descent: 8, projection: [-0.05, -0.12, -0.05][station] },
+          }),
+        ),
+      }),
+    ),
   ],
 };
 

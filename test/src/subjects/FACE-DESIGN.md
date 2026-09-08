@@ -63,6 +63,8 @@ The current optional final grid is a mathematical capability with an unaccepted 
 
 ## Ocular construction {#ocular-construction}
 
+`orbitalSupport.ts` gives each upper orbit independent forehead, brow-pad and superior-sulcus section witnesses. Every sample queries the actual shared skin before the coupled control solver prescribes its signed anterior movement. A zero forehead target constrains the neighbouring pad, rather than adding another independent bump. The existing surface assembler protects open eyelid margins, and brow fibres query the resulting final skin. Omission of this layer preserves the earlier measured support. This is a regional form-control representation, not a reconstructed bone/fat volume; longitudinal curvature between sparse witnesses and their skin transitions still require full and close renders.
+
 Each eye separates aperture/canthi, lid section, underlying globe, corneal optics, iris/pupil and medial tissue. Width and opening height do not stand in for lid thickness, fold shape, hood, lower roll or orbital-to-cheek support. Optional detail can provide separate upper/lower sections and independent left/right inputs while retaining one group frame and gaze relationship.
 
 The current eye factory already owns its corneal material and optional pigment profile. Pigment uses linear RGB endpoints, and its presence changes material binding without changing geometry. Corneal curvature, shell thickness, index of refraction and apparent iris position remain coupled physical/presentation questions. A dark iris or an enlarged eye does not establish a faithful lid contour.
