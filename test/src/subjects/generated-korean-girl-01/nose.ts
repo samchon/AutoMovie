@@ -1,3 +1,4 @@
+import { portraitNormals } from "../geometry";
 import type { IPortraitComponent } from "../portraitComponents";
 import type { IControlMesh } from "../subdivideControlMesh";
 import type { IPortraitNasalBodyShape } from "./nasalBody";
@@ -323,6 +324,18 @@ export function createPortraitNoseComponent(
           point[2] + depth(point),
         ]);
       }
+      // Exterior tangents belong to the sculpted skin before an aperture plane
+      // moves its cut vertices. Capture that basis once for every rim section.
+      const nasalCuts = new Set(socket.nostrils.flat());
+      const skinNormals =
+        rimSection === undefined
+          ? undefined
+          : portraitNormals(
+              host.positions.flatMap((point, id) => targets.get(id) ?? point),
+              host.indices.filter(
+                (_value, index) => !nasalCuts.has(Math.floor(index / 3)),
+              ),
+            );
       for (const faces of openings) {
         const ids = portraitCutBoundary(faces).map((edge) => edge.a);
         const rim = resizePortraitNostrilRim(
@@ -374,6 +387,7 @@ export function createPortraitNoseComponent(
               const section = createPortraitNasalRimSection(
                 ids.map((id) => targets.get(id)!),
                 rimSection,
+                ids.map((id) => skinNormals!.slice(id * 3, id * 3 + 3)),
               );
               ids.forEach((id, i) => targets.set(id, section.outer[i]));
               return { ids, section };

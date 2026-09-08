@@ -16,6 +16,15 @@ import { nclose, throwsError } from "../internal/predicates";
  *    actual inner IDs for lining. Invalid or unrepresentable sections refuse.
  */
 export const test_subject_nasal_rim_section = (): void => {
+  const flatSection = (
+    points: number[][],
+    shape: { width: number; crest: number },
+  ) =>
+    createPortraitNasalRimSection(
+      points,
+      shape,
+      points.map(() => [0, 0, 1]),
+    );
   const points = [
     [2, 0, 0],
     [0, 2, 0],
@@ -23,11 +32,43 @@ export const test_subject_nasal_rim_section = (): void => {
     [0, -2, 0],
   ];
   const shape = { width: 1, crest: 0.3 };
-  const section = createPortraitNasalRimSection(points, shape);
+  const section = flatSection(points, shape);
+  const tilted = createPortraitNasalRimSection(
+    points,
+    shape,
+    points.map(() => [0.6, 0, 0.8]),
+  );
+  TestValidator.predicate(
+    "skin tangent controls shoulder",
+    tilted.outer[0].every((v, i) => nclose(v, [2.8, 0, -0.6][i])),
+  );
+  TestValidator.predicate(
+    "crest follows skin normal",
+    tilted.crest[0].every((v, i) => nclose(v, [2.58, 0, -0.06][i])),
+  );
+  TestValidator.equals(
+    "normal magnitude is not shape",
+    createPortraitNasalRimSection(
+      points,
+      shape,
+      points.map(() => [0, 0, 2]),
+    ),
+    section,
+  );
+  for (const normals of [
+    [],
+    points.map(() => [0, 0]),
+    points.map(() => [0, 0, NaN]),
+    points.map(() => [0, 0, 0]),
+  ])
+    TestValidator.predicate(
+      "invalid skin normals",
+      throwsError(() => createPortraitNasalRimSection(points, shape, normals)),
+    );
   TestValidator.equals("outer width", section.outer[0], [3, 0, 0]);
   TestValidator.equals("crest section", section.crest[0], [2.5, 0, 0.3]);
   TestValidator.equals("aperture retained", section.rim, points);
-  const moved = createPortraitNasalRimSection(
+  const moved = flatSection(
     points.map((p) => p.map((v, i) => v + [10, 20, 30][i])),
     shape,
   );
@@ -39,12 +80,12 @@ export const test_subject_nasal_rim_section = (): void => {
   );
   TestValidator.equals(
     "zero crest",
-    createPortraitNasalRimSection(points, { ...shape, crest: 0 }).crest[0],
+    flatSection(points, { ...shape, crest: 0 }).crest[0],
     [2.5, 0, 0],
   );
   TestValidator.equals(
     "signed crest",
-    createPortraitNasalRimSection(points, { ...shape, crest: -0.3 }).crest[0],
+    flatSection(points, { ...shape, crest: -0.3 }).crest[0],
     [2.5, 0, -0.3],
   );
   const cage = {
@@ -82,9 +123,7 @@ export const test_subject_nasal_rim_section = (): void => {
   ])
     TestValidator.predicate(
       "invalid shape",
-      throwsError(() =>
-        createPortraitNasalRimSection(base, { ...shape, ...invalid }),
-      ),
+      throwsError(() => flatSection(base, { ...shape, ...invalid })),
     );
   for (const invalid of [
     [],
@@ -110,24 +149,22 @@ export const test_subject_nasal_rim_section = (): void => {
   ])
     TestValidator.predicate(
       "invalid boundary",
-      throwsError(() => createPortraitNasalRimSection(invalid, shape)),
+      throwsError(() => flatSection(invalid, shape)),
     );
   TestValidator.predicate(
     "unrepresentable width",
-    throwsError(() =>
-      createPortraitNasalRimSection(base, { width: 1e-300, crest: 0 }),
-    ),
+    throwsError(() => flatSection(base, { width: 1e-300, crest: 0 })),
   );
   TestValidator.predicate(
     "crest overflow",
     throwsError(() =>
-      createPortraitNasalRimSection(
+      flatSection(
         base.map((p) => [p[0], p[1], Number.MAX_VALUE]),
         { width: 1, crest: Number.MAX_VALUE },
       ),
     ),
   );
-  const valid = createPortraitNasalRimSection(base, shape);
+  const valid = flatSection(base, shape);
   for (const outer of [
     [],
     [0, 1, 1, 3],

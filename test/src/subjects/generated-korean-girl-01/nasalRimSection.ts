@@ -1,4 +1,5 @@
-import { portraitNormals } from "../geometry";
+import { Vector3 } from "@automovie/engine";
+
 import type { IControlMesh } from "../subdivideControlMesh";
 import { portraitNasalRimJets } from "./nasalAperture";
 
@@ -12,7 +13,9 @@ export interface IPortraitNasalRimSection {
 
 /**
  * Construct the exterior shoulder and crest from the same ordered aperture.
- * The existing shared normal and rim-jet calculations supply the local frame.
+ * The caller supplies the sculpted skin normals before aperture fitting. The
+ * opening plane normal describes a different surface and cannot substitute for
+ * those exterior tangents. The existing rim-jet calculation supplies the frame.
  * The aperture itself is copied without resizing or moving. An outer offset
  * of width and a halfway crest separate its location from tissue thickness.
  * The resulting three rings are one connected skin section, not a torus mesh
@@ -21,25 +24,27 @@ export interface IPortraitNasalRimSection {
 export function createPortraitNasalRimSection(
   points: readonly (readonly number[])[],
   shape: IPortraitNasalRimSection,
+  skinNormals: readonly (readonly number[])[],
 ): { outer: number[][]; crest: number[][]; rim: number[][] } {
   if (
     !Number.isFinite(shape.width) ||
     shape.width / 1000 <= 0 ||
     !Number.isFinite(shape.crest) ||
     points.length < 3 ||
+    skinNormals.length !== points.length ||
+    skinNormals.some((p) => p.length !== 3 || !p.every(Number.isFinite)) ||
     points.some((p) => p.length !== 3 || !p.every(Number.isFinite))
   )
     throw new Error(
       "A nasal rim section needs finite XYZ, positive width and finite crest projection.",
     );
   const rim = points.map((p) => [...p]);
-  const indices = Array.from({ length: rim.length - 2 }, (_, i) => [
-    0,
-    i + 1,
-    i + 2,
-  ]).flat();
-  const packedNormals = portraitNormals(rim.flat(), indices);
-  const normals = rim.map((_p, i) => packedNormals.slice(i * 3, i * 3 + 3));
+  const normals = skinNormals.map((p) => {
+    const n = Vector3.normalize(
+      Vector3.create(...(p as [number, number, number])),
+    );
+    return [n.x, n.y, n.z];
+  });
   const center = [0, 1, 2].map((axis) =>
     rim.reduce((sum, p) => sum + p[axis] / rim.length, 0),
   );

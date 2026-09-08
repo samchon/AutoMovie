@@ -13,8 +13,8 @@ import { nclose } from "../internal/predicates";
  * The nasal component preserves its fitted aperture while adding exterior skin.
  *
  * Scenarios:
- * 1. A radius-two square aperture gets a radius-three outer attachment from a
- *    one-mm section. Its newly allocated aperture IDs also own curve refinement.
+ * 1. A radius-two square aperture gets an outer attachment one mm along its
+ *    retained skin tangent. Newly allocated aperture IDs also own refinement.
  *    The complete skin/band/lining remains closed through actual subdivision.
  * 2. Omission retains direct attachment, while the component owns supplied
  *    section values against later mutation. This checks the real consumer.
@@ -60,9 +60,12 @@ export const test_subject_nasal_rim_section_component = (): void => {
     plan.constraints,
   );
   TestValidator.predicate(
-    "outer attachment expands",
+    "outer attachment follows physical skin width",
     plan.constraints.every((c) =>
-      nclose(Math.hypot(c.target[0], c.target[1]), 3),
+      nclose(
+        Math.hypot(...c.target.map((v, i) => v - host.positions[c.vertex][i])),
+        1,
+      ),
     ),
   );
   const positions = host.positions.map((p) => [...p]);
