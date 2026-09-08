@@ -21,14 +21,19 @@ export function buildPortraitHairProxy(
   scalp?: readonly number[][],
   /** Optional actual head mesh in engine metres, supplying the coarse fringe attachment. */
   forehead?: IAutoMovieMesh,
+  /** Optional side attachments in mm, enlarging lateral clearance without growing the skull cap vertically. */
+  sideAttachments: readonly (readonly number[])[] = [],
 ) {
   // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
-  // cannot follow another foundation or fitted head. The caller includes any
-  // separately attached ears in this enclosure population. Uniform expansion retains
+  // cannot follow another foundation or fitted head. Uniform expansion retains
   // the authored haircut and ear cutout while enclosing every supplied scalp
   // vertex above Y=20 mm. Three millimetres of radial margin cover coarse panel
   // interpolation; this is context geometry, not a scalp/hair collision solver.
-  if (scalp?.some((p) => p.length !== 3 || !p.every(Number.isFinite)))
+  if (
+    [...(scalp ?? []), ...sideAttachments].some(
+      (p) => p.length !== 3 || !p.every(Number.isFinite),
+    )
+  )
     throw new Error(
       "Hair attachment needs finite construction-millimetre XYZ points.",
     );
@@ -39,9 +44,21 @@ export function buildPortraitHairProxy(
         enclosure,
         Math.hypot(x / 82, (y - 30) / 118, (z + 32) / 101) + 3 / 82,
       );
-  const rx = 82 * enclosure,
-    ry = 118 * enclosure,
+  let rx = 82 * enclosure;
+  const ry = 118 * enclosure,
     rz = 101 * enclosure;
+  // Side attachments require width, not a uniformly larger cranium. Solve the
+  // same ellipsoid inequality for rx while keeping scalp-owned ry/rz fixed.
+  // A point outside that YZ domain cannot be enclosed by lateral expansion and
+  // is refused rather than silently changing another dimension's owner.
+  for (const [x, y, z] of sideAttachments) {
+    const remaining = 1 - ((y - 30) / ry) ** 2 - ((z + 32) / rz) ** 2;
+    if (remaining <= 0)
+      throw new Error(
+        "Hair side attachments must lie inside the scalp's height and depth domain.",
+      );
+    rx = Math.max(rx, Math.abs(x) / Math.sqrt(remaining) + 3);
+  }
   if (
     ![rx, ry, rz].every(
       (r) => Number.isFinite(r) && Number.isFinite(Math.fround(r / 1000)),
