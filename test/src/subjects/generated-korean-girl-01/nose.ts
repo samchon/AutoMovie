@@ -1,5 +1,9 @@
 import type { IPortraitComponent } from "../portraitComponents";
 import type { IControlMesh } from "../subdivideControlMesh";
+import {
+  type IPortraitNasalSection,
+  createPortraitNasalSection,
+} from "./nasalSection";
 import { fitPortraitNostrilRim, resizePortraitNostrilRim } from "./nostrilRim";
 
 /**
@@ -25,6 +29,8 @@ export interface IPortraitNoseSocket {
   surface: number[];
   /** Original triangle ordinals for each nasal opening. */
   nostrils: number[][];
+  /** Optional retained vertex supplying the local section loft's XYZ datum. */
+  sectionAnchor?: number;
 }
 
 /**
@@ -58,6 +64,8 @@ export interface IPortraitNoseShape {
   cavityOffset: number[];
   /** Reach of adjacent skin adaptation along the original mesh, in mm. */
   blendReach: number;
+  /** Optional connected depth basis for the lower nasal body; omission is identity. */
+  section?: IPortraitNasalSection;
 }
 
 /** Smooth nasal volume controls evaluated in the subject-owned socket frame. */
@@ -141,6 +149,10 @@ export function createPortraitNoseComponent(
     nostrils: inputSocket.nostrils.map((faces) => [...faces]),
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
+  const section =
+    inputShape.section === undefined
+      ? undefined
+      : createPortraitNasalSection(inputShape.section);
   if (
     [
       shape.widthScale,
@@ -171,6 +183,28 @@ export function createPortraitNoseComponent(
   return {
     id: "nose",
     fit: (host) => {
+      const datum =
+        socket.sectionAnchor === undefined
+          ? undefined
+          : host.positions[socket.sectionAnchor];
+      if (
+        section !== undefined &&
+        (!Number.isInteger(socket.sectionAnchor) ||
+          socket.sectionAnchor! < 0 ||
+          datum === undefined ||
+          datum.length !== 3 ||
+          !datum.every(Number.isFinite))
+      )
+        throw new Error(
+          "A nasal section needs a resident finite socket datum.",
+        );
+      // One depth evaluator owns both exterior targets and pre-fit aperture
+      // samples. A section replaces the inferred local depth; the existing tip
+      // and alar controls remain explicit additional signed offsets. The lining
+      // later reads the actual fitted rim, so it cannot retain a stale basis.
+      const depth = (point: number[]): number =>
+        portraitNoseDepth(point, socket, shape) +
+        (section === undefined ? 0 : section(point, datum!));
       const openings = socket.nostrils.map((ordinals) =>
         ordinals.map((i) => host.indices.slice(3 * i, 3 * i + 3)),
       );
@@ -180,7 +214,7 @@ export function createPortraitNoseComponent(
         targets.set(id, [
           socket.midline + (point[0] - socket.midline) * shape.widthScale,
           point[1],
-          point[2] + portraitNoseDepth(point, socket, shape),
+          point[2] + depth(point),
         ]);
       }
       for (const faces of openings) {
@@ -190,8 +224,7 @@ export function createPortraitNoseComponent(
             ids.map((id) => [
               host.positions[id][0],
               host.positions[id][1],
-              host.positions[id][2] +
-                portraitNoseDepth(host.positions[id], socket, shape),
+              host.positions[id][2] + depth(host.positions[id]),
             ]),
             shape.rimRoundness,
           ),
@@ -208,9 +241,7 @@ export function createPortraitNoseComponent(
         const centerZ =
           ids.reduce(
             (sum, id) =>
-              sum +
-              host.positions[id][2] +
-              portraitNoseDepth(host.positions[id], socket, shape),
+              sum + host.positions[id][2] + depth(host.positions[id]),
             0,
           ) / ids.length;
         const angle = (shape.nostrilTilt * Math.PI) / 180;

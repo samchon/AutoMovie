@@ -25,6 +25,7 @@ import {
   type IPortraitMouthSocket,
   createPortraitMouthComponent,
 } from "./mouth";
+import type { IPortraitNasalSection } from "./nasalSection";
 import {
   type IPortraitNoseShape,
   type IPortraitNoseSocket,
@@ -121,6 +122,7 @@ export const portraitNoseSocket: IPortraitNoseSocket = {
   alarOffset: 12.5,
   alarY: -13.5,
   alarRadius: 5.5,
+  sectionAnchor: 4,
   surface: referenceControlNet.positions
     .slice(0, 468)
     .flatMap((point, id) =>
@@ -146,6 +148,44 @@ export const portraitNoseSocket: IPortraitNoseSocket = {
     }
     return selected;
   }),
+};
+
+/**
+ * Connected lower-nasal depth controls relative to retained tip datum 4.
+ * Columns run from the anatomical right outer join through its alar body,
+ * lower-tip shoulders and centre, then to the independent left-side controls.
+ * Rows progress from the philtral root through the columellar turn, lower tip,
+ * alar/dome body and lower dorsum. Every value is an authored millimetre fit.
+ * These are cubic shape poles, not sampled anatomy or population dimensions.
+ *
+ * These controls target a broader lower turn than the inferred central wedge;
+ * its final refined width and depth remain measured review conditions. The
+ * connected section replaces local depth instead of adding overlapping
+ * tip/ala/columella bumps. The four-millimetre outer transition leaves a
+ * zero-displacement collar inside the component's controlled skin. Existing
+ * aperture fitting and shared lining remain downstream of this basis.
+ */
+export const portraitNasalSection: IPortraitNasalSection = {
+  transverse: [-22, -18, -12, -6, 0, 6, 12, 18, 22],
+  stations: [
+    // Inferior philtral root, meeting the unchanged host at the lower domain edge.
+    { height: -18, depths: [-30, -27, -22, -18, -17.5, -18, -22, -27, -30] },
+    // Control the columellar root's width through both lower-tip shoulders.
+    { height: -14, depths: [-29, -25, -17, -13.5, -13, -13.5, -17, -25, -29] },
+    { height: -10, depths: [-27, -21, -11, -4.8, -4, -4.8, -11, -21, -27] },
+    // Paired alar bodies and central dome share the same transverse construction.
+    { height: -6, depths: [-26, -13.5, -6.5, -0.8, 0, -0.8, -6.5, -13.5, -26] },
+    { height: -2, depths: [-26, -12.8, -5.5, 1, 2, 1, -5.5, -12.8, -26] },
+    // Guide the superior sections toward the unchanged bridge.
+    {
+      height: 2,
+      depths: [-27, -16.5, -7.5, -0.8, 0.5, -0.8, -7.5, -16.5, -27],
+    },
+    { height: 6, depths: [-29, -23, -13.5, -5, -3.5, -5, -13.5, -23, -29] },
+    { height: 10, depths: [-30, -25, -17, -9, -7, -9, -17, -25, -30] },
+  ],
+  joinWidth: 4,
+  influence: 1,
 };
 
 /** Subject-owned nasal offsets and cavity dimensions; see IPortraitNoseShape for units. */
