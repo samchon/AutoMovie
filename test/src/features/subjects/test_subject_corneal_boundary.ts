@@ -26,6 +26,7 @@ export const test_subject_corneal_boundary = (): void => {
   const shape: IPortraitEyeShape = {
     ...portraitEyeShape,
     cornealBoundary: undefined,
+    lidContact: undefined,
     browFibres: 0,
     upperLashes: 1,
     sampling: { eyeColumns: 4, eyeRows: 2, irisColumns: 12, irisRows: 2 },

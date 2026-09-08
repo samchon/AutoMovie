@@ -67,6 +67,8 @@ The current eye factory already owns its corneal material and optional pigment p
 
 The final skin boundary and the curves used by ocular interiors must be compared numerically and in a close render. Resampling a few retained witnesses is an approximation whose error must be measured before it is treated as the actual full boundary. Partial embedding of a lash tube is not automatically a defect; the required visible edge and its host contact determine the criterion.
 
+The optional `cornealBoundary: "limbus"` retains a complete circular shell; `lidContact: "cornea"` additionally projects the actual shared refined eyelid region against that same resident optical mesh. Both drawing and contact call the same corneal builder. Contact uses the recorded view direction, keeps projection coordinates fixed and uses `lidThickness` as the metric clearance. The eyelid group retains shared vertices and skin material. Omitted contact or explicit `globe` keeps the basic rows. This is a directional sampled contact operation, not a global collision proof or a guarantee that the new tissue section is anatomically correct; both complete and close captures remain required.
+
 ## Oral construction and dentition {#oral-construction}
 
 Upper and lower lips use a curved smile frame. Independent section controls may define upper body, central tubercle, lower body/pads and cutaneous/vermilion/mucosal transitions. The outer skin border, oral aperture and commissures have explicit owners. Detail between fixed borders cannot correct a wrong border, and a border change must rebuild the surrounding skin and interior attachment.

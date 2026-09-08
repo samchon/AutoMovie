@@ -18,6 +18,7 @@ import {
   portraitFacesInsideLoop,
 } from "../portraitComponents";
 import { buildPortraitCornea } from "../portraitCornea";
+import { createPortraitDirectionalContact } from "../portraitDirectionalContact";
 import {
   type IPortraitEyeSphere,
   fitPortraitEyeSphere,
@@ -104,11 +105,18 @@ export interface IPortraitEyeShape {
   cornealRimLift: number;
   /**
    * Closed optical boundary: omission or aperture retains visible-aperture
-   * clipping; limbus keeps the complete circular cornea behind the eyelids.
+   * clipping; limbus keeps the complete circular cornea independent of the lids.
    * The latter separates optical anatomy from visibility. It does not itself
    * refit lid contact to the larger volume, which requires rendered inspection.
    */
   cornealBoundary?: "aperture" | "limbus";
+  /**
+   * Optional final eyelid contact. Omission or globe retains the basic rows;
+   * cornea projects the shared refined eyelid surface clear of the actual full
+   * corneal mesh along viewRay, using lidThickness as clearance. It requires
+   * limbus boundary and retains the image-plane coordinates of each contact.
+   */
+  lidContact?: "globe" | "cornea";
   /** Iris radius in mm before clipping against the fitted eyelid. */
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
@@ -242,6 +250,15 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitOcularTissues(shape.tissues);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (
+    (shape.lidContact !== undefined &&
+      shape.lidContact !== "globe" &&
+      shape.lidContact !== "cornea") ||
+    (shape.lidContact === "cornea" && shape.cornealBoundary !== "limbus")
+  )
+    throw new Error(
+      "Corneal lid contact requires a full limbus; other contact modes must be globe or omitted.",
+    );
   if (
     shape.cornealBoundary !== undefined &&
     shape.cornealBoundary !== "aperture" &&
@@ -395,15 +412,70 @@ export function createPortraitEyeComponent(
           { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
         ],
         cutFaces: portraitFacesInsideLoop(host, loop),
-        attach: (cage) => {
+        attach: (cage, _adapted, region) => {
+          const lidGroup =
+            shape.lidContact === "cornea"
+              ? region(socket.name + "-eyelids", "skin")
+              : 0;
           const margins = appendPortraitEyeMargins(
             cage,
             aperture,
             socket,
             shape,
+            lidGroup,
           );
           return {
             openings: [loopOf(socket).map((id) => margins.get(id)!)],
+            finalSurface:
+              shape.lidContact !== "cornea"
+                ? undefined
+                : (final) => {
+                    const gaze = final.positions[socket.iris];
+                    const center = portraitEyeSphereIntersection(
+                      sphere,
+                      p(gaze[0], gaze[1], gaze[2]),
+                      direction,
+                    );
+                    const optical = portraitPart(
+                      "corneal-contact-basis",
+                      eyeCornea(center, sphere, shape, []),
+                      "skin",
+                    ).geometry.mesh;
+                    const contact = createPortraitDirectionalContact(
+                      optical,
+                      direction,
+                      shape.lidThickness / 1000,
+                    );
+                    const vertices = new Set<number>();
+                    for (let i = 0; i < final.groups.length; i++)
+                      if (final.groups[i] === lidGroup)
+                        for (const vertex of final.indices.slice(
+                          3 * i,
+                          3 * i + 3,
+                        ))
+                          vertices.add(vertex);
+                    return [...vertices].flatMap((vertex) => {
+                      const source = final.positions[vertex];
+                      const point = p(
+                        source[0] / 1000,
+                        source[1] / 1000,
+                        source[2] / 1000,
+                      );
+                      const target = contact(point);
+                      return target === point
+                        ? []
+                        : [
+                            {
+                              vertex,
+                              target: [
+                                target.x * 1000,
+                                target.y * 1000,
+                                target.z * 1000,
+                              ],
+                            },
+                          ];
+                    });
+                  },
             finish: (refined) =>
               buildPortraitEye(
                 refined.positions,
@@ -425,12 +497,14 @@ export function createPortraitEyeComponent(
 /**
  * Attach the lid rows to the already fitted shared outer rim. New inner vertex
  * identities are returned for the eyeball to read after common subdivision.
+ * The optional group is a registered host skin region; omission retains zero.
  */
 export function appendPortraitEyeMargins(
   cage: IControlMesh,
   aperture: number[][],
   socket: IPortraitEyeSocket,
   shape: IPortraitEyeShape,
+  group = 0,
 ): Map<number, number> {
   const rows = lidRows(
     aperture,
@@ -463,7 +537,7 @@ export function appendPortraitEyeMargins(
         rings[ring + 1][j],
         rings[ring + 1][i],
       );
-      cage.groups.push(0, 0);
+      cage.groups.push(group, group);
     }
   return margins;
 }
@@ -627,20 +701,7 @@ export function buildPortraitEye(
       else {
         add(
           `${eye.name}-cornea`,
-          buildPortraitCornea({
-            center,
-            radius: shape.irisRadius,
-            curvature: shape.cornealRadius,
-            globeRadius: shape.surfaceRadius,
-            thickness: shape.cornealThickness,
-            rimLift: shape.cornealRimLift,
-            extents:
-              shape.cornealBoundary === "limbus"
-                ? new Array(shape.sampling.irisColumns).fill(shape.irisRadius)
-                : extents.slice(0, -1),
-            radialSamples: shape.sampling.irisRows,
-            surface: eyeZ,
-          }),
+          eyeCornea(center, sphere, shape, extents.slice(0, -1)),
           eye.name + "-cornea",
         );
         // Pigment follows radial fibres. The outer 13 percent forms a dark
@@ -718,4 +779,29 @@ export function buildPortraitEye(
     );
   }
   return parts;
+}
+
+// Drawing and contact construct the same closed optical shell. The complete
+// limbus is independent of aperture clipping; both consumers retain its sphere,
+// gaze centre, radii, thickness and sampling before any eyelid is projected.
+function eyeCornea(
+  center: Point,
+  sphere: IPortraitEyeSphere,
+  shape: IPortraitEyeShape,
+  extents: number[],
+) {
+  return buildPortraitCornea({
+    center,
+    radius: shape.irisRadius,
+    curvature: shape.cornealRadius,
+    globeRadius: shape.surfaceRadius,
+    thickness: shape.cornealThickness,
+    rimLift: shape.cornealRimLift,
+    extents:
+      shape.cornealBoundary === "limbus"
+        ? new Array(shape.sampling.irisColumns).fill(shape.irisRadius)
+        : extents,
+    radialSamples: shape.sampling.irisRows,
+    surface: (x, y) => portraitEyeSphereHeight(sphere, x, y),
+  });
 }
