@@ -1,4 +1,117 @@
-import type { IPortraitReliefRegion } from "../portraitRelief";
+import {
+  type IPortraitSurfaceControl,
+  createPortraitControlLayer,
+} from "../portraitControlLayer";
+import {
+  type IPortraitReliefRegion,
+  createPortraitReliefLayer,
+} from "../portraitRelief";
+import type { IPortraitSurfaceLayer } from "../portraitSurface";
+
+/**
+ * Optional coupled nasal detail. Omission retains the complete basic supports.
+ * A provided population replaces that layer: its values prescribe total XYZ
+ * movement at the named controls, not another addition to the old amplitudes.
+ *
+ * @author Samchon
+ */
+export interface IPortraitNasalDetail {
+  /** Common compact radius in millimetres, governing the skin/lining transition. */
+  radius: number;
+  /** Shared named control population; explicit empty removes nasal relief. */
+  controls: readonly IPortraitSurfaceControl[];
+}
+
+/** Resolve one nasal surface authority from basic or optional coupled detail. */
+export function portraitNasalLayerFor(
+  detail?: IPortraitNasalDetail,
+): IPortraitSurfaceLayer {
+  return detail === undefined
+    ? createPortraitReliefLayer("nasal-subunits", portraitNasalRelief)
+    : createPortraitControlLayer(
+        "nasal-subunits",
+        detail.radius,
+        detail.controls,
+      );
+}
+
+/**
+ * Provisional subject fit for the complete nasal field. Dorsum, tip, columella
+ * and alar-facial anchors are coupled so their requested movements hold together.
+ * Both external skin and attached vestibular lining consume the same field.
+ * These explicit mm offsets are authored depth/form hypotheses, not a scan.
+ */
+export const portraitNasalDetail: IPortraitNasalDetail = {
+  radius: 22,
+  controls: [
+    {
+      name: "dorsal-root",
+      anchor: 6,
+      offset: [0, 0, 0],
+      displacement: [0, 0, 0],
+    },
+    {
+      name: "lower-dorsum",
+      anchor: 5,
+      offset: [0, 0, 0],
+      displacement: [0, 0, 0],
+    },
+    {
+      name: "tip-centre",
+      anchor: 4,
+      offset: [0, 0, 0],
+      displacement: [0, -1, -1],
+    },
+    {
+      name: "right-tip-dome",
+      anchor: 45,
+      offset: [0, 0, 0],
+      displacement: [-0.2, -0.4, 0.3],
+    },
+    {
+      name: "left-tip-dome",
+      anchor: 275,
+      offset: [0, 0, 0],
+      displacement: [0.2, -0.4, 0.3],
+    },
+    {
+      name: "columellar-turn",
+      anchor: 19,
+      offset: [0, 0, 0],
+      displacement: [0, -1.8, 0.5],
+    },
+    {
+      name: "columellar-root",
+      anchor: 2,
+      offset: [0, 0, 0],
+      displacement: [0, -0.5, 1],
+    },
+    {
+      name: "right-alar-body",
+      anchor: 49,
+      offset: [0, 0, 0],
+      displacement: [-0.3, -1, 3.5],
+    },
+    {
+      name: "left-alar-body",
+      anchor: 279,
+      offset: [0, 0, 0],
+      displacement: [0.3, -1, 3.5],
+    },
+    {
+      name: "right-alar-facial-join",
+      anchor: 129,
+      offset: [0, 0, 0],
+      displacement: [0, 0, 0],
+    },
+    {
+      name: "left-alar-facial-join",
+      anchor: 358,
+      offset: [0, 0, 0],
+      displacement: [0, 0, 0],
+    },
+  ],
+};
 
 /**
  * Nasal subunit supports on this subject's connected skin. The measured dorsal

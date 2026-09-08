@@ -47,6 +47,8 @@ The existing nasal section primitives provide physical position/derivative jets 
 
 A complete detailed component uses the existing fit/cut/attach protocol to replace its owned region when needed. It is not restricted to editing Z on the old skin. Its outer boundary is anatomical and group-owned. A rectangular fade can be useful for a bounded deformation, but it is not a substitute for the perimeter and transition of a whole nose, lip or ear.
 
+An optional coupled control field can retain sound topology while replacing one region's independent support amplitudes. Each anatomical control specifies the total XYZ movement at its position. A shared interpolation solve includes the neighbouring controls, including explicit zero anchors, before it emits the engine's existing compact fields. `portraitControlLayer.ts` obtains its matrix values from that same engine evaluator and retains the engine's differential and emitted-triangle checks. This is a volume deformation of existing skin and lining, not new topology or a claim to have reconstructed cartilage. Close or singular control populations are refused; open-rim protection remains owned by the surface assembler.
+
 The assembler distinguishes continuity obligations. Homogeneous visible skin requires a coherent geometric transition. Separate surfaces such as teeth/lips and globe/lids require correct contact, overlap or clearance; welding them into one mesh would erase the physical interface. The component design specifies which condition applies and supplies the numerical and rendered observations that could falsify it.
 
 ## Nasal construction {#nasal-construction}
