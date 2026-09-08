@@ -3,6 +3,10 @@ import {
   type IPortraitNasalBodyShape,
   createPortraitNasalBody,
 } from "./nasalBody";
+import {
+  type IPortraitNasalSection,
+  createPortraitNasalSection,
+} from "./nasalSection";
 
 /**
  * Refine the lower nasal exterior after subdivision, keeping its vestibular
@@ -17,16 +21,26 @@ import {
  * boundary condition, rather than refitting its plane from changed alar volume.
  * It preserves the existing rim tangent and cannot repair a wrong rim tangent.
  * Interior vertices are never displaced by this exterior owner.
+ *
+ * A section-grid shape replaces local depth toward its absolute loft instead
+ * of adding support envelopes. Its poles and datum use the head XYZ frame;
+ * only that alternative uses head Z, while additive body extents follow the
+ * recorded ray. Both alternatives share this one boundary/lining calculation.
+ * The loft is evaluated after refinement, so its curvature is not attenuated
+ * again by the cage's subdivision and cannot refit the aperture plane.
  */
 export function createPortraitNasalBodySurface(
-  shape: IPortraitNasalBodyShape,
+  shape: IPortraitNasalBodyShape | { section: IPortraitNasalSection },
   datumId: number,
   liningGroup: number,
   viewRay: readonly number[],
   joinWidth: number,
   depthReach: number,
 ): IPortraitFinalSurface {
-  const sample = createPortraitNasalBody(shape);
+  const sample =
+    "section" in shape ? undefined : createPortraitNasalBody(shape);
+  const section =
+    "section" in shape ? createPortraitNasalSection(shape.section) : undefined;
   const rayLength = Math.hypot(...viewRay);
   if (
     !Number.isInteger(datumId) ||
@@ -42,7 +56,8 @@ export function createPortraitNasalBodySurface(
     throw new Error(
       "Nasal final shaping needs resident identities, a finite ray and positive joining distances.",
     );
-  const ray = viewRay.map((v) => v / rayLength);
+  const ray =
+    section === undefined ? viewRay.map((v) => v / rayLength) : [0, 0, 1];
   return (host) => {
     const datum = host.positions[datumId];
     if (datum === undefined)
@@ -77,7 +92,10 @@ export function createPortraitNasalBodySurface(
       if (lining.has(vertex)) return [];
       const z = (point[2] - datum[2]) / depthReach;
       if (Math.abs(z) >= 1) return [];
-      const extent = sample(point[0] - datum[0], point[1] - datum[1]);
+      const extent =
+        section === undefined
+          ? sample!(point[0] - datum[0], point[1] - datum[1])
+          : { lateral: 0, forward: section(point, datum) };
       if (extent.forward === 0 && extent.lateral === 0) return [];
       let distance = Infinity;
       for (const { start, delta, square } of segments) {

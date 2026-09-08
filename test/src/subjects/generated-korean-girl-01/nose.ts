@@ -68,9 +68,15 @@ export interface IPortraitNoseShape {
   blendReach: number;
   /** Optional connected depth basis for the lower nasal body; omission is identity. */
   section?: IPortraitNasalSection;
-  /** Optional refined exterior volume; aperture position and tangent stay fixed. */
+  /**
+   * Optional final exterior construction, after shared refinement. Choose either
+   * additive anatomical body sections or a target-depth grid. Both preserve the
+   * fitted aperture and its first derivative. joinWidth/depthReach are positive
+   * millimetre distances. A pre-fit section cannot also be selected: each is a
+   * complete alternative basis, and stacking them would silently compound form.
+   */
   body?: {
-    shape: IPortraitNasalBodyShape;
+    shape: IPortraitNasalBodyShape | { section: IPortraitNasalSection };
     joinWidth: number;
     depthReach: number;
   };
@@ -160,18 +166,11 @@ export function createPortraitNoseComponent(
   const body =
     inputShape.body === undefined
       ? undefined
-      : {
-          ...inputShape.body,
-          shape: {
-            ...inputShape.body.shape,
-            stations: inputShape.body.shape.stations.map((station) => ({
-              ...station,
-            })),
-            fullness: [...inputShape.body.shape.fullness] as [number, number],
-            spread: [...inputShape.body.shape.spread] as [number, number],
-            crease: [...inputShape.body.shape.crease] as [number, number],
-          },
-        };
+      : structuredClone(inputShape.body);
+  if (inputShape.section !== undefined && body !== undefined)
+    throw new Error(
+      "Choose one pre-fit or final nasal section basis, not two stacked constructions.",
+    );
   const section =
     inputShape.section === undefined
       ? undefined
