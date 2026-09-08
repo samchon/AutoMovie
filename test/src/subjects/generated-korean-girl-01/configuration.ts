@@ -89,6 +89,12 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // pose removal. One radius fits this subject's two independently bound eyes.
   irisRadius: 6.4,
   pupilRadius: 2.55,
+  // The source iris reads as dark brown under its captured illumination.
+  // These are authored linear albedos, not colors sampled from image pixels.
+  irisPigment: {
+    base: [0.004, 0.003, 0.002],
+    variation: [0.016, 0.009, 0.004],
+  },
   // Visible tissue occupies the existing aperture; it does not move its skin
   // attachment or resize the eye. Values are authored millimetre fits. The
   // lower width stays within the iris patch's 0.15 mm lid clearance.

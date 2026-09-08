@@ -32,6 +32,10 @@ import {
   portraitEyebrowProfile,
 } from "./eyebrows";
 import {
+  type IPortraitIrisPigment,
+  createPortraitIrisMaterials,
+} from "./irisPigment";
+import {
   type IPortraitOcularTissueShape,
   createPortraitOcularTissues,
 } from "./ocularTissues";
@@ -102,6 +106,8 @@ export interface IPortraitEyeShape {
   irisRadius: number;
   /** Pupil radius in mm; smaller than the iris. */
   pupilRadius: number;
+  /** Optional instance-owned linear-RGB pigment; omission uses the shared legacy palette. */
+  irisPigment?: IPortraitIrisPigment;
   /** Optional medial conjunctiva and lower lid margin; omission leaves them absent. */
   tissues?: IPortraitOcularTissueShape;
   /** Number of independently generated brow fibres, in [0,4096]; zero disables them. */
@@ -270,6 +276,12 @@ export function createPortraitEyeComponent(
     // Each optical volume owns its material so changing one shell's thickness
     // cannot leave a shared global thickness behind on either eye.
     materials: [
+      ...(shape.irisPigment === undefined
+        ? []
+        : createPortraitIrisMaterials(
+            socket.name + "-iris",
+            shape.irisPigment,
+          )),
       {
         id: socket.name + "-cornea",
         name: socket.name + " corneal surface",
@@ -636,7 +648,7 @@ export function buildPortraitEye(
           add(
             `${eye.name}-iris-${group}`,
             portraitRegion(mesh.positions, mesh.normals!, indices),
-            `iris-${group}`,
+            `${shape.irisPigment === undefined ? "iris" : eye.name + "-iris"}-${group}`,
           ),
         );
       }

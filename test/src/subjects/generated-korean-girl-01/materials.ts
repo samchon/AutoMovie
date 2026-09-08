@@ -1,5 +1,7 @@
 import type { IAutoMovieMaterial } from "@automovie/interface";
 
+import { createPortraitIrisMaterials } from "./irisPigment";
+
 /**
  * Provisional linear-RGB PBR finishes. These values are not sampled sRGB pixels
  * from the photograph, and the reference photo is not used as a skin texture.
@@ -37,14 +39,12 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   // Radial pigment bands vary a dark brown iris without changing its outline.
   // The geometry selects these colours deterministically; no reference pixels
   // are projected onto the eye and no lighting is baked into the pigment.
-  for (let i = 0; i < 8; i++) {
-    const tone = i / 7;
-    material(
-      `iris-${i}`,
-      [0.009 + 0.05 * tone, 0.006 + 0.031 * tone, 0.004 + 0.012 * tone],
-      0.65,
-    );
-  }
+  materials.push(
+    ...createPortraitIrisMaterials("iris", {
+      base: [0.009, 0.006, 0.004],
+      variation: [0.05, 0.031, 0.012],
+    }),
+  );
   // The pupil patch approximates the dark opening into the eye. Its opaque
   // stand-in must not produce a sharp painted-looking secondary catchlight.
   material("pupil", [0.0025, 0.002, 0.0015], 1);
