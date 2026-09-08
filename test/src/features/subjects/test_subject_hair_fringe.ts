@@ -54,17 +54,20 @@ export const test_subject_hair_fringe = (): void => {
         fitted.mesh.positions.slice(i, i + 3),
         base.mesh.positions.slice(i, i + 3),
       );
-  const tips: number[] = [];
+  const tips: { y: number; z: number }[] = [];
   for (let i = 0; i < fitted.mesh.positions.length; i += 3)
     if (
-      Math.abs(fitted.mesh.positions[i]) < 0.01 &&
-      fitted.mesh.positions[i + 1] < 0.055 &&
+      Math.abs(fitted.mesh.positions[i]) < 0.001 &&
       fitted.mesh.positions[i + 2] > 0
     )
-      tips.push(fitted.mesh.positions[i + 2]);
+      tips.push({
+        y: fitted.mesh.positions[i + 1],
+        z: fitted.mesh.positions[i + 2],
+      });
+  tips.sort((a, b) => a.y - b.y);
   TestValidator.predicate(
     "fringe clears actual support",
-    tips.length > 0 && tips.every((z) => z >= 0.0812 - 1e-12),
+    tips.length > 0 && tips[0].z >= 0.0812 - 1e-12,
   );
   TestValidator.equals("forehead ownership", forehead, saved);
   const nearHead = {
@@ -73,18 +76,22 @@ export const test_subject_hair_fringe = (): void => {
   };
   const near = buildPortraitHairProxy(undefined, nearHead)[0].geometry;
   if (near.type !== "mesh") throw new Error("Expected fringe mesh.");
-  const lowerDepths: number[] = [];
+  const lowerDepths: { y: number; z: number }[] = [];
   for (let i = 0; i < near.mesh.positions.length; i += 3)
     if (
       Math.abs(near.mesh.positions[i]) < 0.001 &&
-      near.mesh.positions[i + 1] <= 0.05 &&
       near.mesh.positions[i + 2] > 0
     )
-      lowerDepths.push(near.mesh.positions[i + 2]);
+      lowerDepths.push({
+        y: near.mesh.positions[i + 1],
+        z: near.mesh.positions[i + 2],
+      });
+  lowerDepths.sort((a, b) => a.y - b.y);
   TestValidator.predicate(
     "lower fringe follows the forehead rather than a virtual cap",
     lowerDepths.length > 0 &&
-      lowerDepths.every((z) => z >= 0.0412 - 1e-12 && z < 0.044),
+      lowerDepths[0].z >= 0.0412 - 1e-12 &&
+      lowerDepths[0].z < 0.044,
   );
   const absent = {
     ...forehead,

@@ -65,7 +65,7 @@ export function buildPortraitHairProxy(
       const fringe = support === undefined ? 0 : (1 - lateral * lateral) ** 2;
       const boundaryY =
         Math.max(25, -70 + 152 * front ** 2, earClearance) -
-        fringe * (32 + 3 * Math.cos(12 * angle));
+        fringe * (19 + 2 * Math.cos(12 * angle));
       const polar = 0.002 + v * (Math.acos((boundaryY - 30) / ry) - 0.002);
       const point = portraitPoint(
         rx * Math.sin(polar) * Math.sin(azimuth),

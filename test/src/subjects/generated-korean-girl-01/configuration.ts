@@ -73,8 +73,10 @@ export const portraitEyeShape: IPortraitEyeShape = {
   foldWidth: 1.6,
   foldDepth: 0.22,
   upperLidVolume: 0.18,
-  lowerLidWidth: 3.2,
-  lowerLidVolume: 0.85,
+  // A broad shallow lower roll joins the cheek without a narrow raised band.
+  // These offsets reshape surrounding tissue; the aperture remains its own rim.
+  lowerLidWidth: 4.6,
+  lowerLidVolume: 0.35,
   lidThickness: 0.18,
   surfaceRadius: 18,
   // Schematic-eye optical dimensions, not measurements recovered from this
