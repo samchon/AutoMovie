@@ -190,6 +190,12 @@ const lidRows = (
     const lowerWeight = socket.top.includes(id)
       ? 0
       : Math.sin((pi * (point[0] - left)) / (right - left));
+    // This basic lower branch is only a two-control envelope. Its shared row
+    // names below come from the upper-lid construction; they do not imply an
+    // independently authored pretarsal body, subtarsal boundary or preseptal
+    // section. In particular, corneal clearance added later is contact data,
+    // not the anatomical definition of the lower roll. ../FACE-ANATOMY.md records
+    // the missing detailed section and its lid/cheek boundary responsibilities.
     const lowerWidth = shape.lowerLidWidth * lowerWeight;
     const lowerVolume = shape.lowerLidVolume * lowerWeight;
     const outerWidth = 1.2 + (shape.foldWidth + 2.2) * weight + lowerWidth;

@@ -1,51 +1,61 @@
 # Reference face inspection {#reference-face-inspection}
 
-**Unfinished; likeness remains unaccepted.** The actually inspected complete capture belongs to source `999a8fc9`, GLB `2567261f720217d9bf4575f9f849d8a4eebf68d0de3e283deeb547dd39dd6d56`, profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. The source comparison, all nine views and all three clay views were opened. Blender 5.1.2 rendered the actual GLTF with 64 denoised Cycles CPU samples. New source may be newer than this frozen inspection.
+**Unfinished; likeness remains unaccepted.** The current inspected active capture belongs to pushed geometry source `777d3430`, GLB `454cd902450263161acbf4b66cfe618968a0e8937e9c07584b1f771366621ebe`, named model `177c63a8ac21031b47d90f62a2f7bb9b6d476597d28878cc9debf2b557e4da89` and profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. The main agent and independent image-only reviewer opened all fourteen frames individually, the source comparison and both sheets, plus eight close colour/clay views and their repeated calibration. Blender 5.1.2 imported actual AutoMovie GLTF using the unchanged 64-sample denoised Cycles CPU profile. No source photograph is projected onto the geometry.
+
+This checkpoint gives the shared outer lip border an independent curve subdivision rule. The angular upper notch and lower outline have improved, but clay retains a raised perimeter. The earlier corneal-contact result remains provisional. Complete construction-source review remains outstanding; no compiler fingerprint or numerical check establishes likeness.
 
 ## Front {#front}
 
-The medial cheek and smile transition are readable, but the face still looks synthetic. Small warm medial eye tissue now separates the sclera from the inner corner; the lower margin is subtle. The narrowed upper band and compact lower roll remain visible. Nasal apertures are rounded but too prominent/dark. Teeth form one row and the neck is continuous.
+The lower eyelids retain conspicuous central pads with nearly straight upper edges. Jagged ends have reduced relative to the pointwise-contact experiment. The nose lacks connected rounded tip and alar definition, and the regular dental row remains synthetic. The lip colour boundary is smoother, with no newly observed detached corner or doubled border. Face and neck remain assembled without a newly detached group.
 
 ## Anatomical left oblique {#left-oblique}
 
-The raised cheek continues into the perioral depression. The actual gradient and terminus still differ from the source. The dental row remains behind the upper lip; ear and cervical planes remain simplified.
+The photograph-facing pinna remains exposed. The medial cheek and lower jaw surfaces are connected but broadly shaped. The eye's lower pad and inner-upper dark wedge remain visible. Nasal underside transitions and the ear's internal folds remain simplified.
 
 ## Anatomical right oblique {#right-oblique}
 
-The opposite cheek/lip silhouette is coherent, with no observed new detached skin. The nose partly occludes the eye and hair hides the far face. Hidden anatomy is not established from this frame.
+The nose partly occludes the far eye. The former pinna fragment is hidden by the current lateral hair enclosure. The wider curtain introduces a heavy dark overhang at the temple. The mouth-corner depression and cheek transition remain broad.
 
 ## Anatomical left profile {#left-profile}
 
-Nose, lip and chin projection remain continuous but inferred. The grouped row and smooth neck are retained. The side view does not verify the chosen medial-cheek volume as this person's anatomy.
+Forehead, nose, lips and chin form a continuous silhouette. The recovered scalp height/depth fits more fully than the rejected uniform hair expansion. The long submental plane and temporal-to-neck continuation are inferred. Grouped crowns remain behind the upper lip but have simplified sections.
 
 ## Anatomical right profile {#right-profile}
 
-The opposing profile retains continuity. The curtain hides posterior anatomy. Oral projection, ear details and the broader skull/neck relation remain unaccepted.
+The curtain hides much of the side and rear head, including the previously protruding ear fragment. The visible nasal and oral silhouettes remain synthetic. The hair's coherent enclosure does not validate its proportions or the hidden anatomy.
 
 ## Back {#back}
 
-The cap and curtain enclose the head as coarse context. No new posterior improvement is implied by the cheek stage. Hidden cranial proportions remain inferred.
+The connected cap and curtain make one coarse mass. The crown remains tightly framed. Posterior likeness and detailed grooming are not established by this photograph or frame.
 
 ## Top {#top}
 
-The cap hides most of the scalp and the nose projects forward. The front opening exposes a broad forehead; the source's fringe is absent. This coarse shape is not a completed hairstyle.
+The cap and connected fringe retain a helmet-like outline. The former overlapping fringe pieces are absent, but the simple boundary does not reproduce the photograph's hair. Scalp height and depth remain owned by the scalp envelope rather than the lateral ear clearance.
 
 ## Bottom {#bottom}
 
-Nasal cavities, submental surface and the intentional open neck crop remain visible. No new serrated neck transition appears. The broad neck taper and nasal/ oral geometry remain approximate.
+Both nasal cavities remain connected to their lining. The columellar/alar underside is simplified, and the chin-to-throat form is broad. The lower neck crop is intentionally open. Shared attachment does not certify the aperture's placement or tangents.
 
 ## Rear oblique {#rear-oblique}
 
-The curtain, cap and simplified ear silhouette remain coherent coarse context. The ear attachment and hidden posterior surface remain unaccepted.
+The former opposite-pinna protrusion is no longer observed. Hair remains coarse and the framing tight. The exposed photograph-facing ear is retained in the corresponding source-facing views.
 
 ## Recorded source pose {#reference}
 
-The source still differs in eyes, nose, cheek/perioral form, lips, dental appearance and hair. The new medial eye tissue supplies small local context without materially resolving the whole-face difference. The source fringe remains missing; the active coarse cap/curtain retains the photograph's exposed right ear. Detailed grooming remains deferred.
+The source comparison still differs materially in eye/lid presentation, lower-nasal form, cheek/perioral transitions, lip contour and crowns. Darker per-eye pigment and lower-lip taper are retained local changes; no large overall likeness gain is established. The filename's adolescent target label is not a measurement of facial anatomy.
 
 ## Clay reference, front and oblique {#clay}
 
-All three were opened. The changed cheek/perioral relief survives removal of colour, alongside the eyelid bands, nasal apertures, grouped row and continuous neck. Transparent eye shells are opaque under this diagnostic override. Clay confirms geometry changes, not correctness or likeness.
+All three current clay frames were opened. Inferior nasal turns, broad perioral depressions and conspicuous lower-lid pads persist without pigment. The lip outline is smoother, but the upper perimeter and corners still read as a raised band rather than the photograph's softer transition. The clay override makes the transparent corneal shell opaque; its shell edge alone is not an optical defect in the colour render.
 
 ## Component replacement {#component-replacement}
 
-The measured host composes eyes, nose, mouth and a grouped dental interior. The dental group reads actual refined oral anchors; its local enamel/arch settings are separate from rigid placement. Cheek envelopes expose an optional mirrored outward/up/forward offset from live skin anchors. Each eye owns optional medial tissue and lower-margin dimensions and supplies both with its final lid/globe frame. Numerical checks cover group rigidity, attachment translation, mirrored offsets, ownership, neutral compatibility and refusals. The ocular stage retains all 922 previous parts and adds only four tissue surfaces. Current alternate-component appearance and overall likeness remain unaccepted.
+The active host composes eyes, nose, mouth and a grouped dental arch. The dental group follows refined oral anchors with independent local crown shape. Optional lower-lip band profiles follow the curved smile; optional crown contours retain group placement. The active outer-border curve rule preserves shared topology and improves its visible outline, without establishing a complete lip section. Nasal cubic-loft, absolute-section and coupled-control presets were rendered and rejected as likeness improvements; the active nasal relief retains the basic formula.
+
+The current eye experiment uses full corneal boundaries and contact against those resident surfaces, followed by the shared skin adapter. Independent clearance and remote-region tests do not settle its visible lower pad or upper wedge. The earlier optical capture `3232a96c` is retained as a recovery comparison.
+
+The separate anatomical-prior fit was regenerated against its current source model and target control net at `c666ebc0`. Its inactive GLB `663cffe0` has narrower eyes, broken lip colour boundaries, a stepped neck junction and excessive hair coverage. Small fitted landmark residuals do not make its real eye and lip boundaries match the photograph. It is not adopted as the primary result.
+
+Several direct subjects, complete construction evidence and the final whole-PR Self-Review remain unpaid. After the direct-study phase is accepted, the next PR must make `test` consume the new human package and reproduce the same accepted model, GLTF and complete preview from the same inputs and settings.
+
+The current [anatomical inventory](../FACE-ANATOMY.md) records missing form owners and insufficient controls across the upper orbit, lower lid/cheek, nasal base, upper lip and remaining face. Naming those owners is design work, not completion.

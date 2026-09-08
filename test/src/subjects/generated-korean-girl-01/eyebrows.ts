@@ -85,6 +85,11 @@ export function assertPortraitEyebrowProfile(
  * their planar distribution; their interpolated depths are not a substitute for
  * surface contact between those vertices.
  *
+ * This builder consumes the forehead surface; it does not construct the
+ * supraorbital rim, brow soft-tissue pad, glabella or superior orbital sulcus.
+ * Fibre arch is a hair dimension, not a brow-ridge projection. Their missing
+ * form ownership is recorded separately in ../FACE-ANATOMY.md.
+ *
  * A front-envelope query locates the skin at each fibre sample. Central height
  * differences estimate its local normal over one base fibre radius (at least
  * 0.001 mm). Radius, clearance and arch offset the centreline along that normal.

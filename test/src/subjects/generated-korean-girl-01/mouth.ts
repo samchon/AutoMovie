@@ -83,7 +83,9 @@ export interface IPortraitMouthShape {
    * Optional cutaneous-vermilion boundary refinement. `curve` gives this
    * closed boundary its own cubic subdivision rule while sharing it with the
    * adjoining skin. Omission or `surface` uses the general surface weights.
-   * This does not alter the inner oral boundary or introduce a pigment overlay.
+   * This retains the inner boundary's refinement rule and adds no pigment
+   * overlay. Later rounds can propagate the new outer positions into adjacent
+   * lip vertices, so final inner-rim coordinates still require comparison.
    */
   borderRefinement?: "surface" | "curve";
   /** Geodesic reach of surrounding skin adaptation. */

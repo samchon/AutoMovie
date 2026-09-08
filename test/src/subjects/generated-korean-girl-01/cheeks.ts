@@ -54,8 +54,12 @@ export interface IPortraitCheekVolume {
 /**
  * Independently authored cheek and perioral relief on one connected skin.
  * Support masses and the adjacent groove are separate controls: a nasolabial
- * crease alone does not supply the raised cheek beside it. The existing smile
- * belongs to the host; these values add only the explicitly requested relief.
+ * crease alone does not supply the raised cheek beside it. The host supplies
+ * current correspondence positions, not a validated three-dimensional smile.
+ * These values add only the explicitly requested relief. Each basic region is
+ * one axis-aligned envelope, not a complete reconstruction of a fat compartment
+ * or a freely authored cheek section. A missing directional contour requires
+ * the detailed form ownership described in ../FACE-ANATOMY.md.
  *
  * @author Samchon
  */

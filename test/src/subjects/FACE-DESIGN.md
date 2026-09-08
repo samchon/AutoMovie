@@ -2,6 +2,8 @@
 
 This design governs the direct studies and the later extraction of their demonstrated construction rules into `@automovie/human`. The current portrait remains unfinished. A valid mesh, an optional field or a reviewed formula does not establish a faithful likeness. The active source and its current capture, rather than this design, determine which capabilities have actually been demonstrated.
 
+The [anatomical form and control inventory](FACE-ANATOMY.md) distinguishes the current active implementation, fixed internal form, insufficient detail, absent owners and required connections across the whole face. Read it before treating an existing component name or scalar as evidence that a visible anatomical requirement is expressible.
+
 ## Basic construction and optional detail {#basic-and-detail}
 
 A component has a complete basic construction. Omitted detail invokes that construction; it does not produce an empty component or require an author to enumerate every anatomical constant. Detail is optional at the smallest independently meaningful owner. One eye can use its basic section while the other supplies a detailed lid, and a custom nose must not force custom ears or teeth.

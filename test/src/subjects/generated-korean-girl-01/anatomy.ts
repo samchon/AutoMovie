@@ -224,8 +224,11 @@ export const portraitOrbitalRelief: IPortraitReliefRegion[] = [
 /**
  * Philtral columns flank a shallow central groove above the upper vermilion.
  * Below the lower vermilion, a separate labiomental depression and chin support
- * define the lip-to-chin transition. The photographed smile is already in the
- * measured cage; these settings do not apply another smile or move mouth corners.
+ * define the lip-to-chin transition. The cage supplies the current projected
+ * smile correspondence and inferred depth, not a validated lip/cheek surface.
+ * These settings do not apply another smile or move mouth corners. The column
+ * fields are compact basic supports; they do not yet own continuous philtral
+ * curves from the nasal base to the Cupid peaks or the cutaneous lip section.
  */
 export const portraitPerioralRelief: IPortraitReliefRegion[] = [
   {
