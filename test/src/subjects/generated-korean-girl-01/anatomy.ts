@@ -1,50 +1,25 @@
 import type { IPortraitReliefRegion } from "../portraitRelief";
 
 /**
- * Nasal subunit supports on this subject's connected skin. The measured dorsal
- * path and the resized nasal openings remain the base; these local envelopes
- * supply the paired tip domes, alar lobules, alar-facial separation and columella.
- * The domes overlap across the midline rather than forming a pointed single
- * peak. Broader alar support and a shallow lateral boundary establish a rounded
- * wing together; the aperture alone must not stand in for that exterior volume.
- * They deform both exterior skin and attached lining continuously. Values are
- * authored millimetre fits, not recovered cartilage or soft-tissue measurements.
+ * Separate dorsal and alar-facial transitions on this subject's connected skin.
+ * The nose component's section loft owns the central tip, paired alar bodies
+ * and columellar turn before it derives the shared aperture and lining. Their
+ * former overlapping projection envelopes are absent, so the new depth basis
+ * does not receive a duplicate volume correction after refinement.
+ *
+ * These remaining fields retain the broad dorsal transition and shallow lateral
+ * alar-facial separation. They act on both skin and attached lining through the
+ * common refined host. Values are authored millimetre fits, not recovered
+ * cartilage or soft-tissue measurements. Non-nasal cheek support remains owned
+ * by its independent layer and still contributes to the lateral alar region.
  */
 export const portraitNasalRelief: IPortraitReliefRegion[] = [
-  {
-    name: "right-tip-dome",
-    anchor: 4,
-    offset: [-4.2, -1.5, 0],
-    radius: [9, 9, 16],
-    displacement: [-0.25, 0, 1.4],
-  },
-  {
-    name: "left-tip-dome",
-    anchor: 4,
-    offset: [4.2, -1.5, 0],
-    radius: [9, 9, 16],
-    displacement: [0.25, 0, 1.4],
-  },
   {
     name: "lower-dorsum",
     anchor: 5,
     offset: [0, 0, 0],
     radius: [12, 17, 20],
     displacement: [0, 0, 0.2],
-  },
-  {
-    name: "right-alar-lobule",
-    anchor: 49,
-    offset: [0, -2, 0],
-    radius: [11, 13, 17],
-    displacement: [-0.45, 0, 2.6],
-  },
-  {
-    name: "left-alar-lobule",
-    anchor: 279,
-    offset: [0, -2, 0],
-    radius: [11, 13, 17],
-    displacement: [0.45, 0, 2.6],
   },
   {
     name: "right-alar-facial-groove",
@@ -59,13 +34,6 @@ export const portraitNasalRelief: IPortraitReliefRegion[] = [
     offset: [0.5, 0, 4],
     radius: [5, 11, 14],
     displacement: [0, 0, -0.55],
-  },
-  {
-    name: "columellar-support",
-    anchor: 2,
-    offset: [0, 2, 4],
-    radius: [5, 8, 18],
-    displacement: [0, 0, 0.5],
   },
 ];
 
