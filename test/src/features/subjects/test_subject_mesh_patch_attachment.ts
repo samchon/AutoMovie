@@ -15,8 +15,9 @@ import { nclose } from "../internal/predicates";
  *    contains the smaller donor patch. The fitted boundary reaches z=2, its
  *    remote pole is fixed with reach zero, and the assembled surface is closed.
  * 2. Later caller changes cannot replace the group's owned attachment settings.
- * 3. After subdivision, a one-mm displaced join returns to the source plane.
- *    The native core and remote skin stay exact; shared topology is preserved.
+ * 3. After subdivision, a planar neighbourhood with a one-mm join-interior
+ *    displacement returns to that plane. Core, boundary and remote skin stay
+ *    exact; shared topology is preserved.
  *    A host without join faces yields no final proposal.
  */
 export const test_subject_mesh_patch_attachment = (): void => {
@@ -82,13 +83,21 @@ export const test_subject_mesh_patch_attachment = (): void => {
   assertPortraitSkinTopology(cage, []);
   const refined = subdivideControlMesh(cage, 2);
   const join = new Set<number>();
+  const fixed = new Set<number>();
   for (let face = 0; face < refined.groups.length; face++)
     if (refined.groups[face] === 2)
       refined.indices.slice(face * 3, face * 3 + 3).forEach((v) => join.add(v));
+    else
+      refined.indices
+        .slice(face * 3, face * 3 + 3)
+        .forEach((v) => fixed.add(v));
+  for (const id of fixed) join.delete(id);
   TestValidator.predicate("new join samples exist", join.size > 8);
-  refined.positions = refined.positions.map((p, id) =>
-    join.has(id) ? [p[0], p[1], 3] : p,
-  );
+  refined.positions = refined.positions.map((p, id) => [
+    p[0],
+    p[1],
+    join.has(id) ? 3 : 2,
+  ]);
   const final = applyPortraitFinalSurfaces(refined, [
     { id: "plane", propose: attached.finalSurface! },
   ]);

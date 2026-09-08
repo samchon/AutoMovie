@@ -8,6 +8,7 @@ import {
   type IPortraitPatchAttachment,
   fitPortraitPatchBoundary,
 } from "./portraitPatchAttachment";
+import { fairPortraitSurface } from "./portraitSurfaceFairing";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /** A source patch in the host's millimetre frame, with an oriented boundary. */
@@ -32,11 +33,10 @@ export interface IPortraitMeshPatch {
  * those require actual geometry measurement and rendered inspection.
  * Optional attachment first places the host boundary on the complete source
  * surface along the view ray. Its constraints use the existing host skin blend;
- * omission leaves the original host controls unchanged. The same source surface
- * evaluates the refined annulus after anatomical layers. Merely matching the
- * coarse boundary does not constrain new subdivision samples to that surface.
- * The donor core is excluded from this depth query: its undercuts and cavities
- * must retain native three-dimensional topology, not a frontmost depth sheet.
+ * omission leaves the original host controls unchanged. After refinement and
+ * anatomical layers, a bounded fairing solve joins the final neighbouring
+ * surfaces with fixed shared boundaries. The donor core and host are fixed;
+ * only annulus-interior vertices travel along the recorded view ray.
  */
 export function createPortraitMeshPatchComponent(
   id: string,
@@ -160,26 +160,8 @@ export function createPortraitMeshPatchComponent(
             finalSurface:
               attachment === undefined
                 ? undefined
-                : (refined) => {
-                    // Face ancestry survives subdivision. Shared inner/outer
-                    // seam identities are included once, so normals are still
-                    // computed on one connected surface by the host assembler.
-                    const vertices = new Set<number>();
-                    for (let face = 0; face < refined.groups.length; face++)
-                      if (refined.groups[face] === joinGroup)
-                        for (let corner = 0; corner < 3; corner++)
-                          vertices.add(refined.indices[face * 3 + corner]);
-                    return fitPortraitPatchBoundary(
-                      {
-                        positions: refined.positions.map((p) => [...p]),
-                        indices: [...refined.indices],
-                        viewRay: [...host.viewRay],
-                      },
-                      [...vertices],
-                      source.mesh,
-                      attachment,
-                    );
-                  },
+                : (refined) =>
+                    fairPortraitSurface(refined, joinGroup, host.viewRay),
             finish: () => [],
           };
         },

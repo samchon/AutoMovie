@@ -43,6 +43,8 @@ The measured subject distinguishes observed image coordinates from inferred dept
 
 ## Curves, sections and complete surface replacement {#surface-representation}
 
+The reference-patch joining annulus needs its own surface calculation. Projecting its final vertices independently onto the donor depth sheet was rejected because it created deep outer grooves and inner notches. The replacement calculation minimizes a cotangent squared-Laplacian energy inside the joining region while keeping its shared boundaries, adjacent host and native donor core fixed. Unknowns travel only along the declared view ray. Boundary-adjacent energy rows retain the influence of the fixed neighbouring surfaces; the solver must report nonconvergence instead of silently publishing a partial result. This is a discrete fairing construction, not a guarantee of exact tangent continuity or anatomical likeness. The complete colour/clay view set must judge both seams after every change.
+
 The default may use a compact control cage or named support fields. Detailed shape must be able to state section position, curvature, volume, boundary and connection directly. An arbitrary collection of inflation coefficients is insufficient when the desired contour cannot be expressed by their combined support.
 
 The existing nasal section primitives provide physical position/derivative jets and cubic interpolation. A detail representation can supply ordered sections or a control net in the component frame. The owner declares its parameter domain, units, interpolation, endpoint conditions and which rows or boundaries have a shared authority. A tangent vector is not interchangeable with a unit normal, and equal shading normals do not establish the required surface section.
