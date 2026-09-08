@@ -7,8 +7,8 @@ import { throwsError } from "../internal/predicates";
  * The coarse fringe must follow actual head depth, not occupy a guessed plane.
  * A planar host gives a clearance oracle independent of the portrait surface.
  * Scenarios:
- * 1. Additional panels clear the live foreground plane, preserve the existing
- *    cap/curtain positions and leave the supplied head buffers unchanged.
+ * 1. The fringe and cap form one connected surface that follows a live plane;
+ *    posterior/temporal points and the supplied head buffers stay unchanged.
  * 2. Missing support and an unrepresentable construction depth refuse.
  */
 export const test_subject_hair_fringe = (): void => {
@@ -24,20 +24,47 @@ export const test_subject_hair_fringe = (): void => {
   const fitted = buildPortraitHairProxy(undefined, forehead)[0].geometry;
   if (base.type !== "mesh" || fitted.type !== "mesh")
     throw new Error("Expected hair meshes.");
-  const boundary = base.mesh.positions.length;
   TestValidator.equals(
-    "existing coarse envelope retained",
-    fitted.mesh.positions.slice(0, boundary),
-    base.mesh.positions,
+    "the fringe shares the cap topology",
+    fitted.mesh.indices,
+    base.mesh.indices,
   );
+  const visited = new Set<number>([fitted.mesh.indices![0]]);
+  for (let pass = 0; pass < fitted.mesh.positions.length / 3; pass++) {
+    const before = visited.size;
+    for (let i = 0; i < fitted.mesh.indices!.length; i += 3) {
+      const face = fitted.mesh.indices!.slice(i, i + 3);
+      if (face.some((id) => visited.has(id)))
+        for (const id of face) visited.add(id);
+    }
+    if (visited.size === before) break;
+  }
+  TestValidator.equals(
+    "no detached fringe insert remains",
+    visited.size,
+    new Set(fitted.mesh.indices!).size,
+  );
+  for (let i = 0; i < base.mesh.positions.length; i += 3)
+    if (
+      base.mesh.positions[i + 2] < -0.05 ||
+      Math.abs(base.mesh.positions[i]) > 0.06
+    )
+      TestValidator.equals(
+        "posterior and temporal context stays exact",
+        fitted.mesh.positions.slice(i, i + 3),
+        base.mesh.positions.slice(i, i + 3),
+      );
+  const tips: number[] = [];
+  for (let i = 0; i < fitted.mesh.positions.length; i += 3)
+    if (
+      Math.abs(fitted.mesh.positions[i]) < 0.01 &&
+      fitted.mesh.positions[i + 1] < 0.055 &&
+      fitted.mesh.positions[i + 2] > 0
+    )
+      tips.push(fitted.mesh.positions[i + 2]);
   TestValidator.predicate(
     "fringe clears actual support",
-    fitted.mesh.positions.length > boundary &&
-      fitted.mesh.positions
-        .slice(boundary)
-        .every(
-          (v, i) => Number.isFinite(v) && (i % 3 !== 2 || v >= 0.0812 - 1e-12),
-        ),
+    tips.length > 0 && tips.every((z) => z >= 0.0812 - 1e-12),
   );
   TestValidator.equals("forehead ownership", forehead, saved);
   const nearHead = {
@@ -47,8 +74,12 @@ export const test_subject_hair_fringe = (): void => {
   const near = buildPortraitHairProxy(undefined, nearHead)[0].geometry;
   if (near.type !== "mesh") throw new Error("Expected fringe mesh.");
   const lowerDepths: number[] = [];
-  for (let i = boundary; i < near.mesh.positions.length; i += 3)
-    if (near.mesh.positions[i + 1] <= 0.05)
+  for (let i = 0; i < near.mesh.positions.length; i += 3)
+    if (
+      Math.abs(near.mesh.positions[i]) < 0.001 &&
+      near.mesh.positions[i + 1] <= 0.05 &&
+      near.mesh.positions[i + 2] > 0
+    )
       lowerDepths.push(near.mesh.positions[i + 2]);
   TestValidator.predicate(
     "lower fringe follows the forehead rather than a virtual cap",

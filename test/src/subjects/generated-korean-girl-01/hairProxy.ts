@@ -48,18 +48,51 @@ export function buildPortraitHairProxy(
   )
     throw new Error("Hair attachment exceeds its representable metric range.");
 
+  const support =
+    forehead === undefined
+      ? undefined
+      : createAutoMovieMeshDepthSampler(forehead, "z");
+  // The central fringe is the cap's own boundary. A separate overlapping sheet
+  // would preserve a second cap beneath it and cast a false attachment ridge.
+  // Its compact angular influence retains the temples and exposed left ear.
   const cap = portraitPatch(
     (u, v) => {
       const azimuth = 2 * Math.PI * u;
       const front = Math.max(0, Math.cos(azimuth));
       const earClearance = 50 - 160 * ((azimuth - Math.PI / 2) / 0.8) ** 2;
-      const boundaryY = Math.max(25, -70 + 152 * front ** 2, earClearance);
+      const angle = Math.atan2(Math.sin(azimuth), Math.cos(azimuth));
+      const lateral = Math.min(1, Math.abs(angle) / 0.65);
+      const fringe = support === undefined ? 0 : (1 - lateral * lateral) ** 2;
+      const boundaryY =
+        Math.max(25, -70 + 152 * front ** 2, earClearance) -
+        fringe * (32 + 3 * Math.cos(12 * angle));
       const polar = 0.002 + v * (Math.acos((boundaryY - 30) / ry) - 0.002);
-      return portraitPoint(
+      const point = portraitPoint(
         rx * Math.sin(polar) * Math.sin(azimuth),
         30 + ry * Math.cos(polar),
         -32 + rz * Math.sin(polar) * Math.cos(azimuth),
       );
+      if (support !== undefined && fringe > 0 && point.y < 108) {
+        const hit = support(point.x / 1000, point.y / 1000);
+        if (hit === null)
+          throw new Error(
+            "The central fringe requires a supporting forehead surface.",
+          );
+        const skinZ = hit.maximum * 1000;
+        if (!Number.isFinite(skinZ))
+          throw new Error(
+            "Fringe support exceeds its construction-millimetre range.",
+          );
+        // Blend over the complete root-to-tip section, keeping zero slope at
+        // its root. The tip shares the live forehead's 1.2 mm clearance.
+        const t = Math.max(0, Math.min(1, (108 - point.y) / (108 - boundaryY)));
+        const blend = fringe * t * t * (3 - 2 * t);
+        point.z = Math.max(
+          point.z * (1 - blend) + (skinZ + 1.2) * blend,
+          skinZ + 1.2,
+        );
+      }
+      return point;
     },
     48,
     24,
@@ -92,68 +125,6 @@ export function buildPortraitHairProxy(
         ring[i],
       );
     previous = ring;
-  }
-  if (forehead !== undefined) {
-    const sample = createAutoMovieMeshDepthSampler(forehead, "z");
-    // Nine broad panels supply the reference's forehead fringe. These are hair
-    // clumps, not fibres: each tuple is [root X, tip X, tip Y, width] in mm.
-    // Their tips stay near/above the brow region and well inside the ear's X
-    // range. The cap, fringe and curtain share the same envelope and finish.
-    const panels = [
-      [-27, -34, 54, 8],
-      [-20, -26, 48, 8],
-      [-14, -19, 51, 8],
-      [-8, -12, 44, 8],
-      [-2, -5, 46, 8],
-      [4, 4, 50, 8],
-      [10, 12, 47, 9],
-      [17, 22, 54, 9],
-      [24, 32, 58, 9],
-    ];
-    for (const [rootX, tipX, tipY, width] of panels) {
-      const panel = portraitPatch(
-        (u, v) => {
-          // Clump bodies retain collective coverage. Only the final 28 percent
-          // tapers, and the terminal cross-section curves up at its edges.
-          const end = Math.max(0, Math.min(1, (v - 0.72) / 0.28));
-          const taper =
-            (0.6 + 0.4 * Math.sin((Math.PI * v) / 2)) *
-            (1 - 0.9 * end * end * (3 - 2 * end));
-          const x = rootX + (tipX - rootX) * v * v + (u - 0.5) * width * taper;
-          const y = 108 + (tipY - 108) * v + 3.5 * (2 * u - 1) ** 2 * v ** 6;
-          const hit = sample(x / 1000, y / 1000);
-          if (hit === null)
-            throw new Error(
-              "Fringe panels require a supporting forehead surface.",
-            );
-          const skinZ = hit.maximum * 1000;
-          if (!Number.isFinite(skinZ))
-            throw new Error(
-              "Fringe support exceeds its construction-millimetre range.",
-            );
-          // Roots share the cap envelope. Below its front cutout, blend over
-          // 8 mm towards the forehead's 1.2 mm clearance surface. The small
-          // cross-panel arch gives coarse clumps volume without individual fibres.
-          const envelopeZ =
-            -32 + rz * Math.sqrt(1 - (x / rx) ** 2 - ((y - 30) / ry) ** 2);
-          const angle = Math.atan2(x / rx, (envelopeZ + 32) / rz);
-          // The panels are anterior to the ear cutout; this is the cap's same
-          // front-boundary rule on both anatomical sides.
-          const cutY = Math.max(25, -70 + 152 * Math.cos(angle) ** 2);
-          const contact = Math.max(0, Math.min(1, (cutY - y) / 8));
-          const blend = contact * contact * (3 - 2 * contact);
-          const support =
-            (envelopeZ + 0.12) * (1 - blend) + (skinZ + 1.2) * blend;
-          const arch = 0.65 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
-          return portraitPoint(x, y, Math.max(support, skinZ + 1.2) + arch);
-        },
-        6,
-        20,
-      );
-      const offset = cap.positions.length / 3;
-      cap.positions.push(...panel.positions);
-      cap.indices!.push(...panel.indices!.map((i) => i + offset));
-    }
   }
   cap.normals = portraitNormals(cap.positions, cap.indices!);
   return [portraitPart("hair-mass", cap, "hair")];
