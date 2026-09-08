@@ -76,6 +76,8 @@ The aperture fade supplies both a bounded scalar weight and its spatial gradient
 
 The `measuredPortraitAssembly` supplies paired cheek layers plus named nasal, orbital and perioral supports. Each region carries its attachment, offset, XYZ support radii and signed displacement. The nasal layer distinguishes tip domes, alar lobules, their facial boundaries and columellar support; the perioral layer distinguishes philtral columns, their groove and the lip-to-chin transition. These are compact surface envelopes, not reconstructed internal tissues or a muscle simulation. A shallow nasolabial relief follows the current smile; the medial tear-trough depression is disabled. These are authored shape choices, not age measurements. Fine wrinkles remain deferred. Ear roots are embedded separate shells, not welded to the skin.
 
+`portraitNasalLayerFor(detail?)` in `anatomy.ts` is the optional numerical replacement path for the nasal layer. Omission retains those basic supports. A supplied radius and named control array uses `createPortraitControlLayer` to solve the total requested XYZ movement at each control, including stationary anchors. Replace the layer with ID `nasal-subunits` in a chosen assembly before calling `buildReferencePortrait`; the source and lining consume one field. The retained `portraitNasalDetail` preset was rejected after its `0af74958` capture produced a broad flat tip. It is an inspectable experiment, not the active portrait fit or a recommended default.
+
 This prototype currently exposes replaceable procedural eyes, noses and mouths. Ears, cranium and neck remain subject builders. Numerical controls do not establish anatomical correctness.
 
 ```ts

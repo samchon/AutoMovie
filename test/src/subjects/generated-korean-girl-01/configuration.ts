@@ -2,7 +2,6 @@ import type { IPortraitComponent } from "../portraitComponents";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
-  portraitNasalDetail,
   portraitNasalLayerFor,
   portraitOrbitalRelief,
   portraitPerioralRelief,
@@ -476,11 +475,6 @@ export const measuredPortraitAssembly = {
  */
 export const portraitAssembly = {
   ...measuredPortraitAssembly,
-  surfaceLayers: measuredPortraitAssembly.surfaceLayers.map((layer) =>
-    layer.id === "nasal-subunits"
-      ? portraitNasalLayerFor(portraitNasalDetail)
-      : layer,
-  ),
   components: [
     ...portraitComponentsFor(
       portraitEyeShape,

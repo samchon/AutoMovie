@@ -86,6 +86,20 @@ export function buildReferencePortrait(
     },
     "skin",
   ).geometry;
+  const ears = buildPortraitEars(skin.mesh);
+  // The coarse hair enclosure must include the resident ears as well as scalp.
+  // Otherwise a separately attached pinna can penetrate a cap correctly fitted
+  // to the head alone. Ear buffers are metres; the enclosure consumes mm, like
+  // the refined skin. This changes the shared envelope, not the ear anatomy.
+  const hairEnvelope = [
+    ...head.refined.positions,
+    ...ears.flatMap((ear) => {
+      const positions = ear.geometry.mesh.positions;
+      return Array.from({ length: positions.length / 3 }, (_v, i) =>
+        positions.slice(3 * i, 3 * i + 3).map((value) => value * 1000),
+      );
+    }),
+  ];
   // portraitPart preserves mesh geometry while applying the same metre boundary
   // used by the GLTF exporter; the ear sampler therefore reads renderer units.
   return {
@@ -94,9 +108,9 @@ export function buildReferencePortrait(
     origin: "generated",
     parts: [
       ...head.parts,
-      ...buildPortraitEars(skin.mesh),
+      ...ears,
       ...(assembly.hairProxy
-        ? buildPortraitHairProxy(head.refined.positions, skin.mesh)
+        ? buildPortraitHairProxy(hairEnvelope, skin.mesh)
         : []),
     ],
     materials: [

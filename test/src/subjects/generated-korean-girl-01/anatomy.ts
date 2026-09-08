@@ -36,10 +36,13 @@ export function portraitNasalLayerFor(
 }
 
 /**
- * Provisional subject fit for the complete nasal field. Dorsum, tip, columella
+ * Rejected study fit for the complete nasal field, retained for explicit
+ * replacement experiments and absent from the active portrait. Dorsum, tip, columella
  * and alar-facial anchors are coupled so their requested movements hold together.
  * Both external skin and attached vestibular lining consume the same field.
  * These explicit mm offsets are authored depth/form hypotheses, not a scan.
+ * The 0af74958 capture produced a broad flat tip, so numerical interpolation
+ * does not establish an acceptable relationship between these control targets.
  */
 export const portraitNasalDetail: IPortraitNasalDetail = {
   radius: 22,

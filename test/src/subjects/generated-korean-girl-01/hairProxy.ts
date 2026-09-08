@@ -23,7 +23,8 @@ export function buildPortraitHairProxy(
   forehead?: IAutoMovieMesh,
 ) {
   // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
-  // cannot follow another foundation or fitted head. Uniform expansion retains
+  // cannot follow another foundation or fitted head. The caller includes any
+  // separately attached ears in this enclosure population. Uniform expansion retains
   // the authored haircut and ear cutout while enclosing every supplied scalp
   // vertex above Y=20 mm. Three millimetres of radial margin cover coarse panel
   // interpolation; this is context geometry, not a scalp/hair collision solver.

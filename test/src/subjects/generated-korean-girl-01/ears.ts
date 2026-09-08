@@ -2,7 +2,7 @@ import {
   createAutoMovieMeshDepthSampler,
   transformAutoMovieMesh,
 } from "@automovie/engine";
-import type { IAutoMovieMesh, IAutoMovieModelPart } from "@automovie/interface";
+import type { IAutoMovieMesh } from "@automovie/interface";
 
 import {
   portraitPoint as p,
@@ -169,7 +169,7 @@ export function buildPortraitEars(
   // the pinna remains a separate shell, not a claim of welded skin topology.
   const frontZ = Math.max(...outlinePoints.map((point) => point.z));
   const depthSpan = frontZ - Math.min(...outlinePoints.map((point) => point.z));
-  const parts: IAutoMovieModelPart[] = [];
+  const parts: ReturnType<typeof portraitPart>[] = [];
   for (const side of [-1, 1]) {
     const attachmentX = (y: number, z: number): number => {
       const depth = surfaceDepth(
