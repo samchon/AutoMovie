@@ -19,6 +19,9 @@ import { nclose, throwsError } from "../internal/predicates";
  * 3. Missing/malformed buffers, changed lineage, a midline-crossing cavity,
  *    missing/ambiguous skin correspondence, a mismatched target rim and a broken
  *    original normal seam refuse instead of silently welding another surface.
+ * 4. Both target cavities retain their original anatomical side and unique
+ *    Float32 skin identity. Reflected, crossing, zero/underflow and coincident
+ *    targets refuse; adjacent same-side and distinctly sampled targets pass.
  */
 export const test_subject_rim_attachment = (): void => {
   const blank = (): IAutoMovieMesh => ({
@@ -286,4 +289,99 @@ export const test_subject_rim_attachment = (): void => {
       "normal field",
     ),
   );
+  for (const affectedSide of [-1, 1] as const) {
+    const skinStart = affectedSide === -1 ? 0 : 12;
+    const liningStart = affectedSide === -1 ? 0 : 5;
+    const reflected = structuredClone(target);
+    // Move the entire cavity across the midline, beyond the opposite cavity,
+    // so this side-lineage falsifier does not also create coincident skin IDs.
+    for (let id = liningStart; id < liningStart + 5; id++)
+      reflected.lining.positions[id * 3] =
+        -reflected.lining.positions[id * 3] - affectedSide * 0.02;
+    for (let id = skinStart; id < skinStart + 4; id++)
+      reflected.skin.positions[id * 3] =
+        -reflected.skin.positions[id * 3] - affectedSide * 0.02;
+    TestValidator.predicate(
+      "complete target reflection refuses on either side",
+      throwsError(
+        () => replacePortraitRimAttachment(input, reflected, 1, 1.5),
+        "midline",
+      ),
+    );
+    for (const x of [0, -affectedSide * 0.0001, affectedSide * 1e-50]) {
+      const crossing = structuredClone(target);
+      crossing.lining.positions[(liningStart + 4) * 3] = x;
+      TestValidator.predicate(
+        "target deep wall cannot touch, cross or round onto the midline",
+        throwsError(
+          () => replacePortraitRimAttachment(input, crossing, 1, 1.5),
+          "midline",
+        ),
+      );
+    }
+    for (const x of [affectedSide * 0.0001, affectedSide * 2 ** -149]) {
+      const adjacent = structuredClone(target);
+      adjacent.lining.positions[(liningStart + 4) * 3] = x;
+      const result = replacePortraitRimAttachment(
+        input,
+        adjacent,
+        affectedSide,
+        1.5,
+      );
+      TestValidator.equals(
+        "a distinctly sampled same-side target remains accepted",
+        Math.fround(result.lining.positions[(liningStart + 4) * 3]),
+        Math.fround(x),
+      );
+    }
+    for (const delta of [0, 1e-14]) {
+      const ambiguous = structuredClone(target);
+      ambiguous.skin.positions.splice(
+        (skinStart + 4) * 3,
+        3,
+        ...ambiguous.skin.positions.slice(skinStart * 3, skinStart * 3 + 3),
+      );
+      ambiguous.skin.positions[(skinStart + 4) * 3 + 2] += delta;
+      TestValidator.predicate(
+        "target skin correspondence must remain unique at Float32 precision",
+        throwsError(
+          () => replacePortraitRimAttachment(input, ambiguous, 1, 1.5),
+          "shared skin vertex",
+        ),
+      );
+    }
+    const distinct = structuredClone(target);
+    distinct.skin.positions.splice(
+      (skinStart + 4) * 3,
+      3,
+      ...distinct.skin.positions.slice(skinStart * 3, skinStart * 3 + 3),
+    );
+    distinct.skin.positions[(skinStart + 4) * 3 + 2] += 1e-7;
+    TestValidator.equals(
+      "a distinct non-rim target skin point does not alter the replacement",
+      replacePortraitRimAttachment(input, distinct, 1, 1.5),
+      replacePortraitRimAttachment(input, target, 1, 1.5),
+    );
+    const wrongResident = structuredClone(target);
+    const first = wrongResident.skin.positions.slice(
+      skinStart * 3,
+      skinStart * 3 + 3,
+    );
+    wrongResident.skin.positions.splice(
+      skinStart * 3,
+      3,
+      ...wrongResident.skin.positions.slice(
+        (skinStart + 4) * 3,
+        (skinStart + 4) * 3 + 3,
+      ),
+    );
+    wrongResident.skin.positions.splice((skinStart + 4) * 3, 3, ...first);
+    TestValidator.predicate(
+      "a unique target match must retain the same resident skin identity",
+      throwsError(
+        () => replacePortraitRimAttachment(input, wrongResident, 1, 1.5),
+        "shared skin vertex",
+      ),
+    );
+  }
 };

@@ -170,25 +170,36 @@ export function replacePortraitRimAttachment(
   const targetSkin = points(target.skin),
     targetLining = points(target.lining);
   const key = (p: number[]) => p.join("/");
-  const skinIds = new Map<string, number[]>();
-  skinPoints.forEach((p, id) =>
-    skinIds.set(key(p), [...(skinIds.get(key(p)) ?? []), id]),
-  );
+  const skinIds = new Map<string, number[]>(),
+    targetSkinIds = new Map<string, number[]>();
+  // A target may introduce a second coincident skin vertex even when its rim
+  // still matches the original resident ID. Check uniqueness after Float32
+  // sampling on each basis, where those positions will actually be exported.
+  for (const [basis, ids] of [
+    [skinPoints, skinIds],
+    [targetSkin, targetSkinIds],
+  ] as const)
+    basis.forEach((p, id) => ids.set(key(p), [...(ids.get(key(p)) ?? []), id]));
   const faces = Array.from(
     { length: input.lining.indices!.length / 3 },
     (_, id) => input.lining.indices!.slice(id * 3, id * 3 + 3),
   );
+  // Matching indices do not stop a complete target cavity from reflecting
+  // across the midline. Each corresponding corner must retain its original
+  // anatomical side, including the unselected cavity used as the control.
   for (const face of faces)
     if (
       liningPoints[face[0]][0] === 0 ||
       face.some(
         (id) =>
           Math.sign(liningPoints[id][0]) !==
-          Math.sign(liningPoints[face[0]][0]),
+            Math.sign(liningPoints[face[0]][0]) ||
+          Math.sign(targetLining[id][0]) !==
+            Math.sign(liningPoints[face[0]][0]),
       )
     )
       throw new Error(
-        "A replaceable lining must stay on one side of the head midline.",
+        "A replaceable lining must retain the same side of the head midline on both bases.",
       );
   const selected = faces.filter(
     (face) => Math.sign(liningPoints[face[0]][0]) === side,
@@ -201,9 +212,11 @@ export function replacePortraitRimAttachment(
   const shared = new Map<number, number>();
   for (const id of [...selectedRim, ...otherRim]) {
     const resident = skinIds.get(key(liningPoints[id]));
+    const replacement = targetSkinIds.get(key(targetLining[id]));
     if (
       resident?.length !== 1 ||
-      key(targetSkin[resident[0]]) !== key(targetLining[id])
+      replacement?.length !== 1 ||
+      resident[0] !== replacement[0]
     )
       throw new Error(
         "A final lining boundary must identify one shared skin vertex on both bases.",
