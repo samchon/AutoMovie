@@ -56,7 +56,7 @@ export const portraitEarShape: IPortraitEarShape = {
 export function buildPortraitEars(
   skin: IAutoMovieMesh,
   shape: IPortraitEarShape = portraitEarShape,
-): IAutoMovieModelPart[] {
+): ReturnType<typeof portraitPart>[] {
   if (
     !Object.values(shape).every(Number.isFinite) ||
     shape.heightScale <= 0 ||
