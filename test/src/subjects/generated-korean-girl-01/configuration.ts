@@ -32,7 +32,10 @@ import {
   createPortraitNoseComponent,
   portraitNostrilContains,
 } from "./nose";
-import { createPortraitOrbitalSupport } from "./orbitalSupport";
+import {
+  type IPortraitOrbitalSupportShape,
+  createPortraitOrbitalSupport,
+} from "./orbitalSupport";
 
 /** Subject-specific attachments; component implementations contain no landmark IDs. */
 export const portraitEyeSockets: IPortraitEyeSocket[] = [
@@ -487,6 +490,29 @@ export function portraitComponentsFor(
   ];
 }
 
+/**
+ * Upper-orbit sections retained as authored data for both assembly and capture.
+ * These small fitted displacements are not anatomical population dimensions.
+ */
+export const portraitOrbitalSupportShapes: readonly {
+  side: "right" | "left";
+  shape: IPortraitOrbitalSupportShape;
+}[] = (["right", "left"] as const).map((side, i) => ({
+  side,
+  shape: {
+    radius: 14,
+    stations: (i === 0 ? [107, 105, 70] : [336, 334, 300]).map(
+      (anchor, station) => ({
+        name: ["medial", "middle", "lateral"][station],
+        anchor,
+        forehead: { height: 9, projection: 0 },
+        browProjection: [0.25, 0.7, 0.25][station],
+        sulcus: { descent: 8, projection: [-0.05, -0.12, -0.05][station] },
+      }),
+    ),
+  },
+}));
+
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
   hairProxy: true,
@@ -504,19 +530,8 @@ export const measuredPortraitAssembly = {
     // Upper orbital support belongs to skin form, independently of brow hair.
     // Paired small anterior pad sections sit between fixed forehead witnesses
     // and a shallow superior orbital sulcus. Values are fitting hypotheses.
-    ...(["right", "left"] as const).map((side, i) =>
-      createPortraitOrbitalSupport(side, {
-        radius: 14,
-        stations: (i === 0 ? [107, 105, 70] : [336, 334, 300]).map(
-          (anchor, station) => ({
-            name: ["medial", "middle", "lateral"][station],
-            anchor,
-            forehead: { height: 9, projection: 0 },
-            browProjection: [0.25, 0.7, 0.25][station],
-            sulcus: { descent: 8, projection: [-0.05, -0.12, -0.05][station] },
-          }),
-        ),
-      }),
+    ...portraitOrbitalSupportShapes.map(({ side, shape }) =>
+      createPortraitOrbitalSupport(side, shape),
     ),
   ],
 };

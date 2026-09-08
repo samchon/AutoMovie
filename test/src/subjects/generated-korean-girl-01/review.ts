@@ -30,6 +30,7 @@ import type * as Mouth from "./mouth";
 import type * as Nasal from "./nose";
 import type * as Nostril from "./nostrilRim";
 import type * as Ocular from "./ocularTissues";
+import type * as OrbitalSupport from "./orbitalSupport";
 
 /**
  * Current actually inspected active capture, with a partial construction-source
@@ -37,6 +38,26 @@ import type * as Ocular from "./ocularTissues";
  * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
  * intermediate account does not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation} Owns one forehead/brow/sulcus section on a subject-bound upper orbit.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation} Read every station member with the actual skin query and coupled field consumer. Signed projection changes section form, while positive height/descent locates its neighbours; these do not represent measured bone or fat thickness.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.name} Preserves station identity in the three coupled anatomical targets.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation.name} Traced nonempty/unique admission and distinct forehead/brow/sulcus target names. Deterministic ordering belongs to the shared solver rather than the station array's incidental order.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.anchor} Binds the section to a live retained brow-skin datum.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation.anchor} Checked nonnegative integral input and resident finite XYZ admission before building the skin sampler. The subject supplies different anchors for each orbit; the generic group contains no subject landmark identities.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.forehead} Locates and constrains the surface above the brow pad.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation.forehead} Read positive height and signed projection into the actual z query and combined solve. The independent inclined-plane case keeps this target stationary while the adjacent brow moves forward.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.browProjection} Sets the target anterior movement at the brow's own resident skin section.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation.browProjection} Traced the zero-height target and independent +0.2 mm oracle. This value affects skin consumed by the later eyebrow builder; it is not a hair offset or an independently added kernel amplitude.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.sulcus} Defines the lower side of the upper-orbit support relationship.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation.sulcus} Read positive descent, negative local Y placement and signed projection with the -0.1 mm inclined-plane oracle. Its depth is queried on real skin rather than guessed from the brow point's Z.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportShape} Groups bounded upper-orbit sections under one interpolation support.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportShape} Read copied nested inputs, one-to-32 station admission and the three-target-per-station mapping into the solver's 96-control domain. The section group remains optional in assembly and is not a complete anatomical reconstruction.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportShape.radius} Sets the common millimetre support used by the existing coupled solver.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportShape.radius} Compared finite positive metric admission with the resulting field radii. It governs interpolation reach rather than the brow-pad's literal tissue thickness; open-lid masking remains in the surface assembler.
+ * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportShape.stations} Supplies all section targets including stationary neighbouring witnesses.
+ * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportShape.stations} Checked empty/oversized/duplicate refusal, the exact 32-section limit, all-zero identity and ownership under later mutation. A provided empty population refuses rather than silently deleting one side of the support.
+ * @evidence {@link OrbitalSupport.createPortraitOrbitalSupport} Builds the actual skin-based upper-orbit field consumed by portraitAssembly.
+ * @evidenceReview {@link OrbitalSupport.createPortraitOrbitalSupport} Read full admission, live surface queries, three target roles and the shared coupled solver. The inclined-plane numeric oracle fails when displacement sign is reversed. The first exported comparison changes head skin by at most 0.709414 mm, both nearby lid regions and following brow fibres; lips/dentition remain unchanged. Its first visual assessment remains separate from this numerical observation.
  * @evidence {@link LowerLid.IPortraitLowerLidPoint} Gives a named lower-tissue sample its planar offset and anterior section projection.
  * @evidenceReview {@link LowerLid.IPortraitLowerLidPoint} Read both millimetre fields through the eye's local outward-normal construction and support-depth bridge. Projection is not muscle thickness or a contact clearance; the two coordinates have separate geometric effects.
  * @evidence {@link LowerLid.IPortraitLowerLidPoint.offset} Places tissue in order from the aperture towards surrounding skin.
