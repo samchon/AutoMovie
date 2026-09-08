@@ -97,7 +97,9 @@ export const test_subject_component_replacement = (): void => {
     replacement.source[152],
     host.positions[152],
   );
-  const head = buildPortraitHead(host, replacementParts, 1);
+  // Inspect the assembled cage's exact seam topology. Loop refinement has its
+  // own adjacency/label scenarios and does not create these component joins.
+  const head = buildPortraitHead(host, replacementParts, 0);
   {
     const edges = new Map<
       string,

@@ -82,15 +82,24 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // have separate positions/projections. These mm values are a render-study
   // hypothesis, not adult anatomical averages or accepted subject dimensions.
   lowerLidProfile: {
-    sections: [0, 1].map((at) => ({
+    // The photographed roll is not one uniform crescent. Its body tapers
+    // independently along the lid; the lower section returns gently towards
+    // supporting skin instead of carving a negative-depth wrinkle beneath it.
+    sections: [
+      { at: 0, fullness: 0.35 },
+      { at: 0.25, fullness: 0.75 },
+      { at: 0.55, fullness: 0.8 },
+      { at: 0.8, fullness: 0.55 },
+      { at: 1, fullness: 0.25 },
+    ].map(({ at, fullness }) => ({
       at,
       section: {
         margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 1.9, projection: 0.75 },
-        pretarsalLower: { offset: 3.4, projection: 0.45 },
-        subtarsalInner: { offset: 4.2, projection: -0.12 },
-        subtarsalOuter: { offset: 4.7, projection: -0.15 },
-        preseptal: { offset: 6.4, projection: -0.05 },
+        pretarsalCrest: { offset: 1.9, projection: 0.75 * fullness },
+        pretarsalLower: { offset: 3.4, projection: 0.45 * fullness },
+        subtarsalInner: { offset: 4.2, projection: 0.05 * fullness },
+        subtarsalOuter: { offset: 4.7, projection: 0.02 * fullness },
+        preseptal: { offset: 6.4, projection: 0 },
         attachment: 8.5,
       },
     })),
