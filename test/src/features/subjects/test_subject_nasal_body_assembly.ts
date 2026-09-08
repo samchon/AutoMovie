@@ -23,7 +23,7 @@ import { throwsError } from "../internal/predicates";
 export const test_subject_nasal_body_assembly = (): void => {
   // This scenario isolates the complete final-body basis. Another subject's
   // selected depth-scale basis must not be stacked beneath it.
-  const baseShape = { ...portraitNoseShape, depthScale: 1 };
+  const baseShape = { ...portraitNoseShape, depthScale: 1, lobules: undefined };
   const host = {
     positions: referenceControlNet.positions,
     indices: referenceControlNet.indices,

@@ -2,6 +2,7 @@ import type { IPortraitComponent } from "../portraitComponents";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
+  type IPortraitNasalDetail,
   portraitNasalLayerFor,
   portraitOrbitalRelief,
   portraitPerioralRelief,
@@ -244,6 +245,14 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // support so tip, sidewall and rim samples follow one projection relationship.
   // This fitting trial changes depth, not a claim that tip roundness is solved.
   depthScale: 0.78,
+  // Actual anterior sections replace the basic nasal inflation layer below.
+  // The central tip and each ala share the support-scaled host frame. Their
+  // extents are fitting hypotheses, not measured cartilage dimensions.
+  lobules: [
+    { anchor: 4, offset: [0, -2, 1], radii: [12, 12, 10], core: 0.65 },
+    { anchor: 49, offset: [0, -2, 4], radii: [8, 9, 7], core: 0.6 },
+    { anchor: 279, offset: [0, -2, 4], radii: [8, 9, 7], core: 0.6 },
+  ],
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
@@ -519,6 +528,12 @@ export const portraitOrbitalSupportShapes: readonly {
   },
 }));
 
+/** Explicit empty relief: local nasal sections replace the former inflation layer. */
+export const portraitNasalSupportDetail: IPortraitNasalDetail = {
+  radius: 22,
+  controls: [],
+};
+
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
   hairProxy: true,
@@ -530,7 +545,9 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
-    portraitNasalLayerFor(),
+    // The selected lobule construction owns nasal volume. Do not compound it
+    // with the former tip/ala displacement envelopes on the refined surface.
+    portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
     // Upper orbital support belongs to skin form, independently of brow hair.

@@ -27,6 +27,8 @@ import type * as Head from "./head";
 import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
 import type * as Mouth from "./mouth";
+import type * as NasalLobule from "./nasalLobule";
+import type * as NasalSupport from "./nasalSupport";
 import type * as Nasal from "./nose";
 import type * as Nostril from "./nostrilRim";
 import type * as Ocular from "./ocularTissues";
@@ -38,6 +40,12 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
  * intermediate account does not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link NasalSupport.createPortraitNasalSupport} Resolves nasal projection from one subject-bound facial support plane.
+ * @evidenceReview {@link NasalSupport.createPortraitNasalSupport} Read positive ratio admission, exact neutral return, owned datums, normalized plane solution and finite query/displacement refusal. The independent z=y/2 case retains support points and scales a four-millimetre height by one half under translation. This is a projection relationship, not tip curvature or recovered anatomical depth.
+ * @evidence {@link Nasal.IPortraitNoseSocket.supportPlane} Supplies the shared nasal root and facial-base reference identities.
+ * @evidenceReview {@link Nasal.IPortraitNoseSocket.supportPlane} Traced copied optional IDs through the nonidentity-only resident check and the support helper. Omitted/one scaling requires no plane; active scaling refuses incomplete/nonresident/degenerate support rather than falling back to world zero.
+ * @evidence {@link Nasal.IPortraitNoseShape.depthScale} Selects the shared nasal projection basis used by exterior and rim fitting.
+ * @evidenceReview {@link Nasal.IPortraitNoseShape.depthScale} Read the neutral default, positive finite domain and explicit section/body conflict. The same support displacement feeds both surface targets and aperture fitting before lining attachment. The component oracle fails when its sign is reversed; a lower projection does not by itself establish rounded alar or tip form.
  * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation} Owns one forehead/brow/sulcus section on a subject-bound upper orbit.
  * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation} Read every station member with the actual skin query and coupled field consumer. Signed projection changes section form, while positive height/descent locates its neighbours; these do not represent measured bone or fat thickness.
  * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.name} Preserves station identity in the three coupled anatomical targets.
@@ -349,7 +357,11 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Head.buildPortraitHead} #a66a8d7 Read unchanged-host fitting, cut and region refusals, common cranium/neck topology, optional curves, post-layer proposals and finish(refined). The lip test confirms actual shared skin/colour-border positions; all fourteen a34f1fe4 frames retain assembled skin and neck. The nasal underside and eye pads remain visible defects outside a topology-only conclusion.
  * @evidence {@link Dental.buildPortraitDentalRow} Read the elliptical guide, cumulative arc-length crown centres, tangent rotation and common cervical Y plane, then inspected the current front/profiles/clay. One arch is retained behind the lip; rectangular crowns and the dark lower gap still differ from the photographed smile.
  * @evidence {@link Attachment.createPortraitDentalComponent} Checked that the interior submits no cuts or skin constraints and constructs its rigid frame only from final refined oral anchors. The current exported tooth-upper-arch stays grouped; its placement protocol does not solve the remaining crown and lip appearance.
- * @evidence {@link Nasal.createPortraitNoseComponent} Traced optional loft depth through rim-plane fitting, sizing, tilt and shared lining construction. The active recovered preset omits the loft. Current source/bottom/clay views retain connected openings but weak tip/alar separation; changing exterior depth can still alter the fitted aperture frame.
+ * @evidence {@link NasalLobule.IPortraitNasalLobule} Declares a resident datum, apex offset, three physical radii and normalized inner section extent for each local nasal body.
+ * @evidenceReview {@link NasalLobule.IPortraitNasalLobule} Read the head XYZ/millimetre frame and core [0,1) domain. Separate array members allow asymmetric alae; none of these dimensions is asserted as a measured cartilage value.
+ * @evidence {@link NasalLobule.createPortraitNasalLobules} Binds copied local ellipsoid sections to support-scaled skin before exterior and rim fitting.
+ * @evidenceReview {@link NasalLobule.createPortraitNasalLobules} Traced the anterior square-root section, cubic identity annulus, normalized overlap and owned datums. The radius-five/radius-three test yields depth four, and the component's actual aperture and lining retain that shared result. This establishes the calculation, with rendered likeness still awaiting the new capture.
+ * @evidence {@link Nasal.createPortraitNoseComponent} Traced support scaling and optional local lobules through the common exterior/rim depth evaluator, sizing, tilt and shared lining construction. The earlier ea17fbca capture retains connected openings but weak tip/alar roundness; the new section preset remains a rendering trial.
  * @evidence {@link Ocular.createPortraitOcularTissues} Read the copied tissue profile, mirrored medial distance, caruncle/plica envelopes and lower strip clipped to half the live aperture. Current source views retain the small medial tissue and lower margin; their lid/globe attachment does not resolve the conspicuous lid bands or synthetic eye presentation.
  * @evidence {@link Eyes.buildPortraitEye} Read the final lid curves, fitted spherical height, camera-ray gaze, clipped pigment/corneal layers and radial sclera normal. Independent radius-two/translated-cap and actual GLB tests cover the corrected canthi; all fourteen a34f1fe4 frames and eight close colour/clay views were opened. The lower body is clearer but the central pad and upper-inner wedge remain, so overall ocular likeness is unaccepted.
  */

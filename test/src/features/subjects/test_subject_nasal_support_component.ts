@@ -38,6 +38,7 @@ export const test_subject_nasal_support_component = (): void => {
   const shape = {
     ...portraitNoseShape,
     depthScale: 0.5,
+    lobules: undefined,
     section: undefined,
     body: undefined,
   };

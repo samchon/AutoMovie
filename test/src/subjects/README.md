@@ -125,6 +125,8 @@ Use `portraitCheekLayersFor(rightShape, leftShape)` to replace the paired cheek 
 
 See the [inspection record](generated-korean-girl-01/review.md#component-replacement) for the current numerical checks and pending replacement renders.
 
+The optional [nasal lobule sections](generated-korean-girl-01/nasalLobule.ts) prescribe anterior depth through independent transverse, vertical and depth radii on retained skin datums. The nose applies them to exterior and aperture samples together. The active trial replaces the prior nasal inflation layer with three sections; omission or an empty section list preserves the component's basic depth calculation. A complete section/body basis cannot be selected simultaneously. This trial still requires visual acceptance.
+
 ## Export a GLTF
 
 Run the tracked exporter from the repository root after installing the workspace dependencies. The exporter uses repository-relative output paths and writes staging artifacts in `.shots/face-experiment/`; export alone does not replace the published `preview/` bundle.

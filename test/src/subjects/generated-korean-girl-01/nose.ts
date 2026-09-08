@@ -3,6 +3,10 @@ import type { IControlMesh } from "../subdivideControlMesh";
 import type { IPortraitNasalBodyShape } from "./nasalBody";
 import { createPortraitNasalBodySurface } from "./nasalBodySurface";
 import {
+  type IPortraitNasalLobule,
+  createPortraitNasalLobules,
+} from "./nasalLobule";
+import {
   type IPortraitNasalSection,
   createPortraitNasalSection,
 } from "./nasalSection";
@@ -54,6 +58,8 @@ export interface IPortraitNoseShape {
    * a basis replacement and cannot combine with another section/body basis.
    */
   depthScale?: number;
+  /** Optional local tip/alar sections after support scaling; empty/omitted is identity. */
+  lobules?: readonly IPortraitNasalLobule[];
   /** Tip displacement along host Z, in mm. */
   tipProjection: number;
   /** Alar displacement along host Z, in mm. */
@@ -177,6 +183,7 @@ export function createPortraitNoseComponent(
         : [...inputSocket.supportPlane],
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
+  const bindLobules = createPortraitNasalLobules(inputShape.lobules);
   const body =
     inputShape.body === undefined
       ? undefined
@@ -184,6 +191,13 @@ export function createPortraitNoseComponent(
   if (inputShape.section !== undefined && body !== undefined)
     throw new Error(
       "Choose one pre-fit or final nasal section basis, not two stacked constructions.",
+    );
+  if (
+    (inputShape.lobules?.length ?? 0) !== 0 &&
+    (inputShape.section !== undefined || body !== undefined)
+  )
+    throw new Error(
+      "Choose local nasal lobules or a complete section/body basis.",
     );
   if (
     (shape.depthScale ?? 1) !== 1 &&
@@ -260,10 +274,21 @@ export function createPortraitNoseComponent(
       // samples. A section replaces the inferred local depth; the existing tip
       // and alar controls remain explicit additional signed offsets. The lining
       // later reads the actual fitted rim, so it cannot retain a stale basis.
-      const depth = (point: number[]): number =>
+      const baseDepth = (point: number[]): number =>
         support(point) +
         portraitNoseDepth(point, socket, shape) +
         (section === undefined ? 0 : section(point, datum!));
+      const lobules = bindLobules(
+        host.positions.map((point) => [
+          point[0],
+          point[1],
+          point[2] + baseDepth(point),
+        ]),
+      );
+      const depth = (point: number[]): number => {
+        const base = baseDepth(point);
+        return base + lobules([point[0], point[1], point[2] + base]);
+      };
       const openings = socket.nostrils.map((ordinals) =>
         ordinals.map((i) => host.indices.slice(3 * i, 3 * i + 3)),
       );
