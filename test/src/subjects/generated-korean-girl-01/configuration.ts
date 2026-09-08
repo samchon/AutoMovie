@@ -1,4 +1,5 @@
 import type { IPortraitComponent } from "../portraitComponents";
+import { createPortraitMeshPatchComponent } from "../portraitMeshPatch";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
@@ -26,6 +27,8 @@ import {
   type IPortraitMouthSocket,
   createPortraitMouthComponent,
 } from "./mouth";
+import { buildPortraitNasalReference } from "./nasalReference";
+import nasalReferenceBinding from "./nasalReferenceBinding.json";
 import type { IPortraitNasalSection } from "./nasalSection";
 import {
   type IPortraitNoseShape,
@@ -523,9 +526,11 @@ export const portraitOrbitalSupportShapes: readonly {
   },
 }));
 
-/** Omission selects basic nasal supports; no rejected local-section fit is active. */
-export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined =
-  undefined;
+/** The complete reference patch supplies its own nasal form; omit the old residual. */
+export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined = {
+  radius: 22,
+  controls: [],
+};
 
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
@@ -538,7 +543,7 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
-    // The basic nasal supports are selected by omission of a replacement field.
+    // The reference-patch study disables the old nasal displacement residual.
     portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
@@ -555,7 +560,8 @@ export const measuredPortraitAssembly = {
  * Active measured-surface assembly with a grouped dental interior. The skin
  * components own openings; the dental component attaches after shared skin
  * refinement. Disable the mouth's legacy crowns so the row has exactly one
- * owner. The separate anatomical-prior study is not the active target surface.
+ * owner. Only the complete nasal patch is selected from the anatomical prior;
+ * the other measured-face components and host remain the active construction.
  */
 export const portraitAssembly = {
   ...measuredPortraitAssembly,
@@ -568,6 +574,11 @@ export const portraitAssembly = {
         ...portraitMouthShape,
         crowns: [],
       },
+    ).filter((component) => component.id !== "nose"),
+    createPortraitMeshPatchComponent(
+      "nose-reference",
+      nasalReferenceBinding.hostBoundary,
+      buildPortraitNasalReference,
     ),
     createPortraitDentalComponent(
       portraitDentalSocket,

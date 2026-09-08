@@ -27,6 +27,7 @@ import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01
 import { portraitNeckShape } from "../../src/subjects/generated-korean-girl-01/cranium";
 import { portraitEarShape } from "../../src/subjects/generated-korean-girl-01/ears";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
+import nasalReferenceBinding from "../../src/subjects/generated-korean-girl-01/nasalReferenceBinding.json";
 import {
   portraitDocument,
   portraitGltfExtensions,
@@ -71,6 +72,7 @@ async function main() {
       leftEye: portraitEyeShape,
       nose: portraitNoseShape,
       noseSocket: portraitNoseSocket,
+      nasalReference: nasalReferenceBinding,
       mouth: { ...portraitMouthShape, crowns: [] },
       ears: portraitEarShape,
       nasalDetail: portraitNasalSupportDetail ?? null,

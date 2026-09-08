@@ -1,16 +1,16 @@
 # Reference face inspection {#reference-face-inspection}
 
-**Unfinished; likeness remains unaccepted.** The current inspected active capture belongs to pushed geometry source `83d929bc`, GLB `a34f1fe42215a312787c9bdd2b9e34c65981171efc127ac70229240e3b025540`, named model `eb244b3433ecbf73259ac042b7b2de3d8d5110fc1917b1b9ee59d63ff9e3e1db` and profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. The main agent and independent image-only reviewer opened all fourteen frames individually, the source comparison and both sheets, plus eight close colour/clay views and their repeated calibration. Blender 5.1.2 imported actual AutoMovie GLTF using the unchanged 64-sample denoised Cycles CPU profile. No source photograph is projected onto the geometry.
+**Unfinished; likeness remains unaccepted.** The current inspected capture belongs to pushed geometry source `6ff01c06`, GLB `ea17fbcacc8f7af680dcc6be9955230ba0b00ab4c69088d24b56e7a6013e8dbb`, named model `5c92f75c4437b82da96ed4f8eb3a7cdd28a6871adc48ae794d8f7c966976aeb6` and profile `d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145`. Preview publication finished at 02:55:44 KST on 2026-09-09. The main and independent image-only reviewer opened all fourteen full frames, three sheets, four nasal colour/clay close views and calibration. Blender 5.1.2 imported actual AutoMovie GLTF with the unchanged 64-sample denoised Cycles CPU profile. No photograph is projected onto the geometry.
 
-This checkpoint supplies explicit lower-eyelid tissue sections. The roll and its lower boundary are more readable, but the uniform crescent and the separate central pad remain unlike the photograph. The smoother lip outline is retained; neither change completes its neighbouring connections. Complete construction-source review remains outstanding; no compiler fingerprint or numerical check establishes likeness.
+This checkpoint restores the basic nasal settings after local lobule, rim-curve and exterior-band trials failed complete visual acceptance. Model and GLTF hashes reproduce the earlier ea17fbca exactly. The trial's double outline and strong medial diagonal folds are gone. Lower-lid sections, preconstruction corneal contact, tapered pretarsal support, upper-orbit sections and the smoother lip outline remain active. None completes the source likeness. The native build still has 381 construction-evidence errors; neither a formula test nor an artifact hash is a passing review gate.
 
 ## Front {#front}
 
-The lower eyelids now show a fuller rounded body and clearer lower boundary. A conspicuous central pad with a nearly straight upper edge remains above that body; the uniform crescent is stronger than the photograph. The earlier ragged ends have not visibly returned. The nose lacks connected rounded tip and alar definition, and the regular dental row remains synthetic. The lip colour boundary is smoother, with no newly observed detached corner or doubled border. Face and neck remain assembled without a newly detached group.
+The lower eyelids retain a readable but overly regular crescent; the earlier central contact ledge is reduced. Nasal skin is softer than the rejected ring trials, but the tip and alar lobules remain broad and weakly differentiated. The tooth row and lip perimeter remain synthetic. Face and neck are connected, without a newly detached group.
 
 ## Anatomical left oblique {#left-oblique}
 
-The photograph-facing pinna remains exposed. The medial cheek and lower jaw surfaces are connected but broadly shaped. The eye's lower pad and inner-upper dark wedge remain visible. Nasal underside transitions and the ear's internal folds remain simplified.
+The photograph-facing pinna remains exposed. The medial cheek and jaw are connected but broadly shaped; the lower-lid band and inner-upper eye region remain simplified. The near nasal aperture has a small inferior notch in the close view, with no raised surrounding ring. Ear folds and the nasal underside remain provisional.
 
 ## Anatomical right oblique {#right-oblique}
 
@@ -18,7 +18,7 @@ The nose partly occludes the far eye. The former pinna fragment is hidden by the
 
 ## Anatomical left profile {#left-profile}
 
-Forehead, nose, lips and chin form a continuous silhouette. The recovered scalp height/depth fits more fully than the rejected uniform hair expansion. The long submental plane and temporal-to-neck continuation are inferred. Grouped crowns remain behind the upper lip but have simplified sections.
+Forehead, nose, lips and chin form a continuous silhouette. Nasal projection is reduced by the common support-plane scale; the single photograph cannot establish the correct profile depth. The submental plane and temporal-to-neck continuation remain inferred. Grouped crowns stay behind the upper lip with simplified sections.
 
 ## Anatomical right profile {#right-profile}
 
@@ -34,7 +34,7 @@ The cap and connected fringe retain a helmet-like outline. The former overlappin
 
 ## Bottom {#bottom}
 
-Both nasal cavities remain connected to their lining. The columellar/alar underside is simplified, and the chin-to-throat form is broad. The lower neck crop is intentionally open. Shared attachment does not certify the aperture's placement or tangents.
+Both nasal cavities remain connected to their lining. The artificial oval band from the rim-section trial is absent. The columellar/alar underside and chin-to-throat form remain broad. The lower neck crop is intentionally open. Shared attachment does not certify the aperture's placement or tangents.
 
 ## Rear oblique {#rear-oblique}
 
@@ -46,13 +46,13 @@ The source comparison still differs materially in eye/lid presentation, lower-na
 
 ## Clay reference, front and oblique {#clay}
 
-All three current clay frames were opened. Inferior nasal turns, broad perioral depressions and conspicuous lower-lid pads persist without pigment. The lip outline is smoother, but the upper perimeter and corners still read as a raised band rather than the photograph's softer transition. The clay override makes the transparent corneal shell opaque; its shell edge alone is not an optical defect in the colour render.
+All three clay frames were opened. The nasal double outline and sharp medial folds from the rejected trials are absent, but the inferior turn, broad perioral depressions and regular lower-lid bands remain. The upper lip perimeter and corners still appear raised. The clay override makes the transparent cornea opaque; that override alone is not an optical defect in colour.
 
 ## Component replacement {#component-replacement}
 
-The active host composes eyes, nose, mouth and a grouped dental arch. The dental group follows refined oral anchors with independent local crown shape. Optional lower-lip band profiles follow the curved smile; optional crown contours retain group placement. The active outer-border curve rule preserves shared topology and improves its visible outline, without establishing a complete lip section. Nasal cubic-loft, absolute-section and coupled-control presets were rendered and rejected as likeness improvements; the active nasal relief retains the basic formula.
+The host composes eyes, nose, mouth and grouped dentition. The dental group follows refined oral anchors, lower-lip profiles follow the curved smile, and the outer lip's curve rule preserves shared topology. Optional nasal lobules, aperture-curve refinement and exterior rim sections have typed numerical and attachment tests, including empty/default ownership and closed topology. Their tested presets did not improve the complete nasal surface, so they are omitted in the active fit. Fresh full alternate-assembly captures remain necessary before declaring the final replacement contract complete.
 
-The current eye experiment uses full corneal boundaries and contact against those resident surfaces, followed by the shared skin adapter. Optional lowerLidProfile now supplies independent margin, pretarsal, subtarsal and preseptal samples with longitudinal variation; the current first preset gains local fullness but its continuity and taper remain unfinished. Independent clearance and remote-region tests do not settle its visible lower pad or upper wedge. The earlier optical capture `3232a96c` is retained as a recovery comparison.
+The eyes use full corneal boundaries, contact-aware initial construction and a sphere-based guide that preserves the outer seam under gaze changes. The lower-lid profile supplies margin, pretarsal, subtarsal and preseptal sections at five longitudinal stations. Its shape remains too regular despite improved taper. Clearance and remote-region tests do not settle visible lid/eye likeness.
 
 The separate anatomical-prior fit was regenerated against its current source model and target control net at `c666ebc0`. Its inactive GLB `663cffe0` has narrower eyes, broken lip colour boundaries, a stepped neck junction and excessive hair coverage. Small fitted landmark residuals do not make its real eye and lip boundaries match the photograph. It is not adopted as the primary result.
 

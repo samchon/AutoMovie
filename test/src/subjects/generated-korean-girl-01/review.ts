@@ -10,6 +10,7 @@ import type * as Gltf from "../portraitDocument";
 import type * as Sphere from "../portraitEyeSphere";
 import type * as FitBasis from "../portraitFitBasis";
 import type * as Buffers from "../portraitMeshBuffers";
+import type * as MeshPatch from "../portraitMeshPatch";
 import type * as Relief from "../portraitRelief";
 import type * as Topology from "../portraitSkinTopology";
 import type * as Surface from "../portraitSurface";
@@ -28,6 +29,7 @@ import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
 import type * as Mouth from "./mouth";
 import type * as NasalLobule from "./nasalLobule";
+import type * as NasalReference from "./nasalReference";
 import type * as RimSection from "./nasalRimSection";
 import type * as NasalSupport from "./nasalSupport";
 import type * as Nasal from "./nose";
@@ -41,6 +43,12 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
  * intermediate account does not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link MeshPatch.IPortraitMeshPatch} Names the source mesh and its oriented, anatomically phased attachment loop.
+ * @evidenceReview {@link MeshPatch.IPortraitMeshPatch} Read the common millimetre frame and the requirement that first samples correspond between source and host. The provider returns the native nasal skin, while connectivity selects only its declared patch; source geometry ownership is distinct from placement and outer-join quality.
+ * @evidence {@link MeshPatch.createPortraitMeshPatchComponent} Replaces the host's enclosed region with a selected source patch and an annular zipper.
+ * @evidenceReview {@link MeshPatch.createPortraitMeshPatchComponent} Traced engine-owned region selection, copied source data, normalized perimeter progress, n+m bridge triangles and shared material/normal processing. Square and triangular donors close against the untouched half of a hand octahedron through refinement. Positions outside the cut remain original controls; topology does not guarantee an acceptable geometric join.
+ * @evidence {@link NasalReference.buildPortraitNasalReference} Reconstructs and admits the exact existing CC0 fitted nasal source before its boundary is consumed.
+ * @evidenceReview {@link NasalReference.buildPortraitNasalReference} Read the original fit's source/target byte checks and the separate fitted-skin digest check. Changing source refinement while keeping the recorded binding refuses. The provider imports committed source assets and fit data, not ignored captures. Actual native nose shape and the bridge's rendering remain to be inspected.
  * @evidence {@link NasalSupport.createPortraitNasalSupport} Resolves nasal projection from one subject-bound facial support plane.
  * @evidenceReview {@link NasalSupport.createPortraitNasalSupport} Read positive ratio admission, exact neutral return, owned datums, normalized plane solution and finite query/displacement refusal. The independent z=y/2 case retains support points and scales a four-millimetre height by one half under translation. This is a projection relationship, not tip curvature or recovered anatomical depth.
  * @evidence {@link Nasal.IPortraitNoseSocket.supportPlane} Supplies the shared nasal root and facial-base reference identities.
@@ -376,9 +384,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  */
 export const portraitReview = {
   directory: ".shots/face-experiment/preview",
-  sourceCommit: "83d929bc",
+  sourceCommit: "6ff01c06",
   gltfSha256:
-    "a34f1fe42215a312787c9bdd2b9e34c65981171efc127ac70229240e3b025540",
+    "ea17fbcacc8f7af680dcc6be9955230ba0b00ab4c69088d24b56e7a6013e8dbb",
   profileSha256:
     "d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145",
 };
