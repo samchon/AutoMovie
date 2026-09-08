@@ -44,6 +44,7 @@ export const test_subject_nasal_rim_curve = (): void => {
   const shape = {
     ...portraitNoseShape,
     depthScale: 1,
+    rimSection: undefined,
     lobules: undefined,
     nostrilWidthScale: 1,
     nostrilHeightScale: 1,

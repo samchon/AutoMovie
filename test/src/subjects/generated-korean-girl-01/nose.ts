@@ -7,6 +7,11 @@ import {
   createPortraitNasalLobules,
 } from "./nasalLobule";
 import {
+  type IPortraitNasalRimSection,
+  appendPortraitNasalRimSection,
+  createPortraitNasalRimSection,
+} from "./nasalRimSection";
+import {
   type IPortraitNasalSection,
   createPortraitNasalSection,
 } from "./nasalSection";
@@ -84,6 +89,8 @@ export interface IPortraitNoseShape {
    * rule on the same skin/lining vertices, without creating a normal crease.
    */
   rimRefinement?: "surface" | "curve";
+  /** Optional exterior skin band; omission retains direct skin-to-lining attachment. */
+  rimSection?: IPortraitNasalRimSection;
   /** Cavity floor offset in host XYZ millimetres, rotated with the nostril tilt. */
   cavityOffset: number[];
   /** Reach of adjacent skin adaptation along the original mesh, in mm. */
@@ -190,6 +197,10 @@ export function createPortraitNoseComponent(
   };
   const shape = { ...inputShape, cavityOffset: [...inputShape.cavityOffset] };
   const bindLobules = createPortraitNasalLobules(inputShape.lobules);
+  const rimSection =
+    inputShape.rimSection === undefined
+      ? undefined
+      : { ...inputShape.rimSection };
   if (
     (shape.rimRefinement ?? "surface") !== "surface" &&
     shape.rimRefinement !== "curve"
@@ -355,6 +366,18 @@ export function createPortraitNoseComponent(
           ]);
         }
       }
+      const rimBands =
+        rimSection === undefined
+          ? undefined
+          : openings.map((faces) => {
+              const ids = portraitCutBoundary(faces).map((edge) => edge.a);
+              const section = createPortraitNasalRimSection(
+                ids.map((id) => targets.get(id)!),
+                rimSection,
+              );
+              ids.forEach((id, i) => targets.set(id, section.outer[i]));
+              return { ids, section };
+            });
       return {
         constraints: [...targets].map(([vertex, target]) => ({
           vertex,
@@ -364,18 +387,33 @@ export function createPortraitNoseComponent(
         cutFaces: socket.nostrils.flat(),
         attach: (cage, _adapted, region) => {
           const liningGroup = region("nostril-interiors", "nasal-interior");
-          appendPortraitNostrils(cage, openings, shape, liningGroup);
+          const bandGroup =
+            rimBands === undefined ? undefined : region("nasal-rims", "skin");
+          const innerLoops =
+            rimBands === undefined
+              ? openings.map((faces) =>
+                  portraitCutBoundary(faces).map((edge) => edge.a),
+                )
+              : rimBands.map(({ ids, section }) =>
+                  appendPortraitNasalRimSection(cage, ids, section, bandGroup!),
+                );
+          const liningFaces =
+            rimBands === undefined
+              ? openings
+              : innerLoops.map((loop) =>
+                  Array.from({ length: loop.length - 2 }, (_, i) => [
+                    loop[0],
+                    loop[i + 1],
+                    loop[i + 2],
+                  ]),
+                );
+          appendPortraitNostrils(cage, liningFaces, shape, liningGroup);
           return {
             openings: [],
             // Both exterior and vestibule share these actual fitted rim IDs.
             // Opposite triangles may be asymmetric; they must not pull a
             // deliberately smooth aperture contour back into a pinched edge.
-            curves:
-              shape.rimRefinement === "curve"
-                ? openings.map((faces) =>
-                    portraitCutBoundary(faces).map((edge) => edge.a),
-                  )
-                : undefined,
+            curves: shape.rimRefinement === "curve" ? innerLoops : undefined,
             finalSurface:
               body === undefined
                 ? undefined

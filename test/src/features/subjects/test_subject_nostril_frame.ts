@@ -26,10 +26,12 @@ export const test_subject_nostril_frame = (): void => {
   const host = referenceControlNet;
   const base = createPortraitNoseComponent(portraitNoseSocket, {
     ...portraitNoseShape,
+    rimSection: undefined,
     nostrilTilt: 0,
   }).fit(host);
   const turned = createPortraitNoseComponent(portraitNoseSocket, {
     ...portraitNoseShape,
+    rimSection: undefined,
     nostrilTilt: 90,
   }).fit(host);
   const a = new Map(base.constraints.map((c) => [c.vertex, c.target]));

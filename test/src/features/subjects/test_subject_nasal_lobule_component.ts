@@ -34,6 +34,7 @@ export const test_subject_nasal_lobule_component = (): void => {
   const shape = {
     ...portraitNoseShape,
     depthScale: 1,
+    rimSection: undefined,
     lobules: [lobule],
     nostrilWidthScale: 1,
     nostrilHeightScale: 1,

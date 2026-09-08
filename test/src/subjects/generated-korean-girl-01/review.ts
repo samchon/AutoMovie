@@ -28,6 +28,7 @@ import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
 import type * as Mouth from "./mouth";
 import type * as NasalLobule from "./nasalLobule";
+import type * as RimSection from "./nasalRimSection";
 import type * as NasalSupport from "./nasalSupport";
 import type * as Nasal from "./nose";
 import type * as Nostril from "./nostrilRim";
@@ -48,6 +49,12 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Nasal.IPortraitNoseShape.depthScale} Read the neutral default, positive finite domain and explicit section/body conflict. The same support displacement feeds both surface targets and aperture fitting before lining attachment. The component oracle fails when its sign is reversed; a lower projection does not by itself establish rounded alar or tip form.
  * @evidence {@link Nasal.IPortraitNoseShape.rimRefinement} Selects the existing shared curve rule for the skin/lining aperture identities.
  * @evidenceReview {@link Nasal.IPortraitNoseShape.rimRefinement} Read omission and surface as the general Loop path, curve as the attachment's explicit boundary loops, and invalid-rule refusal. A hand square keeps z=0 and reaches x=1.5 from x=2 under curve refinement while the asymmetric general surface differs. The live full-ellipse comparison eliminates concave rim turns only when this shared rule is selected; its rendered form remains pending.
+ * @evidence {@link RimSection.IPortraitNasalRimSection} Separates exterior tissue width from the fitted aperture and its crest relief.
+ * @evidenceReview {@link RimSection.IPortraitNasalRimSection} Read positive physical width and signed normal projection in millimetres. These describe the new skin band, while aperture scaling/pose and vestibular depth remain with their existing owners. Omission selects the original direct attachment.
+ * @evidence {@link RimSection.createPortraitNasalRimSection} Derives outer and crest rings from the actual aperture's shared normals and existing rim jets.
+ * @evidenceReview {@link RimSection.createPortraitNasalRimSection} Read copied input, normal construction, outward co-normal selection and finite-domain refusals. A planar radius-two square yields radius-three outer attachment and radius-2.5 crest with z=0.3; translation and signed/zero crest are independently checked. This does not yet establish the photographed soft-triangle surface.
+ * @evidence {@link RimSection.appendPortraitNasalRimSection} Connects resident outer skin identities through a new crest to the lining-owned inner loop.
+ * @evidenceReview {@link RimSection.appendPortraitNasalRimSection} Traced both annuli's winding, skin group assignment, copied coordinates and returned inner IDs. The real component uses those IDs for both lining and curve refinement, and the complete small skin/band/lining remains closed before and after subdivision. The first assembled portrait render is still required.
  * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation} Owns one forehead/brow/sulcus section on a subject-bound upper orbit.
  * @evidenceReview {@link OrbitalSupport.IPortraitOrbitalSupportStation} Read every station member with the actual skin query and coupled field consumer. Signed projection changes section form, while positive height/descent locates its neighbours; these do not represent measured bone or fat thickness.
  * @evidence {@link OrbitalSupport.IPortraitOrbitalSupportStation.name} Preserves station identity in the three coupled anatomical targets.

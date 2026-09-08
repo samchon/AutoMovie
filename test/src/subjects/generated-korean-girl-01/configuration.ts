@@ -291,6 +291,7 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // reintroducing angular peaks into that same contour after fitting.
   rimRoundness: 1,
   rimRefinement: "curve",
+  rimSection: { width: 1.2, crest: 0.35 },
   cavityOffset: [0, 3, -5],
   blendReach: 14,
 };
