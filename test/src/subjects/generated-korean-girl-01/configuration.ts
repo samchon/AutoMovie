@@ -97,13 +97,12 @@ export const portraitEyeShape: IPortraitEyeShape = {
     // The crest and lower shoulder describe one rounded tissue body, while its
     // lower boundary returns through positive relief into the cheek. These are
     // visible surface offsets, not muscle thickness or a clinical age model.
-    // Keep the outer attachment and inner margin fixed in this fitting round;
-    // full/close A/B renders must judge whether the body survives subdivision.
-    // Positive relief alone does not prevent a trough: the globe-to-skin bridge
-    // can lie behind both its boundaries. In the first fuller-body render its
-    // preseptal section remained a valley, so the lower transition now carries
-    // support of its own. Keep the crest unchanged while testing that junction;
-    // increasing the crest again would strengthen the unwanted shadow.
+    // Keep the outer attachment and inner margin fixed while the transverse body
+    // and its preseptal landing are fitted as one section. Positive relief alone
+    // does not prevent a trough: the globe-to-skin bridge can lie behind both
+    // boundaries. The adopted coupled study narrows the pretarsal/subtarsal
+    // offsets and carries more support into the preseptal landing, which keeps
+    // the rounded body from reading as a broad detached pad after subdivision.
     sections: [
       { at: 0, fullness: 0.35, width: 0.75 },
       { at: 0.25, fullness: 0.75, width: 0.95 },
@@ -114,11 +113,11 @@ export const portraitEyeShape: IPortraitEyeShape = {
       at,
       section: {
         margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 2.4 * width, projection: 1.6 * fullness },
-        pretarsalLower: { offset: 4 * width, projection: 1.15 * fullness },
-        subtarsalInner: { offset: 4.8 * width, projection: fullness },
-        subtarsalOuter: { offset: 5.4 * width, projection: 0.85 * fullness },
-        preseptal: { offset: 6.4, projection: 0.65 * fullness },
+        pretarsalCrest: { offset: 2.15 * width, projection: 1.6 * fullness },
+        pretarsalLower: { offset: 3.6 * width, projection: 1.15 * fullness },
+        subtarsalInner: { offset: 4.35 * width, projection: fullness },
+        subtarsalOuter: { offset: 4.95 * width, projection: 0.85 * fullness },
+        preseptal: { offset: 6.5, projection: 0.95 * fullness },
         attachment: 8.5,
       },
     })),
@@ -533,8 +532,8 @@ export const portraitOrbitalSupportShapes: readonly {
         name: ["medial", "middle", "lateral"][station],
         anchor,
         forehead: { height: 9, projection: 0 },
-        browProjection: [0.25, 0.7, 0.25][station],
-        sulcus: { descent: 8, projection: [-0.05, -0.12, -0.05][station] },
+        browProjection: [0.6, 0.7, 0.25][station],
+        sulcus: { descent: 8, projection: [0.03, -0.12, -0.05][station] },
       }),
     ),
   },
