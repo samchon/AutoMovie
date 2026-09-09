@@ -12,6 +12,8 @@
 
 Production manifest는 별도 파생 원장 `automovie/derived-artifacts.json`을 선택한다. 그 원장의 output은 `automovie/derived/` 아래에만 놓이며 같은 path를 `automovie/assets.json`이 외부 또는 비결정적 생성 자산으로 등록할 수 없다. 파생 record는 output path와 source-context encoding, generator path와 digest, canonical input path와 digest의 정렬된 목록, basis digest와 output digest를 가진다. Timestamp, host path, process id와 machine metadata는 record에 들어가지 않는다.
 
+더 이상 활성 입력으로 사용하지 않는 항목은 명시적 퇴역 작업으로 원장에서 제외할 수 있다. 퇴역은 generation과 같은 잠금 및 원자적 manifest 게시를 사용하고 기존 output bytes와 다른 항목을 보존한다. 퇴역한 path는 source context에 제공하지 않으며, 이미 없는 항목을 다시 퇴역해도 원장을 다시 쓰지 않는다.
+
 ### Basis identity {#spec-authoring-precomputed-basis}
 
 <!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Product-owned digest closure가 generator와 모든 declared input의 변화를 stale 상태로 만든다. -->

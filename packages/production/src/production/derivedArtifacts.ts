@@ -487,6 +487,59 @@ export const inspectAutoMovieDerivedArtifacts = (props: {
   return { manifest: parsed.manifest, artifacts, problems, fingerprintFields };
 };
 
+/**
+ * Remove one obsolete artifact from the active ledger, preserving its bytes.
+ *
+ * Explicit retirement uses the generation lock and atomic manifest writer.
+ * A source that still requests the retired path receives no context entry;
+ * neither its old output nor other records are rewritten to appear current.
+ * Calling this again for an absent record does not publish a new manifest.
+ *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Retires an obsolete declaration without presenting stale bytes as current inputs.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Preserves historical output while atomically changing the active derived inventory.
+ * @author Samchon
+ */
+export const retireAutoMovieDerivedArtifact = (props: {
+  root: string;
+  output: string;
+}): { changed: boolean; manifest: IAutoMovieDerivedArtifactManifest } => {
+  const root = physicalProjectRoot(props.root, "path-unsafe");
+  assertGenerationPath(props.output, "output");
+  if (!props.output.startsWith(DERIVED_ROOT))
+    generationFailure(
+      "path-unsafe",
+      `Derived output must live below "${DERIVED_ROOT}".`,
+    );
+  const lockFile = resolveCanonical(root, LOCK_PATH);
+  let token: string | null = null;
+  try {
+    ensurePhysicalDirectory(root, path.join(root, "automovie"));
+    token = acquireCommitLock(lockFile);
+    const manifest = readGenerationManifest(root);
+    const artifacts = manifest.artifacts.filter(
+      (entry) => entry.path !== props.output,
+    );
+    if (artifacts.length === manifest.artifacts.length)
+      return { changed: false, manifest };
+    const next: IAutoMovieDerivedArtifactManifest = { version: 1, artifacts };
+    writePhysicalFileAtomic(
+      root,
+      resolveCanonical(root, AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH),
+      Buffer.from(`${JSON.stringify(next, null, 2)}\n`),
+    );
+    return { changed: true, manifest: next };
+  } catch (error) {
+    if (error instanceof AutoMovieDerivedArtifactGenerationError) throw error;
+    throw new AutoMovieDerivedArtifactGenerationError(
+      "publication-failed",
+      `Derived artifact retirement failed: ${errorMessage(error)}`,
+      { cause: error },
+    );
+  } finally {
+    if (token !== null) releaseCommitLock(lockFile, token);
+  }
+};
+
 const invokeGenerator = (
   generate: IGenerateAutoMovieDerivedArtifactProps["generate"],
   inputs: Readonly<Record<string, Uint8Array>>,
