@@ -312,13 +312,20 @@ export const portraitMouthShape: IPortraitMouthShape = {
   borderRefinement: "curve",
   widthScale: 1,
   openingScale: 1,
-  cornerLift: 0,
+  cornerLift: 1,
   upperLipProjection: 0,
   lowerLipProjection: 0,
   // Thickness varies along the curved lower band independently of the smile's
   // inner aperture. The central pad remains broad; the lateral vermilion tapers
   // toward shared corners. These are provisional fit ratios, not measurements.
   band: {
+    upper: [
+      { at: -1, scale: 1 },
+      { at: -0.65, scale: 0.86 },
+      { at: 0, scale: 0.92 },
+      { at: 0.65, scale: 0.86 },
+      { at: 1, scale: 1 },
+    ],
     lower: [
       { at: -1, scale: 1 },
       { at: -0.65, scale: 0.72 },
