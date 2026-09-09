@@ -172,7 +172,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         }
         if (result.type !== "exception")
           for (const diagnostic of result.diagnostics ?? [])
-            if (diagnostic.file !== undefined)
+            if (typeof diagnostic.file === "string")
               rememberInput(path.resolve(root, diagnostic.file));
         if (result.type === "success") {
           const entries = Object.entries(result.output);
