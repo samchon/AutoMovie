@@ -40,10 +40,14 @@ import type * as Ocular from "./ocularTissues";
 import type * as OrbitalSupport from "./orbitalSupport";
 
 /**
- * Current actually inspected active capture, with a partial construction-source
- * account. Relationships are being read and recorded before compiler-issued
- * fingerprints are inserted. Missing coverage/fingerprints remain errors; this
- * intermediate account does not claim whole-source or likeness acceptance.
+ * Partial construction-source account. Individual notes retain the explicitly
+ * named historical capture that was inspected; a historical observation is not
+ * a current-source attestation. In particular, the b3306ba5 patch/fairing notes
+ * predate late source insertion and XYZ tangent-row fairing and need a renewed
+ * literal source review. Current image observations belong to review.md.
+ * Relationships are recorded before compiler-issued fingerprints are inserted.
+ * Missing coverage/fingerprints remain errors; this intermediate account does
+ * not claim whole-source or likeness acceptance.
  *
  * @evidence {@link Fairing.fairPortraitSurface} Shapes the annulus interior against both fixed neighbouring skin regions while preserving the recorded image ray.
  * @evidenceReview {@link Fairing.fairPortraitSurface} Read region-interior selection, boundary-adjacent rows, cotangent weights and lumped areas, the scalar ray-offset energy and conditioned conjugate-gradient solve. Single and nine-point plane oracles recover fixed surrounding heights; zero/one-step budgets refuse incomplete solves and suppressing offsets fails the plane oracle. The full b3306ba5 and nasal close images show softer bridge/sidewall joins but a persistent lower nasal line. This does not certify exact C1 continuity or anatomical likeness.
