@@ -1,12 +1,13 @@
 import {
+  createAutoMovieMeshDepthSampler,
   selectAutoMovieTriangleRegion,
   triangulateAutoMovieRegion,
 } from "@automovie/engine";
 
-import { portraitNormals } from "./geometry";
+import { portraitPart } from "./geometry";
 import type { IPortraitComponent } from "./portraitComponents";
 import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
-import { fitPortraitJoinBoundary } from "./portraitJoinTangency";
+import { fitPortraitJoinReference } from "./portraitJoinReference";
 import {
   type IPortraitPatchAttachment,
   fitPortraitPatchBoundary,
@@ -40,9 +41,9 @@ export interface IPortraitMeshPatch {
  * omission leaves the original host controls unchanged. After refinement and
  * anatomical layers, a bounded fairing solve joins the final neighbouring
  * surfaces with fixed shared boundaries. The donor core and host are fixed;
- * only annulus-interior vertices travel along the recorded view ray. Optional
- * tangent continuity first rotates its boundary-adjacent row in the physical
- * edge frame, then holds that row while all three interior coordinates are solved.
+ * position mode moves annulus-interior vertices along the recorded view ray.
+ * Tangent mode keeps a positive XY chart, matches its first row to neighbouring
+ * planes, then adapts the complete source height surface by bounded displacement.
  *
  * preserveSource reserves the coarse host region instead of inserting the
  * sampled source into Loop subdivision. Its actual refined boundary is recovered
@@ -242,35 +243,24 @@ export function createPortraitMeshPatchComponent(
             finalSurface: (refined: IPortraitFinalSurfaceHost) => {
               if (attachment.boundaryContinuity !== "tangent")
                 return fairPortraitSurface(refined, joinGroup, viewRay);
-              const targets = fitPortraitJoinBoundary(refined, joinGroup);
-              const byVertex = new Map(
-                targets.map((t) => [t.vertex, t.target]),
+              const sample = createAutoMovieMeshDepthSampler(
+                portraitPart(
+                  "joining-source",
+                  {
+                    positions: source.mesh.positions.flat(),
+                    indices: source.mesh.indices,
+                    normals: null,
+                    uvs: null,
+                    skin: null,
+                  },
+                  "skin",
+                ).geometry.mesh,
+                "z",
               );
-              const positions = refined.positions.map(
-                (p, id) => byVertex.get(id) ?? [...p],
-              );
-              const basis = {
-                ...refined,
-                positions,
-                normals: portraitNormals(positions.flat(), [
-                  ...refined.indices,
-                ]),
-              };
-              const fixed = targets.map((t) => t.vertex);
-              // The admitted annulus is one positive XY chart. Only its height
-              // remains free; unconstrained XYZ fairing folded this chart even
-              // while every boundary triangle matched its neighbour's plane.
-              return [
-                ...targets,
-                ...fairPortraitSurface(
-                  basis,
-                  joinGroup,
-                  [0, 0, 1],
-                  undefined,
-                  fixed,
-                  "xy",
-                ),
-              ];
+              return fitPortraitJoinReference(refined, joinGroup, (x, y) => {
+                const hit = sample(x / 1000, y / 1000);
+                return hit === null ? null : hit.maximum * 1000;
+              });
             },
             finish: () => [],
           };

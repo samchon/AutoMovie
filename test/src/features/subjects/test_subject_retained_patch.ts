@@ -153,6 +153,16 @@ export const test_subject_retained_patch = (): void => {
     );
     assertPortraitSkinTopology(replaced, []);
     if (rounds === undefined) {
+      TestValidator.predicate(
+        "source must cover the final chart",
+        throwsError(() =>
+          attached.finalSurface!({
+            ...replaced,
+            positions: replaced.positions.map(([x, y, z]) => [x + 100, y, z]),
+            normals: [],
+          }),
+        ),
+      );
       const final = applyPortraitFinalSurfaces(replaced, [
         { id: "source", propose: attached.finalSurface! },
       ]);
