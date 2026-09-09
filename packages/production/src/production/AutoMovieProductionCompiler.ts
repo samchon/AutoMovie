@@ -312,6 +312,8 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION =
  * The resulting scene, shot, models and sparse motions are validated by the
  * same engine consumers use and then materialized atomically as derived data.
  *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Supplies verified precomputed inputs without executing a generator inside the source sandbox.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Keeps source evaluation and invocation time limits while admitting explicitly generated inputs.
  * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Consumes the graph-derived library owner population at review and final without charging unused film inventory.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Runs the current finite library observation gate inside the same compiler path as final publication.
  * @author Samchon
