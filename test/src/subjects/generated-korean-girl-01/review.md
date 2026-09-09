@@ -46,7 +46,7 @@ The comparison still differs materially in eye/lid presentation, nasal joins, ch
 
 ## Clay reference, front and oblique {#clay}
 
-All three clay frames were opened. Severe upper, side and lower nasal joining folds remain around a comparatively smooth core. The lower-lid body is more rounded and its shadow softer than in 2136659a, but the regular roll and broader lower arc remain visible. Broad perioral depressions and the raised upper lip perimeter remain unresolved. The clay override makes the transparent cornea opaque; that alone is not a colour-render optical defect.
+All three clay frames were opened. Severe upper, side and lower nasal joining folds remain around a comparatively smooth core. The lower shadow is softer than in 2136659a, but the body looks flatter and broader, with a regular lower arc still visible. Broad perioral depressions and the raised upper lip perimeter remain unresolved. The clay override makes the transparent cornea opaque; that alone is not a colour-render optical defect.
 
 ## Component replacement {#component-replacement}
 
