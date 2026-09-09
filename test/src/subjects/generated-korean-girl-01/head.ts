@@ -7,6 +7,7 @@ import {
   type IPortraitComponentHost,
 } from "../portraitComponents";
 import { applyPortraitFinalSurfaces } from "../portraitFinalSurface";
+import { applyPortraitRegionReplacements } from "../portraitRegionReplacement";
 import { assertPortraitSkinTopology } from "../portraitSkinTopology";
 import {
   type IPortraitSurfaceLayer,
@@ -16,20 +17,22 @@ import { subdivideControlMesh } from "../subdivideControlMesh";
 import { appendPortraitCranium, appendPortraitNeck } from "./cranium";
 
 /**
- * Fit replaceable components, adapt their surrounding skin, and subdivide the
- * connected surface once. This assembler knows the component protocol rather
- * than a particular eye or nose implementation. A component finishes its own
- * interior parts against the actual refined attachment it helped construct.
+ * Fit replaceable components and refine the host's connected control surface.
+ * Prebuilt surfaces replace their reserved regions afterward, preserving their
+ * own sampling while joining the actual refined socket. This assembler knows
+ * that protocol rather than a particular eye or nose implementation. Common
+ * normals and component interiors consume the resulting joined surface.
  *
  * Host, constraints, cage and returned positions use millimetres. Original
  * triangle ordinals remain meaningful only during cutting; original vertex IDs
  * survive subdivision for socket lookup. Material groups are triangle-local
- * labels and never define a second independently refined skin surface.
+ * labels retain socket ownership and never introduce a separate normal seam.
  *
  * Surface layers run after subdivision and before normals and interior parts.
  * This order lets a narrow surface feature use the refined resolution and lets
- * dependent interiors read its final rim. The subject supplies its anatomical
- * layers explicitly; this assembler owns their placement in the pipeline.
+ * dependent interiors read its final rim. A prebuilt component inserted after
+ * these layers owns its complete source form. The subject supplies the layers
+ * explicitly; this assembler owns their placement in the pipeline.
  */
 export function buildPortraitHead(
   host: IPortraitComponentHost,
@@ -104,13 +107,16 @@ export function buildPortraitHead(
     ...finishers.flatMap((attached) => attached.openings),
   ]);
   const refined = applyPortraitFinalSurfaces(
-    applyPortraitSurfaceLayers(
-      subdivideControlMesh(
-        cage,
-        rounds,
-        finishers.flatMap((attached) => attached.curves ?? []),
+    applyPortraitRegionReplacements(
+      applyPortraitSurfaceLayers(
+        subdivideControlMesh(
+          cage,
+          rounds,
+          finishers.flatMap((attached) => attached.curves ?? []),
+        ),
+        surfaceLayers,
       ),
-      surfaceLayers,
+      finishers.flatMap((attached) => attached.replacements ?? []),
     ),
     finishers.flatMap((attached, index) =>
       attached.finalSurface === undefined

@@ -4,6 +4,7 @@ import {
 } from "@automovie/engine";
 
 import type { IPortraitComponent } from "./portraitComponents";
+import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
 import {
   type IPortraitPatchAttachment,
   fitPortraitPatchBoundary,
@@ -37,6 +38,12 @@ export interface IPortraitMeshPatch {
  * anatomical layers, a bounded fairing solve joins the final neighbouring
  * surfaces with fixed shared boundaries. The donor core and host are fixed;
  * only annulus-interior vertices travel along the recorded view ray.
+ *
+ * preserveSource reserves the coarse host region instead of inserting the
+ * sampled source into Loop subdivision. Its actual refined boundary is recovered
+ * after host layers, then the source is installed unchanged. Centroid splits
+ * add only annulus-interior samples; source and host boundary edges stay shared.
+ * Omission retains the control-cage path and its existing subdivision behavior.
  */
 export function createPortraitMeshPatchComponent(
   id: string,
@@ -55,6 +62,18 @@ export function createPortraitMeshPatchComponent(
   )
     throw new Error(
       "A patch component needs an identity and a simple host boundary.",
+    );
+  if (
+    (attachment?.preserveSource !== undefined &&
+      typeof attachment.preserveSource !== "boolean") ||
+    (attachment?.joinSubdivisionRounds !== undefined &&
+      (attachment.preserveSource !== true ||
+        !Number.isInteger(attachment.joinSubdivisionRounds) ||
+        attachment.joinSubdivisionRounds < 0 ||
+        attachment.joinSubdivisionRounds > 4))
+  )
+    throw new Error(
+      "Source preservation needs a boolean mode and zero through four joining refinements.",
     );
   const validateEdges = (points: readonly (readonly number[])[]): void => {
     const lengths = points.map((point, i) =>
@@ -93,76 +112,136 @@ export function createPortraitMeshPatchComponent(
         );
       validateEdges(boundary.map((v) => host.positions[v]));
       validateEdges(source.boundary.map((v) => source.mesh.positions[v]));
+      const append = (
+        cage: IControlMesh,
+        boundary: readonly number[],
+        region: (id: string, material: string) => number,
+        subdivisions: number,
+      ) => {
+        const remap = new Map(
+          used.map((vertex, i) => [vertex, cage.positions.length + i]),
+        );
+        const inner = source.boundary.map((v) => remap.get(v)!);
+        const point = (p: readonly number[]) => ({
+          x: p[0] / 1000,
+          y: p[1] / 1000,
+        });
+        const key = (p: { x: number; y: number }) => `${p.x}/${p.y}`;
+        const outerPoints = boundary.map((v) => point(cage.positions[v]));
+        const innerPoints = source.boundary.map((v) =>
+          point(source.mesh.positions[v]),
+        );
+        const triangulation = triangulateAutoMovieRegion({
+          outer: outerPoints,
+          holes: [innerPoints],
+        });
+        const identities = new Map([
+          ...outerPoints.map((p, i) => [key(p), boundary[i]] as const),
+          ...innerPoints.map((p, i) => [key(p), inner[i]] as const),
+        ]);
+        const mapped = triangulation.points.map((p) => identities.get(key(p))!);
+        // Canonicalization only reverses a ring. Its first identity therefore
+        // tells us its input winding without duplicating polygon-area math.
+        const reversed = mapped[0] !== boundary[0];
+        const innerReversed = mapped[triangulation.rings[1].start] !== inner[0];
+        if (reversed === innerReversed)
+          throw new Error(
+            "A source patch and host must have matching projected winding.",
+          );
+        // Complete admission precedes mutation of the shared cage or groups.
+        const group = region(id, "skin");
+        const joinGroup =
+          attachment === undefined ? group : region(`${id}-join`, "skin");
+        for (const vertex of used)
+          cage.positions.push([...source.mesh.positions[vertex]]);
+        for (const face of faces) {
+          cage.indices.push(...face.map((v) => remap.get(v)!));
+          cage.groups.push(group);
+        }
+        let bridge: number[][] = [];
+        for (let i = 0; i < triangulation.triangles.length; i += 3) {
+          const tri = triangulation.triangles
+            .slice(i, i + 3)
+            .map((v) => mapped[v]);
+          bridge.push([tri[0], tri[reversed ? 2 : 1], tri[reversed ? 1 : 2]]);
+        }
+        // Interior splits add no points to either attachment edge. The source
+        // triangles and refined host therefore stay exact, without hanging
+        // edge vertices or another smoothing pass over completed anatomy.
+        for (let round = 0; round < subdivisions; round++)
+          bridge = bridge.flatMap((tri) => {
+            const centre = cage.positions.length;
+            cage.positions.push(
+              [0, 1, 2].map((axis) =>
+                tri.reduce((sum, v) => sum + cage.positions[v][axis] / 3, 0),
+              ),
+            );
+            return tri.map((v, i) => [v, tri[(i + 1) % 3], centre]);
+          });
+        for (const tri of bridge) {
+          cage.indices.push(...tri);
+          cage.groups.push(joinGroup);
+        }
+        return {
+          openings: [],
+          finalSurface:
+            attachment === undefined
+              ? undefined
+              : (refined: IPortraitFinalSurfaceHost) =>
+                  fairPortraitSurface(refined, joinGroup, viewRay),
+          finish: () => [],
+        };
+      };
       return {
         constraints:
           attachment === undefined
             ? []
             : fitPortraitPatchBoundary(host, boundary, source.mesh, attachment),
-        cutFaces: selectAutoMovieTriangleRegion({
-          indices: host.indices,
-          boundary,
-        }),
+        cutFaces:
+          attachment?.preserveSource === true
+            ? []
+            : selectAutoMovieTriangleRegion({
+                indices: host.indices,
+                boundary,
+              }),
         attach: (cage, _adapted, region) => {
-          const remap = new Map(
-            used.map((vertex, i) => [vertex, cage.positions.length + i]),
-          );
-          const inner = source.boundary.map((v) => remap.get(v)!);
-          const point = (p: readonly number[]) => ({
-            x: p[0] / 1000,
-            y: p[1] / 1000,
+          if (attachment?.preserveSource !== true)
+            return append(cage, boundary, region, 0);
+          const selected = selectAutoMovieTriangleRegion({
+            indices: cage.indices,
+            boundary,
           });
-          const key = (p: { x: number; y: number }) => `${p.x}/${p.y}`;
-          const outerPoints = boundary.map((v) => point(cage.positions[v]));
-          const innerPoints = source.boundary.map((v) =>
-            point(source.mesh.positions[v]),
-          );
-          const triangulation = triangulateAutoMovieRegion({
-            outer: outerPoints,
-            holes: [innerPoints],
-          });
-          const identities = new Map([
-            ...outerPoints.map((p, i) => [key(p), boundary[i]] as const),
-            ...innerPoints.map((p, i) => [key(p), inner[i]] as const),
-          ]);
-          const mapped = triangulation.points.map(
-            (p) => identities.get(key(p))!,
-          );
-          // Canonicalization only reverses a ring. Its first identity therefore
-          // tells us its input winding without duplicating polygon-area math.
-          const reversed = mapped[0] !== boundary[0];
-          const innerReversed =
-            mapped[triangulation.rings[1].start] !== inner[0];
-          if (reversed === innerReversed)
+          if (selected.some((face) => cage.groups[face] !== 0))
             throw new Error(
-              "A source patch and host must have matching projected winding.",
+              "A retained source patch must reserve unclaimed host skin.",
             );
-          // Complete admission precedes mutation of the shared cage or groups.
-          const group = region(id, "skin");
-          const joinGroup =
-            attachment === undefined ? group : region(`${id}-join`, "skin");
-          for (const vertex of used)
-            cage.positions.push([...source.mesh.positions[vertex]]);
-          for (const face of faces) {
-            cage.indices.push(...face.map((v) => remap.get(v)!));
-            cage.groups.push(group);
-          }
-          for (let i = 0; i < triangulation.triangles.length; i += 3) {
-            const tri = triangulation.triangles
-              .slice(i, i + 3)
-              .map((v) => mapped[v]);
-            cage.indices.push(
-              tri[0],
-              tri[reversed ? 2 : 1],
-              tri[reversed ? 1 : 2],
-            );
-            cage.groups.push(joinGroup);
-          }
+          const group = region(id, "skin"),
+            joinGroup = region(`${id}-join`, "skin");
+          for (const face of selected) cage.groups[face] = joinGroup;
           return {
             openings: [],
-            finalSurface:
-              attachment === undefined
-                ? undefined
-                : (refined) => fairPortraitSurface(refined, joinGroup, viewRay),
+            // The discarded interior is a placeholder, not a source of seam
+            // shape. The shared curve rule isolates both its boundary vertices
+            // and split edges from that temporary interior during refinement.
+            curves: [boundary],
+            replacements: [
+              {
+                group: joinGroup,
+                append: (
+                  refined: IControlMesh,
+                  refinedBoundary: readonly number[],
+                ) => {
+                  append(
+                    refined,
+                    refinedBoundary,
+                    (name) => (name === id ? group : joinGroup),
+                    attachment.joinSubdivisionRounds ?? 2,
+                  );
+                },
+              },
+            ],
+            finalSurface: (refined: IPortraitFinalSurfaceHost) =>
+              fairPortraitSurface(refined, joinGroup, viewRay),
             finish: () => [],
           };
         },

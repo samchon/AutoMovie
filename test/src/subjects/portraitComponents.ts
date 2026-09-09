@@ -5,6 +5,7 @@ import type {
 } from "@automovie/interface";
 
 import type { IPortraitFinalSurface } from "./portraitFinalSurface";
+import type { IPortraitRegionReplacement } from "./portraitRegionReplacement";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /**
@@ -60,6 +61,8 @@ export interface IPortraitComponentPlan {
     openings: number[][];
     /** Optional closed anatomical curves with their own shared subdivision rule. */
     curves?: readonly (readonly number[])[];
+    /** Replace reserved skin after host refinement, retaining a prebuilt source surface. */
+    replacements?: readonly IPortraitRegionReplacement[];
     /** Propose shared final positions from the immutable post-layer surface. */
     finalSurface?: IPortraitFinalSurface;
     /** Build independent interior parts against the shared refined skin. */

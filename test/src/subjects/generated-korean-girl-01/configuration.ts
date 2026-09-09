@@ -561,6 +561,8 @@ export const measuredPortraitAssembly = {
 export const portraitNasalReferenceAttachment: IPortraitPatchAttachment = {
   reach: 12,
   travel: 40,
+  preserveSource: true,
+  joinSubdivisionRounds: 2,
 };
 
 /**

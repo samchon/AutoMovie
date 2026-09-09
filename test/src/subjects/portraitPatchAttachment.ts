@@ -18,6 +18,10 @@ export interface IPortraitPatchAttachment {
   reach: number;
   /** Positive search distance in either direction on the unit view ray, in mm. */
   travel: number;
+  /** Keep the sampled source mesh unchanged and install it after host refinement. Omitted is false. */
+  preserveSource?: boolean;
+  /** Interior-only annular triangle refinement rounds, 0..4; defaults to two when preserving source. */
+  joinSubdivisionRounds?: number;
 }
 
 /**
