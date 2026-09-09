@@ -6,7 +6,7 @@ import { createPortraitMeshPatchComponent } from "../../subjects/portraitMeshPat
 import { applyPortraitRegionReplacements } from "../../subjects/portraitRegionReplacement";
 import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
 import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
-import { throwsError } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 /**
  * A prebuilt source surface retains its coordinates through host refinement.
@@ -57,6 +57,7 @@ export const test_subject_retained_patch = (): void => {
       reach: 0,
       travel: 4,
       preserveSource: false,
+      boundaryContinuity: "position",
     }).fit(host).cutFaces,
     [0, 1, 2, 3],
   );
@@ -66,6 +67,8 @@ export const test_subject_retained_patch = (): void => {
       travel: 4,
       preserveSource: true,
       joinSubdivisionRounds: rounds,
+      boundaryContinuity:
+        rounds === undefined ? ("tangent" as const) : undefined,
     };
     const component = createPortraitMeshPatchComponent(
       "source",
@@ -156,7 +159,31 @@ export const test_subject_retained_patch = (): void => {
         ),
         source.positions.slice(4),
       );
+      const native = new Set(
+        [0, 1, 2, 3].map((v) => refined.positions.length + v),
+      );
+      const firstRow = final.groups.flatMap((g, f) => {
+        const tri = final.indices.slice(f * 3, f * 3 + 3);
+        return g === 2 && tri.filter((v) => native.has(v)).length === 2
+          ? tri.filter((v) => !native.has(v))
+          : [];
+      });
+      TestValidator.equals(
+        "four native boundary neighbours",
+        firstRow.length,
+        4,
+      );
+      TestValidator.predicate(
+        "tangent row remains on native plane after fairing",
+        firstRow.every((v) => nclose(final.positions[v][2], 2)),
+      );
       assertPortraitSkinTopology(final, []);
+    } else if (rounds === 0) {
+      TestValidator.equals(
+        "coarse positional join has no free interior",
+        attached.finalSurface!({ ...replaced, normals: [] }),
+        [],
+      );
     }
     TestValidator.equals(
       "no separate interior meshes",
@@ -199,6 +226,15 @@ export const test_subject_retained_patch = (): void => {
     throwsError(() => plan.attach(claimed, claimed.positions, () => 1)),
   );
   for (const shape of [
+    { reach: 0, travel: 4, boundaryContinuity: "invalid" as never },
+    { reach: 0, travel: 4, boundaryContinuity: "tangent" as const },
+    {
+      reach: 0,
+      travel: 4,
+      preserveSource: true,
+      joinSubdivisionRounds: 1,
+      boundaryContinuity: "tangent" as const,
+    },
     { reach: 0, travel: 4, preserveSource: "yes" as never },
     { reach: 0, travel: 4, joinSubdivisionRounds: 1 },
     ...[-1, 0.5, 5, NaN].map((joinSubdivisionRounds) => ({

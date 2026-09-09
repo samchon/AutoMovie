@@ -3,8 +3,10 @@ import {
   triangulateAutoMovieRegion,
 } from "@automovie/engine";
 
+import { portraitNormals } from "./geometry";
 import type { IPortraitComponent } from "./portraitComponents";
 import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
+import { fitPortraitJoinBoundary } from "./portraitJoinTangency";
 import {
   type IPortraitPatchAttachment,
   fitPortraitPatchBoundary,
@@ -38,7 +40,9 @@ export interface IPortraitMeshPatch {
  * omission leaves the original host controls unchanged. After refinement and
  * anatomical layers, a bounded fairing solve joins the final neighbouring
  * surfaces with fixed shared boundaries. The donor core and host are fixed;
- * only annulus-interior vertices travel along the recorded view ray.
+ * only annulus-interior vertices travel along the recorded view ray. Optional
+ * tangent continuity first rotates its boundary-adjacent row in the physical
+ * edge frame, then holds that row while the remaining interior follows the ray.
  *
  * preserveSource reserves the coarse host region instead of inserting the
  * sampled source into Loop subdivision. Its actual refined boundary is recovered
@@ -65,6 +69,12 @@ export function createPortraitMeshPatchComponent(
       "A patch component needs an identity and a simple host boundary.",
     );
   if (
+    (attachment?.boundaryContinuity !== undefined &&
+      attachment.boundaryContinuity !== "position" &&
+      attachment.boundaryContinuity !== "tangent") ||
+    (attachment?.boundaryContinuity === "tangent" &&
+      (attachment.preserveSource !== true ||
+        (attachment.joinSubdivisionRounds ?? 2) < 2)) ||
     (attachment?.preserveSource !== undefined &&
       typeof attachment.preserveSource !== "boolean") ||
     (attachment?.joinSubdivisionRounds !== undefined &&
@@ -74,7 +84,7 @@ export function createPortraitMeshPatchComponent(
         attachment.joinSubdivisionRounds > 4))
   )
     throw new Error(
-      "Source preservation needs a boolean mode and zero through four joining refinements.",
+      "Source preservation needs valid mode/refinement settings; tangent continuity requires a retained source and at least two joining rounds.",
     );
   const validateEdges = (points: readonly (readonly number[])[]): void => {
     const lengths = points.map((point, i) =>
@@ -229,8 +239,33 @@ export function createPortraitMeshPatchComponent(
                 },
               },
             ],
-            finalSurface: (refined: IPortraitFinalSurfaceHost) =>
-              fairPortraitSurface(refined, joinGroup, viewRay),
+            finalSurface: (refined: IPortraitFinalSurfaceHost) => {
+              if (attachment.boundaryContinuity !== "tangent")
+                return fairPortraitSurface(refined, joinGroup, viewRay);
+              const targets = fitPortraitJoinBoundary(refined, joinGroup);
+              const byVertex = new Map(
+                targets.map((t) => [t.vertex, t.target]),
+              );
+              const positions = refined.positions.map(
+                (p, id) => byVertex.get(id) ?? [...p],
+              );
+              return [
+                ...targets,
+                ...fairPortraitSurface(
+                  {
+                    ...refined,
+                    positions,
+                    normals: portraitNormals(positions.flat(), [
+                      ...refined.indices,
+                    ]),
+                  },
+                  joinGroup,
+                  viewRay,
+                  undefined,
+                  targets.map((t) => t.vertex),
+                ),
+              ];
+            },
             finish: () => [],
           };
         },

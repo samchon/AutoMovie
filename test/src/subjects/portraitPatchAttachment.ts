@@ -22,6 +22,8 @@ export interface IPortraitPatchAttachment {
   preserveSource?: boolean;
   /** Interior-only annular triangle refinement rounds, 0..4; defaults to two when preserving source. */
   joinSubdivisionRounds?: number;
+  /** Optional first-row tangent matching for a retained source; omitted is position continuity. */
+  boundaryContinuity?: "position" | "tangent";
 }
 
 /**

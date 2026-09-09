@@ -47,6 +47,18 @@ export const test_subject_surface_fairing = (): void => {
     nclose(result[0].target[2], 2),
   );
   TestValidator.equals("input peak retained", positions[12], [0, 0, 3]);
+  TestValidator.equals(
+    "explicit fixed sample stays fixed",
+    fairPortraitSurface(host, 1, [0, 0, 1], undefined, [12]),
+    [],
+  );
+  for (const id of [-1, 0.5, positions.length])
+    TestValidator.predicate(
+      "invalid fixed sample",
+      throwsError(() =>
+        fairPortraitSurface(host, 1, [0, 0, 1], undefined, [id]),
+      ),
+    );
   const oblique = fairPortraitSurface(host, 1, [1, 0, 1]);
   TestValidator.predicate(
     "image plane retained",

@@ -563,6 +563,7 @@ export const portraitNasalReferenceAttachment: IPortraitPatchAttachment = {
   travel: 40,
   preserveSource: true,
   joinSubdivisionRounds: 2,
+  boundaryContinuity: "tangent",
 };
 
 /**

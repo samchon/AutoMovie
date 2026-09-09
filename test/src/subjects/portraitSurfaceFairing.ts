@@ -11,6 +11,8 @@ import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
  * The frozen input metric defines cotangent L and barycentric vertex areas M.
  * We minimize ||M^(-1/2) L (P + d r)||^2 for scalar offsets d on the unit ray r.
  * All boundary/exterior offsets are zero. A matrix-free, diagonally conditioned
+ * solve also excludes explicitly fixed interior samples, preserving a boundary
+ * derivative already established by the owning component. The remaining
  * conjugate-gradient solve avoids a dense matrix and preserves image projection.
  * The residual must converge; the iteration limit is not a smoothing strength.
  * This discrete energy does not certify exact C1 continuity or nonintersection.
@@ -21,10 +23,15 @@ export function fairPortraitSurface(
   ray: readonly number[],
   /** Optional nonnegative solver-work limit; omission allows four steps per unknown. */
   maxIterations?: number,
+  /** Additional resident positions held fixed, such as an authored first tangent row. */
+  fixedVertices: readonly number[] = [],
 ): { vertex: number; target: number[] }[] {
   if (
     !Number.isInteger(group) ||
     group < 0 ||
+    fixedVertices.some(
+      (v) => !Number.isInteger(v) || v < 0 || v >= host.positions.length,
+    ) ||
     (maxIterations !== undefined &&
       (!Number.isInteger(maxIterations) || maxIterations < 0)) ||
     ray.length !== 3 ||
@@ -49,7 +56,10 @@ export function fairPortraitSurface(
     const set = host.groups[f] === group ? inside : outside;
     for (let c = 0; c < 3; c++) set.add(host.indices[f * 3 + c]);
   }
-  const free = [...inside].filter((v) => !outside.has(v)).sort((a, b) => a - b);
+  const fixed = new Set(fixedVertices);
+  const free = [...inside]
+    .filter((v) => !outside.has(v) && !fixed.has(v))
+    .sort((a, b) => a - b);
   if (free.length === 0) return [];
   const lookup = new Map(free.map((v, i) => [v, i]));
   const rows = new Map<
