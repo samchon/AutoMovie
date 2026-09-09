@@ -24,7 +24,7 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
     });
     return id;
   };
-  material("skin", [0.63, 0.41, 0.285], 0.63);
+  material("skin", [0.68, 0.47, 0.36], 0.58);
   material("lips", [0.48, 0.125, 0.145], 0.46);
   // The sclera has a broad surface response. The transparent eye-owned cornea
   // carries the sharp highlight over the iris; repeating a mirror-like lobe on
