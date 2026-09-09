@@ -177,6 +177,47 @@ export const test_subject_retained_patch = (): void => {
         "tangent row remains on native plane after fairing",
         firstRow.every((v) => nclose(final.positions[v][2], 2)),
       );
+      const outsideIds = new Set(
+        final.groups.flatMap((g, f) =>
+          g === 2 ? [] : final.indices.slice(f * 3, f * 3 + 3),
+        ),
+      );
+      const tangentRow = new Set(
+        final.groups.flatMap((g, f) => {
+          const tri = final.indices.slice(f * 3, f * 3 + 3);
+          return g === 2 && tri.filter((v) => outsideIds.has(v)).length === 2
+            ? tri.filter((v) => !outsideIds.has(v))
+            : [];
+        }),
+      );
+      TestValidator.equals("both socket tangent rows", tangentRow.size, 20);
+      TestValidator.predicate(
+        "first row has transverse movement",
+        [...tangentRow].some(
+          (v) =>
+            Math.hypot(
+              final.positions[v][0] - replaced.positions[v][0],
+              final.positions[v][1] - replaced.positions[v][1],
+            ) > 1e-6,
+        ),
+      );
+      const interior = new Set(
+        final.groups
+          .flatMap((g, f) =>
+            g === 2 ? final.indices.slice(f * 3, f * 3 + 3) : [],
+          )
+          .filter((v) => !outsideIds.has(v) && !tangentRow.has(v)),
+      );
+      TestValidator.predicate(
+        "free interior follows transverse boundary change",
+        [...interior].some(
+          (v) =>
+            Math.hypot(
+              final.positions[v][0] - replaced.positions[v][0],
+              final.positions[v][1] - replaced.positions[v][1],
+            ) > 1e-6,
+        ),
+      );
       assertPortraitSkinTopology(final, []);
     } else if (rounds === 0) {
       TestValidator.equals(

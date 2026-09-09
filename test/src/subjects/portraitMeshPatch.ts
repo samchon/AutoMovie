@@ -42,7 +42,7 @@ export interface IPortraitMeshPatch {
  * surfaces with fixed shared boundaries. The donor core and host are fixed;
  * only annulus-interior vertices travel along the recorded view ray. Optional
  * tangent continuity first rotates its boundary-adjacent row in the physical
- * edge frame, then holds that row while the remaining interior follows the ray.
+ * edge frame, then holds that row while all three interior coordinates are solved.
  *
  * preserveSource reserves the coarse host region instead of inserting the
  * sampled source into Loop subdivision. Its actual refined boundary is recovered
@@ -249,21 +249,30 @@ export function createPortraitMeshPatchComponent(
               const positions = refined.positions.map(
                 (p, id) => byVertex.get(id) ?? [...p],
               );
+              const basis = {
+                ...refined,
+                positions,
+                normals: portraitNormals(positions.flat(), [
+                  ...refined.indices,
+                ]),
+              };
+              const fixed = targets.map((t) => t.vertex);
+              // Tangent targets may move transversely to the camera ray. Solve
+              // XYZ on the same fixed metric and constraints, rather than leave
+              // that transverse displacement trapped in a single vertex row.
+              const axes = [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+              ].map((axis) =>
+                fairPortraitSurface(basis, joinGroup, axis, undefined, fixed),
+              );
               return [
                 ...targets,
-                ...fairPortraitSurface(
-                  {
-                    ...refined,
-                    positions,
-                    normals: portraitNormals(positions.flat(), [
-                      ...refined.indices,
-                    ]),
-                  },
-                  joinGroup,
-                  viewRay,
-                  undefined,
-                  targets.map((t) => t.vertex),
-                ),
+                ...axes[0].map((sample, i) => ({
+                  vertex: sample.vertex,
+                  target: axes.map((axis, k) => axis[i].target[k]),
+                })),
               ];
             },
             finish: () => [],
