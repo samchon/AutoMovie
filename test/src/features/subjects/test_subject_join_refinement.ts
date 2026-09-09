@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { refinePortraitJoin } from "../../subjects/refinePortraitJoin";
@@ -67,7 +68,7 @@ export const test_subject_join_refinement = (): void => {
     [...edges]
       .filter(([, n]) => n === 1)
       .map(([e]) => e)
-      .sort(),
+      .sort(compareCodeUnits),
     ["0/1", "0/3", "1/2", "2/3"],
   );
   let area = 0;
@@ -95,7 +96,7 @@ export const test_subject_join_refinement = (): void => {
     [...edgeCounts(maximum)]
       .filter(([, n]) => n === 1)
       .map(([e]) => e)
-      .sort(),
+      .sort(compareCodeUnits),
     ["0/1", "0/3", "1/2", "2/3"],
   );
   for (const rounds of [-1, 0.5, 5, NaN])
