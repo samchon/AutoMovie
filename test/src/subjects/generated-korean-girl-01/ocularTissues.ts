@@ -21,7 +21,7 @@ export interface IPortraitOcularTissueShape {
 }
 
 /**
- * The eye supplies its final refined lid curves and its actual globe surface.
+ * The eye supplies its final refined lid curves and resident ocular support.
  * X increases on both sides; anatomical left has its medial corner at minimum X.
  * Upper and lower curves share endpoints and return millimetre head coordinates.
  */
@@ -31,6 +31,7 @@ export interface IPortraitOcularTissueBoundary {
   maximumX: number;
   upper: (x: number) => IAutoMovieVector3;
   lower: (x: number) => IAutoMovieVector3;
+  /** Support height in mm. The eye may include its raised cornea as well as sclera. */
   globe: (x: number, y: number) => number;
 }
 

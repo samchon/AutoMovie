@@ -12,6 +12,7 @@ import type * as FinalSurface from "../portraitFinalSurface";
 import type * as FitBasis from "../portraitFitBasis";
 import type * as Buffers from "../portraitMeshBuffers";
 import type * as MeshPatch from "../portraitMeshPatch";
+import type * as OralContact from "../portraitOralContact";
 import type * as PatchAttachment from "../portraitPatchAttachment";
 import type * as Replacement from "../portraitRegionReplacement";
 import type * as Relief from "../portraitRelief";
@@ -52,6 +53,13 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * Relationships are recorded before compiler-issued fingerprints are inserted.
  * Missing coverage/fingerprints remain errors; this intermediate account does
  * not claim whole-source or likeness acceptance.
+ *
+ * @evidence {@link DirectionalContact.portraitDirectionalSurfaceTargets} Converts complete engine face-clearance deficits into shared metric vertex targets.
+ * @evidenceReview {@link DirectionalContact.portraitDirectionalSurfaceTargets} Read frame projection, retained front triangle ordinals and maximum travel per shared vertex. Every corner of an offending face receives at least that face's deficit, so its interpolated interior cannot retain the original directional penetration. The small enclosed-support oracle moves all three otherwise clear corners; clear/empty support, shared maxima and unrepresentable output are exercised. The host still owns skin adaptation and normals.
+ * @evidence {@link OralContact.applyPortraitOralContact} Resolves one optional named lip/enamel/cavity relationship on assembled head parts.
+ * @evidenceReview {@link OralContact.applyPortraitOralContact} Read omission identity, distinct requested names, exactly one resident match, mesh/transform/bone-frame admission and replacement of only enamel and lining. The binding scenario rejects missing, ambiguous, duplicate-role and foreign-frame inputs while retaining the actual lip and unrelated part objects. It does not infer contact ownership from every mesh whose bounds happen to overlap.
+ * @evidence {@link OralContact.fitPortraitOralContact} Places the rigid enamel group behind its lip and then fits the cavity behind that placed group.
+ * @evidenceReview {@link OralContact.fitPortraitOralContact} Traced the largest engine lip/enamel deficit into one posterior translation shared by all crown vertices, with normals retained. The negative-Z cavity targets use the translated enamel and recompute lining normals. Independent planes require 1.2 units of enamel retreat and final cavity Z=-0.4 for a 0.2-unit gap; disabling retreat fails that oracle. Current full/close renders retain a grouped arch, while its crown shape remains unaccepted.
  *
  * @evidence {@link Mouth.IPortraitMouthSocket} Binds the oral opening and surrounding vermilion to subject-owned vertex identities.
  * @evidenceReview {@link Mouth.IPortraitMouthSocket} #fd28022 Read the closed outer loop, two equally directed inner paths and interior seed beside band flooding and coordinate construction. The mouth copies all three arrays; their anatomical ownership is supplied by the subject rather than inferred from arbitrary point height.
@@ -357,7 +365,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Loop.IControlMesh.groups} Retains each triangle's material-region ownership through subdivision.
  * @evidenceReview {@link Loop.IControlMesh.groups} Read four copies per parent face and the head's later region extraction. Shared edge vertices are refined once even when adjacent labels differ; colour separation happens only after shared normals.
  * @evidence {@link DirectionalContact.createPortraitDirectionalContact} Resolves a contact target from resident triangles along a declared projection direction.
- * @evidenceReview {@link DirectionalContact.createPortraitDirectionalContact} Read its orthonormal frame, metre-valued triangle projection, foremost depth hit, identity returns and finite-output refusal. Independent frontal, slanted, reversed and Y-normal plane oracles pass; disabling the clearance branch fails the frontal oracle. This operation supplies point contact, not a smooth tissue transition or global intersection proof.
+ * @evidenceReview {@link DirectionalContact.createPortraitDirectionalContact} Read the shared contactFrame/project/advance path and the closure's foremost resident depth query. Independent frontal, diagonal, reversed and Y-normal plane oracles preserve the projected point and exact identity on clear or missed rays; invalid inputs and overflow refuse. The separate surface-target consumer now handles triangle interiors, which this point query alone cannot constrain.
  * @evidence {@link FitBasis.assertPortraitFitBasis} Binds a recorded residual to the exact source-model and target-control bytes consumed by its producer.
  * @evidenceReview {@link FitBasis.assertPortraitFitBasis} Read both digest comparisons and distinct refusal paths with standard abc/empty SHA-256 vectors. Actual fitted-consumer probes changing eye distance or one target coordinate also refuse. A new digest cannot be substituted for recomputing coefficients against that basis.
  * @evidence {@link Fitted.buildFittedReferencePortrait} Applies the recorded anatomical fit only after checking its captured source and current target dependencies.
@@ -616,9 +624,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  */
 export const portraitReview = {
   directory: ".shots/face-experiment/preview",
-  sourceCommit: "85342784",
+  sourceCommit: "957689ed",
   gltfSha256:
-    "db7a56b36d7585e9a9fc2ee2ce09c3ef43e22dca63c6d970615e9f4ac683453a",
+    "4a1b8f427b01f2525f3ae10cbe1fedbd20d3953721222a7a679abc464fe03d63",
   profileSha256:
     "d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145",
 };
