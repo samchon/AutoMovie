@@ -1,5 +1,10 @@
 /** Typed entry points for pure inspection logic, separate from model construction. */
 export declare const portraitWebModes: readonly ["colour", "clay", "wireframe"];
+export declare function resetPortraitWebSubject(subject: {
+  matrixAutoUpdate: boolean;
+  matrix: { identity(): unknown };
+  updateMatrixWorld(force: boolean): unknown;
+}): void;
 export declare function verifyPortraitWebBasis(
   expected: Record<string, string>,
   actual: Record<string, string>,

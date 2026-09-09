@@ -8,6 +8,7 @@ import {
   portraitWebHardwareRenderer,
   portraitWebModes,
   portraitWebReferenceFrame,
+  resetPortraitWebSubject,
 } from "/logic.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -204,8 +205,7 @@ controls.addEventListener("change", () => {
 
 function setCamera(name) {
   referenceCropShown = name === "reference";
-  subject.matrixAutoUpdate = false;
-  subject.matrix.identity();
+  resetPortraitWebSubject(subject);
   camera = name === "reference" || name === "nose" ? orthographic : perspective;
   controls.object = camera;
   const square = camera.isOrthographicCamera;

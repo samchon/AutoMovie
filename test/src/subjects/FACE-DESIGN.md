@@ -105,6 +105,8 @@ Optional `mouth.borderRefinement: "curve"` makes the closed cutaneous-vermilion 
 
 Individual crowns may differ in mesial/distal contour, incisal/cusp form, cervical section and labial/lingual surface. The arch owns their arrangement. A richer crown representation preserves the group's placement and recalculates any affected spacing/contact through that common arrangement. Gingiva, mucosa, lower teeth or tongue are added where the actual visible target or behavior requires them. They are not generic filler for unexplained dark gaps.
 
+Optional dental `contactGap` measures actual proximal surfaces along the group's X axis after nominal elliptical arrangement. Every ordered pair contributes a difference constraint from the engine's complete triangle-overlap minimum. One forward pass resolves the translations, then balances their end shifts around zero. Individual crowns retain their shape, orientation, Y/Z coordinates and normals. The guide ellipse remains the nominal arrangement rather than an exact locus after this explicit contact adjustment. Omission preserves nominal placement; the current requested gap is 0.02 mm. This local crown fit precedes rigid oral attachment and lip/cavity contact.
+
 ## Defaults, detail and later semantic controls {#control-resolution}
 
 Resolution proceeds from declared defaults to the component's supplied detailed values, then to the group arrangement and assembled geometry. The result can explain which values were inherited and which were authored. Updating a default cannot silently overwrite an explicit detail value. Changing a group frame carries local detail through its documented coordinates instead of discarding it.

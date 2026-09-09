@@ -1,4 +1,8 @@
-import { Vector3, mergeAutoMovieMeshes } from "@automovie/engine";
+import {
+  Vector3,
+  mergeAutoMovieMeshes,
+  separateAutoMovieMeshSequence,
+} from "@automovie/engine";
 import type { IAutoMovieMesh, IAutoMovieVector3 } from "@automovie/interface";
 
 import { portraitPoint as p } from "../geometry";
@@ -23,6 +27,8 @@ export interface IPortraitDentalRow {
   depth: number;
   /** Nonnegative clearance measured along the common arch, in millimetres. */
   gap: number;
+  /** Optional minimum inter-crown surface gap along local X, in mm. Omission retains nominal arch placement. */
+  contactGap?: number;
   /** Ordered from anatomical right to left; each crown keeps its own dimensions. */
   crowns: readonly IPortraitDentalCrown[];
 }
@@ -30,7 +36,7 @@ export interface IPortraitDentalRow {
 /**
  * Compose one resident enamel group before attaching it to the face. The local
  * guide is an ellipse: x=a*sin(theta), z=b*(cos(theta)-1), y=0. Its cumulative
- * arc length owns every crown centre. The same tangent rotates that crown's
+ * arc length establishes nominal crown centres. The same tangent rotates each crown's
  * positions and normals, while all cervical ends share the group's Y=0 plane.
  * Neither a lip landmark's height nor an individual ray hit can tilt one tooth.
  */
@@ -49,6 +55,13 @@ export function buildPortraitDentalRow(
       "A dental row needs positive arch dimensions, a nonnegative gap and crowns.",
     );
   shape.crowns.forEach(assertPortraitDentalCrown);
+  if (
+    shape.contactGap !== undefined &&
+    (!Number.isFinite(shape.contactGap) || shape.contactGap < 0)
+  )
+    throw new Error(
+      "Dental surface contact gap must be finite and nonnegative.",
+    );
   const crowns: IAutoMovieMesh[] = [];
   const length =
     shape.crowns.reduce((sum, crown) => sum + crown.width, 0) +
@@ -89,7 +102,32 @@ export function buildPortraitDentalRow(
       mesh.normals![i + 2] = tangent.z * nx + tangent.x * nz;
     }
   }
-  return mergeAutoMovieMeshes(crowns);
+  // Arc-distance widths establish nominal centres but cannot account for the
+  // rotated three-dimensional proximal faces. An optional complete-surface fit
+  // shifts each intact crown along group X and balances the two end shifts. It
+  // retains Y/Z, crown orientation and shape; the nominal ellipse is a guide,
+  // not an exact locus after this explicitly requested contact adjustment.
+  const placed =
+    shape.contactGap === undefined
+      ? crowns
+      : separateAutoMovieMeshSequence(
+          crowns.map((mesh) => ({
+            ...mesh,
+            positions: mesh.positions.map((value) => value / 1000),
+          })),
+          "x",
+          shape.contactGap / 1000,
+        ).map((mesh, index) => {
+          const shift =
+            (mesh.positions[0] - crowns[index].positions[0] / 1000) * 1000;
+          return {
+            ...mesh,
+            positions: crowns[index].positions.map((value, axis) =>
+              axis % 3 === 0 ? value + shift : value,
+            ),
+          };
+        });
+  return mergeAutoMovieMeshes(placed);
 }
 
 /**

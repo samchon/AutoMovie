@@ -30,6 +30,8 @@ The HTTP process stays alive when the exporter fails. A failed `ttsx` check appe
 
 Drag to orbit, wheel to zoom and right-drag to pan. Canonical views use the exported camera profile. Eye and mouth views frame resident part bounds in the context of the whole model. The nose uses an authored orthographic close camera at target `[0, -0.010, 0.074]`, distance `0.4 m` and vertical span `0.068 m`, matching the study's `render-close.py` inspection. The basic assembly integrates nasal skin into `head` and has only `nostril-interiors` as a separate nasal part. Colour, clay and wireframe are inspection modes. Part toggles remain explicit across mode changes, including hair; use the Hair button to expose the head for a clay inspection. The filter addresses every exported part, including nasal core/join when those parts exist. It cannot isolate skin inside `head`.
 
+Switching away from the reference pose resets and propagates the subject matrix before any child bounds frame a close view. Opening the mouth or eyes therefore gives the same canonical framing regardless of the previous view; an old parent world matrix must not translate the next close camera.
+
 `reference` reproduces `render-blender.py`'s recorded measurement rotation, image origin, millimetres per pixel and square reference crop. The model group receives that exact matrix; the orthographic camera and the photograph display the same crop. Receipts include the model matrix, projection, orthographic extents and native square raster. Returning to a canonical view clears the model rotation and restores perspective and the profile's portrait dimensions. An arbitrary orbit view is not registered to the photograph.
 
 ## Capture

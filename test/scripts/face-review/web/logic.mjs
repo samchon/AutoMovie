@@ -1,6 +1,15 @@
 /** Pure inspection choices shared by the browser and its unit scenarios. */
 export const portraitWebModes = ["colour", "clay", "wireframe"];
 
+/** Reset the subject frame before a close camera reads child world bounds. */
+export function resetPortraitWebSubject(subject) {
+  subject.matrixAutoUpdate = false;
+  subject.matrix.identity();
+  // Box3.expandByObject updates the child without recomputing its parent.
+  // A reference-pose matrix must therefore be propagated away before focus.
+  subject.updateMatrixWorld(true);
+}
+
 /** Refuse a mixed export rather than labeling old geometry with a new basis. */
 export function verifyPortraitWebBasis(expected, actual) {
   for (const key of ["model", "gltf", "profile", "configuration", "input"])

@@ -409,6 +409,9 @@ export const portraitDentalRow: IPortraitDentalRow = {
   halfWidth: 24,
   depth: 18,
   gap: 0.08,
+  // Nominal arc gaps do not measure the rotating proximal surfaces. Fit those
+  // resident crown meshes with a separate, small physical separation constraint.
+  contactGap: 0.02,
   crowns: portraitMouthShape.crowns.map((crown) => ({
     ...crown,
     depth: 1.5,
