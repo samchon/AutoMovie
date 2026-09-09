@@ -46,6 +46,8 @@ A film's effect track has two owners that must never overlap on one world zone: 
 
 A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
 
+Library builders receive verified precomputed inputs through `IAutoMovieLibraryBuildContext.derivedArtifacts`, keyed by output path. The compiler checks the declared ledger, basis, output and external-asset collisions before source execution and includes those bytes in its publication freshness check. Generation remains an explicit authoring command; library compilation does not run generators.
+
 ## Reviewed public utility callables
 
 These utilities are public for generated-project scripts and diagnostic clients;

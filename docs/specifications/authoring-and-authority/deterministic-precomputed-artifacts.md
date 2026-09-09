@@ -2,7 +2,7 @@
 
 ## 파생 산출물 경계 {#spec-authoring-precomputed-boundary}
 
-파생 산출물은 tracked generator와 declared input을 소비해 ordinary project script가 만든 tracked bytes다. Generation은 compile 전에 명시적으로 실행되고 compile은 generator를 실행하지 않는다. Shot과 film source의 모듈 평가 및 build 호출에 적용되는 실행 시간 예산은 그대로 유지된다.
+파생 산출물은 tracked generator와 declared input을 소비해 ordinary project script가 만든 tracked bytes다. Generation은 compile 전에 명시적으로 실행되고 compile은 generator를 실행하지 않는다. Shot, film, library source의 모듈 평가 및 build 호출에 적용되는 실행 시간 예산은 그대로 유지된다. Library도 검증된 파생 bytes를 build context로 전달하며, 원장·basis·output 및 외부 자산 경로의 변경은 컴파일 입력 지문과 게시 직전 재확인에 포함한다.
 
 ### Manifest와 namespace {#spec-authoring-precomputed-manifest}
 

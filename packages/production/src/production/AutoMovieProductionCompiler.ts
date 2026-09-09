@@ -1272,8 +1272,12 @@ export class AutoMovieProductionCompiler {
       requireReviewed,
     );
     const sources = snapshot.sources.map((source) => source.path);
-    const inputFingerprint = this.libraryInputFingerprint(snapshot);
-    const diagnostics: IAutoMovieDiagnostic[] = [];
+    const derived = this.libraryDerivedInputs(input.scope !== "design");
+    const inputFingerprint = this.libraryInputFingerprint(
+      snapshot,
+      derived.fields,
+    );
+    const diagnostics: IAutoMovieDiagnostic[] = [...derived.diagnostics];
     if (input.scope !== "design")
       diagnostics.push(
         ...execution.problems.map(
@@ -1302,6 +1306,7 @@ export class AutoMovieProductionCompiler {
           branch: owner.branch,
           design: owner.path,
           anchor: unit.anchor,
+          derivedArtifacts: derived.artifacts,
         });
         sourceBranchByDesign.set(address, owner.sourceBinding?.branch ?? "");
       }
@@ -1313,6 +1318,7 @@ export class AutoMovieProductionCompiler {
           branch: entry.branch,
           design: entry.owner.slice(0, separator),
           anchor: entry.owner.slice(separator + 1),
+          derivedArtifacts: derived.artifacts,
         });
         sourceBranchByDesign.set(entry.owner, entry.branch);
       }
@@ -1327,7 +1333,10 @@ export class AutoMovieProductionCompiler {
     const contextOwner = new Map<string, string>();
     const models = new Map<string, IAutoMovieModel>();
     const modelOwner = new Map<string, string>();
-    if (input.scope !== "design")
+    if (
+      input.scope !== "design" &&
+      derived.diagnostics.every((item) => item.category !== "error")
+    )
       for (const source of sources) {
         let text: string | null = null;
         try {
@@ -1558,13 +1567,19 @@ export class AutoMovieProductionCompiler {
     const inputCurrent = (): boolean => {
       if (this.currentAuthoringEvidence === undefined) return false;
       try {
-        return sameAutoMovieLibraryAuthoringSnapshot(
-          snapshot,
-          captureAutoMovieLibraryAuthoringSnapshot({
-            root: this.project.root,
-            evidence: this.currentAuthoringEvidence(),
-            readSource: (source) => this.project.readSource(source),
-          }),
+        return (
+          sameAutoMovieLibraryAuthoringSnapshot(
+            snapshot,
+            captureAutoMovieLibraryAuthoringSnapshot({
+              root: this.project.root,
+              evidence: this.currentAuthoringEvidence(),
+              readSource: (source) => this.project.readSource(source),
+            }),
+          ) &&
+          this.libraryInputFingerprint(
+            snapshot,
+            this.libraryDerivedInputs(input.scope !== "design").fields,
+          ) === inputFingerprint
         );
       } catch {
         return false;
@@ -1631,15 +1646,16 @@ export class AutoMovieProductionCompiler {
   /**
    * The compiler input identity of one library, recomputed on demand.
    *
-   * A library's inputs are the authoring declaration and the source bytes its
-   * reviewed bindings select, so the same read answers both the fingerprint the
-   * result carries and the guard the atomic publication runs against a
-   * concurrent edit.
+   * A library's inputs include the authoring declaration, selected source bytes,
+   * content inventory and verified derivation closure. The same read answers
+   * both the result identity and the atomic publication's concurrent-edit guard.
    */
   private libraryInputFingerprint(
     snapshot: IAutoMovieLibraryAuthoringSnapshot,
+    derivedFields: readonly IAutoMovieFingerprintField[],
   ): AutoMovieContentDigest {
     return fingerprintAutoMovieFields([
+      ...derivedFields,
       {
         role: "library:compiler",
         kind: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
@@ -1649,6 +1665,65 @@ export class AutoMovieProductionCompiler {
         }),
       },
     ]);
+  }
+
+  /** Read the same verified content closure for execution and publication. */
+  private libraryDerivedInputs(enabled: boolean): {
+    artifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
+    fields: IAutoMovieFingerprintField[];
+    diagnostics: IAutoMovieDiagnostic[];
+  } {
+    const fields: IAutoMovieFingerprintField[] = [];
+    const diagnostics: IAutoMovieDiagnostic[] = [];
+    if (!enabled) return { artifacts: {}, fields, diagnostics };
+    const manifest = this.project.manifest();
+    let externalAssetPaths: string[] = [];
+    try {
+      const content = this.project.contentInputs();
+      fields.push(...contentFingerprintFields(content));
+      const inventory = compilerAssetInventory(
+        manifest.assetManifest,
+        content,
+        this.project.productionId,
+        this.project.graph(),
+        this.project.archetypes,
+      );
+      externalAssetPaths = inventory.records.map((asset) => asset.path);
+      diagnostics.push(...inventory.diagnostics);
+    } catch (error) {
+      fields.push({
+        role: "content:inventory",
+        kind: "unsafe",
+        payload: new Uint8Array(),
+      });
+      diagnostics.push({
+        code: "content-input-unsafe",
+        category: "error",
+        phase: "source",
+        target: "declared-content",
+        path: null,
+        message: errorMessage(error),
+      });
+    }
+    const inspection = inspectAutoMovieDerivedArtifacts({
+      root: this.project.root,
+      manifestPath: manifest.derivedArtifactManifest,
+      externalAssetPaths,
+    });
+    fields.push(...inspection.fingerprintFields);
+    diagnostics.push(
+      ...inspection.problems.map(
+        (problem): IAutoMovieDiagnostic => ({
+          code: problem.code,
+          category: "error",
+          phase: "project",
+          target: problem.target,
+          path: problem.path,
+          message: problem.message,
+        }),
+      ),
+    );
+    return { artifacts: inspection.artifacts, fields, diagnostics };
   }
 
   /** Admit settings serialization only as a zero-payload lineage result. */

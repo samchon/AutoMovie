@@ -1,6 +1,7 @@
 import { IAutoMovieEnvironmentContext } from "../analysis/IAutoMovieEnvironmentContext";
 import { IAutoMovieBuiltEnvironment } from "../architecture/IAutoMovieBuiltEnvironment";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
+import { IAutoMovieDerivedArtifactSource } from "./IAutoMovieDerivedArtifact";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /**
@@ -9,8 +10,8 @@ import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
  * A library has no shot, so a library owner receives no scene, no clock, and no
  * staged world. What it receives is its own address, because the module has to
  * be able to state which reviewed decision it is realizing without reading a
- * file. Everything else a deterministic builder needs is either arithmetic it
- * does itself or a named import from the sandbox engine surface.
+ * file. Verified precomputed inputs arrive through the build context; the
+ * builder still performs no filesystem access or implicit generation.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Carries the exact owner address a materialized library artifact is traced back through.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Types the declared input a library derivation attempt receives.
@@ -25,6 +26,14 @@ export interface IAutoMovieLibraryBuildContext {
   design: string;
   /** Exact H2 anchor of the reviewed decision this owner realizes. */
   anchor: string;
+  /**
+   * Declared precomputed artifacts whose basis and output bytes the compiler
+   * verified before execution, keyed by project-relative output path.
+   *
+   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Supplies only current declared precomputed inputs to library owners.
+   * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Carries the verified bytes included in the library compilation fingerprint.
+   */
+  derivedArtifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
 }
 
 /**
