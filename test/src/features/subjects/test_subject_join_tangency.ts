@@ -5,14 +5,14 @@ import { refinePortraitJoin } from "../../subjects/refinePortraitJoin";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
- * Boundary jets match neighbouring planes while retaining each sample's edge frame.
+ * Boundary jets match neighbouring planes without folding the annular XY chart.
  *
  * Scenarios:
  * 1. A refined triangular region rises 0.4mm over flat neighbours. Its first
- *    row returns to z=0; the AB witness keeps x=4/3 and obtains y=sqrt(61)/15
- *    from its original transverse distance. Boundaries and input remain owned.
- * 2. A flat coarse first row merges compatible targets; a raised shared sample
- *    refuses incompatible ones. Missing/duplicate neighbours, immovable samples,
+ *    row returns to z=0 while retaining x=4/3 and y=1/3. A ten-times taller
+ *    triangle brings that row to half-edge distance, x=57/40 and y=3/2.
+ * 2. A coarse first row merges compatible planes; inconsistent planes refuse.
+ *    Missing/duplicate neighbours, immovable samples,
  *    invalid input and degenerate frames refuse. An absent group is neutral.
  */
 export const test_subject_join_tangency = (): void => {
@@ -58,20 +58,41 @@ export const test_subject_join_tangency = (): void => {
   const point = targets.find((t) => t.vertex === witness)!.target;
   TestValidator.predicate(
     "hand tangent-row coordinate",
-    nclose(point[0], 4 / 3) && nclose(point[1], Math.sqrt(61) / 15),
+    nclose(point[0], 4 / 3) && nclose(point[1], 1 / 3),
   );
   TestValidator.equals("input owned", host, before);
   TestValidator.equals("absent region", fitPortraitJoinBoundary(host, 99), []);
-  const compatible = fitPortraitJoinBoundary(make(1, 0), 1);
+  const compatible = fitPortraitJoinBoundary(make(1, 0.4), 1);
   TestValidator.equals("compatible shared sample", compatible.length, 1);
   TestValidator.predicate(
     "shared planar target",
     compatible[0].target.every((v, k) => nclose(v, [1, 1, 0][k])),
   );
+  const incompatible = make(1, 0.4);
+  incompatible.positions[3][2] = 1;
   TestValidator.predicate(
     "conflicting shared sample",
-    throwsError(() => fitPortraitJoinBoundary(make(1, 0.4), 1)),
+    throwsError(() => fitPortraitJoinBoundary(incompatible, 1)),
   );
+  const tall = make(2, 0.4);
+  tall.positions.forEach((p) => {
+    p[1] *= 10;
+  });
+  const local = fitPortraitJoinBoundary(tall, 1).find(
+    (t) => t.vertex === witness,
+  )!.target;
+  TestValidator.predicate(
+    "long transverse chord gets a local first row",
+    nclose(local[0], 57 / 40) && nclose(local[1], 1.5) && nclose(local[2], 0),
+  );
+  const inclined = make(2, 0.4);
+  inclined.positions.forEach((p) => {
+    p[2] += p[0] / 2 - p[1] / 4;
+  });
+  const jet = fitPortraitJoinBoundary(inclined, 1).find(
+    (t) => t.vertex === witness,
+  )!.target;
+  TestValidator.predicate("inclined boundary plane", nclose(jet[2], 7 / 12));
   TestValidator.predicate(
     "boundary-only samples refuse",
     throwsError(() => fitPortraitJoinBoundary(make(0, 0), 1)),
@@ -108,6 +129,18 @@ export const test_subject_join_tangency = (): void => {
     {
       ...host,
       positions: host.positions.map((p, i) => (i === 3 ? [1, 0, 0] : p)),
+    },
+    {
+      ...host,
+      positions: host.positions.map((p, i) => (i === 3 ? [1, 1, 0] : p)),
+    },
+    {
+      ...host,
+      positions: host.positions.map((p, i) => (i === 3 ? [1, -1e-310, 1] : p)),
+    },
+    {
+      ...host,
+      positions: host.positions.map((p, i) => (i === 6 ? [10, 10, 0.4] : p)),
     },
     {
       ...host,

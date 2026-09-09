@@ -4,16 +4,20 @@ import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
 
 /**
  * Match the first joining row to the actual planes on both sides of its boundary.
- * For a directed joining edge A→B, T is its unit tangent and N the neighbouring
- * face normal. N×T points into the join. The inner vertex retains its along-edge
- * coordinate and perpendicular edge distance, but uses that transverse direction.
- * Thus its boundary triangle has the same oriented normal as its neighbour.
+ * The annulus is a height surface over its existing head-XY triangulation.
+ * Its first sample moves towards the shared edge midpoint only when farther
+ * than half that edge's projected length. This gives short boundary segments
+ * a local derivative sample instead of extrapolating their planes across the
+ * whole annulus. The neighbouring plane then supplies Z at that XY location.
  *
  * Coordinates are millimetres. Only interior vertices are proposed; boundary,
  * native core and surrounding skin remain fixed. Compatible repeated targets
  * agree within 1e-8 mm; incompatible first-row ownership refuses. The caller must
- * hold these targets during subsequent fairing. This is a discrete tangent-plane
- * condition, not a curvature or self-intersection guarantee.
+ * hold these targets and all XY coordinates during subsequent height fairing.
+ * Every resulting join triangle must retain positive projected area. A vertical
+ * or backward-facing supporting plane cannot define this height chart and is
+ * refused. This is a discrete tangent-plane condition, not a curvature guarantee
+ * or a claim about intersections with geometry outside this annular chart.
  */
 export function fitPortraitJoinBoundary(
   host: IPortraitFinalSurfaceHost,
@@ -82,33 +86,39 @@ export function fitPortraitJoinBoundary(
     const a = points[edge.a],
       b = points[edge.b],
       p = points[edge.vertex];
-    const tangent = Vector3.normalize(Vector3.subtract(b, a)),
-      face = edge.outside[0];
+    const face = edge.outside[0];
     const normal = Vector3.normalize(
       Vector3.cross(
         Vector3.subtract(points[face[1]], points[face[0]]),
         Vector3.subtract(points[face[2]], points[face[0]]),
       ),
     );
-    const transverse = Vector3.normalize(Vector3.cross(normal, tangent));
-    const offset = Vector3.subtract(p, a),
-      along = Vector3.dot(offset, tangent);
-    const width = Vector3.length(
-      Vector3.subtract(offset, Vector3.scale(tangent, along)),
-    );
+    const dx = b.x - a.x,
+      dy = b.y - a.y,
+      length = Math.hypot(dx, dy),
+      width = (dx * (p.y - a.y) - dy * (p.x - a.x)) / length;
     if (
-      !(Vector3.length(transverse) > 0) ||
+      !(normal.z > 0) ||
+      !(length > 0) ||
+      !Number.isFinite(length) ||
       !(width > 0) ||
       !Number.isFinite(width)
     )
-      throw new Error("Join tangent frames must be finite and nondegenerate.");
-    const target = Vector3.add(
-      a,
-      Vector3.add(
-        Vector3.scale(tangent, along),
-        Vector3.scale(transverse, width),
-      ),
+      throw new Error(
+        "Join tangency needs a finite forward-facing height chart.",
+      );
+    const fraction = Math.min(1, length / (2 * width)),
+      middleX = a.x + dx / 2,
+      middleY = a.y + dy / 2,
+      x = middleX + fraction * (p.x - middleX),
+      y = middleY + fraction * (p.y - middleY);
+    const target = Vector3.create(
+      x,
+      y,
+      a.z - (normal.x * (x - a.x) + normal.y * (y - a.y)) / normal.z,
     );
+    if (![target.x, target.y, target.z].every(Number.isFinite))
+      throw new Error("Join tangent-plane extrapolation must remain finite.");
     const previous = targets.get(edge.vertex);
     if (
       previous !== undefined &&
@@ -124,5 +134,21 @@ export function fitPortraitJoinBoundary(
       );
     targets.set(edge.vertex, [target.x, target.y, target.z]);
   }
+  // Moving a last-refinement face centre towards its boundary edge stays inside
+  // that parent triangle. Check the entire proposed chart as well: callers with
+  // a different/nonconvex vertex star must not silently publish a fold. Keeping
+  // this checked XY chart fixed makes later Z fairing unable to reverse a face.
+  for (let f = 0; f < host.groups.length; f++)
+    if (host.groups[f] === group) {
+      const [a, b, c] = host.indices
+        .slice(f * 3, f * 3 + 3)
+        .map((v) => targets.get(v) ?? host.positions[v]);
+      const area =
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      if (!(area > 0) || !Number.isFinite(area))
+        throw new Error(
+          "Join tangent rows must preserve positive XY triangles.",
+        );
+    }
   return [...targets].map(([vertex, target]) => ({ vertex, target }));
 }

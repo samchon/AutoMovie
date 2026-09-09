@@ -16,6 +16,9 @@ import { nclose, throwsError } from "../internal/predicates";
  *    identities, ray/dimensions, work limits and collapsed support refuse.
  * 4. Nine independently displaced interior points require multiple iterations
  *    and recover the surrounding plane; a one-step budget refuses that solve.
+ * 5. A fixed XY metric recovers the zero centre of z=x²+y²: the interior
+ *    discrete Laplacian is constant. Height rays preserve XY; other axes,
+ *    unknown metrics and vertically collapsed charts refuse.
  */
 export const test_subject_surface_fairing = (): void => {
   const positions: number[][] = [],
@@ -47,6 +50,62 @@ export const test_subject_surface_fairing = (): void => {
     nclose(result[0].target[2], 2),
   );
   TestValidator.equals("input peak retained", positions[12], [0, 0, 3]);
+  const paraboloid = {
+    ...host,
+    positions: positions.map(([x, y], i) => [
+      x,
+      y,
+      i === 12 ? 7 : x * x + y * y,
+    ]),
+  };
+  for (const ray of [
+    [0, 0, 1],
+    [0, 0, -3],
+  ]) {
+    const height = fairPortraitSurface(paraboloid, 1, ray, undefined, [], "xy");
+    TestValidator.predicate(
+      "independent paraboloid centre",
+      height[0].target.every((v) => nclose(v, 0)),
+    );
+  }
+  TestValidator.predicate(
+    "surface metric is a distinct problem",
+    !nclose(fairPortraitSurface(paraboloid, 1, [0, 0, 1])[0].target[2], 0),
+  );
+  for (const ray of [
+    [1, 0, 1],
+    [0, 1, 1],
+  ])
+    TestValidator.predicate(
+      "height metric refuses moving XY",
+      throwsError(() => fairPortraitSurface(host, 1, ray, undefined, [], "xy")),
+    );
+  TestValidator.predicate(
+    "unknown metric",
+    throwsError(() =>
+      fairPortraitSurface(
+        host,
+        1,
+        [0, 0, 1],
+        undefined,
+        [],
+        "invalid" as never,
+      ),
+    ),
+  );
+  TestValidator.predicate(
+    "vertical chart refuses",
+    throwsError(() =>
+      fairPortraitSurface(
+        { ...host, positions: positions.map(([x, y]) => [0, y, x]) },
+        1,
+        [0, 0, 1],
+        undefined,
+        [],
+        "xy",
+      ),
+    ),
+  );
   TestValidator.equals(
     "explicit fixed sample stays fixed",
     fairPortraitSurface(host, 1, [0, 0, 1], undefined, [12]),

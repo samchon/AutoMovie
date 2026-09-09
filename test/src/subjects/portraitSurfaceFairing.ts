@@ -9,6 +9,9 @@ import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
  * solving against boundary positions alone. Native core detail is not smoothed.
  *
  * The frozen input metric defines cotangent L and barycentric vertex areas M.
+ * The default uses physical surface areas; optional XY uses the fixed planar
+ * chart and only admits a Z displacement. It retains XY exactly so a caller's
+ * admitted positive triangulation cannot fold during the height solve.
  * We minimize ||M^(-1/2) L (P + d r)||^2 for scalar offsets d on the unit ray r.
  * All boundary/exterior offsets are zero. A matrix-free, diagonally conditioned
  * solve also excludes explicitly fixed interior samples, preserving a boundary
@@ -25,8 +28,12 @@ export function fairPortraitSurface(
   maxIterations?: number,
   /** Additional resident positions held fixed, such as an authored first tangent row. */
   fixedVertices: readonly number[] = [],
+  /** XY uses projected areas/cotangents and admits only a Z height displacement. */
+  metric: "surface" | "xy" = "surface",
 ): { vertex: number; target: number[] }[] {
   if (
+    (metric !== "surface" && metric !== "xy") ||
+    (metric === "xy" && (ray[0] !== 0 || ray[1] !== 0)) ||
     !Number.isInteger(group) ||
     group < 0 ||
     fixedVertices.some(
@@ -74,10 +81,15 @@ export function fairPortraitSurface(
   const points = host.positions.map((p) =>
     Vector3.create(...(p as [number, number, number])),
   );
+  // A height solve measures derivatives in the fixed chart. The current 3D
+  // surface's distorted lengths and areas must not define that planar metric.
+  // Keep physical points separately: their Z values still define the energy.
+  const metricPoints =
+    metric === "xy" ? points.map((p) => Vector3.create(p.x, p.y, 0)) : points;
   for (let f = 0; f < host.indices.length; f += 3) {
     const tri = host.indices.slice(f, f + 3);
     if (!tri.some((v) => rows.has(v))) continue;
-    const [a, b, c] = tri.map((v) => points[v]);
+    const [a, b, c] = tri.map((v) => metricPoints[v]);
     const area2 = Vector3.length(
       Vector3.cross(Vector3.subtract(b, a), Vector3.subtract(c, a)),
     );
@@ -95,8 +107,8 @@ export function fairPortraitSurface(
         s = tri[(k + 2) % 3];
       const weight =
         Vector3.dot(
-          Vector3.subtract(points[r], points[q]),
-          Vector3.subtract(points[s], points[q]),
+          Vector3.subtract(metricPoints[r], metricPoints[q]),
+          Vector3.subtract(metricPoints[s], metricPoints[q]),
         ) /
         area2 /
         2;

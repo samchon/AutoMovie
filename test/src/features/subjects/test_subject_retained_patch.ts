@@ -12,7 +12,7 @@ import { nclose, throwsError } from "../internal/predicates";
  * A prebuilt source surface retains its coordinates through host refinement.
  *
  * Scenarios:
- * 1. A two-triangle plane replaces the marked half of a refined octahedron.
+ * 1. A two-triangle plane replaces the central region of a closed convex cap.
  *    Its four vertices remain exactly authored, both loops stay shared, and
  *    only the annulus gains interior edge/face samples before final fairing.
  * 2. Omitted, zero and maximum joining rounds are distinct. Caller mutation
@@ -21,15 +21,20 @@ import { nclose, throwsError } from "../internal/predicates";
 export const test_subject_retained_patch = (): void => {
   const host = {
     positions: [
+      [4, 0, 0],
+      [0, 4, 0],
+      [-4, 0, 0],
+      [0, -4, 0],
+      [0, 0, 1],
       [10, 0, 0],
       [0, 10, 0],
       [-10, 0, 0],
       [0, -10, 0],
-      [0, 0, 10],
       [0, 0, -10],
     ],
     indices: [
-      4, 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 5, 1, 0, 5, 2, 1, 5, 3, 2, 5, 0, 3,
+      4, 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 0, 5, 6, 0, 6, 1, 1, 6, 7, 1, 7, 2, 2,
+      7, 8, 2, 8, 3, 3, 8, 5, 3, 5, 0, 9, 6, 5, 9, 7, 6, 9, 8, 7, 9, 5, 8,
     ],
     viewRay: [0, 0, 1],
   };
@@ -91,7 +96,7 @@ export const test_subject_retained_patch = (): void => {
     const cage = {
       positions,
       indices: [...host.indices],
-      groups: new Array(8).fill(0),
+      groups: new Array(host.indices.length / 3).fill(0),
     };
     const attached = plan.attach(cage, positions, (id) =>
       id === "source" ? 1 : 2,
@@ -192,13 +197,11 @@ export const test_subject_retained_patch = (): void => {
       );
       TestValidator.equals("both socket tangent rows", tangentRow.size, 20);
       TestValidator.predicate(
-        "first row has transverse movement",
-        [...tangentRow].some(
+        "well-spaced first row retains XY",
+        [...tangentRow].every(
           (v) =>
-            Math.hypot(
-              final.positions[v][0] - replaced.positions[v][0],
-              final.positions[v][1] - replaced.positions[v][1],
-            ) > 1e-6,
+            nclose(final.positions[v][0], replaced.positions[v][0]) &&
+            nclose(final.positions[v][1], replaced.positions[v][1]),
         ),
       );
       const interior = new Set(
@@ -209,14 +212,24 @@ export const test_subject_retained_patch = (): void => {
           .filter((v) => !outsideIds.has(v) && !tangentRow.has(v)),
       );
       TestValidator.predicate(
-        "free interior follows transverse boundary change",
-        [...interior].some(
+        "free interior keeps the admitted XY chart",
+        [...interior].every(
           (v) =>
-            Math.hypot(
-              final.positions[v][0] - replaced.positions[v][0],
-              final.positions[v][1] - replaced.positions[v][1],
-            ) > 1e-6,
+            final.positions[v][0] === replaced.positions[v][0] &&
+            final.positions[v][1] === replaced.positions[v][1],
         ),
+      );
+      TestValidator.predicate(
+        "every final annular triangle faces forward",
+        final.groups.every((g, f) => {
+          if (g !== 2) return true;
+          const [a, b, c] = final.indices
+            .slice(f * 3, f * 3 + 3)
+            .map((v) => final.positions[v]);
+          return (
+            (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) > 0
+          );
+        }),
       );
       assertPortraitSkinTopology(final, []);
     } else if (rounds === 0) {
@@ -243,7 +256,7 @@ export const test_subject_retained_patch = (): void => {
   const cage = {
     positions: host.positions.map((p) => [...p]),
     indices: [...host.indices],
-    groups: new Array(8).fill(0),
+    groups: new Array(host.indices.length / 3).fill(0),
   };
   const attached = plan.attach(cage, cage.positions, (id) =>
     id === "owned" ? 1 : 2,
@@ -260,7 +273,9 @@ export const test_subject_retained_patch = (): void => {
   const claimed = {
     positions: host.positions.map((p) => [...p]),
     indices: [...host.indices],
-    groups: [9, 0, 0, 0, 0, 0, 0, 0],
+    groups: Array.from({ length: host.indices.length / 3 }, (_, i) =>
+      i === 0 ? 9 : 0,
+    ),
   };
   TestValidator.predicate(
     "claimed region refused",

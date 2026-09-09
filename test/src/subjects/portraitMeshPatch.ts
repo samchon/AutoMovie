@@ -257,22 +257,19 @@ export function createPortraitMeshPatchComponent(
                 ]),
               };
               const fixed = targets.map((t) => t.vertex);
-              // Tangent targets may move transversely to the camera ray. Solve
-              // XYZ on the same fixed metric and constraints, rather than leave
-              // that transverse displacement trapped in a single vertex row.
-              const axes = [
-                [1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-              ].map((axis) =>
-                fairPortraitSurface(basis, joinGroup, axis, undefined, fixed),
-              );
+              // The admitted annulus is one positive XY chart. Only its height
+              // remains free; unconstrained XYZ fairing folded this chart even
+              // while every boundary triangle matched its neighbour's plane.
               return [
                 ...targets,
-                ...axes[0].map((sample, i) => ({
-                  vertex: sample.vertex,
-                  target: axes.map((axis, k) => axis[i].target[k]),
-                })),
+                ...fairPortraitSurface(
+                  basis,
+                  joinGroup,
+                  [0, 0, 1],
+                  undefined,
+                  fixed,
+                  "xy",
+                ),
               ];
             },
             finish: () => [],
