@@ -91,12 +91,13 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // have separate positions/projections. These mm values are a render-study
   // hypothesis, not adult anatomical averages or accepted subject dimensions.
   lowerLidProfile: {
-    // The photographed roll is not one uniform crescent. Its body tapers
-    // independently along the lid. Width and projection have separate authored
-    // witnesses: multiplying depth alone leaves the same uniform narrow band.
-    // The crest and lower shoulder describe one rounded tissue body, while its
-    // lower boundary returns through positive relief into the cheek. These are
-    // visible surface offsets, not muscle thickness or a clinical age model.
+    // The photographed aegyo-sal is a small pretarsal orbicularis roll, not a
+    // broad lower-eye pad. Its crest therefore sits close to the margin and
+    // carries most of the relief; the subtarsal rows fall back toward the host
+    // skin before the preseptal transition. Width and projection remain
+    // independent authored witnesses: changing only depth would preserve the
+    // old horizontal band. These are visible surface offsets, not muscle
+    // thickness or a clinical age model.
     // Keep the outer attachment and inner margin fixed while the transverse body
     // and its preseptal landing are fitted as one section. Positive relief alone
     // does not prevent a trough: the globe-to-skin bridge can lie behind both
@@ -113,11 +114,11 @@ export const portraitEyeShape: IPortraitEyeShape = {
       at,
       section: {
         margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 2.15 * width, projection: 1.6 * fullness },
-        pretarsalLower: { offset: 3.6 * width, projection: 1.15 * fullness },
-        subtarsalInner: { offset: 4.35 * width, projection: fullness },
-        subtarsalOuter: { offset: 4.95 * width, projection: 0.85 * fullness },
-        preseptal: { offset: 6.5, projection: 0.95 * fullness },
+        pretarsalCrest: { offset: 1.35 * width, projection: 1.75 * fullness },
+        pretarsalLower: { offset: 2.25 * width, projection: 0.8 * fullness },
+        subtarsalInner: { offset: 3.1 * width, projection: 0.18 * fullness },
+        subtarsalOuter: { offset: 4.15 * width, projection: 0.02 * fullness },
+        preseptal: { offset: 6.2, projection: 0.0 },
         attachment: 8.5,
       },
     })),
