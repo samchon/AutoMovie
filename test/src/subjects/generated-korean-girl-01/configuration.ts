@@ -1,6 +1,4 @@
 import type { IPortraitComponent } from "../portraitComponents";
-import { createPortraitMeshPatchComponent } from "../portraitMeshPatch";
-import type { IPortraitPatchAttachment } from "../portraitPatchAttachment";
 import { createPortraitReliefLayer } from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
@@ -28,8 +26,6 @@ import {
   type IPortraitMouthSocket,
   createPortraitMouthComponent,
 } from "./mouth";
-import { buildPortraitNasalReference } from "./nasalReference";
-import nasalReferenceBinding from "./nasalReferenceBinding.json";
 import type { IPortraitNasalSection } from "./nasalSection";
 import {
   type IPortraitNoseShape,
@@ -537,11 +533,9 @@ export const portraitOrbitalSupportShapes: readonly {
   },
 }));
 
-/** The complete reference patch supplies its own nasal form; omit the old residual. */
-export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined = {
-  radius: 22,
-  controls: [],
-};
+/** Restore the basic nose and its original supports after the patch-join regression. */
+export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined =
+  undefined;
 
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
@@ -554,7 +548,7 @@ export const measuredPortraitAssembly = {
   subdivisionRounds: 3,
   surfaceLayers: [
     ...portraitCheekLayersFor(portraitCheekShape, portraitCheekShape),
-    // The reference-patch study disables the old nasal displacement residual.
+    // The restored procedural nose requires its original support field.
     portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
@@ -567,21 +561,13 @@ export const measuredPortraitAssembly = {
   ],
 };
 
-/** Outer nasal boundary uses the same source surface with connected-skin adaptation. */
-export const portraitNasalReferenceAttachment: IPortraitPatchAttachment = {
-  reach: 12,
-  travel: 40,
-  preserveSource: true,
-  joinSubdivisionRounds: 2,
-  boundaryContinuity: "tangent",
-};
-
 /**
  * Active measured-surface assembly with a grouped dental interior. The skin
  * components own openings; the dental component attaches after shared skin
  * refinement. Disable the mouth's legacy crowns so the row has exactly one
- * owner. Only the complete nasal patch is selected from the anatomical prior;
- * the other measured-face components and host remain the active construction.
+ * owner. The procedural nose and its original support field restore the earlier
+ * continuous skin. The later reference-patch experiments remain unaccepted and
+ * are not selected here; their perimeter failures must not replace working form.
  */
 export const portraitAssembly = {
   ...measuredPortraitAssembly,
@@ -594,12 +580,6 @@ export const portraitAssembly = {
         ...portraitMouthShape,
         crowns: [],
       },
-    ).filter((component) => component.id !== "nose"),
-    createPortraitMeshPatchComponent(
-      "nose-reference",
-      nasalReferenceBinding.hostBoundary,
-      buildPortraitNasalReference,
-      portraitNasalReferenceAttachment,
     ),
     createPortraitDentalComponent(
       portraitDentalSocket,
