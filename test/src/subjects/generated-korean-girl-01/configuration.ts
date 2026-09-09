@@ -265,7 +265,10 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
   tipProjection: 0,
-  alarProjection: 0,
+  // A restrained positive alar relief rounds the paired wing beneath each
+  // opening while leaving the fitted nostril boundary and its topology intact.
+  // Keep this small: the target has a soft ala, not a separate lateral bump.
+  alarProjection: 0.65,
   // Aperture width/height are independent from its complete rim and lining's
   // shared eight-degree downward orientation. The current contour is provisional.
   // These are source-guided authored ratios, not measured airway dimensions.
