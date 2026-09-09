@@ -652,9 +652,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  */
 export const portraitReview = {
   directory: ".shots/face-experiment/preview",
-  sourceCommit: "957689ed",
+  sourceCommit: "ac1145b0",
   gltfSha256:
-    "4a1b8f427b01f2525f3ae10cbe1fedbd20d3953721222a7a679abc464fe03d63",
+    "49c90e9d61b6e0ec3004630d86cace7eebe096ca7228466cb28f9b7ffb5198cb",
   profileSha256:
     "d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145",
 };

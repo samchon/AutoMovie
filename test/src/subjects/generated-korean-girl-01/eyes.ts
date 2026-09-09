@@ -139,7 +139,7 @@ export interface IPortraitEyeShape {
    * recorded projection coordinates of each boundary contact.
    */
   lidContact?: "globe" | "cornea";
-  /** Post-contact skin adaptation distance in mm; omission uses 3, zero retains pointwise contact. */
+  /** Post-contact skin adaptation distance in mm; omission uses 3, zero keeps the face-contact targets without neighbouring adaptation. */
   lidContactReach?: number;
   /** Iris radius in mm before clipping against the fitted eyelid. */
   irisRadius: number;
