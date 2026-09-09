@@ -14,7 +14,7 @@ import { throwsError } from "../internal/predicates";
  * Scenarios:
  * 1. A two-triangle plane replaces the marked half of a refined octahedron.
  *    Its four vertices remain exactly authored, both loops stay shared, and
- *    only the annulus gains 3^rounds interior triangles before final fairing.
+ *    only the annulus gains interior edge/face samples before final fairing.
  * 2. Omitted, zero and maximum joining rounds are distinct. Caller mutation
  *    cannot change the copied source/mode. Claimed skin and invalid modes refuse.
  */
@@ -133,10 +133,15 @@ export const test_subject_retained_patch = (): void => {
       replaced.groups.filter((g) => g === 1).length,
       2,
     );
+    // With B fixed boundary edges, interior edges I=(3F-B)/2. One face-centre
+    // fan adds 3F triangles and splitting shared interior edges adds 2I more.
+    let expectedFaces = 20;
+    for (let i = 0; i < (rounds ?? 2); i++)
+      expectedFaces = 6 * expectedFaces - 20;
     TestValidator.equals(
       "annular interior sampling",
       replaced.groups.filter((g) => g === 2).length,
-      20 * 3 ** (rounds ?? 2),
+      expectedFaces,
     );
     assertPortraitSkinTopology(replaced, []);
     if (rounds === undefined) {

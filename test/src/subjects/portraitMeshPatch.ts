@@ -10,6 +10,7 @@ import {
   fitPortraitPatchBoundary,
 } from "./portraitPatchAttachment";
 import { fairPortraitSurface } from "./portraitSurfaceFairing";
+import { refinePortraitJoin } from "./refinePortraitJoin";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /** A source patch in the host's millimetre frame, with an oriented boundary. */
@@ -41,8 +42,8 @@ export interface IPortraitMeshPatch {
  *
  * preserveSource reserves the coarse host region instead of inserting the
  * sampled source into Loop subdivision. Its actual refined boundary is recovered
- * after host layers, then the source is installed unchanged. Centroid splits
- * add only annulus-interior samples; source and host boundary edges stay shared.
+ * after host layers, then the source is installed unchanged. Interior edge and
+ * face splits add movable join samples; source and host boundaries stay shared.
  * Omission retains the control-cage path and its existing subdivision behavior.
  */
 export function createPortraitMeshPatchComponent(
@@ -165,19 +166,7 @@ export function createPortraitMeshPatchComponent(
             .map((v) => mapped[v]);
           bridge.push([tri[0], tri[reversed ? 2 : 1], tri[reversed ? 1 : 2]]);
         }
-        // Interior splits add no points to either attachment edge. The source
-        // triangles and refined host therefore stay exact, without hanging
-        // edge vertices or another smoothing pass over completed anatomy.
-        for (let round = 0; round < subdivisions; round++)
-          bridge = bridge.flatMap((tri) => {
-            const centre = cage.positions.length;
-            cage.positions.push(
-              [0, 1, 2].map((axis) =>
-                tri.reduce((sum, v) => sum + cage.positions[v][axis] / 3, 0),
-              ),
-            );
-            return tri.map((v, i) => [v, tri[(i + 1) % 3], centre]);
-          });
+        bridge = refinePortraitJoin(cage, bridge, subdivisions);
         for (const tri of bridge) {
           cage.indices.push(...tri);
           cage.groups.push(joinGroup);
