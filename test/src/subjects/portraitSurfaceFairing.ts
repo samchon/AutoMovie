@@ -8,7 +8,11 @@ import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
  * remain in the energy, so the join reads both surrounding surfaces instead of
  * solving against boundary positions alone. Native core detail is not smoothed.
  *
- * The frozen input metric defines cotangent L and barycentric vertex areas M.
+ * The head's anatomical XY plane defines cotangent L and vertex areas M, matching
+ * the annular triangulator's domain. This parameterization is distinct from the
+ * displacement ray: rotating the camera must not redefine its reference metric.
+ * Unknown starting Z must not alter the equation used to remove an unfinished
+ * fold. Supporting triangles must project nondegenerately into anatomical XY.
  * We minimize ||M^(-1/2) L (P + d r)||^2 for scalar offsets d on the unit ray r.
  * All boundary/exterior offsets are zero. A matrix-free, diagonally conditioned
  * conjugate-gradient solve avoids a dense matrix and preserves image projection.
@@ -64,16 +68,17 @@ export function fairPortraitSurface(
   const points = host.positions.map((p) =>
     Vector3.create(...(p as [number, number, number])),
   );
+  const metric = points.map((p) => Vector3.create(p.x, p.y, 0));
   for (let f = 0; f < host.indices.length; f += 3) {
     const tri = host.indices.slice(f, f + 3);
     if (!tri.some((v) => rows.has(v))) continue;
-    const [a, b, c] = tri.map((v) => points[v]);
+    const [a, b, c] = tri.map((v) => metric[v]);
     const area2 = Vector3.length(
       Vector3.cross(Vector3.subtract(b, a), Vector3.subtract(c, a)),
     );
     if (!(area2 > 0) || !Number.isFinite(area2))
       throw new Error(
-        "Surface fairing needs nondegenerate supporting triangles.",
+        "Surface fairing needs nondegenerate anatomical-XY supporting triangles.",
       );
     for (const v of tri) {
       const row = rows.get(v);
@@ -85,8 +90,8 @@ export function fairPortraitSurface(
         s = tri[(k + 2) % 3];
       const weight =
         Vector3.dot(
-          Vector3.subtract(points[r], points[q]),
-          Vector3.subtract(points[s], points[q]),
+          Vector3.subtract(metric[r], metric[q]),
+          Vector3.subtract(metric[s], metric[q]),
         ) /
         area2 /
         2;

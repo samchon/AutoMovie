@@ -16,6 +16,9 @@ import { nclose, throwsError } from "../internal/predicates";
  *    identities, ray/dimensions, work limits and collapsed support refuse.
  * 4. Nine independently displaced interior points require multiple iterations
  *    and recover the surrounding plane; a one-step budget refuses that solve.
+ * 5. On the unit anatomical XY lattice, z=2+x²+y² has constant Laplacian and zero
+ *    bi-Laplacian at the centre. Opposite initial centre heights both recover
+ *    z=2; the unknown starting height must not change the operator being solved.
  */
 export const test_subject_surface_fairing = (): void => {
   const positions: number[][] = [],
@@ -74,6 +77,16 @@ export const test_subject_surface_fairing = (): void => {
   TestValidator.predicate(
     "unfinished solve refuses",
     throwsError(() => fairPortraitSurface(host, 1, [0, 0, 1], 0)),
+  );
+  TestValidator.predicate(
+    "XY-collapsed supporting triangle refuses",
+    throwsError(() =>
+      fairPortraitSurface(
+        { ...host, positions: positions.map(([x, y, z]) => [0, y, z + x]) },
+        1,
+        [0, 0, 1],
+      ),
+    ),
   );
   for (const ray of [[], [0, 0, 0], [0, NaN, 1]])
     TestValidator.predicate(
@@ -142,4 +155,18 @@ export const test_subject_surface_fairing = (): void => {
     "coupled plane recovered",
     coupled.every((r) => nclose(r.target[2], 2)),
   );
+  for (const height of [-4, 9]) {
+    const quadratic = {
+      ...host,
+      positions: positions.map(([x, y], id) => [
+        x,
+        y,
+        id === 12 ? height : 2 + x * x + y * y,
+      ]),
+    };
+    TestValidator.predicate(
+      "anatomical XY quadratic oracle",
+      nclose(fairPortraitSurface(quadratic, 1, [0, 0, 1])[0].target[2], 2),
+    );
+  }
 };
