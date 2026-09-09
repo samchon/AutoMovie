@@ -332,11 +332,11 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // broad body. Projections use mm; widths/offsets use oral half-width fractions.
   // This provisional shape retains the photographed aperture and dental frame.
   section: {
-    upperBody: 0.45,
-    upperTubercle: 0.25,
+    upperBody: 0.3,
+    upperTubercle: 0.16,
     upperTubercleWidth: 0.25,
-    lowerBody: 0.55,
-    lowerPads: 0.15,
+    lowerBody: 0.4,
+    lowerPads: 0.1,
     lowerPadOffset: 0.28,
     lowerPadWidth: 0.26,
   },
@@ -350,17 +350,17 @@ export const portraitMouthShape: IPortraitMouthShape = {
   dentalDepth: 1.5,
   toothGap: 0.08,
   crowns: [
-    { width: 4.4, height: 8.5 },
-    { width: 5.1, height: 8.8 },
-    { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
+    { width: 4.4, height: 8.0 },
+    { width: 5.1, height: 8.3 },
+    { width: 6, height: 8.8, cervicalWidth: 0.72, edgeRise: 1.05 },
     {
       width: 6.8,
-      height: 9.8,
+      height: 9.2,
       cervicalWidth: 0.76,
-      edgeRise: 0.5,
+      edgeRise: 0.65,
       contour: {
-        mesial: { contactHeight: 0.29, incisalRise: 0.25, cervicalWidth: 0.81 },
-        distal: { contactHeight: 0.43, incisalRise: 0.7, cervicalWidth: 0.74 },
+        mesial: { contactHeight: 0.29, incisalRise: 0.35, cervicalWidth: 0.81 },
+        distal: { contactHeight: 0.43, incisalRise: 0.82, cervicalWidth: 0.74 },
       },
     },
     // The central incisors have a sharper mesial and rounder distal corner.
@@ -368,37 +368,37 @@ export const portraitMouthShape: IPortraitMouthShape = {
     // mesial orientation, so neither crown owns an independent world placement.
     {
       width: 8.1,
-      height: 10.4,
+      height: 9.7,
       cervicalWidth: 0.82,
-      edgeRise: 0.22,
+      edgeRise: 0.45,
       contour: {
-        mesial: { contactHeight: 0.22, incisalRise: 0.06, cervicalWidth: 0.85 },
-        distal: { contactHeight: 0.35, incisalRise: 0.4, cervicalWidth: 0.78 },
+        mesial: { contactHeight: 0.22, incisalRise: 0.16, cervicalWidth: 0.85 },
+        distal: { contactHeight: 0.35, incisalRise: 0.55, cervicalWidth: 0.78 },
       },
     },
     {
       width: 8.1,
-      height: 10.5,
+      height: 9.8,
       cervicalWidth: 0.82,
-      edgeRise: 0.3,
+      edgeRise: 0.5,
       contour: {
-        mesial: { contactHeight: 0.2, incisalRise: 0.07, cervicalWidth: 0.84 },
-        distal: { contactHeight: 0.36, incisalRise: 0.42, cervicalWidth: 0.77 },
+        mesial: { contactHeight: 0.2, incisalRise: 0.17, cervicalWidth: 0.84 },
+        distal: { contactHeight: 0.36, incisalRise: 0.58, cervicalWidth: 0.77 },
       },
     },
     {
       width: 6.8,
-      height: 9.8,
+      height: 9.2,
       cervicalWidth: 0.76,
-      edgeRise: 0.5,
+      edgeRise: 0.65,
       contour: {
-        mesial: { contactHeight: 0.29, incisalRise: 0.25, cervicalWidth: 0.81 },
-        distal: { contactHeight: 0.43, incisalRise: 0.7, cervicalWidth: 0.74 },
+        mesial: { contactHeight: 0.29, incisalRise: 0.35, cervicalWidth: 0.81 },
+        distal: { contactHeight: 0.43, incisalRise: 0.82, cervicalWidth: 0.74 },
       },
     },
-    { width: 6, height: 9.3, cervicalWidth: 0.72, edgeRise: 1.15 },
-    { width: 5.1, height: 8.8 },
-    { width: 4.4, height: 8.5 },
+    { width: 6, height: 8.8, cervicalWidth: 0.72, edgeRise: 1.05 },
+    { width: 5.1, height: 8.3 },
+    { width: 4.4, height: 8.0 },
   ],
 };
 
