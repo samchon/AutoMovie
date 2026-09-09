@@ -2,6 +2,7 @@ import type { IAutoMovieModel } from "@automovie/interface";
 
 import { portraitPart } from "../geometry";
 import type { IPortraitComponent } from "../portraitComponents";
+import { applyPortraitOralContact } from "../portraitOralContact";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import { referenceControlNet } from "./controlNet";
 import { buildPortraitEars } from "./ears";
@@ -61,6 +62,8 @@ export function buildReferencePortrait(
         surfaceLayers?: readonly IPortraitSurfaceLayer[];
         /** Include only the coarse hairstyle mass; omitted for isolated face inspection. */
         hairProxy?: boolean;
+        /** Named assembled oral surfaces and nonnegative clearance in metres. */
+        oralContact?: Parameters<typeof applyPortraitOralContact>[1];
       },
 ): IAutoMovieModel {
   if (assembly.foundation === "anatomical")
@@ -75,6 +78,7 @@ export function buildReferencePortrait(
     assembly.subdivisionRounds,
     assembly.surfaceLayers,
   );
+  head.parts = applyPortraitOralContact(head.parts, assembly.oralContact);
   const skin = portraitPart(
     "ear-attachment-basis",
     {

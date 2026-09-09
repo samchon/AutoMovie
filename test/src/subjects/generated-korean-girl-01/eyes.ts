@@ -1,4 +1,7 @@
-import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
+import {
+  createAutoMovieMeshDepthSampler,
+  mergeAutoMovieMeshes,
+} from "@automovie/engine";
 import type {
   IAutoMovieModelPart,
   IAutoMovieVector3,
@@ -10,6 +13,7 @@ import {
   portraitMix as mix,
   portraitPoint as p,
   portraitPatch as patch,
+  portraitNormals,
   portraitPart,
   portraitRegion,
   portraitTube as tube,
@@ -19,7 +23,10 @@ import {
   portraitFacesInsideLoop,
 } from "../portraitComponents";
 import { buildPortraitCornea } from "../portraitCornea";
-import { createPortraitDirectionalContact } from "../portraitDirectionalContact";
+import {
+  createPortraitDirectionalContact,
+  portraitDirectionalSurfaceTargets,
+} from "../portraitDirectionalContact";
 import {
   type IPortraitEyeSphere,
   fitPortraitEyeSphere,
@@ -569,41 +576,35 @@ export function createPortraitEyeComponent(
                       eyeCornea(center, sphere, shape, []),
                       "skin",
                     ).geometry.mesh;
-                    const contact = createPortraitDirectionalContact(
+                    const indices: number[] = [];
+                    for (let i = 0; i < final.groups.length; i++)
+                      if (final.groups[i] === lidGroup)
+                        indices.push(...final.indices.slice(3 * i, 3 * i + 3));
+                    // Full triangle overlap catches an optical bulge between
+                    // clear lid vertices. Retain host IDs so all neighbouring
+                    // skin receives one shared contact target and normal field.
+                    const constraints = portraitDirectionalSurfaceTargets(
+                      {
+                        positions: final.positions.flatMap((point) =>
+                          point.map((v) => v / 1000),
+                        ),
+                        indices,
+                        normals: null,
+                        uvs: null,
+                        skin: null,
+                      },
                       optical,
                       direction,
                       shape.lidThickness / 1000,
-                    );
-                    const vertices = new Set<number>();
-                    for (let i = 0; i < final.groups.length; i++)
-                      if (final.groups[i] === lidGroup)
-                        for (const vertex of final.indices.slice(
-                          3 * i,
-                          3 * i + 3,
-                        ))
-                          vertices.add(vertex);
-                    const constraints = [...vertices].flatMap((vertex) => {
-                      const source = final.positions[vertex];
-                      const point = p(
-                        source[0] / 1000,
-                        source[1] / 1000,
-                        source[2] / 1000,
-                      );
-                      const target = contact(point);
-                      return target === point
-                        ? []
-                        : [
-                            {
-                              vertex,
-                              reach: shape.lidContactReach ?? 3,
-                              target: [
-                                target.x * 1000,
-                                target.y * 1000,
-                                target.z * 1000,
-                              ],
-                            },
-                          ];
-                    });
+                    ).map(({ vertex, target }) => ({
+                      vertex,
+                      reach: shape.lidContactReach ?? 3,
+                      target: [
+                        target.x * 1000,
+                        target.y * 1000,
+                        target.z * 1000,
+                      ],
+                    }));
                     // Contact fixes the required points; the same geodesic skin
                     // adapter used by initial component fitting carries their
                     // movement into surrounding tissue. A pointwise clamp alone
@@ -784,6 +785,25 @@ export function buildPortraitEye(
       (value, index) => (value - sphereCenter[index % 3]) / sphere.radius,
     );
     add(`${eye.name}-sclera`, sclera, white);
+    // One gaze centre feeds drawing and tissue support. Full-limbus contact
+    // includes the actual optical shell, whose anterior surface is above the
+    // basic globe; following the latter buried the wet margin in the cornea.
+    const center = portraitEyeSphereIntersection(
+      sphere,
+      landmark(eye.iris),
+      p(viewRay[0], viewRay[1], viewRay[2]),
+    );
+    const support = portraitPart(
+      "ocular-tissue-support",
+      mergeAutoMovieMeshes([
+        sclera,
+        ...(shape.lidContact === "cornea"
+          ? [eyeCornea(center, sphere, shape, [])]
+          : []),
+      ]),
+      white,
+    ).geometry.mesh;
+    const surface = createAutoMovieMeshDepthSampler(support, "z");
     if (tissues !== undefined) {
       const surfaces = tissues({
         side: eye.name,
@@ -791,8 +811,35 @@ export function buildPortraitEye(
         maximumX: lower[lower.length - 1].x,
         lower: (x) => lidAt(x, lower),
         upper: (x) => lidAt(x, upper),
-        globe: eyeZ,
+        globe: (x, y) =>
+          Math.max(
+            eyeZ(x, y),
+            (surface(x / 1000, y / 1000)?.maximum ?? -Infinity) * 1000,
+          ),
       });
+      // A strip's vertices may clear a curved support while its straight
+      // triangles cut it. Resolve the emitted faces in metres, then return to
+      // construction mm before add() crosses the common model-unit boundary.
+      for (const mesh of [surfaces.corner, surfaces.lowerMargin]) {
+        if (mesh === null) continue;
+        const metric = portraitPart("ocular-tissue-contact", mesh, white)
+          .geometry.mesh;
+        const targets = portraitDirectionalSurfaceTargets(
+          metric,
+          support,
+          p(0, 0, 1),
+          0.00002,
+        );
+        for (const { vertex, target } of targets)
+          mesh.positions.splice(
+            vertex * 3,
+            3,
+            target.x * 1000,
+            target.y * 1000,
+            target.z * 1000,
+          );
+        mesh.normals = portraitNormals(mesh.positions, mesh.indices!);
+      }
       if (surfaces.corner !== null)
         add(`${eye.name}-medial-conjunctiva`, surfaces.corner, "ocular-corner");
       if (surfaces.lowerMargin !== null)
@@ -805,11 +852,6 @@ export function buildPortraitEye(
     // The detector's iris depth differs from the eye surface depth. Simply
     // replacing Z moves the apparent gaze in the reference camera. Intersect
     // its measured ray instead, retaining the photographed iris centre in XY.
-    const center = portraitEyeSphereIntersection(
-      sphere,
-      landmark(eye.iris),
-      p(viewRay[0], viewRay[1], viewRay[2]),
-    );
     for (const [name, radius] of [
       ["iris", shape.irisRadius],
       ["pupil", shape.pupilRadius],

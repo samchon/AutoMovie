@@ -6,3 +6,4 @@ export * from "./proceduralMesh";
 export * from "./selectTriangleRegion";
 export * from "./meshDeformation";
 export * from "./meshDepthSampler";
+export * from "./meshClearance";

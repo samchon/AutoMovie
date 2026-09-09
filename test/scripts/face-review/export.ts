@@ -89,6 +89,7 @@ async function main() {
         row: portraitDentalRow,
         socket: portraitDentalSocket,
         placement: portraitDentalPlacement,
+        contact: portraitAssembly.oralContact,
       },
       neck: portraitNeckShape,
       subdivisionRounds: portraitAssembly.subdivisionRounds,

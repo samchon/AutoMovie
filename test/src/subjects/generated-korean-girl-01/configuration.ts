@@ -571,6 +571,14 @@ export const measuredPortraitAssembly = {
  */
 export const portraitAssembly = {
   ...measuredPortraitAssembly,
+  // An explicit 0.2 mm construction gap keeps the entire upper arch behind the
+  // actual lip and the cavity behind the enamel, without per-crown distortion.
+  oralContact: {
+    lips: "lips",
+    enamel: "tooth-upper-arch",
+    cavity: "oral-cavity",
+    clearance: 0.0002,
+  },
   components: [
     ...portraitComponentsFor(
       portraitEyeShape,

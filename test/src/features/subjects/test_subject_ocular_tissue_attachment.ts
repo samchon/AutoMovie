@@ -1,3 +1,4 @@
+import { measureAutoMovieMeshClearance } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -48,6 +49,24 @@ export const test_subject_ocular_tissue_attachment = (): void => {
       };
     };
     const before = complete(eye);
+    const cornea = before.parts.find(
+      (part) => part.id === socket.name + "-cornea",
+    )!;
+    const margin = before.parts.find(
+      (part) => part.id === socket.name + "-lower-lid-margin",
+    )!;
+    if (cornea.geometry.type !== "mesh" || margin.geometry.type !== "mesh")
+      throw new Error("The ocular contact scenario needs resident surfaces.");
+    const clearance = measureAutoMovieMeshClearance(
+      margin.geometry.mesh,
+      cornea.geometry.mesh,
+      "z",
+    );
+    TestValidator.predicate(
+      "wet margin clears the complete optical shell",
+      clearance.length > 0 &&
+        clearance.every((face) => face.minimum >= 0.00002 - 1e-10),
+    );
     profile.cornerLength = 2;
     profile.lowerMarginWidth = 0.1;
     TestValidator.equals("eye owns nested tissue shape", complete(eye), before);
