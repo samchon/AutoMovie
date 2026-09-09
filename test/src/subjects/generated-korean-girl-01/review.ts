@@ -17,6 +17,7 @@ import type * as Topology from "../portraitSkinTopology";
 import type * as Surface from "../portraitSurface";
 import type * as Fairing from "../portraitSurfaceFairing";
 import type * as SurfaceFit from "../portraitSurfaceFit";
+import type * as ReferenceAnatomy from "../reference-anatomy/model";
 import type * as Loop from "../subdivideControlMesh";
 import type * as Quads from "../subdividePortraitQuads";
 import type * as Anatomy from "./anatomy";
@@ -48,6 +49,33 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * Relationships are recorded before compiler-issued fingerprints are inserted.
  * Missing coverage/fingerprints remain errors; this intermediate account does
  * not claim whole-source or likeness acceptance.
+ *
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape} Declares the endpoint, expression, optical and refinement inputs of the optional anatomical study.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape} Read all ten fields and their consumers in buildAnatomicalStudy. Weight controls act on the resident sparse targets, eye placement normalizes the common skin/anchor frame, and optical radii remain separate from skin refinement. The basic, translated-optics and buffer scenarios exercise this prior; it is not the active restored procedural face.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.youth} Selects the child contribution and complementary young contribution of the recorded prior.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.youth} Followed youth and 1-youth into the child/young target loop for both skin vertices and eye anchors. The basis scenario exercises zero and one and refuses -0.1 and 1.1. No calendar-age conversion is implemented or inferred from this blend.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.smile} Weights the recorded mouth-corner-puller target in the same source frame.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.smile} Located the smile target beside its eye-anchor deltas and checked the shared finite [0,1] admission. The basis scenario runs both endpoint values and rejects NaN; changing this value blends the stored deformation rather than invoking a coordinated facial muscle system.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.jawOpen} Weights the stored opening deformation before normalization and neck attachment.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.jawOpen} Read the jawOpen sparse target application and the zero/one basis cases with an out-of-range 1.1 twin. The returned model has skeleton null, so this is a static target contribution rather than a jaw joint angle.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeDistance} Sets the physical eye separation used to normalize the entire prior.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeDistance} Traced division by the morphed anchors' X separation into the transform of every skin point and both eye centres; neck dimensions also use eyeDistance/64. The 64mm oracle places centres at +/-32mm. Zero separation and a scale exceeding Float32 representation refuse; this control is not an eyes-only translation.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeHeight} Positions the common normalized eye midpoint along head Y.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeHeight} Read target[1] in the shared transform and the corresponding offset in all neck section heights. The basis oracle reads 0.025m at both globe centres, the optical twin changes it to 29mm, and NaN/Float32-overflow placements refuse. The surrounding head moves with this datum.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeDepth} Positions the common normalized eye midpoint along head Z.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeDepth} Followed target[2] through skin and anchor normalization and the neck centre formula. The independent centre oracle reads 0.037m, the translated optical case uses 34mm, and Infinity refuses. This is global anterior placement of the prior, not globe protrusion relative to its skin.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeRadius} Defines each rigid optical sphere independently of the prior's skin coordinates.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.eyeRadius} Checked positive radius, 2*radius<eyeDistance and irisRadius<radius before reading spherical vertex construction and radial normals. The radius-sixteen and translated radius-fifteen scenarios retain the analytic directions; equality at radius32 with separation64 refuses. Fitted optical centres move, but the sphere itself is not warped by the skin residual.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.irisRadius} Determines the sampled pigment-cap disk on the study globe.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.irisRadius} Read its positive domain and strict upper bound against eyeRadius, then the radius*v angular samples for the iris-1 cap. Its 0.04mm lift changes axial placement separately from radius. The buffer and optics scenarios inspect this cap; the simplified construction does not establish captured-eye refraction.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.pupilRadius} Controls the separate pupil-cap extent inside the iris.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.pupilRadius} Compared its strict pupil<iris admission with the separate pupil samples and 0.07mm lift. Zero and equality with the default6.4mm iris refuse. This is an opaque spherical cap, not a modeled internal pupil opening.
+ * @evidence {@link ReferenceAnatomy.IAnatomicalStudyShape.subdivisionRounds} Selects common skin and neck tessellation after their shared attachment.
+ * @evidenceReview {@link ReferenceAnatomy.IAnatomicalStudyShape.subdivisionRounds} Traced omission to one round and explicit zero through the joinedFaces Catmull-Clark call. The subdivision owner admits only integers zero through three. This value does not change the separate 48-column optical sampling or authorize a different fitted-source basis.
+ * @evidence {@link ReferenceAnatomy.anatomicalStudyShape} Supplies the explicitly unaccepted starting preset for the anatomical-prior path.
+ * @evidenceReview {@link ReferenceAnatomy.anatomicalStudyShape} Read youth0.6, smile0.55, jawOpen0.35, the64mm separation, midpoint[0,25,37]mm and radii16/6.4/2.55mm against the source interface and basis/optics scenarios. The preset contains no supplied refinement override; these authored values neither reproduce the current procedural construction nor establish the photographed adolescent's measurements.
+ * @evidence {@link ReferenceAnatomy.buildAnatomicalStudy} Builds the resident attributed prior, shared skin/neck surface and separate optical parts.
+ * @evidenceReview {@link ReferenceAnatomy.buildAnatomicalStudy} Read the complete target accumulation, shared normalization, open-crop extraction, face-centre neck support, joined-quad refinement, optional residual and material separation. Basis tests verify finite geometry, midpoint placement and admission failures; optical/buffer tests check the actual delivered directions. The optional fitted alternative remains unaccepted, and source provenance is retained in the prior's README/assets rather than claimed as original sculpting.
  *
  * @evidence {@link Fairing.fairPortraitSurface} Shapes the annulus interior against both fixed neighbouring skin regions while preserving the recorded image ray.
  * @evidenceReview {@link Fairing.fairPortraitSurface} Read region-interior selection, boundary-adjacent rows, cotangent weights and lumped areas, the scalar ray-offset energy and conditioned conjugate-gradient solve. Single and nine-point plane oracles recover fixed surrounding heights; zero/one-step budgets refuse incomplete solves and suppressing offsets fails the plane oracle. The full b3306ba5 and nasal close images show softer bridge/sidewall joins but a persistent lower nasal line. This does not certify exact C1 continuity or anatomical likeness.
@@ -396,9 +424,9 @@ import type * as OrbitalSupport from "./orbitalSupport";
  */
 export const portraitReview = {
   directory: ".shots/face-experiment/preview",
-  sourceCommit: "542e22ed",
+  sourceCommit: "85342784",
   gltfSha256:
-    "b3306ba5e2f781f9f06c974b22ea5d09633b6f267009bdf1c6dadc4bef41ec90",
+    "db7a56b36d7585e9a9fc2ee2ce09c3ef43e22dca63c6d970615e9f4ac683453a",
   profileSha256:
     "d682354f6c1be6500f66cd7783f27e0554aa8bfa5ea396daa49a334ea1588145",
 };
