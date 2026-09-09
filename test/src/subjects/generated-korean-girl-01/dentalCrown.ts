@@ -81,7 +81,8 @@ export function assertPortraitDentalCrown(s: IPortraitDentalCrown): void {
 /**
  * A closed crown loft with a narrow cervical end, broad body and thin cutting
  * edge. End caps share their ring identities. The sampled body reaches exactly
- * the declared width, preserving arch clearance. Hidden roots are not modelled.
+ * the declared local width. The row owns clearance after arch rotation; nominal
+ * breadth alone does not separate the proximal surfaces. Hidden roots are not modelled.
  *
  * Optional side contours locate each contact crest independently. Their heights
  * join the regular sampling rows, so an unsampled authored crest cannot shrink
