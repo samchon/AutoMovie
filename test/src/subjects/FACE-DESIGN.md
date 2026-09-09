@@ -89,6 +89,8 @@ Corneal contact also supplies the inner tissue basis before the lid sections are
 
 The outer skin seam retains the sphere-projected aperture's gaze-independent planar frame. Inner contact can move along a slanted view ray; that XY difference fades to zero towards the outer seam using the section's existing bridge weight. The section therefore joins the real inner contact without allowing a gaze edit to drag its outer skin attachment. The component-parameter scenario retains this independent-seam oracle.
 
+The current lower-lid fitting study varies transverse width separately from longitudinal fullness. The crest and lower shoulder rise together, followed by positive, diminishing subtarsal and preseptal relief. This tests a rounded pretarsal body against the previously thin regular band without lowering a groove to manufacture contrast. The inner margin and 8.5 mm outer attachment remain fixed. These subject-owned values are a visual hypothesis, and cannot establish tissue likeness before the actual subdivided and contact-adjusted surface is inspected in full and close views.
+
 ## Oral construction and dentition {#oral-construction}
 
 Upper and lower lips use a curved smile frame. Independent section controls may define upper body, central tubercle, lower body/pads and cutaneous/vermilion/mucosal transitions. The outer skin border, oral aperture and commissures have explicit owners. Detail between fixed borders cannot correct a wrong border, and a border change must rebuild the surrounding skin and interior attachment.
