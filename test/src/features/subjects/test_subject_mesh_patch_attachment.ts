@@ -14,7 +14,8 @@ import { nclose } from "../internal/predicates";
  * 1. A source plane at z=2 extends beyond a radius-three host boundary and
  *    contains the smaller donor patch. The fitted boundary reaches z=2, its
  *    remote pole is fixed with reach zero, and the assembled surface is closed.
- * 2. Later caller changes cannot replace the group's owned attachment settings.
+ * 2. Later caller changes cannot replace the group's owned attachment settings
+ *    or the fitted ray used by its deferred final-surface provider.
  * 3. After subdivision, a planar neighbourhood with a one-mm join-interior
  *    displacement returns to that plane. Core, boundary and remote skin stay
  *    exact; shared topology is preserved.
@@ -98,6 +99,10 @@ export const test_subject_mesh_patch_attachment = (): void => {
     p[1],
     join.has(id) ? 3 : 2,
   ]);
+  // The final provider must retain its fitted frame even if the caller later
+  // repurposes the mutable host record for another arrangement.
+  host.viewRay[0] = 1;
+  host.viewRay[2] = 0;
   const final = applyPortraitFinalSurfaces(refined, [
     { id: "plane", propose: attached.finalSurface! },
   ]);

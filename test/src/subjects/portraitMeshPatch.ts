@@ -69,6 +69,8 @@ export function createPortraitMeshPatchComponent(
   return {
     id,
     fit: (host) => {
+      // Final refinement uses this fitted frame, not a later caller mutation.
+      const viewRay = [...host.viewRay];
       const source = structuredClone(provide());
       const selected = selectAutoMovieTriangleRegion({
         indices: source.mesh.indices,
@@ -160,8 +162,7 @@ export function createPortraitMeshPatchComponent(
             finalSurface:
               attachment === undefined
                 ? undefined
-                : (refined) =>
-                    fairPortraitSurface(refined, joinGroup, host.viewRay),
+                : (refined) => fairPortraitSurface(refined, joinGroup, viewRay),
             finish: () => [],
           };
         },
