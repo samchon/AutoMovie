@@ -256,14 +256,14 @@ export const portraitPerioralRelief: IPortraitReliefRegion[] = [
     name: "labiomental-groove",
     anchor: 17,
     offset: [0, -6, -1],
-    radius: [20, 7, 16],
-    displacement: [0, 0, -0.2],
+    radius: [22, 8, 18],
+    displacement: [0, 0, -0.12],
   },
   {
     name: "mental-support",
     anchor: 152,
     offset: [0, 12, 6],
-    radius: [23, 18, 20],
-    displacement: [0, 0, 0.5],
+    radius: [27, 20, 22],
+    displacement: [0, 0, 0.25],
   },
 ];
