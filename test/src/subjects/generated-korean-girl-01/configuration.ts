@@ -98,8 +98,12 @@ export const portraitEyeShape: IPortraitEyeShape = {
     // lower boundary returns through positive relief into the cheek. These are
     // visible surface offsets, not muscle thickness or a clinical age model.
     // Keep the outer attachment and inner margin fixed in this fitting round;
-    // full/close A/B renders must judge whether the body survives subdivision
-    // without introducing a second ridge or a carved wrinkle underneath it.
+    // full/close A/B renders must judge whether the body survives subdivision.
+    // Positive relief alone does not prevent a trough: the globe-to-skin bridge
+    // can lie behind both its boundaries. In the first fuller-body render its
+    // preseptal section remained a valley, so the lower transition now carries
+    // support of its own. Keep the crest unchanged while testing that junction;
+    // increasing the crest again would strengthen the unwanted shadow.
     sections: [
       { at: 0, fullness: 0.35, width: 0.75 },
       { at: 0.25, fullness: 0.75, width: 0.95 },
@@ -112,9 +116,9 @@ export const portraitEyeShape: IPortraitEyeShape = {
         margin: { offset: 0.22, projection: 0.2 },
         pretarsalCrest: { offset: 2.4 * width, projection: 1.6 * fullness },
         pretarsalLower: { offset: 4 * width, projection: 1.15 * fullness },
-        subtarsalInner: { offset: 4.8 * width, projection: 0.35 * fullness },
-        subtarsalOuter: { offset: 5.4 * width, projection: 0.14 * fullness },
-        preseptal: { offset: 6.4, projection: 0.02 * fullness },
+        subtarsalInner: { offset: 4.8 * width, projection: fullness },
+        subtarsalOuter: { offset: 5.4 * width, projection: 0.85 * fullness },
+        preseptal: { offset: 6.4, projection: 0.65 * fullness },
         attachment: 8.5,
       },
     })),
