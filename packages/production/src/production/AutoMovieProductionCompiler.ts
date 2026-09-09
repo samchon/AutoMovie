@@ -65,6 +65,7 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieConstraintViolation,
   IAutoMovieDefinedShotContract,
+  IAutoMovieDerivedArtifactSource,
   IAutoMovieDesignEvidence,
   IAutoMovieDesignLineage,
   IAutoMovieDesignReference,
