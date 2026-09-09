@@ -61,7 +61,7 @@ export function fitPortraitEyeSphere(
     const delta = Vector3.subtract(point, center);
     const height = Vector3.dot(delta, normal);
     const squared = radius ** 2 - Vector3.dot(delta, delta) + height ** 2;
-    if (squared <= 0)
+    if (!Number.isFinite(squared) || squared <= 0)
       throw new Error("The selected eye curvature cannot span this aperture.");
     depth += height - Math.sqrt(squared);
   }
