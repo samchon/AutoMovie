@@ -20,7 +20,8 @@ import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head"
  * 1. Fit baseline and changed left-eye/nose attachments on the same host.
  *    Both variants retain their exact component constraints before refinement.
  * 2. The right eye stays unchanged, skin adjacent to the edited parts changes,
- *    and the distant chin remains fixed. Replacement keeps the original cut IDs.
+ *    and the distant chin remains fixed. The edited eye recalculates its skin
+ *    reservation while unrelated component cut identities remain stable.
  * 3. The assembled replacement cage has two oppositely wound incident faces on each internal
  *    edge and exactly four closed boundary loops, with no new seam openings.
  */
@@ -47,9 +48,18 @@ export const test_subject_component_replacement = (): void => {
   const basePlans = baselineParts.map((part) => part.fit(host));
   const replacementPlans = replacementParts.map((part) => part.fit(host));
   TestValidator.equals(
-    "stable cut identities",
-    replacementPlans.map((plan) => plan.cutFaces),
-    basePlans.map((plan) => plan.cutFaces),
+    "unrelated cut identities stay stable",
+    replacementPlans
+      .filter((_plan, i) => baselineParts[i].id !== "left-eye")
+      .map((plan) => plan.cutFaces),
+    basePlans
+      .filter((_plan, i) => baselineParts[i].id !== "left-eye")
+      .map((plan) => plan.cutFaces),
+  );
+  const left = baselineParts.findIndex((part) => part.id === "left-eye");
+  TestValidator.predicate(
+    "replacement recalculates the required eye reservation",
+    basePlans[left].cutFaces.length !== replacementPlans[left].cutFaces.length,
   );
   const baseline = {
     source: blendPortraitSkin(

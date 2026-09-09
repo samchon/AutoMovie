@@ -71,6 +71,10 @@ export const portraitEyeShape: IPortraitEyeShape = {
   outerCornerLift: 0,
   socketLift: 0,
   blendReach: 18,
+  // Reserve the host patch before installing the wide lower-tissue section.
+  // Deforming the old aperture into that outer seam folded neighbouring skin;
+  // the shared annulus instead keeps the containing host boundary in place.
+  skinAttachment: "reserve",
   // Keep the upper crease near the measured aperture. The lower roll belongs
   // immediately below its margin; a separate infraorbital layer supplies the
   // broader transition into the cheek. These millimetre dimensions are authored

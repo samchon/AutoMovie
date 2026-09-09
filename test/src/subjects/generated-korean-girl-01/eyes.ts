@@ -33,6 +33,10 @@ import {
   portraitEyeSphereHeight,
   portraitEyeSphereIntersection,
 } from "../portraitEyeSphere";
+import {
+  portraitSkinAnnulus,
+  reservePortraitSkin,
+} from "../reservePortraitSkin";
 import type { IControlMesh } from "../subdivideControlMesh";
 import {
   type IPortraitEyebrowProfile,
@@ -96,6 +100,13 @@ export interface IPortraitEyeShape {
   socketLift: number;
   /** Geodesic reach of surrounding skin adaptation, in mm. */
   blendReach: number;
+  /**
+   * Optional surrounding-skin reservation. Reserve cuts a containing host patch
+   * before installing the lid rows and connects its unchanged outer boundary
+   * through a shared annulus. Omission retains the original boundary-deformation
+   * path. This changes attachment topology, not the eye's optical dimensions.
+   */
+  skinAttachment?: "reserve";
   /** Upper lid fold width, in mm. */
   foldWidth: number;
   /** Upper crease depth behind the lid ridge, in mm. */
@@ -320,6 +331,8 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitLowerLidProfile(inputShape.lowerLidProfile);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (shape.skinAttachment !== undefined && shape.skinAttachment !== "reserve")
+    throw new Error("Eye skin attachment must be reserve or omitted.");
   if (
     shape.lidContactReach !== undefined &&
     (!Number.isFinite(shape.lidContactReach) || shape.lidContactReach < 0)
@@ -517,35 +530,73 @@ export function createPortraitEyeComponent(
         ).geometry.mesh,
         "z",
       );
+      const outerConstraints = lidRows(
+        aperture,
+        socket,
+        shape,
+        undefined,
+        lowerProfile,
+        apertureGuide,
+      ).map((row) => {
+        const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
+        if (hit === null)
+          throw new Error(
+            "An eyelid's outer attachment must remain on supporting skin.",
+          );
+        return {
+          vertex: row.id,
+          target: [
+            row.outer[0],
+            row.outer[1],
+            hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
+          ],
+          reach: shape.blendReach,
+        };
+      });
+      const cutFaces = portraitFacesInsideLoop(host, loop);
+      const reservation =
+        shape.skinAttachment === undefined
+          ? undefined
+          : reservePortraitSkin(
+              host,
+              loop,
+              outerConstraints.map((constraint) => constraint.target),
+            );
       return {
         constraints: [
-          ...lidRows(
-            aperture,
-            socket,
-            shape,
-            undefined,
-            lowerProfile,
-            apertureGuide,
-          ).map((row) => {
-            const hit = support(row.outer[0] / 1000, row.outer[1] / 1000);
-            if (hit === null)
-              throw new Error(
-                "An eyelid's outer attachment must remain on supporting skin.",
-              );
-            return {
-              vertex: row.id,
-              target: [
-                row.outer[0],
-                row.outer[1],
-                hit.maximum * 1000 + shape.socketLift * host.viewRay[2],
-              ],
-              reach: shape.blendReach,
-            };
-          }),
+          // Internal seam targets still participate in shared ownership checks.
+          // Zero reach prevents them from initiating a host deformation; simply
+          // omitting them would hide a contradictory target from another part.
+          ...(reservation === undefined
+            ? outerConstraints
+            : outerConstraints.map((constraint) => ({
+                ...constraint,
+                reach: 0,
+              }))),
           { vertex: socket.iris, target: aperture[socket.iris], reach: 0 },
         ],
-        cutFaces: portraitFacesInsideLoop(host, loop),
+        cutFaces: reservation?.faces ?? cutFaces,
         attach: (cage, _adapted, region) => {
+          let bridge: number[] = [];
+          if (reservation !== undefined) {
+            // The old aperture IDs are now wholly inside the removed patch.
+            // Moving them cannot drag a remaining host triangle across the new
+            // seam. Admit the actual post-adaptation annulus before mutating the
+            // cage: another component may have moved its outer boundary.
+            const targets = new Map(
+              outerConstraints.map((constraint) => [
+                constraint.vertex,
+                constraint.target,
+              ]),
+            );
+            bridge = portraitSkinAnnulus(
+              cage.positions.map((point, id) => targets.get(id) ?? point),
+              reservation.boundary,
+              loop,
+            );
+            for (const { vertex, target } of outerConstraints)
+              cage.positions[vertex] = [...target];
+          }
           const lidGroup =
             shape.lidContact === "cornea"
               ? region(socket.name + "-eyelids", "skin")
@@ -559,6 +610,10 @@ export function createPortraitEyeComponent(
             lowerProfile,
             apertureGuide,
           );
+          for (let i = 0; i < bridge.length; i += 3) {
+            cage.indices.push(...bridge.slice(i, i + 3));
+            cage.groups.push(0);
+          }
           return {
             openings: [loopOf(socket).map((id) => margins.get(id)!)],
             finalSurface:

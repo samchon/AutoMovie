@@ -39,6 +39,7 @@ export const test_subject_eyelid_support = (): void => {
   };
   const component = createPortraitEyeComponent(socket, {
     ...portraitEyeShape,
+    skinAttachment: undefined,
     widthScale: 1,
     openingScale: 1,
     socketLift: 0,
