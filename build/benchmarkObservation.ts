@@ -1,10 +1,16 @@
-/** One executable invocation. Arguments bypass a shell and stdin stays UTF-8. */
+/**
+ * One executable invocation. Arguments bypass a shell and stdin stays UTF-8.
+ * @author Samchon
+ */
 export interface IBenchmarkCommand {
   executable: string;
   args: string[];
 }
 
-/** Frozen operator inputs for one authoring turn and its declared checks. */
+/**
+ * Frozen operator inputs for one authoring turn and its declared checks.
+ * @author Samchon
+ */
 export interface IBenchmarkTurnPlan {
   runId: string;
   generation: number;

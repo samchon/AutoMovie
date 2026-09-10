@@ -234,9 +234,9 @@ const main = async (): Promise<void> => {
     const result = await new Promise<{
       exitCode: number | null;
       signal: NodeJS.Signals | null;
-    }>((resolve) =>
-      child.once("close", (exitCode, signal) => resolve({ exitCode, signal })),
-    );
+    }>((resolve) => {
+      child.once("close", (exitCode, signal) => resolve({ exitCode, signal }));
+    });
     clearInterval(timer);
     await flushed;
     process.removeListener("SIGINT", interrupt);

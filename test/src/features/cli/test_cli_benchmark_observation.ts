@@ -23,6 +23,14 @@ const unit = loadSourceModule<{
   };
 }>(path.resolve(__dirname, "../../../../build/benchmarkObservation.ts"));
 
+/**
+ * A timed observation cannot authorize another turn or manufacture completion.
+ *
+ * Scenarios:
+ * 1. Invalid identity, cadence, artifacts and command declarations fail admission.
+ * 2. New activity, a quiet interval and the exact stall boundary stay distinct.
+ * 3. Empty and mixed check populations report only verified successful work.
+ */
 export const test_cli_benchmark_observation = (): void => {
   const command = { executable: "author", args: ["exec", "-"] };
   const plan = {
