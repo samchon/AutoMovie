@@ -56,6 +56,12 @@ Source에서 렌더 대상 authored owner로 향하는 reference는 같은 roots
 
 `autoMovieBinding.account`를 가진 claim은 실제 native host와 두 reference가 그 typed 선언에서 재생성한 값과 일치해야 한다. Manifest의 `localBindings`와 pilot-only `localAudits`는 account host, 계약 `targets`, 별도 비교 `population`, `relationship`, 단계와 범위를 그대로 투영한다. `readAutoMovieContractRules`의 optional structured metadata 소유자는 계속 평면 계약 H2이며 account나 비교 대상 H2는 새 rule이 아니다. 이전 helper의 authored `files`·`symbol` 호출은 account 경로로 명시적으로 이관하고 복수 문서는 문서별 선언으로 나눈다. Authored 사실과 원칙·계보 관계를 보존하면서 기존 직접 의무 annotation을 새 전체 모집단 비교로 교체하고 새 관계를 실제로 다시 검토한다.
 
+### 네이티브 입력 투영 {#spec-authoring-production-evidence-native-boundary}
+
+<!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-native-boundary 작품의 소유권 선언을 보존하면서 네이티브 평가기 입력만 분리한다. -->
+
+이미 소유권 검증을 마친 추가 claim마다 새 최상위 레코드를 만들고 작품 소유권 메타데이터만 제거한다. 원본 선언과 그 메타데이터는 manifest 판독을 위해 유지한다. 투영은 claim 순서와 native 필드를 그대로 보존하며 reference의 심각도, review 요구, exclusion 허용 여부, cardinality, host와 target selector를 바꾸지 않는다. 처음부터 native 형식인 claim과 빈 claim 배열에도 같은 무변경 정책을 적용한다.
+
 ### 결정론적 출력과 사전 실패 {#spec-authoring-production-evidence-deterministic-result}
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result 같은 입력의 동일 출력과 모순 입력의 명시적 실패를 규정한다. -->

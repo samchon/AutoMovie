@@ -37,6 +37,7 @@ import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
+import { projectAutoMovieNativeClaims } from "./projectAutoMovieNativeClaims";
 import { readAutoMovieContractRules } from "./readAutoMovieContractRules";
 import {
   type IAutoMovieLocalContractProjection,
@@ -3728,15 +3729,6 @@ export const createAutoMovieEvidenceConfig = (
     },
   ];
   return {
-    claims: [
-      ...shared,
-      ...(graph.claims ?? []).map((claim) => {
-        // Validated above and retained on the authored declaration for manifest
-        // readers; this metadata is not part of the native evaluator's schema.
-        const native = { ...claim };
-        Reflect.deleteProperty(native, "autoMovieBinding");
-        return native;
-      }),
-    ],
+    claims: [...shared, ...projectAutoMovieNativeClaims(graph.claims ?? [])],
   };
 };

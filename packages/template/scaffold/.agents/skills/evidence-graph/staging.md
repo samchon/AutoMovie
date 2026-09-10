@@ -129,6 +129,10 @@ The helper derives the complete authored file selector from `layer` and `populat
 
 The factory admits only declared account files and rejects missing active accounts or targets, duplicate ownership, and unknown or disabled-layer residue. `readAutoMovieProductionEvidence(...).manifest.localBindings` reports each positive account host, contract `targets`, and separate compared `population`; `localAudits` retains pilot-only inapplicable declarations. Structured `contract-rule` metadata stays on the contract H2 in `docs/contracts`, where `readAutoMovieContractRules` reads it. Account H2s compare those rules and do not become new rule owners.
 
+Keep helper-returned claims in the tracked `productionEvidence.claims` declaration and pass the whole declaration through `createAutoMovieEvidenceConfig` for the native `evidence/graph` rule. The factory validates ownership before projecting native claims. Do not strip `autoMovieBinding` from the authored declaration or pass the helper's metadata-bearing claim directly to the native evaluator; those are different inputs for different readers.
+
+If the native schema rejects internal metadata, repair the package boundary and refresh the installed harness before continuing, preserving the declared ownership and reference policy.
+
 For an existing caller, replace obligation `files` and `symbol` inputs with the account path and split a multi-document call into one declaration per document. Preserve each authored unit's facts, decisions, principle answers, and real parent relationships. Read the local obligation against every selected H2, move the whole-population answer into its account, and remove the superseded direct obligation annotations. Reinspect every moved relationship before writing its review. A copied generic account or a batch fingerprint replacement does not complete migration. Keep the current layer stage; use the reset exception only through its authorized lifecycle transition. After updating the installed package and declaration, follow [Activation and revision](work-specific.md#activation-and-revision) for the instruction handoff.
 
 ## Verification
