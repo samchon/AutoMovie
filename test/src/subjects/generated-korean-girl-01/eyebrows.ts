@@ -36,11 +36,18 @@ export interface IPortraitEyebrowProfile {
 
 /** Authored brow fibre dimensions; these are rendering controls, not measured hair data. */
 export const portraitEyebrowProfile: IPortraitEyebrowProfile = {
-  radius: 0.035,
+  // The source brow reads as a continuous soft band at the captured close
+  // distance; retain individual fibres while giving the base enough width to
+  // survive rasterisation beside the eye.
+  radius: 0.05,
   radiusStep: 0.0075,
-  taper: 0.8,
+  // A gentler loss keeps the lateral ends legible instead of dissolving into
+  // isolated dark points after the five longitudinal samples are rasterised.
+  taper: 0.58,
   clearance: 0.03,
-  arch: 0.08,
+  // Lift remains shallow; it separates the enlarged fibres from the skin
+  // without making a raised brow ridge or covering the upper lid.
+  arch: 0.1,
   outwardBend: 1.2,
   segments: 5,
 };
