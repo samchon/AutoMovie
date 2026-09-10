@@ -33,7 +33,7 @@ export type AutoMovieProductionContractLayer = AutoMovieAuthoredDocumentLayer;
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the typed local binding projection consumed by the manifest reader.
  */
 export type AutoMovieProductionContractClaim = MarkdownClaim & {
-  /** AutoMovie-only identity ignored by the generic evidence evaluator. */
+  /** AutoMovie identity validated and removed before native graph evaluation. */
   autoMovieBinding: {
     /** Authored layer that owns the host population. */
     layer: AutoMovieProductionContractLayer;

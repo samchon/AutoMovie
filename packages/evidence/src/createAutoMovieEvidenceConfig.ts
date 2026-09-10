@@ -3728,6 +3728,15 @@ export const createAutoMovieEvidenceConfig = (
     },
   ];
   return {
-    claims: [...shared, ...(graph.claims ?? [])],
+    claims: [
+      ...shared,
+      ...(graph.claims ?? []).map((claim) => {
+        // Validated above and retained on the authored declaration for manifest
+        // readers; this metadata is not part of the native evaluator's schema.
+        const native = { ...claim };
+        Reflect.deleteProperty(native, "autoMovieBinding");
+        return native;
+      }),
+    ],
   };
 };
