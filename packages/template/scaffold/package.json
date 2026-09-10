@@ -13,6 +13,7 @@
   "scripts": {
     "build": "npm run compile",
     "building:report": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/deriveBuilding-cli.ts",
+    "building:inspect": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/inspectBuilding-cli.ts",
     "book": "ttsx --no-plugins --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/book.ts",
     "capture:doctor": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/capture-doctor.ts",
     "capture:install": "ttsx --cache-dir node_modules/.cache/ttsc -P tsconfig.json scripts/capture-install.ts",
