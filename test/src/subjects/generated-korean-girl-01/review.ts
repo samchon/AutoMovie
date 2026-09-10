@@ -21,6 +21,7 @@ import type * as Surface from "../portraitSurface";
 import type * as Fairing from "../portraitSurfaceFairing";
 import type * as SurfaceFit from "../portraitSurfaceFit";
 import type * as ReferenceAnatomy from "../reference-anatomy/model";
+import type * as SkinReservation from "../reservePortraitSkin";
 import type * as Loop from "../subdivideControlMesh";
 import type * as Quads from "../subdividePortraitQuads";
 import type * as Anatomy from "./anatomy";
@@ -56,6 +57,11 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * Missing coverage/fingerprints remain errors; this intermediate account does
  * not claim whole-source or likeness acceptance.
  *
+ * @evidence {@link SkinReservation.reservePortraitSkin} Selects a connected host-skin reservation that contains a component's proposed outer seam before the component removes its original faces.
+ * @evidenceReview {@link SkinReservation.reservePortraitSkin} #bec1190 Read the target/loop cardinality guard, connected face-ring growth, simple-boundary test and finite termination before the shared annulus is attached. The host remains immutable and the reservation returns original face ordinals plus its outer boundary; this topology operation does not claim a 3D collision certificate.
+ * @evidence {@link SkinReservation.portraitSkinAnnulus} Bridges a reserved outer host boundary to the component's inner boundary with the existing planar region triangulator.
+ * @evidenceReview {@link SkinReservation.portraitSkinAnnulus} #346bf5e Read both loop winding checks, complete finite coordinate conversion, planar-region rejection and the returned oriented triangle order. The bridge preserves the two boundary identities for the eye attachment; it does not alter the component's optical or lower-lid dimensions.
+ *
  * @evidence {@link Crown.IPortraitDentalSideContour} Supplies optional mesial/distal detail within one crown's basic profile.
  * @evidenceReview {@link Crown.IPortraitDentalSideContour} #9395cb4 Read the three independently optional overrides and their nullish defaults in admission and loft construction. Empty side objects reproduce the basic mesh exactly. Mesial direction comes from the row, so a side profile does not carry an independently guessed world orientation.
  * @evidence {@link Crown.IPortraitDentalSideContour.contactHeight} Locates the proximal breadth crest along the normalized loft height.
@@ -66,7 +72,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Crown.IPortraitDentalSideContour.incisalRise} #2cf9d34 Read the signed-X side selection, nonnegative half-height bound and rise*x²*(1-v)^4 contribution to Y. Explicit zero is retained instead of falling back to the crown's base rise; the asymmetric scenario gives the two independently calculated edge heights without rotating the tooth.
  *
  * @evidence {@link Eyes.createPortraitEyeComponent} Fits one owned eye configuration into shared skin and supplies its optical and tissue finishers.
- * @evidenceReview {@link Eyes.createPortraitEyeComponent} #2991db3 Read the complete input-copy/admission, aperture transform, gaze-independent sphere, inner corneal support, outer-skin depth query, shared rings and final face-contact proposal. The final eye uses the same corneal builder and fitted sphere as contact. Colour is captured into owned materials, while aperture and tissue geometry remain distinct from palette choice. Current 49c90e9d views retain connected lids with positive measured contact but still lack the photographed localized lower-lid fullness.
+ * @evidenceReview {@link Eyes.createPortraitEyeComponent} #aecbb77 Read the complete input-copy/admission, aperture transform, gaze-independent sphere, inner corneal support, outer-skin depth query, shared rings, reservation branch and final face-contact proposal. The final eye uses the same corneal builder and fitted sphere as contact. Colour is captured into owned materials, while aperture and tissue geometry remain distinct from palette choice. The reservation branch removes a containing host patch and joins its annulus without changing optical dimensions; current views retain connected lids with positive measured contact but still lack the photographed localized lower-lid fullness.
  * @evidence {@link Eyes.appendPortraitEyeMargins} Attaches the section rings to retained outer skin identities and returns the new inner boundary mapping.
  * @evidenceReview {@link Eyes.appendPortraitEyeMargins} #c363758 Traced the retained outer ring, seven appended section rings, two triangles per longitudinal cell and paired material labels. The map returns original socket IDs to final inner-ring IDs for later eye construction. Optional group zero, lower-section resolution and the sphere-projected guide are exercised by the component/contact scenarios; this attachment precedes subdivision and does not itself perform final optical contact.
  * @evidence {@link Eyes.IPortraitEyeShape.irisPigment} Selects an instance-owned pigment palette without changing the aperture or optical shell.
@@ -526,7 +532,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Eyes.IPortraitEyeSocket.browBottom} Supplies the lower boundary from which brow fibre spans begin.
  * @evidenceReview {@link Eyes.IPortraitEyeSocket.browBottom} #2fbdd4d Compared its lower spline with the upper spline and the deterministic start/end fractions between them. Identical boundaries remove that cross-brow span, although outwardBend can still create a nonzero strand path. The eye copies this boundary array independently before final-skin sampling.
  * @evidence {@link Eyes.IPortraitEyeShape} Groups aperture, surrounding tissue, optical and sampling inputs for one eye instance.
- * @evidenceReview {@link Eyes.IPortraitEyeShape} #1e3cf36 Read all declared aperture, basic/detail tissue, optical, pigment, brow and sampling inputs through the complete factory and finish paths. Lower-lid sections replace the basic interior profile where their longitudinal blend is full; optical contact and material colour have separate consumers. The shape is an authored approximation with explicit dimensional admission, not a physiological reconstruction from the photograph.
+ * @evidenceReview {@link Eyes.IPortraitEyeShape} #54e02ac Read all declared aperture, basic/detail tissue, optical, pigment, brow, sampling and optional skin-attachment inputs through the complete factory and finish paths. Lower-lid sections replace the basic interior profile where their longitudinal blend is full; optical contact, material colour and host reservation have separate consumers. The shape is an authored approximation with explicit dimensional admission, not a physiological reconstruction from the photograph.
  * @evidence {@link Eyes.IPortraitEyeShape.widthScale} Multiplies the aperture span about its measured horizontal midpoint.
  * @evidenceReview {@link Eyes.IPortraitEyeShape.widthScale} #3969d18 Read middleX+(x-middleX)*widthScale on both rim paths. The gaze marker is handled separately, so this dimension does not automatically scale the pupil or iris radius.
  * @evidence {@link Eyes.IPortraitEyeShape.openingScale} Multiplies aperture height about the extrema-derived vertical midpoint.
