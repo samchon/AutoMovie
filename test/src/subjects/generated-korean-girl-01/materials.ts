@@ -25,6 +25,13 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
     return id;
   };
   material("skin", [0.68, 0.47, 0.36], 0.58);
+  // Keep the active face material conservative: the public material contract
+  // has no dedicated subsurface-scattering channel, so a restrained clear-coat
+  // lobe is the portable way to soften the hard, plastic-looking skin response
+  // in the viewer without declaring transmission on the cropped neck surface.
+  // This value describes an appearance approximation, never tissue thickness.
+  const skin = materials[materials.length - 1]!;
+  skin.clearcoat = 0.06;
   material("lips", [0.48, 0.125, 0.145], 0.46);
   // The sclera has a broad surface response. The transparent eye-owned cornea
   // carries the sharp highlight over the iris; repeating a mirror-like lobe on
