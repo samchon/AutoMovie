@@ -247,7 +247,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link JoinReference.fitPortraitJoinReference} Adapts a supplied source height surface across a joining annulus.
  * @evidenceReview {@link JoinReference.fitPortraitJoinReference} #66e0184 Read tangent targets, source height lookup, finite reach accumulation and positive-weight skin adaptation beside fairing. Fixed native/host boundaries remain authoritative and the result is not a global intersection proof.
  * @evidence {@link Hair.buildPortraitHairProxy} Builds the coarse scalp cap and side curtain used for face silhouette inspection.
- * @evidenceReview {@link Hair.buildPortraitHairProxy} #ebb94e3 Read copied scalp/side attachment points, ellipsoid enclosure, forehead support, ear clearance and finite metric checks. This remains an unfinished coarse proxy with no fibre simulation or detailed hair likeness claim.
+ * @evidenceReview {@link Hair.buildPortraitHairProxy} #43369f0 Read copied scalp/side attachment points, ellipsoid enclosure, forehead support, continuous hairline transition, ear clearance and finite metric checks. This remains an unfinished coarse proxy with no fibre simulation or detailed hair likeness claim.
  * @evidence {@link Model.buildReferencePortrait} Assembles the selected foundation, components, shared skin layers, ears, hair and oral contacts into the inspectable portrait model.
  * @evidenceReview {@link Model.buildReferencePortrait} #910745a Read foundation branching, control-net handoff, component assembly, final-skin ear/hair attachment and oral-contact application. The builder returns deterministic model data but does not turn passing construction checks into a likeness verdict.
  *
