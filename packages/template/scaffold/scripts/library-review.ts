@@ -54,6 +54,7 @@ import {
   readAutoMovieObservationMeasurements,
   readAutoMovieObservationPose,
 } from "./libraryReviewRequest";
+import { libraryReviewWorklist } from "./libraryReviewWorklist";
 
 type Verdict = "failed" | "not-run" | "passed" | "unsupported";
 
@@ -108,6 +109,7 @@ const planPath = (design: string): string =>
 
 const actionArguments = {
   inspect: new Set<string>(),
+  pending: new Set<string>(),
   plan: new Set(["--owner", "--source", "--observation"]),
   record: new Set([
     "--owner",
@@ -226,6 +228,8 @@ const evidenceOf = (props: {
  *
  * 1. `inspect` prints the exact current branch, H2 owner, identity, and finite
  *    observation denominator without writing a receipt.
+ * `pending` projects the current review refusals onto that population without
+ * recording or renewing any evidence.
  * 2. `plan` creates or replaces one H2 plan from exact manifest-owned sources
  *    while retaining its historical receipts for stale classification.
  * 3. `record` reopens one artifact, facts file, or turntable identity, replaces
@@ -247,9 +251,14 @@ export const runLibraryReviewCommand = (props: {
     );
   const authoring = currentAuthoringEvidence();
   const action = props.argv[0] ?? "inspect";
-  if (action !== "inspect" && action !== "plan" && action !== "record")
+  if (
+    action !== "inspect" &&
+    action !== "pending" &&
+    action !== "plan" &&
+    action !== "record"
+  )
     throw new Error(
-      'Library review action must be "inspect", "plan", or "record".',
+      'Library review action must be "inspect", "pending", "plan", or "record".',
     );
   assertActionArguments(props.argv, action);
 
@@ -376,6 +385,29 @@ export const runLibraryReviewCommand = (props: {
     });
   const snapshot = readCurrent();
   const { population } = snapshot;
+  if (action === "pending") {
+    const compilation = new AutoMovieProductionCompiler(
+      project,
+      authoring,
+      currentAuthoringEvidence,
+    ).lint({ scope: "review" });
+    if (
+      compilation.compiler.inputFingerprint !==
+      snapshot.compilation.compiler.inputFingerprint
+    )
+      throw new Error(
+        "Library inputs changed while reading pending observations. Run the command again against current source.",
+      );
+    const result = {
+      ...libraryReviewWorklist({
+        population,
+        diagnostics: [...population.diagnostics, ...compilation.diagnostics],
+      }),
+      compilation,
+    };
+    props.output?.(result);
+    return result;
+  }
   if (action === "inspect") {
     assertCurrentLibraryReview({ expected: snapshot, read: readCurrent });
     const result = { ...population, compilation: snapshot.compilation };
