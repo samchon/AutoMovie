@@ -98,7 +98,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Cranium.portraitNeckShape} Selects the active cranial/neck section dimensions and crop.
  * @evidenceReview {@link Cranium.portraitNeckShape} #f3f6e13 Read the upper-section Y adjustment beside appendPortraitNeck and the profile capture. The neck shape remains an authored crop/transition control, separate from facial likeness claims.
  * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
- * @evidenceReview {@link Materials.createPortraitMaterials} #d196a93 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
+ * @evidenceReview {@link Materials.createPortraitMaterials} #2e134a2 Read the warmer rosy skin albedo, restrained roughness and clearcoat beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
  *
  * @evidence {@link Configuration.portraitEyeSockets} Binds the active eye aperture, iris and brow boundary identities.
  * @evidenceReview {@link Configuration.portraitEyeSockets} #fc103a2 Read both handed socket loops and their shared canthus/iris/brow anchors beside eye construction. These identities select resident host vertices and do not encode a second eye shape.
