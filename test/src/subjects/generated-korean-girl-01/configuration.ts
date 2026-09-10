@@ -314,8 +314,12 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // The outer vermilion is an anatomical curve shared with neighbouring skin.
   // Its refinement should not inherit zigzags from opposite triangle vertices.
   borderRefinement: "curve",
-  widthScale: 1,
-  openingScale: 1,
+  // The captured smile occupies a narrower, shallower oral frame than the
+  // resident landmark cage. Keep the corner identities and dental group
+  // shared, while letting the fitted vermilion carry that proportion as one
+  // optional oral-frame control.
+  widthScale: 0.86,
+  openingScale: 0.8,
   cornerLift: 1,
   upperLipProjection: 0,
   lowerLipProjection: 0,
@@ -343,11 +347,11 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // broad body. Projections use mm; widths/offsets use oral half-width fractions.
   // This provisional shape retains the photographed aperture and dental frame.
   section: {
-    upperBody: 0.26,
-    upperTubercle: 0.2,
+    upperBody: 0.18,
+    upperTubercle: 0.14,
     upperTubercleWidth: 0.33,
-    lowerBody: 0.34,
-    lowerPads: 0.06,
+    lowerBody: 0.2,
+    lowerPads: 0.04,
     lowerPadOffset: 0.28,
     lowerPadWidth: 0.26,
   },

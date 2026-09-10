@@ -58,6 +58,8 @@ export const test_subject_lip_band_component = (): void => {
     // The production smile lifts its corners, but this fixture isolates the
     // thickness transform. Keep every unrelated positional contributor at its
     // neutral value so the oracle names only the lower-band ratio.
+    widthScale: 1,
+    openingScale: 1,
     cornerLift: 0,
     band: undefined,
     section: undefined,
