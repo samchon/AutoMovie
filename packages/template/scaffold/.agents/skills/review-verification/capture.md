@@ -46,6 +46,8 @@ Use `npm run preview` for one view you want for a specific question. Use `npm ru
 
 Only that exact receipt-backed frame may be cited in review. Never cite a console screenshot, a guessed output path, or a previous bundle.
 
+When reviewing a render receipt, inspect version 3's raw integer timebase and exact rational frame identity. Reject epsilon comparison, decimal reconstruction, or runtime substitution when establishing that identity.
+
 ## Refusal catalog
 
 Refusals arrive in two shapes and only one of them carries diagnostics. A refusal that can be attributed to your target returns `captured:false` with its diagnostics in the payload; the catalog below lists those. A refusal of the call itself is thrown, so it reaches you as the command's error text with no payload at all: `"Capture requires a current source compile"`, `"Capture requires a production frame format"`, and a commit-lock failure while the render bundle is written. `npm run preview` and `npm run turntable` run through the same capture path, so both raise those preconditions the same way. A thrown error means nothing was attempted and nothing was measured, so read its prose and satisfy the named precondition instead of hunting for a diagnostic list that does not exist.

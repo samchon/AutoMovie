@@ -72,6 +72,8 @@ The adjacent file is a physical observation plan and receipt locator, not a find
 
 `library:review inspect` requires a successful current source compile and returns that compile result beside the owner population. Source errors and stale, missing, or tampered generated output refuse inspection. `library:review record` repeats the current compile and complete observation-population check immediately before sidecar publication; a source, target, or plan change requires a new inspection and observation. The command records the supplied terminal verdict and never records that anyone reviewed the output.
 
+Use `npm run library:review -- pending` for a library's current observation work list. It runs the existing source and review checks, reports the declared and derived populations, and lists pending or blocked observations with the compiler's reasons. Satisfied observations are counted and omitted from the work list. Resolve owner, plan or source blockers before capturing; a blocked observation is not an instruction to photograph it again. This command writes no receipt and changes no freshness rule. An existing receipt is reused only when the normal review gate independently accepts its current identity and evidence.
+
 The strict file shape is:
 
 ```json

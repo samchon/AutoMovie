@@ -5,7 +5,10 @@ import {
 import type { IAutoMovieBuiltEnvironment } from "@automovie/interface";
 import { createHash } from "node:crypto";
 
-/** Measurements an author supplies for a building's reference ground plane. */
+/**
+ * Measurements an author supplies for a building's reference ground plane.
+ * @author Samchon
+ */
 export interface IAutoMoviePlacementStudy {
   groundY: number;
   tolerance: number;

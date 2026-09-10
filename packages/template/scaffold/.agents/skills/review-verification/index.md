@@ -12,7 +12,7 @@ Read the applicable sibling in full before acting:
 - [Capture](capture.md) owns exact targets, passes, receipts, and refusal recovery.
 - [Inspection](inspection.md) owns render-free structural descriptions of compiled subjects, parts, instances, and spaces.
 - [Live viewing](live-viewing.md) owns the persistent compiled viewer and the separate source preview while authoring.
-- [Offline measurements](measurements.md) owns current-state building reports and texture-scale census.
+- [Offline measurements](measurements.md) owns current-state building drawings, placement and storage measurements, and texture-scale census.
 - [Debugging](debugging.md) owns diagnostics-first correction across ownership, derived artifacts, compile, inspection, capture, and render.
 - [Recording authored work](recording-work.md) owns coherent staging, commit boundaries, messages, and strict text checks; read it before committing production work.
 
