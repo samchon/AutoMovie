@@ -88,7 +88,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitMouthShape} Selects the active mouth's corner, section, and grouped crown controls.
  * @evidenceReview {@link Configuration.portraitMouthShape} #b5d08c9 Read the narrower fitted oral frame and reduced upper/lower vermilion relief beside the shared lip and dental consumers. The grouped settings do not replace the oral attachment frame.
  * @evidence {@link Configuration.portraitCheekShape} Selects paired medial and buccal cheek support radii and transition controls.
- * @evidenceReview {@link Configuration.portraitCheekShape} #57d030e Read the medial reach/projection and downward buccal offset, width and height beside portraitCheekLayersFor. The offset follows the shared live anchor and does not create an independent detached cheek mesh.
+ * @evidenceReview {@link Configuration.portraitCheekShape} #4df9f58 Read the malar cushion's coupled projection/lift and the medial transition beside portraitCheekLayersFor. The offset follows the shared live anchor and does not create an independent detached cheek mesh.
  * @evidence {@link Configuration.portraitOrbitalSupportShapes} Selects the station-wise brow and sulcus support values for the active orbital layer.
  * @evidenceReview {@link Configuration.portraitOrbitalSupportShapes} #16623d4 Read the changed medial station brow/sulcus projections beside the orbital support factory. Station order and resident anchors remain the authority; these values do not alter the eye's optical shell.
  * @evidence {@link Cranium.portraitNeckShape} Selects the active cranial/neck section dimensions and crop.

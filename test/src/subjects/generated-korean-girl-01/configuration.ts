@@ -491,7 +491,11 @@ export const portraitCheekSockets: IPortraitCheekSocket[] = [
  * zero because the host already contains the photographed smile.
  */
 export const portraitCheekShape: IPortraitCheekShape = {
-  malar: { width: 30, height: 35, reach: 40, projection: 3.7, lift: 0 },
+  // The reference carries a broad, high malar cushion rather than a planar
+  // cheek. Increase its shallow anterior turn and lift together so the light
+  // rolls across one soft mass; the neighboring medial field remains a
+  // separate transition control.
+  malar: { width: 32, height: 34, reach: 40, projection: 4.8, lift: 0.7 },
   // This bound vertex lies lateral/inferior to the desired medial prominence.
   // Move the envelope inward/up relative to its live anchor; the cheek builder
   // mirrors the outward axis automatically. Keep lower cheek support smaller
@@ -504,8 +508,8 @@ export const portraitCheekShape: IPortraitCheekShape = {
     // lowering its crest. The wider support is a transition control, not a
     // second cheek mass, so its lower projection stays below the baseline.
     reach: 48,
-    projection: 3.8,
-    lift: 0,
+    projection: 4.5,
+    lift: 0.45,
   },
   // Keep the lower cheek's crest tight around its live support so the buccal
   // mass tapers into the mandibular plane instead of reading as one flat pad.
