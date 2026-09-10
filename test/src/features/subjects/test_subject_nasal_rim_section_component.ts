@@ -47,6 +47,9 @@ export const test_subject_nasal_rim_section_component = (): void => {
     nostrilWidthScale: 1,
     nostrilHeightScale: 1,
     nostrilTilt: 0,
+    // Isolate the rim-section attachment contract from the subject's active
+    // alar relief, which belongs to the production surface layer.
+    alarProjection: 0,
     rimRoundness: 0,
     rimRefinement: "curve" as const,
     rimSection,
