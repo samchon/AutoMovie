@@ -66,10 +66,11 @@ export const portraitEyeSockets: IPortraitEyeSocket[] = [
 export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
-  widthScale: 1.04,
-  // Eye close review: the reference's visible aperture is calmer vertically
-  // than the broad default. Keep the measured horizontal socket and optical
-  // radius fixed while narrowing only the opening envelope for this A/B.
+  widthScale: 1.06,
+  // Eye close review: the reference carries a longer almond-shaped horizontal
+  // span than the subdivision-shrunk socket. Keep the optical radius fixed
+  // while adding only this restrained six-percent horizontal aperture fit;
+  // the vertical opening remains independently controlled below.
   openingScale: 0.92,
   outerCornerLift: 0,
   socketLift: 0,
