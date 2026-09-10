@@ -47,6 +47,7 @@ export const test_subject_lower_lid_component = (): void => {
   };
   const shape: IPortraitEyeShape = {
     ...portraitEyeShape,
+    aegyoSal: undefined,
     lowerLidProfile: undefined,
     lidContact: undefined,
     browFibres: 0,

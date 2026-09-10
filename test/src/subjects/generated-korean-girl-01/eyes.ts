@@ -244,7 +244,11 @@ const lidRows = (
       depth: number,
       role?: Exclude<keyof IPortraitLowerLidSection, "attachment">,
     ): number[] => {
-      if (detail !== undefined && role !== undefined) {
+      if (
+        detail !== undefined &&
+        role !== undefined &&
+        shape.aegyoSal === undefined
+      ) {
         // Replace this section point within the canthal boundary blend. The
         // old lower-roll depth is not added to the new anatomical projection.
         offset = offset * (1 - lowerWeight) + detail[role].offset * lowerWeight;
@@ -256,34 +260,72 @@ const lidRows = (
       // several closely spaced rows can read as parallel carved lines in a
       // close render. Replace those lower rows with a single crest and one
       // rapidly fading shoulder, then let the host resume at preseptal skin.
-      if (
-        detail !== undefined &&
-        role !== undefined &&
-        shape.aegyoSal !== undefined
-      ) {
+      if (role !== undefined && shape.aegyoSal !== undefined) {
         const roll = shape.aegyoSal;
+        const smoothDecay = (at: number): number => {
+          const t = Math.max(0, Math.min(1, at));
+          const smooth = t * t * (3 - 2 * t);
+          return 1 - smooth;
+        };
         const section = {
-          pretarsalCrest: { offset: roll.offset, projection: roll.projection },
+          pretarsalCrest: {
+            offset: roll.offset,
+            projection: roll.projection,
+            decay: 1,
+          },
           pretarsalLower: {
-            offset: roll.offset + roll.height * 0.58,
-            projection: roll.projection * 0.52,
+            offset: roll.offset + roll.height * 0.35,
+            projection: roll.projection * smoothDecay(0.35),
+            decay: smoothDecay(0.35),
           },
           subtarsalInner: {
-            offset: roll.offset + roll.height,
-            projection: roll.projection * 0.12,
+            offset: roll.offset + roll.height * 0.65,
+            projection: roll.projection * smoothDecay(0.65),
+            decay: smoothDecay(0.65),
           },
           subtarsalOuter: {
-            offset: roll.offset + roll.height * 1.25,
-            projection: 0,
+            offset: roll.offset + roll.height * 0.95,
+            projection: roll.projection * smoothDecay(0.95),
+            decay: smoothDecay(0.95),
           },
           preseptal: {
-            offset: roll.offset + roll.height * 1.55,
+            offset: roll.offset + roll.height * 1.25,
             projection: 0,
+            decay: 0,
           },
-          margin: { offset: 0.16, projection: 0.12 },
+          margin: { offset: 0.16, projection: 0.12, decay: 0 },
         }[role];
-        offset = offset * (1 - lowerWeight) + section.offset * lowerWeight;
-        depth = depth * (1 - lowerWeight) + section.projection * lowerWeight;
+        // The optional longitudinal weights are the roll's medial-to-lateral
+        // fullness witnesses. They modulate one cross-section; they must not
+        // reintroduce the old detailed profile as a second set of ridges.
+        const weights = roll.weights;
+        const position = Math.max(0, Math.min(1, progress)) * 6;
+        const index = Math.min(5, Math.floor(position));
+        const weight =
+          weights === undefined
+            ? 1
+            : weights[index] * (1 - (position - index)) +
+              weights[index + 1] * (position - index);
+        // Width and reach are image-fit controls, not metadata.  Width scales
+        // the visible fullness against the authored lateral reach; reach then
+        // gates the roll toward each canthus so the pad occupies the same
+        // measured fraction of the lower-lid silhouette as the reference.
+        const lateral = Math.abs(progress - 0.5) * 2;
+        const span = Math.max(right - left, 1e-6);
+        const envelope = (range: number): number => {
+          const fraction = Math.max(0, Math.min(1, range / span));
+          if (fraction >= 1 || lateral <= fraction) return 1;
+          const t = (lateral - fraction) / (1 - fraction);
+          return 1 - t * t * (3 - 2 * t);
+        };
+        const rollWeight =
+          lowerWeight * weight * envelope(roll.width) * envelope(roll.reach);
+        // A supplied roll owns its complete section. Blending offsets back to
+        // the basic envelope at the canthi leaves the old shell's attachment
+        // rows visible as a competing shelf. The longitudinal weight only
+        // fades relief; the anatomical offsets stay on one continuous profile.
+        offset = section.offset;
+        depth = roll.projection * section.decay * rollWeight;
       }
       const t = Math.min(1, offset / outerWidth),
         blend = t * t * (3 - 2 * t);
@@ -325,7 +367,10 @@ const lidRows = (
         : basicWidth * (1 - lowerWeight) + detail.attachment * lowerWeight;
     return {
       id,
-      outer: at(outerWidth, -0.4 + 0.2 * weight),
+      outer: at(
+        outerWidth,
+        shape.aegyoSal === undefined ? -0.4 + 0.2 * weight : 0.04 * lowerWeight,
+      ),
       hoodUpper: at(
         1.0 + (shape.foldWidth + 1.1) * weight + 0.9 * lowerWidth,
         shape.lidThickness + 0.45 * depth + 0.1 * lowerVolume,

@@ -56,7 +56,7 @@ export const test_subject_lower_lid_handedness = (): void => {
         browTop: [],
         browBottom: [],
       },
-      { ...portraitEyeShape, lowerLidProfile: profile },
+      { ...portraitEyeShape, aegyoSal: undefined, lowerLidProfile: profile },
     );
     return cage.positions;
   };

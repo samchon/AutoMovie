@@ -70,6 +70,16 @@ export const test_subject_aegyo_sal = (): void => {
       point.some((value, axis) => value !== plain.cage.positions[id][axis]),
     ),
   );
+  const quiet = attach({
+    ...base,
+    aegyoSal: { ...roll, weights: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25] },
+  });
+  TestValidator.predicate(
+    "aegyo-sal weights modulate its single roll",
+    quiet.cage.positions.some((point, id) =>
+      point.some((value, axis) => value !== detailed.cage.positions[id][axis]),
+    ),
+  );
 
   const component = createPortraitEyeComponent(socket, {
     ...base,

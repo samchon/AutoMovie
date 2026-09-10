@@ -80,11 +80,9 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
   widthScale: 1.06,
-  // Eye close review: the reference carries a longer almond-shaped horizontal
-  // span than the subdivision-shrunk socket. Keep the optical radius fixed
-  // while adding only this restrained six-percent horizontal aperture fit;
-  // the vertical opening remains independently controlled below.
-  openingScale: 0.92,
+  // Preserve the measured vertical opening while the lower roll is fitted;
+  // the pretarsal component must never compensate by shrinking the eye.
+  openingScale: 1.04,
   outerCornerLift: 0,
   socketLift: 0,
   blendReach: 18,
@@ -111,11 +109,15 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // rings do not compete with the single rounded surface roll.
   aegyoSal: {
     offset: 1.1,
-    projection: 1.05,
-    width: 4.8,
-    height: 2.9,
-    reach: 8,
-    weights: [0.18, 0.58, 0.9, 1, 0.9, 0.58, 0.18],
+    projection: 3,
+    // Reference projection measures a 55–63 px lower-roll span at
+    // 0.4357646 mm/px; 24 mm is the conservative paired-eye envelope.
+    width: 24,
+    height: 2,
+    // The socket's canthus-to-canthus span is approximately 24 mm in the
+    // same projection, so the reach participates in the envelope as well.
+    reach: 24,
+    weights: [0.48, 0.84, 1, 1, 1, 0.84, 0.48],
   } satisfies IPortraitAegyoSalShape,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
