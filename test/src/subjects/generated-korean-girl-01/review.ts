@@ -89,6 +89,19 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
  * @evidenceReview {@link Materials.createPortraitMaterials} #a9af753 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
  *
+ * @evidence {@link Configuration.portraitEyeSockets} Binds the active eye aperture, iris and brow boundary identities.
+ * @evidenceReview {@link Configuration.portraitEyeSockets} #fc103a2 Read both handed socket loops and their shared canthus/iris/brow anchors beside eye construction. These identities select resident host vertices and do not encode a second eye shape.
+ * @evidence {@link Configuration.alternatePortraitEye} Supplies an independently replaceable eye profile for component-assembly scenarios.
+ * @evidenceReview {@link Configuration.alternatePortraitEye} #855a356 Read the copied alternate profile beside portraitComponentsFor and the replacement tests. Its replacement path is independent of the active eye and does not mutate the active configuration.
+ * @evidence {@link Configuration.portraitNoseSocket} Binds the active nose's cut, aperture and lining anchors.
+ * @evidenceReview {@link Configuration.portraitNoseSocket} #817b474 Read the resident socket IDs and their use by the nose component. These are attachment identities, separate from nasal dimensions and fitted aperture shape.
+ * @evidence {@link Configuration.portraitNasalSection} Selects the optional cubic nasal-section evaluator input.
+ * @evidenceReview {@link Configuration.portraitNasalSection} #0b359ee Read the retained section stations, transverse basis and join width beside the nasal evaluator. The active assembly keeps this optional path distinct from the recovered basic nose.
+ * @evidence {@link Configuration.alternatePortraitNose} Supplies an independently replaceable nose profile for component-assembly scenarios.
+ * @evidenceReview {@link Configuration.alternatePortraitNose} #48a088f Read the alternate nose's copied dimensions beside portraitComponentsFor and the replacement tests. It is an assembly alternative, not a second active nasal authority.
+ * @evidence {@link Configuration.portraitMouthSocket} Binds the active mouth opening, lip and dental attachment identities.
+ * @evidenceReview {@link Configuration.portraitMouthSocket} #ec358d3 Read the resident mouth loop and oral anchors beside mouth and dental attachment. These identities do not determine optional lip relief or crown profiles.
+ *
  * @evidence {@link Ears.IPortraitEarShape} Groups the resident ear datum, scale, projection and embedding controls.
  * @evidenceReview {@link Ears.IPortraitEarShape} #580d580 Read the copied ear shape inputs beside its sampler and builder. The profile separates height/depth scale from projection and embedding, while keeping the shell as an authored external ear approximation.
  * @evidence {@link Ears.IPortraitEarShape.centerY} Locates the ear datum along the construction Y axis.
