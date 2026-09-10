@@ -490,8 +490,11 @@ export const portraitCheekShape: IPortraitCheekShape = {
     offset: [-7, 6, 0],
     width: 29,
     height: 27,
-    reach: 40,
-    projection: 4.2,
+    // Extend the medial malar field along the curved cheek-to-nose path while
+    // lowering its crest. The wider support is a transition control, not a
+    // second cheek mass, so its lower projection stays below the baseline.
+    reach: 48,
+    projection: 3.8,
     lift: 0,
   },
   buccal: { width: 28, height: 33, reach: 35, projection: 1.4, lift: 0 },
