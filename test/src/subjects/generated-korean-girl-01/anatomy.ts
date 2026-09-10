@@ -3,6 +3,7 @@ import {
   createPortraitControlLayer,
 } from "../portraitControlLayer";
 import {
+  type IPortraitReliefCurve,
   type IPortraitReliefRegion,
   createPortraitReliefLayer,
 } from "../portraitRelief";
@@ -279,5 +280,63 @@ export const portraitPerioralRelief: IPortraitReliefRegion[] = [
     offset: [0, 12, 6],
     radius: [27, 20, 22],
     displacement: [0, 0, 0.25],
+  },
+];
+
+/**
+ * Narrow paired philtral crests run from subnasale to the two Cupid peaks.
+ * Each curve keeps its own root, taper and terminal support while the shared
+ * curve-layer sampler interpolates overlapping fields along the path. The
+ * small forward values describe the cutaneous white roll; they do not repaint
+ * the vermilion or move the retained mouth border. Anchors 0, 82 and 312 are
+ * subject-owned landmarks from the frozen control net, and the offsets keep
+ * the controls on the fitted host after its surface residual is applied.
+ */
+export const portraitPhiltralCurves: IPortraitReliefCurve[] = [
+  {
+    name: "right-philtral-crest",
+    points: [
+      {
+        anchor: 0,
+        offset: [-2.2, -1.4, -0.3],
+        radius: [2.1, 3.2, 4.4],
+        displacement: [0, 0, 0.12],
+      },
+      {
+        anchor: 0,
+        offset: [-3.6, -2.5, -1.3],
+        radius: [1.9, 3, 4.1],
+        displacement: [0, 0, 0.2],
+      },
+      {
+        anchor: 82,
+        offset: [0, 0, 0],
+        radius: [1.7, 2.8, 3.8],
+        displacement: [0, 0, 0.08],
+      },
+    ],
+  },
+  {
+    name: "left-philtral-crest",
+    points: [
+      {
+        anchor: 0,
+        offset: [2.2, -1.4, -0.3],
+        radius: [2.1, 3.2, 4.4],
+        displacement: [0, 0, 0.12],
+      },
+      {
+        anchor: 0,
+        offset: [3.6, -2.5, -1.3],
+        radius: [1.9, 3, 4.1],
+        displacement: [0, 0, 0.2],
+      },
+      {
+        anchor: 312,
+        offset: [0, 0, 0],
+        radius: [1.7, 2.8, 3.8],
+        displacement: [0, 0, 0.08],
+      },
+    ],
   },
 ];

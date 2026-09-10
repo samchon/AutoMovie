@@ -81,6 +81,8 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Anatomy.portraitOrbitalRelief} #a1b1558 Read the medial upper-orbit region additions, resident anchors, XYZ offsets, radii and signed displacement beside the layer consumer. These authored envelopes adjust shared skin support and do not claim measured orbital anatomy.
  * @evidence {@link Anatomy.portraitPerioralRelief} Supplies the subject's named perioral transition regions consumed by the shared surface layer.
  * @evidenceReview {@link Anatomy.portraitPerioralRelief} #7f2a730 Read the updated philtral and lip-to-chin support radii and displacement beside the live-skin layer consumer. They remain surface envelopes with authored values, separate from the mouth component and dental placement.
+ * @evidence {@link Anatomy.portraitPhiltralCurves} Supplies paired continuous controls from subnasale to the Cupid peaks for the upper cutaneous lip surface.
+ * @evidenceReview {@link Anatomy.portraitPhiltralCurves} #b414518 Read both ordered crest groups, live landmark attachments, narrow support radii and bounded forward relief beside the curve-layer consumer; the curves stop at the retained vermilion boundary.
  * @evidence {@link Configuration.portraitEyeShape} Selects the active eye's optional skin attachment, lower-lid profile and optical/material controls.
  * @evidenceReview {@link Configuration.portraitEyeShape} #8c38466 Read the reserved attachment mode, compact pretarsal/subtarsal profile, aperture width and optical scale controls, pigment endpoints and their consumers. These values select one authored assembly and do not certify likeness.
  * @evidence {@link Configuration.portraitHairShape} Selects the subject's continuous frontal hair-cap boundary fit.
@@ -126,7 +128,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitNasalSupportDetail} Holds the optional nasal-control replacement selected by an assembly.
  * @evidenceReview {@link Configuration.portraitNasalSupportDetail} #cfdf698 Read its explicit undefined/default branch beside portraitNasalLayerFor and assembly construction; it remains separate from basic support.
  * @evidence {@link Configuration.measuredPortraitAssembly} Supplies the active component and surface-layer assembly.
- * @evidenceReview {@link Configuration.measuredPortraitAssembly} #31c6970 Read shared components, paired cheek layers and named supports beside buildReferencePortrait; this is an authored assembly datum, not likeness evidence.
+ * @evidenceReview {@link Configuration.measuredPortraitAssembly} #f802d60 Read shared components, paired cheek layers, named supports and paired philtral curves beside buildReferencePortrait; this is an authored assembly datum, not likeness evidence.
  * @evidence {@link Configuration.portraitAssembly} Supplies the complete default assembly input.
  * @evidenceReview {@link Configuration.portraitAssembly} #532a6ea Read default component/layer composition and stable references; replacement helpers retain independent owners.
  *
@@ -860,6 +862,12 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Relief.IPortraitReliefRegion} #9908253 Read the named anchor, XYZ offset, three positive radii and displacement fields against the layer adapter. All use head-space millimetres; the anchor follows replacement, while these envelopes remain visible-surface controls rather than reconstructed internal tissue.
  * @evidence {@link Relief.createPortraitReliefLayer} Converts owned anatomical support settings into engine deformation fields on the live skin.
  * @evidenceReview {@link Relief.createPortraitReliefLayer} #6a87ee4 Traced copied regions, unique names, resident-anchor checks and the millimetre-to-metre conversion of centre/radius/displacement. Zero displacement emits no field and stretch stays zero; the final surface assembler supplies aperture protection and common normals.
+ * @evidence {@link Relief.IPortraitReliefCurvePoint} Declares one resident attachment, offset, support and displacement control for a continuous anatomical surface curve.
+ * @evidenceReview {@link Relief.IPortraitReliefCurvePoint} #886f2fe Read the four finite millimetre fields and resident anchor contract beside the curve layer; each control follows the live skin without creating a detached section.
+ * @evidence {@link Relief.IPortraitReliefCurve} Groups ordered curve controls under one named surface responsibility.
+ * @evidenceReview {@link Relief.IPortraitReliefCurve} #77e3c95 Read the unique name and bounded ordered control population beside the curve factory; the group is independently optional and shares the existing host.
+ * @evidence {@link Relief.createPortraitReliefCurveLayer} Samples adjacent controls into overlapping metric fields while preserving live endpoints and boundary ownership.
+ * @evidenceReview {@link Relief.createPortraitReliefCurveLayer} #30aae88 Read copied input, control attachment checks, three interior samples per segment, endpoint retention and millimetre conversion beside its focused curve scenarios.
  *
  * @evidence {@link Capture.portraitCaptureProfile} Fixes the finite angle set, source crop, optics and lighting conditions used by these inspection frames.
  * @evidenceReview {@link Capture.portraitCaptureProfile} #fb7d532 Read all nine yaw/pitch views, the 430-pixel source crop and the 64-sample denoised Cycles lights. Calibration, source pose and three clay captures complete the fourteen-frame set; hair is hidden in clay, and denoising leaves detailed strand judgments outside this stage.

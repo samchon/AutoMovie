@@ -1,11 +1,15 @@
 import type { IPortraitComponent } from "../portraitComponents";
-import { createPortraitReliefLayer } from "../portraitRelief";
+import {
+  createPortraitReliefCurveLayer,
+  createPortraitReliefLayer,
+} from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
   type IPortraitNasalDetail,
   portraitNasalLayerFor,
   portraitOrbitalRelief,
   portraitPerioralRelief,
+  portraitPhiltralCurves,
 } from "./anatomy";
 import {
   type IPortraitCheekShape,
@@ -21,6 +25,7 @@ import {
   type IPortraitEyeSocket,
   createPortraitEyeComponent,
 } from "./eyes";
+import type { IPortraitHairShape } from "./hairProxy";
 import {
   type IPortraitMouthShape,
   type IPortraitMouthSocket,
@@ -37,7 +42,6 @@ import {
   type IPortraitOrbitalSupportShape,
   createPortraitOrbitalSupport,
 } from "./orbitalSupport";
-import type { IPortraitHairShape } from "./hairProxy";
 
 /** Subject-owned continuous hair-cap boundary fit for the reference fringe. */
 export const portraitHairShape: IPortraitHairShape = {
@@ -610,6 +614,7 @@ export const measuredPortraitAssembly = {
     portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
+    createPortraitReliefCurveLayer("philtral-curves", portraitPhiltralCurves),
     // Upper orbital support belongs to skin form, independently of brow hair.
     // Paired small anterior pad sections sit between fixed forehead witnesses
     // and a shallow superior orbital sulcus. Values are fitting hypotheses.
