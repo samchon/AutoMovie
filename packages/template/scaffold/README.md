@@ -63,6 +63,7 @@ The table names entry points, not completion evidence. Read the linked procedure
 
 - `src`, `docs`, `test`, `public`, `lint.config.ts`, `scripts/emitDesign.ts`, and the screenplay index are project-owned inputs.
 - `automovie/design/shared` and `automovie/design/<production>` are tracked design records emitted or authored through their declared owners.
+- `automovie/derived` contains Git-ignored precomputed outputs. Track their generator scripts, inputs, and `automovie/derived-artifacts.json` provenance ledger; run the production's explicit generation command before compiling a fresh checkout. Compilation verifies these outputs and never regenerates them.
 - `generated`, `automovie/productions/<production>`, and `renders` are compiler or runtime outputs; do not edit them.
 - `src/examples` and `npm run derive:example` are teaching material, not production owners or evidence.
 
