@@ -325,9 +325,9 @@ export const portraitMouthShape: IPortraitMouthShape = {
   band: {
     upper: [
       { at: -1, scale: 1 },
-      { at: -0.65, scale: 0.86 },
-      { at: 0, scale: 0.92 },
-      { at: 0.65, scale: 0.86 },
+      { at: -0.65, scale: 0.8 },
+      { at: 0, scale: 1.05 },
+      { at: 0.65, scale: 0.8 },
       { at: 1, scale: 1 },
     ],
     lower: [
@@ -343,11 +343,11 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // broad body. Projections use mm; widths/offsets use oral half-width fractions.
   // This provisional shape retains the photographed aperture and dental frame.
   section: {
-    upperBody: 0.3,
-    upperTubercle: 0.16,
-    upperTubercleWidth: 0.25,
-    lowerBody: 0.4,
-    lowerPads: 0.1,
+    upperBody: 0.26,
+    upperTubercle: 0.2,
+    upperTubercleWidth: 0.33,
+    lowerBody: 0.34,
+    lowerPads: 0.06,
     lowerPadOffset: 0.28,
     lowerPadWidth: 0.26,
   },
