@@ -21,6 +21,7 @@ import type * as Surface from "../portraitSurface";
 import type * as Fairing from "../portraitSurfaceFairing";
 import type * as SurfaceFit from "../portraitSurfaceFit";
 import type * as ReferenceAnatomy from "../reference-anatomy/model";
+import type * as RimReplacement from "../replacePortraitRim";
 import type * as SkinReservation from "../reservePortraitSkin";
 import type * as Loop from "../subdivideControlMesh";
 import type * as Quads from "../subdividePortraitQuads";
@@ -185,6 +186,17 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link NasalSection.IPortraitNasalSection.influence} #1b124cc Read influence into the [0,1] blend, where zero preserves host identity.
  * @evidence {@link NasalSection.createPortraitNasalSection} Evaluates the optional continuous nasal depth loft against a translated host datum.
  * @evidenceReview {@link NasalSection.createPortraitNasalSection} #e2fe69c Read copied inputs, open-uniform cubic evaluation, physical-coordinate inversion, edge transition and finite output/refusal paths. The loft's bounded scalar depth does not assert post-subdivision likeness or global intersection safety.
+ *
+ * @evidence {@link RimReplacement.IPortraitRimMeshes} Groups the skin and lining meshes returned for one replaced nasal rim.
+ * @evidenceReview {@link RimReplacement.IPortraitRimMeshes} #f29c7f8 Read the paired skin/lining outputs beside rim replacement and its shared boundary IDs. The result keeps exterior and interior geometry separate while preserving one aperture ownership contract.
+ * @evidence {@link RimReplacement.IPortraitRimMeshes.skin} Supplies the exterior nasal-rim mesh after replacement.
+ * @evidenceReview {@link RimReplacement.IPortraitRimMeshes.skin} #8e9f9fa Read skin mesh indices, positions and group labels through the replacement attachment; it remains joined to the host skin rather than becoming a detached nose shell.
+ * @evidence {@link RimReplacement.IPortraitRimMeshes.lining} Supplies the interior lining mesh corresponding to the replaced rim.
+ * @evidenceReview {@link RimReplacement.IPortraitRimMeshes.lining} #37f37c9 Read lining mesh construction from the shared inner boundary beside the exterior rim. Its separate material/geometry identity does not alter the outer aperture shape.
+ * @evidence {@link RimReplacement.replacePortraitRim} Replaces a selected nasal rim region while retaining its resident opening boundary.
+ * @evidenceReview {@link RimReplacement.replacePortraitRim} #2720d63 Read source-region selection, boundary remapping, orientation checks and skin/lining extraction before cage mutation. The operation owns declared rim topology and does not infer unrecorded anatomy.
+ * @evidence {@link RimReplacement.replacePortraitRimAttachment} Attaches the replaced rim meshes to the live refined host.
+ * @evidenceReview {@link RimReplacement.replacePortraitRimAttachment} #c200c98 Read copied host bindings, resident boundary admission and deferred attachment ordering beside rim replacement tests. Shared identities preserve the seam while the lining remains a separate group.
  *
  * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
  * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
