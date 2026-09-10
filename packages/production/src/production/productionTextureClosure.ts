@@ -1,8 +1,8 @@
 import {
+  type IAutoMovieSceneEnvironmentUse,
   readAutoMovieImageFacts,
   validateTextureAssets,
 } from "@automovie/engine";
-import type { IAutoMovieSceneEnvironmentUse } from "@automovie/engine";
 import type {
   IAutoMovieAssetProvenance,
   IAutoMovieBuiltEnvironment,
@@ -18,8 +18,8 @@ import type {
  * Keep every occurrence: equal ids across environments must not hide different
  * material records behind a last-writer-wins map.
  *
- * @evidence requirements/asset-authoring/validation.md#asset-surface-validation Checks sampled material images against their registered uses and actual image headers.
- * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Applies the same resource closure to standalone and building-contained models before publication.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Refuses sampled images without a registered source, authorized consumer use, and readable byte facts.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Returns the exact unmet image use before either production shape can publish its output.
  */
 export const productionTextureClosureDiagnostics = (props: {
   production: string;
@@ -27,7 +27,7 @@ export const productionTextureClosureDiagnostics = (props: {
   environments: readonly Pick<IAutoMovieBuiltEnvironment, "models">[];
   scenes: readonly IAutoMovieSceneEnvironmentUse[];
   assets: readonly IAutoMovieAssetProvenance[];
-  content: readonly { path: string; bytes: Uint8Array }[];
+  content: readonly { path: string; bytes: Uint8Array | null }[];
 }): IAutoMovieDiagnostic[] => {
   const bytes = new Map(
     props.content.map((entry) => [entry.path, entry.bytes]),
