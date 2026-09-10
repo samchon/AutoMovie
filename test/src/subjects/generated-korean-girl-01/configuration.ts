@@ -67,7 +67,10 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
   widthScale: 1.04,
-  openingScale: 1.04,
+  // Eye close review: the reference's visible aperture is calmer vertically
+  // than the broad default. Keep the measured horizontal socket and optical
+  // radius fixed while narrowing only the opening envelope for this A/B.
+  openingScale: 0.92,
   outerCornerLift: 0,
   socketLift: 0,
   blendReach: 18,
@@ -139,8 +142,8 @@ export const portraitEyeShape: IPortraitEyeShape = {
   lidContactReach: 3,
   // The observed iris-rim markers give horizontal radii of 6.36–6.47 mm after
   // pose removal. One radius fits this subject's two independently bound eyes.
-  irisRadius: 6.4,
-  pupilRadius: 2.55,
+  irisRadius: 6.1,
+  pupilRadius: 2.35,
   // The source iris reads as dark brown under its captured illumination.
   // These are authored linear albedos, not colors sampled from image pixels.
   irisPigment: {

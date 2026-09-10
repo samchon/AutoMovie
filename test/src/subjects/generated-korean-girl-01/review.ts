@@ -82,7 +82,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Anatomy.portraitPerioralRelief} Supplies the subject's named perioral transition regions consumed by the shared surface layer.
  * @evidenceReview {@link Anatomy.portraitPerioralRelief} #7f2a730 Read the updated philtral and lip-to-chin support radii and displacement beside the live-skin layer consumer. They remain surface envelopes with authored values, separate from the mouth component and dental placement.
  * @evidence {@link Configuration.portraitEyeShape} Selects the active eye's optional skin attachment, lower-lid profile and optical/material controls.
- * @evidenceReview {@link Configuration.portraitEyeShape} #aa7e43f Read the reserved attachment mode, compact pretarsal/subtarsal profile, pigment endpoints and their consumers. These values select one authored assembly and do not certify likeness.
+ * @evidenceReview {@link Configuration.portraitEyeShape} #e879bf8 Read the reserved attachment mode, compact pretarsal/subtarsal profile, aperture and optical scale controls, pigment endpoints and their consumers. These values select one authored assembly and do not certify likeness.
  * @evidence {@link Configuration.portraitNoseShape} Selects the active nose's fitted aperture dimensions and restrained alar projection.
  * @evidenceReview {@link Configuration.portraitNoseShape} #9dd2218 Read the positive alar projection beside the aperture and rim consumers. The value is a local relief control; nostril topology and cavity attachment remain owned by the nose component.
  * @evidence {@link Configuration.portraitMouthShape} Selects the active mouth's corner, section, and grouped crown controls.
@@ -94,7 +94,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Cranium.portraitNeckShape} Selects the active cranial/neck section dimensions and crop.
  * @evidenceReview {@link Cranium.portraitNeckShape} #f3f6e13 Read the upper-section Y adjustment beside appendPortraitNeck and the profile capture. The neck shape remains an authored crop/transition control, separate from facial likeness claims.
  * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
- * @evidenceReview {@link Materials.createPortraitMaterials} #a9af753 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
+ * @evidenceReview {@link Materials.createPortraitMaterials} #d196a93 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
  *
  * @evidence {@link Configuration.portraitEyeSockets} Binds the active eye aperture, iris and brow boundary identities.
  * @evidenceReview {@link Configuration.portraitEyeSockets} #fc103a2 Read both handed socket loops and their shared canthus/iris/brow anchors beside eye construction. These identities select resident host vertices and do not encode a second eye shape.
