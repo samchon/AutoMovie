@@ -32,6 +32,7 @@ import type * as DentalArc from "./dentalArc";
 import type * as Attachment from "./dentalComponent";
 import type * as Crown from "./dentalCrown";
 import type * as Dental from "./dentalRow";
+import type * as Ears from "./ears";
 import type * as Eyebrows from "./eyebrows";
 import type * as Eyes from "./eyes";
 import type * as Fitted from "./fittedModel";
@@ -83,6 +84,25 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Cranium.portraitNeckShape} #f3f6e13 Read the upper-section Y adjustment beside appendPortraitNeck and the profile capture. The neck shape remains an authored crop/transition control, separate from facial likeness claims.
  * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
  * @evidenceReview {@link Materials.createPortraitMaterials} #a9af753 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
+ *
+ * @evidence {@link Ears.IPortraitEarShape} Groups the resident ear datum, scale, projection and embedding controls.
+ * @evidenceReview {@link Ears.IPortraitEarShape} #580d580 Read the copied ear shape inputs beside its sampler and builder. The profile separates height/depth scale from projection and embedding, while keeping the shell as an authored external ear approximation.
+ * @evidence {@link Ears.IPortraitEarShape.centerY} Locates the ear datum along the construction Y axis.
+ * @evidenceReview {@link Ears.IPortraitEarShape.centerY} #fe0ab55 Read centerY into the sampled ear frame and its finite coordinate admission.
+ * @evidence {@link Ears.IPortraitEarShape.centerZ} Locates the ear datum along the construction Z axis.
+ * @evidenceReview {@link Ears.IPortraitEarShape.centerZ} #0cc974c Read centerZ into the sampled ear frame; it remains separate from the ear's anterior projection scale.
+ * @evidence {@link Ears.IPortraitEarShape.heightScale} Scales the ear's vertical extent around its resident datum.
+ * @evidenceReview {@link Ears.IPortraitEarShape.heightScale} #5beb13f Traced heightScale into the outer and inner ear sample rows beside positive finite scale checks.
+ * @evidence {@link Ears.IPortraitEarShape.depthScale} Scales the ear's depth extent around its resident datum.
+ * @evidenceReview {@link Ears.IPortraitEarShape.depthScale} #9e9dac6 Read depthScale into the ear shell's depth coordinates beside its positive finite admission.
+ * @evidence {@link Ears.IPortraitEarShape.projection} Controls the ear's anterior placement relative to the sampled head surface.
+ * @evidenceReview {@link Ears.IPortraitEarShape.projection} #cd9ec32 Read projection into the final ear frame beside the head-surface attachment; it does not move the shared facial sockets.
+ * @evidence {@link Ears.IPortraitEarShape.embedding} Controls lateral embedding of the ear shell into its host surface.
+ * @evidenceReview {@link Ears.IPortraitEarShape.embedding} #5a7d808 Traced embedding into the ear attachment frame and its bounded admission; the shell remains a separate component group.
+ * @evidence {@link Ears.buildPortraitEars} Samples and attaches both authored ear shells to the final cranial surface.
+ * @evidenceReview {@link Ears.buildPortraitEars} #ff76f86 Read side mirroring, copied shape inputs, live head-surface depth sampling and separate ear material groups beside ear attachment tests. This external shell does not claim detailed helix anatomy or likeness acceptance.
+ * @evidence {@link Ears.portraitEarShape} Supplies the default authored ear profile when no replacement is selected.
+ * @evidenceReview {@link Ears.portraitEarShape} #e2cf74e Read the default datum, scales, projection and embedding beside both ear consumers. These values are procedural defaults rather than measured subject anatomy.
  *
  * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
  * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
