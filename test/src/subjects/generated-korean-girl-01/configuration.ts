@@ -98,10 +98,13 @@ export const portraitEyeShape: IPortraitEyeShape = {
   foldWidth: 1.6,
   foldDepth: 0.22,
   upperLidVolume: 0.18,
-  // A broad shallow lower roll joins the cheek without a narrow raised band.
-  // These offsets reshape surrounding tissue; the aperture remains its own rim.
-  lowerLidWidth: 2.65,
-  lowerLidVolume: 0.08,
+  // The source shows a roughly six-millimetre pretarsal roll immediately below
+  // the lashes. Keep the crest visible, then let the lower shoulder fall away
+  // before the preseptal field; this is visible fullness, not a bag or muscle
+  // thickness estimate. These offsets reshape surrounding tissue while the
+  // aperture remains its own rim.
+  lowerLidWidth: 1.5,
+  lowerLidVolume: 0.02,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
   // have separate positions/projections. These mm values are a render-study
@@ -118,26 +121,28 @@ export const portraitEyeShape: IPortraitEyeShape = {
     // and its preseptal landing are fitted as one section. Positive relief alone
     // does not prevent a trough: the globe-to-skin bridge can lie behind both
     // boundaries. The adopted coupled study narrows the pretarsal/subtarsal
-    // offsets and carries more support into the preseptal landing, which keeps
-    // the rounded body from reading as a broad detached pad after subdivision.
+    // offsets. The crest is intentionally fuller than the lower shoulder, and
+    // the shoulder loses relief before the preseptal landing; this keeps the
+    // rounded body legible without extending a bag into the cheek after
+    // subdivision.
     sections: [
-      { at: 0, fullness: 0.12, width: 0.55 },
-      { at: 0.16, fullness: 0.42, width: 0.72 },
-      { at: 0.34, fullness: 0.82, width: 0.9 },
+      { at: 0, fullness: 0.2, width: 0.7 },
+      { at: 0.16, fullness: 0.6, width: 0.9 },
+      { at: 0.34, fullness: 0.92, width: 1 },
       { at: 0.5, fullness: 1, width: 1 },
-      { at: 0.66, fullness: 0.82, width: 0.9 },
-      { at: 0.84, fullness: 0.42, width: 0.72 },
-      { at: 1, fullness: 0.12, width: 0.55 },
+      { at: 0.66, fullness: 0.92, width: 1 },
+      { at: 0.84, fullness: 0.6, width: 0.9 },
+      { at: 1, fullness: 0.2, width: 0.7 },
     ].map(({ at, fullness, width }) => ({
       at,
       section: {
-        margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 1.0 * width, projection: 0.16 * fullness },
-        pretarsalLower: { offset: 1.9 * width, projection: 0.07 * fullness },
-        subtarsalInner: { offset: 2.8 * width, projection: 0.025 * fullness },
-        subtarsalOuter: { offset: 3.8 * width, projection: 0.006 * fullness },
-        preseptal: { offset: 6.2, projection: 0.0 },
-        attachment: 8.5,
+        margin: { offset: 0.16, projection: 0.12 },
+        pretarsalCrest: { offset: 1.1 * width, projection: 0.55 * fullness },
+        pretarsalLower: { offset: 1.9 * width, projection: 0.28 * fullness },
+        subtarsalInner: { offset: 2.7 * width, projection: 0.08 * fullness },
+        subtarsalOuter: { offset: 3.8 * width, projection: 0.01 * fullness },
+        preseptal: { offset: 5.2, projection: 0.0 },
+        attachment: 6.2,
       },
     })),
   },
