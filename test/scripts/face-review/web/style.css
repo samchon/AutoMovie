@@ -1,0 +1,154 @@
+:root {
+  color-scheme: dark;
+  font:
+    14px/1.45 system-ui,
+    sans-serif;
+  background: #10151d;
+  color: #e5ecf4;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #354153;
+}
+header div {
+  margin-right: auto;
+}
+header span {
+  display: block;
+  font-size: 12px;
+  color: #93a8c0;
+}
+main {
+  display: grid;
+  grid-template-columns: 235px minmax(350px, 1fr) minmax(240px, 28%);
+  gap: 18px;
+  padding: 16px;
+}
+h2 {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  color: #afc3dd;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+  background: #202c3c;
+  border: 1px solid #42526a;
+  border-radius: 5px;
+  padding: 7px 10px;
+}
+button {
+  cursor: pointer;
+}
+button:hover,
+button.active {
+  background: #345c85;
+  border-color: #85b1df;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.buttons button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.hint {
+  color: #95a6bc;
+  font-size: 12px;
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+}
+#filter {
+  width: 100%;
+  margin: 10px 0;
+}
+#parts {
+  max-height: 42vh;
+  overflow: auto;
+}
+#parts label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  padding: 3px 0;
+  overflow-wrap: anywhere;
+}
+#parts input {
+  flex: none;
+}
+#parts label[hidden] {
+  display: none;
+}
+#canvas-slot {
+  width: 100%;
+  aspect-ratio: 9/10;
+  background: #090d14;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+#status {
+  padding-top: 9px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+#status.error {
+  color: #ffaca7;
+}
+#reference-panel img {
+  width: 100%;
+  display: block;
+  border-radius: 6px;
+}
+#reference-frame {
+  overflow: hidden;
+}
+pre {
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#build-notice {
+  margin: 10px 16px;
+  padding: 8px 12px;
+  border: 1px solid #b45555;
+  color: #ffb5aa;
+}
+#build-notice[hidden] {
+  display: none;
+}
+@media (max-width: 1000px) {
+  main {
+    grid-template-columns: 190px minmax(300px, 1fr);
+  }
+  #reference-panel {
+    grid-column: 2;
+  }
+  #reference-panel img {
+    max-width: 320px;
+  }
+}
