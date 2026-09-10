@@ -47,6 +47,7 @@ import type * as NasalBody from "./nasalBody";
 import type * as NasalLobule from "./nasalLobule";
 import type * as NasalReference from "./nasalReference";
 import type * as RimSection from "./nasalRimSection";
+import type * as NasalSection from "./nasalSection";
 import type * as NasalSupport from "./nasalSupport";
 import type * as Nasal from "./nose";
 import type * as Nostril from "./nostrilRim";
@@ -165,6 +166,25 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link NasalBody.createPortraitNasalBody} #caeff2b Read copied array inputs, station slope limiting, endpoint joins, transverse envelopes and finite output checks. Midline, shoulder, alar and crease controls share one field rather than overlapping detached shells.
  * @evidence {@link NasalBody.portraitNasalViewRay} Derives the image-depth ray from the captured horizontal and vertical camera rows.
  * @evidenceReview {@link NasalBody.portraitNasalViewRay} #e91e045 Read finite three-component admission, normalized cross product and independent-axis refusal. The ray preserves image-plane coordinates for nasal depth controls and does not itself alter geometry.
+ *
+ * @evidence {@link NasalSection.IPortraitNasalSectionStation} Defines one transverse depth-control row of the optional nasal loft.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSectionStation} #e2d459b Read station height and ordered depth poles beside the cubic loft's axis mapping. The row supplies authored controls rather than sampled source vertices.
+ * @evidence {@link NasalSection.IPortraitNasalSectionStation.height} Locates a nasal loft row along local head Y.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSectionStation.height} #beb4849 Read increasing heights into the open-uniform station axis and its finite spacing checks.
+ * @evidence {@link NasalSection.IPortraitNasalSectionStation.depths} Supplies the ordered local head-Z poles for one station.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSectionStation.depths} #63262ba Traced depth poles into the tensor-product control grid and depth-hull interpolation.
+ * @evidence {@link NasalSection.IPortraitNasalSection} Groups transverse poles, station rows and bounded identity-transition controls.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSection} #285c27c Read copied axes, station rows, join width and influence beside the loft evaluator. The optional field is a single connected depth authority and leaves aperture pose to its separate owner.
+ * @evidence {@link NasalSection.IPortraitNasalSection.transverse} Supplies the strictly increasing local-X control positions.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSection.transverse} #8ef8a98 Read transverse poles into the normalized inversion and four-to-64 control bound.
+ * @evidence {@link NasalSection.IPortraitNasalSection.stations} Supplies strictly increasing local-Y control rows.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSection.stations} #2e231a7 Read station rows into the tensor-product grid and matching depth-array admission.
+ * @evidence {@link NasalSection.IPortraitNasalSection.joinWidth} Sets the positive identity-transition width at the domain edges.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSection.joinWidth} #d0a3e18 Traced joinWidth into the half-span bound and quintic edge transition.
+ * @evidence {@link NasalSection.IPortraitNasalSection.influence} Sets the bounded blend from host depth to the local loft.
+ * @evidenceReview {@link NasalSection.IPortraitNasalSection.influence} #1b124cc Read influence into the [0,1] blend, where zero preserves host identity.
+ * @evidence {@link NasalSection.createPortraitNasalSection} Evaluates the optional continuous nasal depth loft against a translated host datum.
+ * @evidenceReview {@link NasalSection.createPortraitNasalSection} #e2fe69c Read copied inputs, open-uniform cubic evaluation, physical-coordinate inversion, edge transition and finite output/refusal paths. The loft's bounded scalar depth does not assert post-subdivision likeness or global intersection safety.
  *
  * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
  * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
