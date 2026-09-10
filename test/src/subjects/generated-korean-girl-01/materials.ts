@@ -36,7 +36,13 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
   // This value describes an appearance approximation, never tissue thickness.
   const skin = materials[materials.length - 1]!;
   skin.clearcoat = 0.09;
-  material("lips", [0.48, 0.125, 0.145], 0.46);
+  // The captured mouth reads as a softly desaturated pink under the same key,
+  // while the procedural lip currently catches a narrow, cosmetic-looking
+  // highlight. Raise the green/blue channels slightly to soften the rosy
+  // albedo and raise roughness to spread that lobe across the vermilion.
+  // This is one global material response: it changes no lip coordinates,
+  // section relief, boundary ownership or oral contact relationship.
+  material("lips", [0.48, 0.16, 0.18], 0.6);
   // The sclera has a broad surface response. The transparent eye-owned cornea
   // carries the sharp highlight over the iris; repeating a mirror-like lobe on
   // opaque pigment beneath it would add a second unrelated reflective surface.
