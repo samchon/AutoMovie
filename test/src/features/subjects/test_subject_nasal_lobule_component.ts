@@ -34,6 +34,9 @@ export const test_subject_nasal_lobule_component = (): void => {
   const shape = {
     ...portraitNoseShape,
     depthScale: 1,
+    // Isolate the local lobule oracle from the active subject's paired alar
+    // relief; this fixture measures only the section's shared depth path.
+    alarProjection: 0,
     rimSection: undefined,
     lobules: [lobule],
     nostrilWidthScale: 1,
