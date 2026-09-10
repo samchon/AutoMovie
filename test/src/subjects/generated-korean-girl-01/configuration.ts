@@ -21,6 +21,7 @@ import { createPortraitDentalComponent } from "./dentalComponent";
 import type { IPortraitDentalRow } from "./dentalRow";
 import { portraitEyebrowProfile } from "./eyebrows";
 import {
+  type IPortraitAegyoSalShape,
   type IPortraitEyeShape,
   type IPortraitEyeSocket,
   createPortraitEyeComponent,
@@ -103,8 +104,19 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // before the preseptal field; this is visible fullness, not a bag or muscle
   // thickness estimate. These offsets reshape surrounding tissue while the
   // aperture remains its own rim.
-  lowerLidWidth: 1.5,
-  lowerLidVolume: 0.02,
+  lowerLidWidth: 0.55,
+  lowerLidVolume: 0,
+  // The visible pretarsal body is owned by the grouped aegyo-sal field below.
+  // Keep the construction envelope as a quiet supporting seam so its repeated
+  // rings do not compete with the single rounded surface roll.
+  aegyoSal: {
+    offset: 1.1,
+    projection: 1.05,
+    width: 4.8,
+    height: 2.9,
+    reach: 8,
+    weights: [0.18, 0.58, 0.9, 1, 0.9, 0.58, 0.18],
+  } satisfies IPortraitAegyoSalShape,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
   // have separate positions/projections. These mm values are a render-study
@@ -137,10 +149,10 @@ export const portraitEyeShape: IPortraitEyeShape = {
       at,
       section: {
         margin: { offset: 0.16, projection: 0.12 },
-        pretarsalCrest: { offset: 1.1 * width, projection: 0.55 * fullness },
-        pretarsalLower: { offset: 1.9 * width, projection: 0.28 * fullness },
-        subtarsalInner: { offset: 2.7 * width, projection: 0.08 * fullness },
-        subtarsalOuter: { offset: 3.8 * width, projection: 0.01 * fullness },
+        pretarsalCrest: { offset: 1.1 * width, projection: 0.08 * fullness },
+        pretarsalLower: { offset: 1.9 * width, projection: 0.03 * fullness },
+        subtarsalInner: { offset: 2.7 * width, projection: 0.01 * fullness },
+        subtarsalOuter: { offset: 3.8 * width, projection: 0.0 },
         preseptal: { offset: 5.2, projection: 0.0 },
         attachment: 6.2,
       },

@@ -84,6 +84,26 @@ export interface IPortraitEyeSocket {
 }
 
 /**
+ * Optional one-body pretarsal roll. These values shape visible surface
+ * fullness in the lower-lid construction; they are not a claim about muscle
+ * thickness or a detached tissue mesh.
+ */
+export interface IPortraitAegyoSalShape {
+  /** Distance from the lower-lid margin to the roll crest, in millimetres. */
+  offset: number;
+  /** Positive anterior relief at the crest, in millimetres. */
+  projection: number;
+  /** Full transverse roll width, in millimetres. */
+  width: number;
+  /** Crest-to-shoulder distance, in millimetres. */
+  height: number;
+  /** Positive support reach used to validate the authored section. */
+  reach: number;
+  /** Optional medial-to-lateral weights for the seven lower-lid witnesses. */
+  weights?: readonly number[];
+}
+
+/**
  * Numerical eye shape independent of its host socket. Lengths are millimetres;
  * width/opening multipliers deform the fitted aperture, not an isolated eyeball.
  *
@@ -125,6 +145,13 @@ export interface IPortraitEyeShape {
    * resolves residual penetration after shared refinement and surface layers.
    */
   lowerLidProfile?: IPortraitLowerLidProfile;
+  /**
+   * Optional grouped pretarsal roll relief immediately below the lashes.
+   * Omission preserves the eyelid-only construction; when supplied, the eye
+   * component replaces its lower profile's competing rows with one continuous
+   * rounded crest and a short lower shoulder.
+   */
+  aegyoSal?: IPortraitAegyoSalShape;
   /** Forward projection of the inner lid margin, in mm. */
   lidThickness: number;
   /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
@@ -224,6 +251,40 @@ const lidRows = (
         depth =
           depth * (1 - lowerWeight) + detail[role].projection * lowerWeight;
       }
+      // A supplied aegyo-sal owns one visible pretarsal cross-section. The
+      // former detailed profile remains a valid optional fallback, but its
+      // several closely spaced rows can read as parallel carved lines in a
+      // close render. Replace those lower rows with a single crest and one
+      // rapidly fading shoulder, then let the host resume at preseptal skin.
+      if (
+        detail !== undefined &&
+        role !== undefined &&
+        shape.aegyoSal !== undefined
+      ) {
+        const roll = shape.aegyoSal;
+        const section = {
+          pretarsalCrest: { offset: roll.offset, projection: roll.projection },
+          pretarsalLower: {
+            offset: roll.offset + roll.height * 0.58,
+            projection: roll.projection * 0.52,
+          },
+          subtarsalInner: {
+            offset: roll.offset + roll.height,
+            projection: roll.projection * 0.12,
+          },
+          subtarsalOuter: {
+            offset: roll.offset + roll.height * 1.25,
+            projection: 0,
+          },
+          preseptal: {
+            offset: roll.offset + roll.height * 1.55,
+            projection: 0,
+          },
+          margin: { offset: 0.16, projection: 0.12 },
+        }[role];
+        offset = offset * (1 - lowerWeight) + section.offset * lowerWeight;
+        depth = depth * (1 - lowerWeight) + section.projection * lowerWeight;
+      }
       const t = Math.min(1, offset / outerWidth),
         blend = t * t * (3 - 2 * t);
       return [
@@ -317,6 +378,16 @@ export function createPortraitEyeComponent(
     ...inputShape,
     sampling: { ...inputShape.sampling },
     browProfile: { ...(inputShape.browProfile ?? portraitEyebrowProfile) },
+    aegyoSal:
+      inputShape.aegyoSal === undefined
+        ? undefined
+        : {
+            ...inputShape.aegyoSal,
+            weights:
+              inputShape.aegyoSal.weights === undefined
+                ? undefined
+                : [...inputShape.aegyoSal.weights],
+          },
     tissues:
       inputShape.tissues === undefined ? undefined : { ...inputShape.tissues },
   };
@@ -331,6 +402,29 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitLowerLidProfile(inputShape.lowerLidProfile);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (
+    shape.aegyoSal !== undefined &&
+    (![
+      shape.aegyoSal.offset,
+      shape.aegyoSal.projection,
+      shape.aegyoSal.width,
+      shape.aegyoSal.height,
+      shape.aegyoSal.reach,
+    ].every(Number.isFinite) ||
+      shape.aegyoSal.offset <= 0 ||
+      shape.aegyoSal.projection < 0 ||
+      shape.aegyoSal.width <= 0 ||
+      shape.aegyoSal.height <= 0 ||
+      shape.aegyoSal.reach <= 0 ||
+      (shape.aegyoSal.weights !== undefined &&
+        (shape.aegyoSal.weights.length !== 7 ||
+          shape.aegyoSal.weights.some(
+            (weight) => !Number.isFinite(weight) || weight < 0 || weight > 1,
+          ))))
+  )
+    throw new Error(
+      "Aegyo-sal needs finite positive dimensions and seven bounded weights.",
+    );
   if (shape.skinAttachment !== undefined && shape.skinAttachment !== "reserve")
     throw new Error("Eye skin attachment must be reserve or omitted.");
   if (
