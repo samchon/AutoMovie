@@ -10,6 +10,8 @@ import type * as Gltf from "../portraitDocument";
 import type * as Sphere from "../portraitEyeSphere";
 import type * as FinalSurface from "../portraitFinalSurface";
 import type * as FitBasis from "../portraitFitBasis";
+import type * as JoinReference from "../portraitJoinReference";
+import type * as JoinTangency from "../portraitJoinTangency";
 import type * as Buffers from "../portraitMeshBuffers";
 import type * as MeshPatch from "../portraitMeshPatch";
 import type * as OralContact from "../portraitOralContact";
@@ -21,6 +23,7 @@ import type * as Surface from "../portraitSurface";
 import type * as Fairing from "../portraitSurfaceFairing";
 import type * as SurfaceFit from "../portraitSurfaceFit";
 import type * as ReferenceAnatomy from "../reference-anatomy/model";
+import type * as JoinRefinement from "../refinePortraitJoin";
 import type * as RimReplacement from "../replacePortraitRim";
 import type * as SkinReservation from "../reservePortraitSkin";
 import type * as Loop from "../subdivideControlMesh";
@@ -28,6 +31,7 @@ import type * as Quads from "../subdividePortraitQuads";
 import type * as Anatomy from "./anatomy";
 import type * as Cheeks from "./cheeks";
 import type * as Configuration from "./configuration";
+import type * as ControlNet from "./controlNet";
 import type * as Cranium from "./cranium";
 import type * as DentalArc from "./dentalArc";
 import type * as Attachment from "./dentalComponent";
@@ -37,14 +41,17 @@ import type * as Ears from "./ears";
 import type * as Eyebrows from "./eyebrows";
 import type * as Eyes from "./eyes";
 import type * as Fitted from "./fittedModel";
+import type * as Hair from "./hairProxy";
 import type * as Head from "./head";
 import type * as Pigment from "./irisPigment";
 import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
 import type * as Materials from "./materials";
+import type * as Model from "./model";
 import type * as Mouth from "./mouth";
 import type * as NasalAperture from "./nasalAperture";
 import type * as NasalBody from "./nasalBody";
+import type * as NasalBodySurface from "./nasalBodySurface";
 import type * as NasalLobule from "./nasalLobule";
 import type * as NasalReference from "./nasalReference";
 import type * as RimSection from "./nasalRimSection";
@@ -218,6 +225,31 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link NasalSection.IPortraitNasalSection.influence} #1b124cc Read influence into the [0,1] blend, where zero preserves host identity.
  * @evidence {@link NasalSection.createPortraitNasalSection} Evaluates the optional continuous nasal depth loft against a translated host datum.
  * @evidenceReview {@link NasalSection.createPortraitNasalSection} #e2fe69c Read copied inputs, open-uniform cubic evaluation, physical-coordinate inversion, edge transition and finite output/refusal paths. The loft's bounded scalar depth does not assert post-subdivision likeness or global intersection safety.
+ *
+ * @evidence {@link NasalAperture.samplePortraitNasalSection} Interpolates one nasal section jet while retaining its point and derivative.
+ * @evidenceReview {@link NasalAperture.samplePortraitNasalSection} #c38fee2 Read signed span interpolation, endpoint derivative scaling and finite output guards beside aperture consumers. The helper is a local section operation and does not choose the finished nose depth.
+ * @evidence {@link NasalAperture.portraitNasalJetCorrection} Extends a nasal boundary jet toward an unchanged far end.
+ * @evidenceReview {@link NasalAperture.portraitNasalJetCorrection} #ec044ca Read signed-distance orientation, derivative reversal and clamped section progress beside nasal entry construction. The correction preserves one local jet and does not refit the outer aperture.
+ * @evidence {@link NasalAperture.portraitNasalRimJets} Derives tangent/transverse rim jets from the shared aperture points, normals and exterior samples.
+ * @evidenceReview {@link NasalAperture.portraitNasalRimJets} #f0861d7 Read cyclic tangent, normalized common normal, exterior-side sign agreement and degenerate refusal. The result fixes a local rim frame for lining and does not add a separate rim shell.
+ * @evidence {@link NasalAperture.samplePortraitNasalEntry} Samples the connected vestibular meridian from a shared rim jet and aperture frame.
+ * @evidenceReview {@link NasalAperture.samplePortraitNasalEntry} #f8e842b Read finite jet/frame admission, contracted middle section and common floor pole construction. This is an authored lining approximation and not an airway or likeness model.
+ * @evidence {@link Anatomy.portraitNasalRelief} Supplies the retained basic nasal surface envelopes when no optional replacement detail is selected.
+ * @evidenceReview {@link Anatomy.portraitNasalRelief} #d38d104 Read named nasal support regions, live anchors, radii and signed displacements beside portraitNasalLayerFor. They are visible-surface controls and remain separate from the nasal body and aperture groups.
+ * @evidence {@link NasalBodySurface.createPortraitNasalBodySurface} Adapts a lower-nasal body field to the shared skin surface and its recorded view ray.
+ * @evidenceReview {@link NasalBodySurface.createPortraitNasalBodySurface} #8b70114 Read body evaluator ownership, skin depth sampling, view-ray projection and finite field conversion beside the nasal assembly. The adapter shares one host surface and does not produce overlapping nasal shells.
+ * @evidence {@link ControlNet.referenceControlNet} Supplies the frozen measured control positions, camera basis and triangle topology for this subject.
+ * @evidenceReview {@link ControlNet.referenceControlNet} #0720aae Read source/model/topology digests, camera basis and resident position population beside fitting and assembly. Image-plane observations are measured inputs; depth remains an authored estimate and is not a likeness certificate.
+ * @evidence {@link JoinRefinement.refinePortraitJoin} Refines a joining annulus while retaining its fixed attachment boundaries.
+ * @evidenceReview {@link JoinRefinement.refinePortraitJoin} #60e4cd6 Read resident triangle admission, shared edge midpoint reuse, centroid fans and bounded rounds beside join tests. Existing boundary vertices remain exact while interior samples are appended deterministically.
+ * @evidence {@link JoinTangency.fitPortraitJoinBoundary} Fits the first joining row to the actual supporting planes on both sides.
+ * @evidenceReview {@link JoinTangency.fitPortraitJoinBoundary} #913a264 Read two-sided boundary discovery, forward-facing plane admission, local midpoint fraction and positive projected-area checks. The discrete chart owns only the compact annulus and does not prove curvature continuity globally.
+ * @evidence {@link JoinReference.fitPortraitJoinReference} Adapts a supplied source height surface across a joining annulus.
+ * @evidenceReview {@link JoinReference.fitPortraitJoinReference} #66e0184 Read tangent targets, source height lookup, finite reach accumulation and positive-weight skin adaptation beside fairing. Fixed native/host boundaries remain authoritative and the result is not a global intersection proof.
+ * @evidence {@link Hair.buildPortraitHairProxy} Builds the coarse scalp cap and side curtain used for face silhouette inspection.
+ * @evidenceReview {@link Hair.buildPortraitHairProxy} #ebb94e3 Read copied scalp/side attachment points, ellipsoid enclosure, forehead support, ear clearance and finite metric checks. This remains an unfinished coarse proxy with no fibre simulation or detailed hair likeness claim.
+ * @evidence {@link Model.buildReferencePortrait} Assembles the selected foundation, components, shared skin layers, ears, hair and oral contacts into the inspectable portrait model.
+ * @evidenceReview {@link Model.buildReferencePortrait} #910745a Read foundation branching, control-net handoff, component assembly, final-skin ear/hair attachment and oral-contact application. The builder returns deterministic model data but does not turn passing construction checks into a likeness verdict.
  *
  * @evidence {@link RimReplacement.IPortraitRimMeshes} Groups the skin and lining meshes returned for one replaced nasal rim.
  * @evidenceReview {@link RimReplacement.IPortraitRimMeshes} #f29c7f8 Read the paired skin/lining outputs beside rim replacement and its shared boundary IDs. The result keeps exterior and interior geometry separate while preserving one aperture ownership contract.
