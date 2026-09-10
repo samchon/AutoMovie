@@ -8,6 +8,12 @@ import {
   portraitPoint,
 } from "../geometry";
 
+/** Subject-owned continuous hair-cap controls. */
+export interface IPortraitHairShape {
+  /** Signed frontal radians; positive moves the deepest fringe toward +X. */
+  fringeBias?: number;
+}
+
 /**
  * Coarse hairstyle mass for judging this face's silhouette. A scalp cap and a
  * continuous side/back curtain suggest the reference's long hair. The anatomical
@@ -23,6 +29,8 @@ export function buildPortraitHairProxy(
   forehead?: IAutoMovieMesh,
   /** Optional side attachments in mm, enlarging lateral clearance without growing the skull cap vertically. */
   sideAttachments: readonly (readonly number[])[] = [],
+  /** Optional subject fit for the continuous frontal boundary. */
+  shape: IPortraitHairShape = {},
 ) {
   // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
   // cannot follow another foundation or fitted head. Uniform expansion retains
@@ -70,6 +78,11 @@ export function buildPortraitHairProxy(
     forehead === undefined
       ? undefined
       : createAutoMovieMeshDepthSampler(forehead, "z");
+  const fringeBias = shape.fringeBias ?? 0;
+  if (!Number.isFinite(fringeBias) || Math.abs(fringeBias) > 0.45)
+    throw new Error(
+      "Hair fringe bias must be a finite angular offset within 0.45 radians.",
+    );
   // The lower cap edge is a boundary between the frontal hairline and the
   // temporal/ear clearance. A hard maximum makes that boundary change slope
   // at the winning branch, which reads as a blunt polygonal notch in the
@@ -98,7 +111,7 @@ export function buildPortraitHairProxy(
       const front = Math.max(0, Math.cos(azimuth));
       const earClearance = 50 - 160 * ((azimuth - Math.PI / 2) / 0.8) ** 2;
       const angle = Math.atan2(Math.sin(azimuth), Math.cos(azimuth));
-      const lateral = Math.min(1, Math.abs(angle) / 0.65);
+      const lateral = Math.min(1, Math.abs(angle - fringeBias) / 0.65);
       const fringe = support === undefined ? 0 : (1 - lateral * lateral) ** 2;
       const frontalBoundary = -70 + 152 * front ** 2;
       const boundaryY =

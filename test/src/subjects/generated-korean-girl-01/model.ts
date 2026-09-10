@@ -5,6 +5,7 @@ import type { IPortraitComponent } from "../portraitComponents";
 import { applyPortraitOralContact } from "../portraitOralContact";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import { referenceControlNet } from "./controlNet";
+import { portraitHairShape } from "./configuration";
 import { buildPortraitEars } from "./ears";
 import { buildFittedReferencePortrait } from "./fittedModel";
 import { buildPortraitHairProxy } from "./hairProxy";
@@ -112,7 +113,12 @@ export function buildReferencePortrait(
       ...head.parts,
       ...ears,
       ...(assembly.hairProxy
-        ? buildPortraitHairProxy(head.refined.positions, skin.mesh, earEnvelope)
+        ? buildPortraitHairProxy(
+            head.refined.positions,
+            skin.mesh,
+            earEnvelope,
+            portraitHairShape,
+          )
         : []),
     ],
     materials: [

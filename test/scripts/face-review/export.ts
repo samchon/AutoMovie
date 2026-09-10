@@ -17,6 +17,7 @@ import {
   portraitDentalRow,
   portraitDentalSocket,
   portraitEyeShape,
+  portraitHairShape,
   portraitMouthShape,
   portraitNasalSupportDetail,
   portraitNoseShape,
@@ -85,6 +86,7 @@ async function main() {
         sockets: portraitCheekSockets,
       },
       hairProxy: true,
+      hair: portraitHairShape,
       dental: {
         row: portraitDentalRow,
         socket: portraitDentalSocket,

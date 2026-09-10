@@ -37,6 +37,14 @@ import {
   type IPortraitOrbitalSupportShape,
   createPortraitOrbitalSupport,
 } from "./orbitalSupport";
+import type { IPortraitHairShape } from "./hairProxy";
+
+/** Subject-owned continuous hair-cap boundary fit for the reference fringe. */
+export const portraitHairShape: IPortraitHairShape = {
+  // The photograph's heavier fringe falls toward anatomical +X. Keep the
+  // offset within the cap's transition band so both sides remain continuous.
+  fringeBias: 0.18,
+};
 
 /** Subject-specific attachments; component implementations contain no landmark IDs. */
 export const portraitEyeSockets: IPortraitEyeSocket[] = [
