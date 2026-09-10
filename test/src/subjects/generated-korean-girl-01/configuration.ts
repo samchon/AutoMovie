@@ -497,7 +497,18 @@ export const portraitCheekShape: IPortraitCheekShape = {
     projection: 3.8,
     lift: 0,
   },
-  buccal: { width: 28, height: 33, reach: 35, projection: 1.4, lift: 0 },
+  // Keep the lower cheek's crest tight around its live support so the buccal
+  // mass tapers into the mandibular plane instead of reading as one flat pad.
+  // The downward centre shift leaves the malar field untouched and places the
+  // transition below the smile rather than widening the midface.
+  buccal: {
+    offset: [0, -3, 0],
+    width: 24,
+    height: 27,
+    reach: 35,
+    projection: 1.2,
+    lift: 0,
+  },
   modiolus: { width: 12, height: 14, reach: 24, projection: 0.2, lift: 0 },
   foldWidth: 5,
   foldDepth: 0.45,
