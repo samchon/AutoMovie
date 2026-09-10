@@ -86,7 +86,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitNoseShape} Selects the active nose's fitted aperture dimensions and restrained alar projection.
  * @evidenceReview {@link Configuration.portraitNoseShape} #f7ab8e1 Read the coupled tip and alar relief beside the aperture and rim consumers. The two amplitudes soften the bridge-to-tip and paired wing transition while nostril topology and cavity attachment remain owned by the nose component.
  * @evidence {@link Configuration.portraitMouthShape} Selects the active mouth's corner, section, and grouped crown controls.
- * @evidenceReview {@link Configuration.portraitMouthShape} #b5d08c9 Read the narrower fitted oral frame and reduced upper/lower vermilion relief beside the shared lip and dental consumers. The grouped settings do not replace the oral attachment frame.
+ * @evidenceReview {@link Configuration.portraitMouthShape} #ad3adf7 Read the narrower fitted oral frame, reduced vermilion relief and the central-incisor mesial/distal cutting-edge contours beside the shared lip and dental consumers. The grouped settings do not replace the oral attachment frame.
  * @evidence {@link Configuration.portraitCheekShape} Selects paired medial and buccal cheek support radii and transition controls.
  * @evidenceReview {@link Configuration.portraitCheekShape} #4df9f58 Read the malar cushion's coupled projection/lift and the medial transition beside portraitCheekLayersFor. The offset follows the shared live anchor and does not create an independent detached cheek mesh.
  * @evidence {@link Configuration.portraitOrbitalSupportShapes} Selects the station-wise brow and sulcus support values for the active orbital layer.

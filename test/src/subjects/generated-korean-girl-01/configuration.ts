@@ -391,20 +391,24 @@ export const portraitMouthShape: IPortraitMouthShape = {
       width: 8.1,
       height: 9.7,
       cervicalWidth: 0.82,
-      edgeRise: 0.45,
+      // The central incisor cutting edge is a shallow curved arc in the
+      // reference smile. Keep crown height and the shared arch unchanged;
+      // increase only the mesial/distal corner lift so the enamel reads as a
+      // rounded incisal edge instead of a rectangular block.
+      edgeRise: 0.9,
       contour: {
-        mesial: { contactHeight: 0.22, incisalRise: 0.16, cervicalWidth: 0.85 },
-        distal: { contactHeight: 0.35, incisalRise: 0.55, cervicalWidth: 0.78 },
+        mesial: { contactHeight: 0.22, incisalRise: 0.32, cervicalWidth: 0.85 },
+        distal: { contactHeight: 0.35, incisalRise: 0.8, cervicalWidth: 0.78 },
       },
     },
     {
       width: 8.1,
       height: 9.8,
       cervicalWidth: 0.82,
-      edgeRise: 0.5,
+      edgeRise: 0.95,
       contour: {
-        mesial: { contactHeight: 0.2, incisalRise: 0.17, cervicalWidth: 0.84 },
-        distal: { contactHeight: 0.36, incisalRise: 0.58, cervicalWidth: 0.77 },
+        mesial: { contactHeight: 0.2, incisalRise: 0.34, cervicalWidth: 0.84 },
+        distal: { contactHeight: 0.36, incisalRise: 0.83, cervicalWidth: 0.77 },
       },
     },
     {
