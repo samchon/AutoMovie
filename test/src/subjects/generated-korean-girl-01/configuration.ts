@@ -267,11 +267,14 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // active fit uses the prior basic construction rather than its pinched trial.
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
-  tipProjection: 0,
+  // Give the bridge-to-tip turn a shallow central cushion. The positive
+  // Gaussian is deliberately smaller than the alar relief so the tip joins
+  // the bridge as one soft surface instead of becoming a second lobe.
+  tipProjection: 0.85,
   // A restrained positive alar relief rounds the paired wing beneath each
   // opening while leaving the fitted nostril boundary and its topology intact.
   // Keep this small: the target has a soft ala, not a separate lateral bump.
-  alarProjection: 0.65,
+  alarProjection: 0.45,
   // Aperture width/height are independent from its complete rim and lining's
   // shared eight-degree downward orientation. The current contour is provisional.
   // These are source-guided authored ratios, not measured airway dimensions.

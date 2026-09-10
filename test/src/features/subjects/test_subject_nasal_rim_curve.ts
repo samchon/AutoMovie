@@ -46,6 +46,7 @@ export const test_subject_nasal_rim_curve = (): void => {
     depthScale: 1,
     // Isolate curve refinement from the subject preset's paired alar relief;
     // this fixture's square rim oracle measures only the shared curve rule.
+    tipProjection: 0,
     alarProjection: 0,
     rimSection: undefined,
     lobules: undefined,

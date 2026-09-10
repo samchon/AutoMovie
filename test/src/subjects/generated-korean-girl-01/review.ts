@@ -84,7 +84,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitEyeShape} Selects the active eye's optional skin attachment, lower-lid profile and optical/material controls.
  * @evidenceReview {@link Configuration.portraitEyeShape} #e879bf8 Read the reserved attachment mode, compact pretarsal/subtarsal profile, aperture and optical scale controls, pigment endpoints and their consumers. These values select one authored assembly and do not certify likeness.
  * @evidence {@link Configuration.portraitNoseShape} Selects the active nose's fitted aperture dimensions and restrained alar projection.
- * @evidenceReview {@link Configuration.portraitNoseShape} #9dd2218 Read the positive alar projection beside the aperture and rim consumers. The value is a local relief control; nostril topology and cavity attachment remain owned by the nose component.
+ * @evidenceReview {@link Configuration.portraitNoseShape} #f7ab8e1 Read the coupled tip and alar relief beside the aperture and rim consumers. The two amplitudes soften the bridge-to-tip and paired wing transition while nostril topology and cavity attachment remain owned by the nose component.
  * @evidence {@link Configuration.portraitMouthShape} Selects the active mouth's corner, section, and grouped crown controls.
  * @evidenceReview {@link Configuration.portraitMouthShape} #b5d08c9 Read the narrower fitted oral frame and reduced upper/lower vermilion relief beside the shared lip and dental consumers. The grouped settings do not replace the oral attachment frame.
  * @evidence {@link Configuration.portraitCheekShape} Selects paired medial and buccal cheek support radii and transition controls.
