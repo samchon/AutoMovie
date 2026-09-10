@@ -84,6 +84,31 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
  * @evidenceReview {@link Materials.createPortraitMaterials} #a9af753 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
  *
+ * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
+ * @evidence {@link Cranium.IPortraitNeckSection.y} Locates a neck section along the construction Y axis.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection.y} #988de89 Read the ordered section Y samples and their positive spacing admission beside neck loft construction.
+ * @evidence {@link Cranium.IPortraitNeckSection.width} Sets the lateral half-width of one neck section.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection.width} #efb1575 Traced width into the section's paired lateral points and finite positive admission; it does not alter the facial component sockets.
+ * @evidence {@link Cranium.IPortraitNeckSection.front} Sets the anterior depth of one neck section.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection.front} #3d71dce Read front depth beside the section loft's anterior boundary and its finite-domain checks.
+ * @evidence {@link Cranium.IPortraitNeckSection.centre} Sets the central depth of one neck section.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection.centre} #e8cc6cf Read centre depth beside the neck surface sample; this is a construction datum, not a facial soft-tissue measurement.
+ * @evidence {@link Cranium.IPortraitNeckSection.back} Sets the posterior depth of one neck section.
+ * @evidenceReview {@link Cranium.IPortraitNeckSection.back} #36fc572 Read back depth beside the posterior closure and section admission; it remains separate from the visible jawline controls.
+ * @evidence {@link Cranium.IPortraitNeckShape} Groups upper/lower neck sections and the crop policy for the cranial continuation.
+ * @evidenceReview {@link Cranium.IPortraitNeckShape} #821259c Read copied upper/lower section groups and crop value beside appendPortraitNeck. The group owns the neck continuation and does not substitute for facial likeness evidence.
+ * @evidence {@link Cranium.IPortraitNeckShape.upper} Supplies the upper neck section at the cranial attachment.
+ * @evidenceReview {@link Cranium.IPortraitNeckShape.upper} #b8b35ad Read the upper section's shared neck datum beside the head/neck join.
+ * @evidence {@link Cranium.IPortraitNeckShape.lower} Supplies the lower neck section at the crop boundary.
+ * @evidenceReview {@link Cranium.IPortraitNeckShape.lower} #24a6126 Read the lower section's crop-side datum beside the closed neck continuation.
+ * @evidence {@link Cranium.IPortraitNeckShape.crop} Selects the authored lower crop applied during neck construction.
+ * @evidenceReview {@link Cranium.IPortraitNeckShape.crop} #c9c248d Read crop admission and its branch in appendPortraitNeck; it limits the authored continuation rather than moving face component anchors.
+ * @evidence {@link Cranium.appendPortraitCranium} Appends the cranial continuation to the shared control cage.
+ * @evidenceReview {@link Cranium.appendPortraitCranium} #bf4d6e0 Read copied control positions, cranium section sampling and shared face boundary handoff before component refinement. The operation preserves the host's resident identities.
+ * @evidence {@link Cranium.appendPortraitNeck} Appends the authored neck continuation and its crop to the cranial cage.
+ * @evidenceReview {@link Cranium.appendPortraitNeck} #93a6b33 Read section ordering, finite loft samples, crop closure and shared boundary stitching beside the neck attachment tests. The result is a structural continuation, not a global self-intersection or likeness certificate.
+ *
  * @evidence {@link Crown.IPortraitDentalSideContour} Supplies optional mesial/distal detail within one crown's basic profile.
  * @evidenceReview {@link Crown.IPortraitDentalSideContour} #9395cb4 Read the three independently optional overrides and their nullish defaults in admission and loft construction. Empty side objects reproduce the basic mesh exactly. Mesial direction comes from the row, so a side profile does not carry an independently guessed world orientation.
  * @evidence {@link Crown.IPortraitDentalSideContour.contactHeight} Locates the proximal breadth crest along the normalized loft height.
