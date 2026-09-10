@@ -440,6 +440,7 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude requirements/README.md The repository requirement root spans product authority beyond the viewer; this package implements only the directly cited projection leaves.
  * @evidenceExclude requirements/production-evidence/README.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
  * @evidenceExclude requirements/production-evidence/graph.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
+ * @evidenceExclude requirements/production-evidence/native-input.md#agent-production-evidence-native-boundary Native graph configuration belongs to the evidence adapter; the viewer consumes compiled production state without transforming graph declarations.
  * @evidenceExclude requirements/production-evidence/input.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
  * @evidenceExclude requirements/rendering/budgets.md#rendering-budget-decision The viewer owns interactive projection only; render scheduling, headless capture policy, encoding, packaging, and publication remain in the render lane.
  * @evidenceExclude requirements/rendering/budgets.md#rendering-budget-refusal The viewer owns interactive projection only; render scheduling, headless capture policy, encoding, packaging, and publication remain in the render lane.
@@ -702,6 +703,7 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/README.md The repository specification root spans system authority beyond the viewer; this package implements only the directly cited projection leaves.
  * @evidenceExclude specifications/production-evidence/README.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
  * @evidenceExclude specifications/production-evidence/graph.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
+ * @evidenceExclude specifications/production-evidence/native-input.md#spec-authoring-production-evidence-native-boundary The evidence adapter projects evaluator inputs before visualization; viewer mounting preserves no graph declaration or local ownership metadata.
  * @evidenceExclude specifications/production-evidence/input.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
  * @evidenceExclude specifications/review-and-acceptance/alternatives-regression-and-revalidation.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/approval-waiver-and-publication.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
