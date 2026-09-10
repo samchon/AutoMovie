@@ -48,6 +48,8 @@ A generated library passes its single graph-derived authoring snapshot into the 
 
 Library builders receive verified precomputed inputs through `IAutoMovieLibraryBuildContext.derivedArtifacts`, keyed by output path. The compiler checks the declared ledger, basis, output and external-asset collisions before source execution and includes those bytes in its publication freshness check. Generation remains an explicit authoring command; library compilation does not run generators.
 
+For a complete precomputed contribution, export an `IAutoMovieLibraryDerivedSourceOwner` with `design` and `derivedArtifact` instead of `build`. The path selects a current UTF-8 ledger output containing an `IAutoMovieLibraryContribution`. The compiler decodes that data outside authored execution and applies the same DTO, branch and spatial validation. Declaring both forms is refused; module evaluation and ordinary builders retain their one-second execution limit.
+
 Call `retireAutoMovieDerivedArtifact({ root, output })` from an explicit project script when an obsolete output is no longer an active input. It removes only that ledger entry under the generation lock and preserves the resident output bytes. Source owners must adopt the replacement explicitly; retirement does not mark an old result current.
 
 ## Reviewed public utility callables

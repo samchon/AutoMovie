@@ -109,6 +109,25 @@ export interface IAutoMovieLibrarySourceOwner {
 }
 
 /**
+ * A library owner whose complete contribution was explicitly precomputed.
+ *
+ * The compiler reads the declared, current UTF-8 artifact after admitting this
+ * source export against its design owner. It applies the same contribution and
+ * spatial validation as a build result. No generator executes during compile,
+ * and payload decoding does not consume the authored module's execution budget.
+ * A registration must choose this path or a build function, never both.
+ *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Selects a verified precomputed contribution without copying its payload through authored execution.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Separates declarative artifact transfer from the unchanged source execution budget.
+ */
+export interface IAutoMovieLibraryDerivedSourceOwner {
+  /** Exact active design-document and H2 address this export realizes. */
+  design: string;
+  /** Current ledger output path containing an IAutoMovieLibraryContribution. */
+  derivedArtifact: string;
+}
+
+/**
  * What one design owner's executed source published on this compile.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Records which source export and revision each library artifact came from.

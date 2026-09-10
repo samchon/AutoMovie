@@ -4717,11 +4717,19 @@ const LIBRARY_OWNER_DISCOVERY = `
           value !== null &&
           typeof value === "object" &&
           typeof value.design === "string" &&
-          typeof value.build === "function"
+          (typeof value.build === "function" || "derivedArtifact" in value)
         );
       })
       .sort()
-      .map((name) => ({ name, design: module.exports[name].design })),
+      .map((name) => {
+        const value = module.exports[name];
+        return {
+          name, design: value.design,
+          derived: "derivedArtifact" in value,
+          artifact: typeof value.derivedArtifact === "string" ? value.derivedArtifact : null,
+          build: typeof value.build === "function",
+        };
+      }),
   );
 })();
 `;
@@ -4794,7 +4802,13 @@ const compileLibrarySource = (props: {
     }).runInContext(sandbox, { timeout: 1_000 });
     const discovered = JSON.parse(
       sandbox.__automovieLibraryOwnersJson as string,
-    ) as Array<{ name: string; design: string }>;
+    ) as Array<{
+      name: string;
+      design: string;
+      derived: boolean;
+      artifact: string | null;
+      build: boolean;
+    }>;
     for (const entry of discovered) {
       current = `export "${entry.name}"`;
       const context = props.context(entry.design);
@@ -4821,23 +4835,49 @@ const compileLibrarySource = (props: {
         });
         continue;
       }
-      sandbox.__automovieContextJson = JSON.stringify(context);
-      sandbox.__automovieExportName = entry.name;
-      new vm.Script(LIBRARY_INVOCATION, {
-        filename: `${props.path}#${entry.name}`,
-      }).runInContext(sandbox, { timeout: 1_000 });
-      if (sandbox.__automovieReturnedPromise === true) {
-        diagnostics.push({
-          code: "source-export-invalid",
-          category: "error",
-          phase: "source",
-          target: `${target}:${entry.name}`,
-          path: props.path,
-          message: `Library owner export "${entry.name}" returned a Promise. Return a synchronous deterministic library contribution from ${props.path}.`,
-        });
-        continue;
+      let resultJson: unknown;
+      if (entry.derived) {
+        const artifact =
+          entry.artifact === null
+            ? undefined
+            : Object.hasOwn(context.derivedArtifacts, entry.artifact)
+              ? context.derivedArtifacts[entry.artifact]
+              : undefined;
+        if (
+          entry.build ||
+          artifact === undefined ||
+          artifact.encoding !== "utf8"
+        ) {
+          diagnostics.push({
+            code: "source-export-invalid",
+            category: "error",
+            phase: "source",
+            target: `${target}:${entry.name}`,
+            path: props.path,
+            message: `Library owner export "${entry.name}" must select exactly one current UTF-8 derived artifact and omit build(). Received ${JSON.stringify(entry.artifact)}. Generate the declared artifact explicitly before compiling.`,
+          });
+          continue;
+        }
+        resultJson = artifact.content;
+      } else {
+        sandbox.__automovieContextJson = JSON.stringify(context);
+        sandbox.__automovieExportName = entry.name;
+        new vm.Script(LIBRARY_INVOCATION, {
+          filename: `${props.path}#${entry.name}`,
+        }).runInContext(sandbox, { timeout: 1_000 });
+        if (sandbox.__automovieReturnedPromise === true) {
+          diagnostics.push({
+            code: "source-export-invalid",
+            category: "error",
+            phase: "source",
+            target: `${target}:${entry.name}`,
+            path: props.path,
+            message: `Library owner export "${entry.name}" returned a Promise. Return a synchronous deterministic library contribution from ${props.path}.`,
+          });
+          continue;
+        }
+        resultJson = sandbox.__automovieResultJson as unknown;
       }
-      const resultJson = sandbox.__automovieResultJson as unknown;
       const validation = typia.validateEquals<IAutoMovieLibraryContribution>(
         typeof resultJson === "string"
           ? (JSON.parse(resultJson) as unknown)
