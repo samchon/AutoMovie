@@ -100,8 +100,8 @@ export const portraitEyeShape: IPortraitEyeShape = {
   upperLidVolume: 0.18,
   // A broad shallow lower roll joins the cheek without a narrow raised band.
   // These offsets reshape surrounding tissue; the aperture remains its own rim.
-  lowerLidWidth: 4.6,
-  lowerLidVolume: 0.35,
+  lowerLidWidth: 2.65,
+  lowerLidVolume: 0.08,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
   // have separate positions/projections. These mm values are a render-study
@@ -121,19 +121,21 @@ export const portraitEyeShape: IPortraitEyeShape = {
     // offsets and carries more support into the preseptal landing, which keeps
     // the rounded body from reading as a broad detached pad after subdivision.
     sections: [
-      { at: 0, fullness: 0.35, width: 0.75 },
-      { at: 0.25, fullness: 0.75, width: 0.95 },
-      { at: 0.55, fullness: 0.8, width: 1 },
-      { at: 0.8, fullness: 0.55, width: 0.85 },
-      { at: 1, fullness: 0.25, width: 0.65 },
+      { at: 0, fullness: 0.12, width: 0.55 },
+      { at: 0.16, fullness: 0.42, width: 0.72 },
+      { at: 0.34, fullness: 0.82, width: 0.9 },
+      { at: 0.5, fullness: 1, width: 1 },
+      { at: 0.66, fullness: 0.82, width: 0.9 },
+      { at: 0.84, fullness: 0.42, width: 0.72 },
+      { at: 1, fullness: 0.12, width: 0.55 },
     ].map(({ at, fullness, width }) => ({
       at,
       section: {
         margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 1.35 * width, projection: 1.75 * fullness },
-        pretarsalLower: { offset: 2.25 * width, projection: 0.8 * fullness },
-        subtarsalInner: { offset: 3.1 * width, projection: 0.18 * fullness },
-        subtarsalOuter: { offset: 4.15 * width, projection: 0.02 * fullness },
+        pretarsalCrest: { offset: 1.0 * width, projection: 0.16 * fullness },
+        pretarsalLower: { offset: 1.9 * width, projection: 0.07 * fullness },
+        subtarsalInner: { offset: 2.8 * width, projection: 0.025 * fullness },
+        subtarsalOuter: { offset: 3.8 * width, projection: 0.006 * fullness },
         preseptal: { offset: 6.2, projection: 0.0 },
         attachment: 8.5,
       },

@@ -170,8 +170,13 @@ export function buildPortraitEyebrow(
     const u = (i + 0.5) / fibres,
       a = portraitSpline(bottom, u),
       b = portraitSpline(top, u);
-    const start = 0.3 * ((i * 0.61803398875) % 1),
-      end = 0.5 + 0.45 * ((i * 0.41421356237) % 1);
+    // A brow hair grows from the lower edge through a short upward/outward
+    // sweep. The former independent start/end fractions sampled most of the
+    // full lower-to-upper span, so the close view read as a dense picket fence
+    // of vertical lines. Keep a small deterministic root variation, then let
+    // the authored side bend carry the visible direction of the fibres.
+    const start = 0.1 + 0.12 * ((i * 0.61803398875) % 1),
+      end = start + 0.26 + 0.08 * Math.sin(Math.PI * u);
     if (
       Math.hypot(
         (b.x - a.x) * (end - start) + outward * shape.outwardBend,
