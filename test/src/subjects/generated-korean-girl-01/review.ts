@@ -26,6 +26,8 @@ import type * as Loop from "../subdivideControlMesh";
 import type * as Quads from "../subdividePortraitQuads";
 import type * as Anatomy from "./anatomy";
 import type * as Cheeks from "./cheeks";
+import type * as Configuration from "./configuration";
+import type * as Cranium from "./cranium";
 import type * as DentalArc from "./dentalArc";
 import type * as Attachment from "./dentalComponent";
 import type * as Crown from "./dentalCrown";
@@ -37,6 +39,7 @@ import type * as Head from "./head";
 import type * as Pigment from "./irisPigment";
 import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
+import type * as Materials from "./materials";
 import type * as Mouth from "./mouth";
 import type * as NasalLobule from "./nasalLobule";
 import type * as NasalReference from "./nasalReference";
@@ -61,6 +64,25 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link SkinReservation.reservePortraitSkin} #bec1190 Read the target/loop cardinality guard, connected face-ring growth, simple-boundary test and finite termination before the shared annulus is attached. The host remains immutable and the reservation returns original face ordinals plus its outer boundary; this topology operation does not claim a 3D collision certificate.
  * @evidence {@link SkinReservation.portraitSkinAnnulus} Bridges a reserved outer host boundary to the component's inner boundary with the existing planar region triangulator.
  * @evidenceReview {@link SkinReservation.portraitSkinAnnulus} #346bf5e Read both loop winding checks, complete finite coordinate conversion, planar-region rejection and the returned oriented triangle order. The bridge preserves the two boundary identities for the eye attachment; it does not alter the component's optical or lower-lid dimensions.
+ *
+ * @evidence {@link Anatomy.portraitOrbitalRelief} Supplies the subject's named orbital support regions consumed by the shared surface layer.
+ * @evidenceReview {@link Anatomy.portraitOrbitalRelief} #a1b1558 Read the medial upper-orbit region additions, resident anchors, XYZ offsets, radii and signed displacement beside the layer consumer. These authored envelopes adjust shared skin support and do not claim measured orbital anatomy.
+ * @evidence {@link Anatomy.portraitPerioralRelief} Supplies the subject's named perioral transition regions consumed by the shared surface layer.
+ * @evidenceReview {@link Anatomy.portraitPerioralRelief} #7f2a730 Read the updated philtral and lip-to-chin support radii and displacement beside the live-skin layer consumer. They remain surface envelopes with authored values, separate from the mouth component and dental placement.
+ * @evidence {@link Configuration.portraitEyeShape} Selects the active eye's optional skin attachment, lower-lid profile and optical/material controls.
+ * @evidenceReview {@link Configuration.portraitEyeShape} #aa7e43f Read the reserved attachment mode, compact pretarsal/subtarsal profile, pigment endpoints and their consumers. These values select one authored assembly and do not certify likeness.
+ * @evidence {@link Configuration.portraitNoseShape} Selects the active nose's fitted aperture dimensions and restrained alar projection.
+ * @evidenceReview {@link Configuration.portraitNoseShape} #9dd2218 Read the positive alar projection beside the aperture and rim consumers. The value is a local relief control; nostril topology and cavity attachment remain owned by the nose component.
+ * @evidence {@link Configuration.portraitMouthShape} Selects the active mouth's corner, section, and grouped crown controls.
+ * @evidenceReview {@link Configuration.portraitMouthShape} #128b3ed Read the corner lift, curved upper section knots, independent upper/lower relief and shorter side-qualified crown profiles beside their consumers. The grouped settings do not replace the oral attachment frame.
+ * @evidence {@link Configuration.portraitCheekShape} Selects paired medial and buccal cheek support radii and transition controls.
+ * @evidenceReview {@link Configuration.portraitCheekShape} #57d030e Read the medial reach/projection and downward buccal offset, width and height beside portraitCheekLayersFor. The offset follows the shared live anchor and does not create an independent detached cheek mesh.
+ * @evidence {@link Configuration.portraitOrbitalSupportShapes} Selects the station-wise brow and sulcus support values for the active orbital layer.
+ * @evidenceReview {@link Configuration.portraitOrbitalSupportShapes} #16623d4 Read the changed medial station brow/sulcus projections beside the orbital support factory. Station order and resident anchors remain the authority; these values do not alter the eye's optical shell.
+ * @evidence {@link Cranium.portraitNeckShape} Selects the active cranial/neck section dimensions and crop.
+ * @evidenceReview {@link Cranium.portraitNeckShape} #f3f6e13 Read the upper-section Y adjustment beside appendPortraitNeck and the profile capture. The neck shape remains an authored crop/transition control, separate from facial likeness claims.
+ * @evidence {@link Materials.createPortraitMaterials} Produces the active subject's owned skin and component material records.
+ * @evidenceReview {@link Materials.createPortraitMaterials} #a9af753 Read the warmer skin base colour and roughness beside the material factory's copied records. This appearance-only change leaves component geometry and attachment topology to their separate owners.
  *
  * @evidence {@link Crown.IPortraitDentalSideContour} Supplies optional mesial/distal detail within one crown's basic profile.
  * @evidenceReview {@link Crown.IPortraitDentalSideContour} #9395cb4 Read the three independently optional overrides and their nullish defaults in admission and loft construction. Empty side objects reproduce the basic mesh exactly. Mesial direction comes from the row, so a side profile does not carry an independently guessed world orientation.
