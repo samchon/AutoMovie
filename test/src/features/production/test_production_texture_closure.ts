@@ -1,8 +1,33 @@
-import type { IAutoMovieAssetProvenance } from "@automovie/interface";
+import type {
+  IAutoMovieAssetProvenance,
+  IAutoMovieDiagnostic,
+  IAutoMovieModel,
+  IAutoMovieSceneEnvironment,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
+import path from "node:path";
 
-import { productionTextureClosureDiagnostics } from "../../../../packages/production/src/production/productionTextureClosure";
 import { createModel } from "../internal/fixtures";
+import { loadSourceModule } from "../internal/loadSourceModule";
+
+const { productionTextureClosureDiagnostics } = loadSourceModule<{
+  productionTextureClosureDiagnostics: (props: {
+    production: string;
+    models: readonly IAutoMovieModel[];
+    environments: readonly { models: IAutoMovieModel[] }[];
+    scenes: readonly {
+      shot: string;
+      environment?: IAutoMovieSceneEnvironment | null;
+    }[];
+    assets: readonly IAutoMovieAssetProvenance[];
+    content: readonly { path: string; bytes: Uint8Array | null }[];
+  }) => IAutoMovieDiagnostic[];
+}>(
+  path.resolve(
+    __dirname,
+    "../../../../packages/production/src/production/productionTextureClosure.ts",
+  ),
+);
 
 export const test_production_texture_closure = (): void => {
   const model = createModel();
