@@ -43,6 +43,7 @@ import type * as LowerLid from "./lowerLidSection";
 import type * as Materials from "./materials";
 import type * as Mouth from "./mouth";
 import type * as NasalAperture from "./nasalAperture";
+import type * as NasalBody from "./nasalBody";
 import type * as NasalLobule from "./nasalLobule";
 import type * as NasalReference from "./nasalReference";
 import type * as RimSection from "./nasalRimSection";
@@ -125,6 +126,45 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link NasalAperture.IPortraitNasalApertureFrame.origin} #9565747 Read origin beside centroid-preserving aperture resizing and finite point checks.
  * @evidence {@link NasalAperture.IPortraitNasalApertureFrame.inward} Selects the aperture plane's inward direction.
  * @evidenceReview {@link NasalAperture.IPortraitNasalApertureFrame.inward} #9297734 Traced inward into plane-normal orientation and the signed rim/cavity relationship; it is not an independent nose projection amount.
+ *
+ * @evidence {@link NasalBody.IPortraitNasalBodyStation} Defines one ordered lower-nasal station and its midline, shoulder and alar extents.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyStation} #d614402 Read the four station fields beside the C1 longitudinal interpolator; endpoint extents and ordering remain explicit profile invariants.
+ * @evidence {@link NasalBody.IPortraitNasalBodyStation.height} Locates one lower-nasal station along head Y.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyStation.height} #b79e800 Read increasing height into station spans and endpoint sampling.
+ * @evidence {@link NasalBody.IPortraitNasalBodyStation.centre} Sets the midline forward extent at one station.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyStation.centre} #66bedc7 Traced centre into the midline transverse section and its zero-end admission.
+ * @evidence {@link NasalBody.IPortraitNasalBodyStation.shoulder} Sets paired lower-tip shoulder extent at one station.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyStation.shoulder} #af540a8 Read shoulder into the paired transverse supports beside the station interpolator.
+ * @evidence {@link NasalBody.IPortraitNasalBodyStation.ala} Sets paired alar-body extent at one station.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyStation.ala} #db3554e Read ala into the paired alar supports and peak-phase calculation.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape} Groups the ordered lower-nasal stations and independent midline, shoulder, alar and crease controls.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape} #b8092fb Read copied stations and all transverse controls beside the connected lower-nose evaluator. The profile owns one shared surface field and leaves aperture pose to its separate owner.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.stations} Supplies ordered longitudinal samples whose endpoint extents join the surrounding surface.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.stations} #ef04243 Traced ordered station admission, zero endpoint extents and harmonic-mean slope construction through the body evaluator.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.centreWidth} Sets the midline transverse half-width.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.centreWidth} #04d83a2 Read centreWidth into the midline envelope and positive-width admission.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.shoulderOffset} Sets paired shoulder distance from the midline.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.shoulderOffset} #73a4735 Read shoulderOffset into the paired shoulder envelopes and nonnegative admission.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.shoulderWidth} Sets each shoulder transverse half-width.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.shoulderWidth} #9ea34ff Read shoulderWidth into the shoulder envelopes beside positive-width checks.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.alarOffset} Sets paired alar distance from the midline.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.alarOffset} #9f8125e Traced alarOffset into the paired alar transverse supports.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.alarWidth} Sets each alar transverse half-width.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.alarWidth} #ec97130 Read alarWidth beside the positive transverse-domain admission.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.fullness} Adds independent right/left alar forward extent at the profile peak.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.fullness} #90cee34 Read the two side-qualified fullness values through alar phase; zero peak disables this optional term.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.spread} Adds independent right/left lateral support at the alar peak.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.spread} #a961178 Traced signed side spread through the lateral output and preserved anatomical handedness.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.creaseOffset} Sets lateral distance from each alar centre to its facial crease.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.creaseOffset} #059f25b Read creaseOffset into the paired crease envelopes beside nonnegative admission.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.creaseWidth} Sets each alar-facial crease half-width.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.creaseWidth} #2704044 Read creaseWidth into crease recession support beside positive-width checks.
+ * @evidence {@link NasalBody.IPortraitNasalBodyShape.crease} Adds independent right/left crease recession at the alar peak.
+ * @evidenceReview {@link NasalBody.IPortraitNasalBodyShape.crease} #83e7b6e Traced signed right/left crease values into the forward field and the absent-alar refusal.
+ * @evidence {@link NasalBody.createPortraitNasalBody} Builds the connected lower-nasal surface field from ordered stations and transverse controls.
+ * @evidenceReview {@link NasalBody.createPortraitNasalBody} #caeff2b Read copied array inputs, station slope limiting, endpoint joins, transverse envelopes and finite output checks. Midline, shoulder, alar and crease controls share one field rather than overlapping detached shells.
+ * @evidence {@link NasalBody.portraitNasalViewRay} Derives the image-depth ray from the captured horizontal and vertical camera rows.
+ * @evidenceReview {@link NasalBody.portraitNasalViewRay} #e91e045 Read finite three-component admission, normalized cross product and independent-axis refusal. The ray preserves image-plane coordinates for nasal depth controls and does not itself alter geometry.
  *
  * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
  * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
