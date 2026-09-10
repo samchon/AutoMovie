@@ -192,6 +192,20 @@ export const portraitNasalRelief: IPortraitReliefRegion[] = [
  */
 export const portraitOrbitalRelief: IPortraitReliefRegion[] = [
   {
+    name: "right-medial-upper-orbit-support",
+    anchor: 107,
+    offset: [0, -9, -4],
+    radius: [6, 8, 7],
+    displacement: [0, 0, 0.22],
+  },
+  {
+    name: "left-medial-upper-orbit-support",
+    anchor: 336,
+    offset: [0, -9, -4],
+    radius: [6, 8, 7],
+    displacement: [0, 0, 0.22],
+  },
+  {
     name: "right-infraorbital-support",
     anchor: 145,
     offset: [0, -5, 0],
