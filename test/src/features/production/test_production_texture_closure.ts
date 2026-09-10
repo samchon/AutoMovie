@@ -29,6 +29,15 @@ const { productionTextureClosureDiagnostics } = loadSourceModule<{
   ),
 );
 
+/**
+ * Every admitted model occurrence owes its sampled image registration and bytes.
+ *
+ * Scenarios:
+ * 1. Registered standalone and environment-owned material uses pass together.
+ * 2. Missing registration, bytes, readable image facts or authorized use refuse.
+ * 3. Equal model ids cannot hide a second environment's unpaid image binding.
+ * 4. An empty output population introduces no image obligation.
+ */
 export const test_production_texture_closure = (): void => {
   const model = createModel();
   model.materials[0]!.baseColorTexture = {
@@ -96,6 +105,14 @@ export const test_production_texture_closure = (): void => {
     productionTextureClosureDiagnostics({
       ...input,
       content: [{ path: asset.path, bytes: new Uint8Array() }],
+    }).length,
+    1,
+  );
+  TestValidator.equals(
+    "an explicitly unavailable snapshot is refused",
+    productionTextureClosureDiagnostics({
+      ...input,
+      content: [{ path: asset.path, bytes: null }],
     }).length,
     1,
   );

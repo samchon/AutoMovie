@@ -26,6 +26,14 @@ const { libraryReviewWorklist } = loadSourceModule<{
   ),
 );
 
+/**
+ * Review work follows existing diagnostics without reopening satisfied siblings.
+ *
+ * Scenarios:
+ * 1. An addressed missing view stays pending while its satisfied sibling is omitted.
+ * 2. Owner, branch and unaddressed error scopes block their affected observations.
+ * 3. Warnings alone and empty owner populations invent no pending work.
+ */
 export const test_cli_scaffold_library_review_worklist = (): void => {
   const digest = `sha256:${"0".repeat(64)}` as AutoMovieContentDigest;
   const owner = "docs/models/object.md#object";
