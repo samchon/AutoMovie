@@ -42,6 +42,7 @@ import type * as LipSection from "./lipSection";
 import type * as LowerLid from "./lowerLidSection";
 import type * as Materials from "./materials";
 import type * as Mouth from "./mouth";
+import type * as NasalAperture from "./nasalAperture";
 import type * as NasalLobule from "./nasalLobule";
 import type * as NasalReference from "./nasalReference";
 import type * as RimSection from "./nasalRimSection";
@@ -103,6 +104,27 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidenceReview {@link Ears.buildPortraitEars} #ff76f86 Read side mirroring, copied shape inputs, live head-surface depth sampling and separate ear material groups beside ear attachment tests. This external shell does not claim detailed helix anatomy or likeness acceptance.
  * @evidence {@link Ears.portraitEarShape} Supplies the default authored ear profile when no replacement is selected.
  * @evidenceReview {@link Ears.portraitEarShape} #e2cf74e Read the default datum, scales, projection and embedding beside both ear consumers. These values are procedural defaults rather than measured subject anatomy.
+ *
+ * @evidence {@link NasalAperture.IPortraitNasalJet} Groups one sampled nasal-section point and its derivative.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalJet} #c776965 Read the point and derivative pair beside nasal-section sampling. The jet is a local parametric witness and does not independently place the finished nose.
+ * @evidence {@link NasalAperture.IPortraitNasalJet.point} Supplies one finite nasal-section point in the construction frame.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalJet.point} #30d94d6 Read point into the section sampler's returned XYZ datum and finite coordinate guard.
+ * @evidence {@link NasalAperture.IPortraitNasalJet.derivative} Supplies the local tangent used by nasal aperture fitting.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalJet.derivative} #e923e9c Read derivative beside the section's transverse/vertical parameter directions; it is a local frame witness rather than a global normal.
+ * @evidence {@link NasalAperture.IPortraitNasalRimJet} Groups one nasal rim point with its tangent and transverse directions.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalRimJet} #5febf4d Read the three rim-vector fields beside rim-section fitting. Their shared local frame preserves aperture ownership and does not create an additional detached rim.
+ * @evidence {@link NasalAperture.IPortraitNasalRimJet.point} Supplies the rim point retained by the aperture boundary.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalRimJet.point} #42602aa Read point beside the shared rim boundary and its finite XYZ admission.
+ * @evidence {@link NasalAperture.IPortraitNasalRimJet.tangent} Supplies the longitudinal direction along the nasal rim.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalRimJet.tangent} #e57983f Traced tangent into the rim annulus orientation and its local normalization.
+ * @evidence {@link NasalAperture.IPortraitNasalRimJet.transverse} Supplies the transverse direction across the nasal rim section.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalRimJet.transverse} #a57f5eb Read transverse beside tangent to preserve the aperture-plane frame and its signed normal relationship.
+ * @evidence {@link NasalAperture.IPortraitNasalApertureFrame} Groups the origin and inward axis of one fitted nasal aperture plane.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalApertureFrame} #308170b Read copied origin/inward values beside aperture sizing and tilt. The frame is local to the authored rim and does not replace the nose's shared skin support.
+ * @evidence {@link NasalAperture.IPortraitNasalApertureFrame.origin} Locates the fitted aperture plane in the construction frame.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalApertureFrame.origin} #9565747 Read origin beside centroid-preserving aperture resizing and finite point checks.
+ * @evidence {@link NasalAperture.IPortraitNasalApertureFrame.inward} Selects the aperture plane's inward direction.
+ * @evidenceReview {@link NasalAperture.IPortraitNasalApertureFrame.inward} #9297734 Traced inward into plane-normal orientation and the signed rim/cavity relationship; it is not an independent nose projection amount.
  *
  * @evidence {@link Cranium.IPortraitNeckSection} Describes one cross-section of the authored neck continuation.
  * @evidenceReview {@link Cranium.IPortraitNeckSection} #9f21ae5 Read the section's Y coordinate, width, front, centre and back depths beside appendPortraitNeck. These values define one closed continuation sample and do not claim measured cervical anatomy.
