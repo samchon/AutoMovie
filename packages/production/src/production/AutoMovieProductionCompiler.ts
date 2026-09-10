@@ -15,7 +15,6 @@ import {
   makeActorSynthesizer,
   placeFormationSlot,
   productionFrameBoundaryToGridTick,
-  readAutoMovieImageFacts,
   realizeShotContract,
   resolveAutoMovieMaterial,
   resolveProductionFrameRate,
@@ -38,7 +37,6 @@ import {
   validateShotArtifact,
   validateSoftBodyDomain,
   validateSoftFurnishings,
-  validateTextureAssets,
   validateWaterFeatures,
   validateWetZones,
 } from "@automovie/engine";
@@ -214,6 +212,7 @@ import {
   isPortableProductionPublicationPath,
   parseProductionRenderPublicationIdentity,
 } from "./productionRenderPublicationIdentity";
+import { productionTextureClosureDiagnostics } from "./productionTextureClosure";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   planAutoMovieVisualDelivery,
@@ -1003,40 +1002,23 @@ export class AutoMovieProductionCompiler {
           this.finalRenderPlan,
         ),
       );
-    // Close the loop between what the compiled production SAMPLES and what its
-    // ledger AUTHORIZES. This runs here rather than beside the asset inventory
-    // because it is decided against compiled models and scenes, which do not
-    // exist until every shot has compiled. A design-scope compile has no
-    // compiled artifact to close, so it states nothing rather than guessing.
-    if (input.scope !== "design" && compiled.size !== 0) {
-      const bytesOf = new Map(
-        (contentInputs ?? []).map((entry) => [entry.path, entry.bytes]),
+    // Both production shapes close image uses over their admitted output.
+    if (input.scope !== "design" && compiled.size !== 0)
+      diagnostics.push(
+        ...productionTextureClosureDiagnostics({
+          production: graph.production?.id ?? this.project.productionId,
+          models: [...compiled.values()].flatMap((shot) => shot.models),
+          environments: [...compiled.values()].flatMap(
+            (shot) => shot.builtEnvironments ?? [],
+          ),
+          scenes: [...compiled.values()].map((shot) => ({
+            shot: shot.shot.id,
+            environment: shot.scene.environment,
+          })),
+          assets: assetRecords,
+          content: contentInputs ?? [],
+        }),
       );
-      const models = new Map<string, IAutoMovieModel>();
-      for (const shot of compiled.values())
-        for (const model of shot.models) models.set(model.id, model);
-      const closure = validateTextureAssets({
-        production: graph.production?.id ?? this.project.productionId,
-        models: [...models.values()],
-        scenes: [...compiled.values()].map((shot) => ({
-          shot: shot.shot.id,
-          environment: shot.scene.environment,
-        })),
-        assets: assetRecords,
-        facts: (asset) =>
-          readAutoMovieImageFacts(bytesOf.get(asset)) ?? undefined,
-      });
-      if (closure.success === false)
-        for (const violation of closure.violations)
-          diagnostics.push({
-            code: "asset-texture-unclosed",
-            category: "error",
-            phase: "compile",
-            target: "asset-manifest",
-            path: "automovie/assets.json",
-            message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
-          });
-    }
     // Hold every observation the buildings read against the bytes it claims,
     // and every phase, alternative and derivation against the identities the
     // buildings publish. Both run here rather than per shot: two shots that
@@ -1474,6 +1456,20 @@ export class AutoMovieProductionCompiler {
         }
       }
 
+    if (input.scope !== "design")
+      diagnostics.push(
+        ...productionTextureClosureDiagnostics({
+          production: this.project.productionId,
+          models: results.flatMap((result) => result.contribution.models),
+          environments: results.flatMap(
+            (result) => result.contribution.environments,
+          ),
+          scenes: [],
+          assets: derived.assets,
+          content: derived.content,
+        }),
+      );
+
     const publication =
       input.scope === "design"
         ? null
@@ -1675,14 +1671,19 @@ export class AutoMovieProductionCompiler {
     artifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
     fields: IAutoMovieFingerprintField[];
     diagnostics: IAutoMovieDiagnostic[];
+    assets: IAutoMovieAssetProvenance[];
+    content: IAutoMovieProductionContentInput[];
   } {
     const fields: IAutoMovieFingerprintField[] = [];
     const diagnostics: IAutoMovieDiagnostic[] = [];
-    if (!enabled) return { artifacts: {}, fields, diagnostics };
+    let assets: IAutoMovieAssetProvenance[] = [];
+    let content: IAutoMovieProductionContentInput[] = [];
+    if (!enabled)
+      return { artifacts: {}, fields, diagnostics, assets, content };
     const manifest = this.project.manifest();
     let externalAssetPaths: string[] = [];
     try {
-      const content = this.project.contentInputs();
+      content = this.project.contentInputs();
       fields.push(...contentFingerprintFields(content));
       const inventory = compilerAssetInventory(
         manifest.assetManifest,
@@ -1691,7 +1692,8 @@ export class AutoMovieProductionCompiler {
         this.project.graph(),
         this.project.archetypes,
       );
-      externalAssetPaths = inventory.records.map((asset) => asset.path);
+      assets = inventory.records;
+      externalAssetPaths = assets.map((asset) => asset.path);
       diagnostics.push(...inventory.diagnostics);
     } catch (error) {
       fields.push({
@@ -1726,7 +1728,13 @@ export class AutoMovieProductionCompiler {
         }),
       ),
     );
-    return { artifacts: inspection.artifacts, fields, diagnostics };
+    return {
+      artifacts: inspection.artifacts,
+      fields,
+      diagnostics,
+      assets,
+      content,
+    };
   }
 
   /** Admit settings serialization only as a zero-payload lineage result. */
