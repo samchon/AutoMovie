@@ -42,10 +42,6 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 작품 전용 claim은 공통 그래프 뒤에 추가할 수 있어야 한다. 그 확장점으로 공통 claim이나 reference를 교체하고 cardinality, 잔여물 검사, 실패 조건을 약화하거나 끌 수 있어서는 안 된다.
 
-### 네이티브 설정 경계 {#agent-production-evidence-native-boundary}
-
-검증된 작품 전용 claim을 네이티브 평가기에 전달할 때 작품의 소유권 메타데이터는 평가기 입력에 섞이지 않아야 한다. 이 변환은 원본 선언을 수정하지 않고 claim 순서, 대상 선택, 단계에 따른 활성화, 심각도와 관계 정책을 보존해야 한다.
-
 ### 결정론적 결과 또는 명시적 실패 {#agent-production-evidence-deterministic-result}
 
 같은 설정과 같은 파일 트리는 실행 순서와 무관하게 같은 그래프를 만들고 같은 topology와 semantic-review alarm을 내놓아야 한다. 모순된 제작 종류·단계·대상·계보·topology 또는 기계적으로 복제된 review 이유는 일부 그래프를 내놓지 말고 구체적인 원인과 대상을 밝히며 실패해야 한다.

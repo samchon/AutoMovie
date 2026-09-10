@@ -76,6 +76,8 @@ export const test_evidence_native_claim_projection = (): void => {
   for (const claim of claims) Object.freeze(claim);
   Object.freeze(claims);
   const projected = projectAutoMovieNativeClaims(claims);
+  const compare = (left: string, right: string): number =>
+    left < right ? -1 : left > right ? 1 : 0;
   TestValidator.equals(
     "claim order",
     projected.map((claim) => claim.name),
@@ -99,10 +101,10 @@ export const test_evidence_native_claim_projection = (): void => {
       );
     TestValidator.equals(
       "no additional fields",
-      Object.keys(output).sort(),
+      Object.keys(output).sort(compare),
       Object.keys(claim)
         .filter((key) => key !== "autoMovieBinding")
-        .sort(),
+        .sort(compare),
     );
   }
   TestValidator.equals(

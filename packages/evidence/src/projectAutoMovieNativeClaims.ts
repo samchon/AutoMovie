@@ -8,8 +8,8 @@ import type { AutoMovieProductionContractClaim } from "./createAutoMovieProducti
  * The factory validates ownership first. Manifest readers retain the original
  * declaration; this projection removes only its AutoMovie binding metadata.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-native-boundary Preserves claim policy and the authored declaration while adapting local claims for native evaluation.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-native-boundary Copies admitted claims and removes only AutoMovie ownership metadata from native output.
+ * @evidence requirements/production-evidence/native-input.md#agent-production-evidence-native-boundary Preserves claim policy and the authored declaration while adapting local claims for native evaluation.
+ * @evidence specifications/production-evidence/native-input.md#spec-authoring-production-evidence-native-boundary Copies admitted claims and removes only AutoMovie ownership metadata from native output.
  */
 export const projectAutoMovieNativeClaims = (
   claims: readonly (
