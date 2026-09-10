@@ -102,6 +102,25 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitMouthSocket} Binds the active mouth opening, lip and dental attachment identities.
  * @evidenceReview {@link Configuration.portraitMouthSocket} #ec358d3 Read the resident mouth loop and oral anchors beside mouth and dental attachment. These identities do not determine optional lip relief or crown profiles.
  *
+ * @evidence {@link Configuration.portraitDentalRow} Selects the ordered upper dental profiles, arch dimensions and contact policy.
+ * @evidenceReview {@link Configuration.portraitDentalRow} #c55c28c Read the row's ordered profiles, arch dimensions and optional contact gap beside dental-row construction; proximal clearance remains resolved after rigid placement.
+ * @evidence {@link Configuration.portraitDentalSocket} Binds the dental row to the refined oral anchors.
+ * @evidenceReview {@link Configuration.portraitDentalSocket} #4507b8c Read the three resident attachment identities beside createPortraitDentalComponent; the socket owns placement data and does not reshape crowns.
+ * @evidence {@link Configuration.portraitDentalPlacement} Selects grouped dental lift and recess in millimetres.
+ * @evidenceReview {@link Configuration.portraitDentalPlacement} #0cd2005 Read lift/recess beside the rigid oral frame; these offsets move one group and do not introduce per-tooth transforms.
+ * @evidence {@link Configuration.portraitCheekSockets} Binds paired cheek support regions to resident refined-surface anchors.
+ * @evidenceReview {@link Configuration.portraitCheekSockets} #6a3f08e Read anatomical-side ordering and live anchors beside cheek-layer construction; sockets provide locations while paired shapes own radii and offsets.
+ * @evidence {@link Configuration.portraitCheekLayersFor} Builds paired cheek surface layers from independently supplied shape controls.
+ * @evidenceReview {@link Configuration.portraitCheekLayersFor} #88d021b Read copied right/left shapes, side mirroring and named malar/buccal fields beside the layer factory; it emits shared-skin fields rather than detached cheek parts.
+ * @evidence {@link Configuration.portraitComponentsFor} Composes replaceable eye, nose and mouth owners with shared sockets.
+ * @evidenceReview {@link Configuration.portraitComponentsFor} #08bcb1e Read copied component settings, defaults and optional mouth replacement beside assembly tests; each part retains independent attachment/detail parameters.
+ * @evidence {@link Configuration.portraitNasalSupportDetail} Holds the optional nasal-control replacement selected by an assembly.
+ * @evidenceReview {@link Configuration.portraitNasalSupportDetail} #cfdf698 Read its explicit undefined/default branch beside portraitNasalLayerFor and assembly construction; it remains separate from basic support.
+ * @evidence {@link Configuration.measuredPortraitAssembly} Supplies the active component and surface-layer assembly.
+ * @evidenceReview {@link Configuration.measuredPortraitAssembly} #31c6970 Read shared components, paired cheek layers and named supports beside buildReferencePortrait; this is an authored assembly datum, not likeness evidence.
+ * @evidence {@link Configuration.portraitAssembly} Supplies the complete default assembly input.
+ * @evidenceReview {@link Configuration.portraitAssembly} #532a6ea Read default component/layer composition and stable references; replacement helpers retain independent owners.
+ *
  * @evidence {@link Ears.IPortraitEarShape} Groups the resident ear datum, scale, projection and embedding controls.
  * @evidenceReview {@link Ears.IPortraitEarShape} #580d580 Read the copied ear shape inputs beside its sampler and builder. The profile separates height/depth scale from projection and embedding, while keeping the shell as an authored external ear approximation.
  * @evidence {@link Ears.IPortraitEarShape.centerY} Locates the ear datum along the construction Y axis.
