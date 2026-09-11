@@ -351,7 +351,7 @@ export const createProductionSoundRuntime = (props: {
         const bytes = inputs.get(asset);
         if (bytes === undefined || bytes === null)
           throw new Error(
-            `Audio asset "${asset}" has no current compiler-owned bytes.`,
+            `Audio asset "${asset}" has no current builder-owned bytes.`,
           );
         const digest = digestAutoMovieBytes(bytes);
         const stem = placeholderAudioStem(asset, bytes);
@@ -1316,7 +1316,7 @@ export const createProductionRenderEncoderRuntime = (props: {
   };
 };
 
-/** Plan, mix, inspect, and encode one compiler-owned production soundtrack. */
+/** Plan, mix, inspect, and encode one builder-owned production soundtrack. */
 export const produceProductionSound = async (props: {
   assertCurrent: () => void;
   assertRenderClock: (input: {

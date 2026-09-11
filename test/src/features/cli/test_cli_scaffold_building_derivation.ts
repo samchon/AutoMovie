@@ -83,7 +83,7 @@ const run = (
  *    of zeroes beside that sentence invites reading it as a result.
  * 2. Each building's sheets land before its lines, and the run's tally comes
  *    last, which is the order a reader would open the directory in.
- * 3. Two shots staging one building carry one record, because the compiler
+ * 3. Two shots staging one building carry one record, because the builder
  *    copies one declaration into every artifact that stages it.
  * 4. Two shots staging two different records under one id are refused by name
  *    rather than resolved by whichever was read first.
@@ -139,7 +139,7 @@ export const test_cli_scaffold_building_derivation = (): void => {
         () => two[two.length - 1]?.line === "2 building record(s)",
       ],
       [
-        // The compiler copies the source's own declaration into every artifact
+        // The builder copies the source's own declaration into every artifact
         // that stages it, so two shots staging one building carry one record.
         "twoShotsStagingOneBuildingCarryOneRecord",
         () =>

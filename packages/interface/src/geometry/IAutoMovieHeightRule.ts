@@ -56,7 +56,7 @@ export type IAutoMovieHeightRule =
        * **Determinism.** Pure arithmetic over the stored samples: the same
        * design answers the same height on every machine and every run. Nothing
        * is sampled from an image, a noise function, or a seed here; a generator
-       * that wants relief bakes its samples into this array, where the compiler
+       * that wants relief bakes its samples into this array, where the builder
        * digests them with the rest of the design.
        */
       kind: "heightfield";

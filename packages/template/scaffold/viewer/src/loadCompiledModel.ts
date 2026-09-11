@@ -23,7 +23,7 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 export const createShotTextureCache = (): AutoMovieTextureCache =>
   new AutoMovieTextureCache(loadEnvironmentAsset);
 
-/** Load the final registered mesh or build the compiler-owned primitive. */
+/** Load the final registered mesh or build the builder-owned primitive. */
 export const loadCompiledModel = async (
   model: IAutoMovieModel,
   textures?: AutoMovieTextureCache,
@@ -42,7 +42,7 @@ export const loadCompiledModel = async (
   }
   if (model.imported === undefined)
     throw new Error(
-      `Imported model "${model.id}" has no compiler-sealed ingest binding.`,
+      `Imported model "${model.id}" has no builder-sealed ingest binding.`,
     );
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(assetUrl(model.asset));

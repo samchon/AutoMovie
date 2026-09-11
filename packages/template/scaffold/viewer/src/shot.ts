@@ -41,7 +41,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
+    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run build.`,
   );
 const compiled = (await response.json()) as IAutoMovieCompiledShotSource;
 const productionRuntimeResponse = await fetch(
@@ -61,7 +61,7 @@ const runtime = await createCompiledShotRuntime(compiled, deliveryTone, {
   filmEffectIdentity: productionRuntime.filmEffectIdentity,
 });
 // The palette is a pure function of the compiled artifact, so the page derives
-// the same one the compiler's own evidence path derives, and the mask pass
+// the same one the builder's own evidence path derives, and the mask pass
 // paints stable per-entity colours instead of a ramp keyed by scene order.
 const mask = deriveAutoMovieSemanticMask(
   autoMovieRenderSubjectOfCompiledShot({ compiled }),

@@ -2,14 +2,6 @@
 
 Material documents define construction, finish, scale, response, and state. They bind to stable surfaces owned by models or spaces and do not redefine those surfaces.
 
-## Material information structure {#material-information-structure}
-
-Every H2 first identifies its material owner, central construction or appearance decision, compatibility boundary, and downstream consequence, then develops layers, parameters, bindings, limits, and verification in paragraphs with distinct functions. Tables support comparison rather than replacing the authored relation among those facts.
-
-Review question: can a reverse outline assign every paragraph and table one non-repeated material purpose?
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [glTF on declarative material structure](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials)
-
 ## Construction and appearance separation {#material-construction-appearance}
 
 Every material H2 distinguishes its physical layer or assembly facts from renderer-facing appearance parameters and states the deliberate relationship between them.

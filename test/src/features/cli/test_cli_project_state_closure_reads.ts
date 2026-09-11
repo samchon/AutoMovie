@@ -30,7 +30,7 @@ export const test_cli_project_state_closure_reads = (): void => {
     const diagnostic = projectStateClosureTamperDiagnostic();
     fixture.first.success = false;
     fixture.first.diagnostics = [diagnostic];
-    fixture.first.compiler.inputFingerprint = `sha256:${"b".repeat(64)}`;
+    fixture.first.builder.inputFingerprint = `sha256:${"b".repeat(64)}`;
     const injected = projectStateClosureReadFailure(
       fixture.input.read,
       failure,
@@ -68,8 +68,8 @@ export const test_cli_project_state_closure_reads = (): void => {
       `read ${failure} fingerprint`,
       result.freshness.currentFingerprint,
       failure === 2 || failure === 3
-        ? fixture.first.compiler.inputFingerprint
-        : fixture.initial.compiler.inputFingerprint,
+        ? fixture.first.builder.inputFingerprint
+        : fixture.initial.builder.inputFingerprint,
     );
     TestValidator.predicate(
       `read ${failure} design`,

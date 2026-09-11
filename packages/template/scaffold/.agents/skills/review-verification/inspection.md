@@ -2,7 +2,7 @@
 
 Use subject inspection after compilation to ask what one authored thing is and what it looks like, on its own, without staging a shot around it. Routes answer different halves of that. The numbers come from ordinary `@automovie/engine` queries over an `IAutoMovieSubjectArtifact`, which is one `IAutoMovieCompiledShotSource` paired with the revision you read it at. The pictures come from `inspectProductionSubject`, the project scripts this document gates.
 
-The engine queries run in a project script under `scripts/`, where the whole of `@automovie/engine` is available, and none of them is on the shot-source sandbox surface. That is the point rather than an omission: they read a compiled artifact, and a shot build function is the thing producing one, so a source module asking what it just compiled would be asking about a file that does not exist yet. Every engine name below is therefore written bare, which is this corpus's way of saying a source module may not call it. Section planes reach a call that runs in neither place, and that section says where.
+Run inspection queries on the artifact or source result that you want to examine. Import them directly from `@automovie/engine`. Project scripts can read generated files after the build that produces them; source functions inspect their explicit input and output values. Section planes are viewer inspection controls.
 
 This ground is divided, and no document on it substitutes for another. This one answers what a compiled subject is, how two compiled artifacts differ, and what one subject looks like from an eye the inspection chose. The visual change report answers which already-rendered views moved between two revisions, as digests. A verdict is produced in the evidence citation on the source that claims the unit is realized, and no question answered here produces one.
 
@@ -40,7 +40,7 @@ That revision string is your label for the exact bytes you read. A review mints 
 
 ## Enumerate, then address
 
-`describeAutoMovieSubjects`, called with `{ revision, compiled }`, lists the directly stored subjects in stable order: prototypes, prototype parts, building elements, instance sets, and logical spaces. Building elements include the transform-only groups the compiler stages no scene node for, because a group is an authored element and a list that skipped it would be a list of the scene rather than of the work. `describeAutoMovieSubject`, called with the same pair and an id, resolves any of those and additionally regenerates a placed part or one compact instance on demand. The stable id namespaces are:
+`describeAutoMovieSubjects`, called with `{ revision, compiled }`, lists the directly stored subjects in stable order: prototypes, prototype parts, building elements, instance sets, and logical spaces. Building elements include the transform-only groups the builder stages no scene node for, because a group is an authored element and a list that skipped it would be a list of the scene rather than of the work. `describeAutoMovieSubject`, called with the same pair and an id, resolves any of those and additionally regenerates a placed part or one compact instance on demand. The stable id namespaces are:
 
 - `prototype:<model>` and `prototype-part:<model>/<part>` for reusable geometry;
 - `element:<node>` and `element-part:<node>/<part>` for scene placements, where a built-environment element's node id reads `<environment>/<element>`;

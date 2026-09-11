@@ -67,7 +67,7 @@ export const applySceneEnvironment = (
  * sampled as linear lights the room off a radiance the image never held; a
  * Radiance HDR decodes to a float texture that already carries linear radiance,
  * which is exactly what `RGBELoader` records on it. `type` is that distinction,
- * and it follows from the media the compiler already proved from the bytes, so
+ * and it follows from the media the builder already proved from the bytes, so
  * deriving the decoding here keeps one fact in one place rather than asking an
  * author to restate it and then refusing them for restating it wrong.
  */

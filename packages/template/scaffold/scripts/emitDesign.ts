@@ -9,7 +9,7 @@ import type {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
-  AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+  AUTOMOVIE_PRODUCTION_BUILD_VERSION,
   type IAutoMovieDesignDerivationBasis,
   type IAutoMovieDesignProducerEntry,
   autoMovieDesignTargetAddress,
@@ -40,8 +40,7 @@ const EMITTER_PATH = "scripts/emitDesign.ts";
  * be derived from prose without comparing the prose with itself.
  *
  * Every declared target is evaluated twice against one frozen producer basis
- * (this emitter's bytes, the named source export, its transitive runtime
- * imports and the toolchain), compared with the live basis, and only then
+ * (this emitter's bytes, the named source export, its project source inventory and the toolchain), compared with the live basis, and only then
  * stored. A result that differs between the two evaluations, a basis that moved
  * during the run, or a resident record no entry derives refuses the whole run
  * before any record is written.
@@ -116,11 +115,15 @@ const run = runAutoMovieDesignDerivation({
     bytes: fs.readFileSync(path.join(projectRoot, ...EMITTER_PATH.split("/"))),
   },
   tool: {
-    production: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+    production: AUTOMOVIE_PRODUCTION_BUILD_VERSION,
     typescript: ts.version,
     node: process.versions.node,
   },
-  readSource: (source) => project.readSource(source),
+  sourceInputs: () =>
+    project
+      .contentInputs()
+      .filter((input) => input.source && input.bytes !== null)
+      .map((input) => ({ path: input.path, bytes: input.bytes! })),
   resident: resident.map((target) => ({
     target: autoMovieDesignTargetAddress(target),
     recordPath: project.designRecordPath(target),

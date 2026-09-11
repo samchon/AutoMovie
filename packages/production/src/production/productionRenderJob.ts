@@ -103,7 +103,7 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
 }
 
 /**
- * Explicit cost/quality tier sharing one compiler-owned edit.
+ * Explicit cost/quality tier sharing one builder-owned edit.
  * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-derivatives Binds the proxy tier to the master frame identity and range it derives from so a derivative never stands in for master verification.
  */
 export interface IAutoMovieProductionRenderTier {
@@ -149,7 +149,7 @@ export interface IAutoMovieProductionRenderFrame {
    */
   globalFrame: number;
   /**
-   * Exact frame on the compiler-owned full-rate film timeline.
+   * Exact frame on the builder-owned full-rate film timeline.
    */
   timelineFrame: number;
   /**
@@ -219,7 +219,7 @@ export interface IAutoMovieProductionRenderJobPlan {
    */
   compileFingerprint: AutoMovieContentDigest;
   /**
-   * Digest of the compiler-owned film edit.
+   * Digest of the builder-owned film edit.
    */
   editFingerprint: AutoMovieContentDigest;
   /**
@@ -251,12 +251,12 @@ export interface IAutoMovieProductionRenderJobPlan {
    */
   chunks: IAutoMovieProductionRenderChunk[];
   /**
-   * Non-video compiler tracks used during terminal publication.
+   * Non-video builder tracks used during terminal publication.
    */
   tracks: {
     /** Canonical WebVTT derived from the caption placements. */
     captions: string;
-    /** Exact compiler-owned audio placements. */
+    /** Exact builder-owned audio placements. */
     audio: IAutoMovieFilmTimeline["tracks"]["audio"];
     /** Byte, duration, and format identity for every referenced audio asset. */
     audioAssets: IAutoMovieProductionAudioAssetIdentity[];
@@ -376,11 +376,11 @@ export interface IAutoMovieProductionRenderChunkStatus {
 }
 
 /**
- * Parser/preflight identity for one compiler-declared audio source asset.
+ * Parser/preflight identity for one builder-declared audio source asset.
  */
 interface IAutoMovieProductionAudioAssetIdentityBase {
   /**
-   * Project-relative compiler-declared asset path.
+   * Project-relative builder-declared asset path.
    */
   path: string;
   /**
@@ -432,7 +432,7 @@ export type IAutoMovieProductionAudioAssetIdentity =
     );
 
 /**
- * Build content-addressed chunks from the compiler-owned film edit.
+ * Build content-addressed chunks from the builder-owned film edit.
  * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Plans every cue as exact source and presentation sample counts on the rational film clock, so the first and last audible samples are verifiable facts rather than rounded seconds.
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Partitions the exact frame schedule into non-overlapping content-addressed chunks whose identity does not depend on chunk size or worker count.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Reads the compiled edit's start-inclusive, end-exclusive frame ranges with exact integer arithmetic rather than rounding a duration by frame rate.
@@ -585,7 +585,7 @@ export const planProductionRenderJob = (props: {
             const digest = props.sourceFingerprints[shot];
             if (digest === undefined || validDigest(digest) === false)
               throw new Error(
-                `Render range references shot "${shot}" without one current compiler-owned source fingerprint.`,
+                `Render range references shot "${shot}" without one current builder-owned source fingerprint.`,
               );
             return { shot, digest };
           });
@@ -640,7 +640,7 @@ export const planProductionRenderJob = (props: {
 };
 
 /**
- * Prove a persisted plan is exactly reproducible from current compiler inputs.
+ * Prove a persisted plan is exactly reproducible from current builder inputs.
  */
 export const verifyProductionRenderJobPlan = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -668,7 +668,7 @@ export const verifyProductionRenderJobPlan = (props: {
     canonicalizeAutoMovieJson(expected)
   )
     throw new Error(
-      "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
+      "Stored render plan differs from the current builder-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
 };
 
@@ -697,7 +697,7 @@ export const sampleProductionRenderFrame = (
   const current = active.at(-1);
   if (current === undefined)
     throw new Error(
-      `Film-global frame ${globalFrame} has no compiler-owned video segment.`,
+      `Film-global frame ${globalFrame} has no builder-owned video segment.`,
     );
   const offset = globalFrame - current.segment.startFrame;
   const incoming: IAutoMovieProductionRenderLayer = {

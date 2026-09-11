@@ -1,6 +1,6 @@
 import type {
   AutoMovieContentDigest,
-  IAutoMovieCompileProjectOutput,
+  IAutoMovieBuildProjectOutput,
   IAutoMovieDiagnostic,
 } from "@automovie/interface";
 import { digestAutoMovieBytes } from "@automovie/production";
@@ -18,8 +18,8 @@ const runtime = loadSourceModule<{
       authoring: Authoring | undefined,
       current: (() => Authoring) | undefined,
     ) => Pick<
-      IAutoMovieCompileProjectOutput,
-      "success" | "compiler" | "diagnostics"
+      IAutoMovieBuildProjectOutput,
+      "success" | "builder" | "diagnostics"
     >;
   }) => AutoMovieContentDigest;
 }>(
@@ -60,7 +60,7 @@ export const test_production_publication_fresh_authoring = (): void => {
   const compile = (
     authoring: ReturnType<typeof currentAuthoringEvidence> | undefined,
     current: typeof currentAuthoringEvidence | undefined,
-  ): IAutoMovieCompileProjectOutput => {
+  ): IAutoMovieBuildProjectOutput => {
     compiled += 1;
     seen.push(authoring?.sourceOwners[0]?.reviewed);
     TestValidator.equals(
@@ -72,7 +72,7 @@ export const test_production_publication_fresh_authoring = (): void => {
     return {
       success: !fail,
       revision: 1,
-      compiler: {
+      builder: {
         version: "unit",
         inputFingerprint: digestAutoMovieBytes(
           Buffer.from(JSON.stringify({ source, authoring })),
@@ -97,7 +97,7 @@ export const test_production_publication_fresh_authoring = (): void => {
     changedTarget !== initial,
     true,
   );
-  TestValidator.equals("compiler sees current reviewed state", seen, [
+  TestValidator.equals("builder sees current reviewed state", seen, [
     true,
     true,
     false,
@@ -118,7 +118,7 @@ export const test_production_publication_fresh_authoring = (): void => {
   fail = false;
   runtime.readProductionPublicationInputFingerprint({ snapshot: {}, compile });
   TestValidator.equals(
-    "timed compiler missing reader retains its fallback input",
+    "timed builder missing reader retains its fallback input",
     seen.at(-1),
     undefined,
   );

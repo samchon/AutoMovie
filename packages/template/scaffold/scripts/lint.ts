@@ -1,5 +1,5 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
-import { AutoMovieProductionCompiler } from "@automovie/production";
+import { AutoMovieProductionBuilder } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
 import { readAutoMovieLintArguments } from "./commandArguments";
@@ -35,7 +35,7 @@ const currentAuthoringEvidence = () =>
     productionEvidence,
   });
 const authoringEvidence = currentAuthoringEvidence();
-const output = new AutoMovieProductionCompiler(
+const output = new AutoMovieProductionBuilder(
   project,
   authoringEvidence,
   currentAuthoringEvidence,

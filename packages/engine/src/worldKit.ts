@@ -36,13 +36,13 @@ export interface IAutoMovieWorldBlock {
    * Primitive recipe registered with production design.
    *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's archetype, dimensions, palette, and representation choices as its model recipe.
-   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits the complete primitive recipe that the compiler consumes rather than hiding construction parameters in the helper.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits the complete primitive recipe that the builder consumes rather than hiding construction parameters in the helper.
    */
   recipe: IAutoMovieModelRecipe;
   /**
-   * Static scene node using the compiler-owned runtime model id.
+   * Static scene node using the builder-owned runtime model id.
    *
-   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains the project's grounded placement as a scene node bound to the compiler-owned runtime model identity.
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains the project's grounded placement as a scene node bound to the builder-owned runtime model identity.
    * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the derived translation and runtime-model reference as plain output consumed by shot construction.
    */
   node: IAutoMovieSceneNode;
