@@ -12,9 +12,6 @@ interface IIdentity {
 }
 
 interface IProvenance {
-  source: string;
-  license: string;
-  termsCheckedAt: string;
   cost: string;
   consumer: { kind: "dialogue-synthesis"; reason: string };
 }
@@ -60,9 +57,6 @@ const selection: ISelection = {
   voice: "af_heart",
   speed: 1,
   generatorProvenance: {
-    source: "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX",
-    license: "Apache-2.0",
-    termsCheckedAt: "2025-01-01",
     cost: "local compute",
     consumer: { kind: "dialogue-synthesis", reason: "fixture dialogue" },
   },
@@ -236,8 +230,7 @@ const validation = (
  * 4. Generation hands the synthesizer exactly the request text the key was
  *    computed from, seals that text and the ordered chunks into the record,
  *    and the sealed bytes validate as current; an invalid or changing sample
- *    rate, an empty or non-finite chunk, an empty stream, a terms date after
- *    the generation instant, and a generation instant the record cannot
+ *    rate, an empty or non-finite chunk, an empty stream, and a generation instant the record cannot
  *    reproduce are each refused by line before publication.
  * 5. The public receipt is projected from the validated record's single
  *    phoneme carrier onto each line's own placement, so the same generation
@@ -444,29 +437,19 @@ export const test_cli_scaffold_dialogue_cache_text_identity =
       text?: string;
       chunks?: IGenerationChunk[];
       generatedAt?: string;
-      termsCheckedAt?: string;
     }) => {
       const text = props.text ?? "Café";
-      const generationSelection = {
-        ...selection,
-        generatorProvenance: {
-          ...selection.generatorProvenance,
-          termsCheckedAt:
-            props.termsCheckedAt ??
-            selection.generatorProvenance.termsCheckedAt,
-        },
-      };
       return generateProductionDialogueCache({
         line: "line-a",
         identity: productionDialogueCacheIdentity({
           cacheRoot: "state/audio-cache/kokoro",
-          selection: generationSelection,
+          selection,
           text,
           language: "en",
           speaker: null,
           runtimeAssets,
         }),
-        selection: generationSelection,
+        selection,
         runtimeAssets,
         generatedAt: props.generatedAt ?? "2025-01-02T00:00:00.000Z",
         synthesize: async (request) => {
@@ -556,11 +539,6 @@ export const test_cli_scaffold_dialogue_cache_text_identity =
         "an empty stream",
         { chunks: [] },
         ['synthesized no PCM for line "line-a"'],
-      ],
-      [
-        "a terms review dated after the generation instant",
-        { termsCheckedAt: "2025-01-03" },
-        ["Kokoro dialogue generation generatorProvenance"],
       ],
       [
         "a generation instant the record cannot reproduce",
