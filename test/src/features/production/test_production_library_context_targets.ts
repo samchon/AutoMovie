@@ -18,7 +18,7 @@ import { namedFacts, throwsError } from "../internal/predicates";
 export const test_production_library_context_targets = (): void => {
   const index: IAutoMovieMaterializedLibrary = {
     version: 1,
-    compiler: "automovie.production.v1",
+    builder: "automovie.production.v1",
     production: "library",
     inputFingerprint:
       "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

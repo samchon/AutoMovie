@@ -3,11 +3,11 @@ import { IAutoMovieSemanticMaskReceipt } from "../../render/IAutoMovieSemanticMa
 import {
   IAutoMovieDiagnostic,
   IAutoMovieReviewTarget,
-} from "../IAutoMovieProductionCompiler";
+} from "../IAutoMovieProductionBuild";
 import { AutoMovieContentDigest } from "../IAutoMovieProductionDesign";
 
 /**
- * One compiler-registry target accepted by the evidence capture tool.
+ * One builder-registry target accepted by the evidence capture tool.
  *
  * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Exposes `AutoMovieCaptureTarget` as the portable data boundary for the agent host evidence requirement.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `AutoMovieCaptureTarget` for the spec authoring host evidence output system contract.
@@ -80,7 +80,7 @@ export interface IAutoMovieCaptureReceipt {
    */
   target: AutoMovieCaptureTarget;
   /**
-   * Current compiler-owned target registry fingerprint.
+   * Current builder-owned target registry fingerprint.
    *
    * @evidence requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance Exposes `compileFingerprint` as the portable data boundary for the agent contract guidance requirement.
    * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `compileFingerprint` for the spec authoring knowledge request output system contract.

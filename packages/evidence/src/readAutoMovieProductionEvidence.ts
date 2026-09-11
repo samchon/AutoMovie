@@ -453,7 +453,7 @@ const sourceOwnerBindingsOf = (
   );
 };
 
-/** Read source in the same BOM and line-ending form the compiler executes. */
+/** Read source in the same BOM and line-ending form the builder executes. */
 const readNormalizedSource = (file: string): string => {
   let source = fs.readFileSync(file, "utf8");
   if (source.charCodeAt(0) === 0xfeff) source = source.slice(1);

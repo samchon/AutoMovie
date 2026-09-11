@@ -116,7 +116,7 @@ const riggedAsset = (
     return diagnostic(
       "capture-target-missing",
       asset,
-      `Asset "${asset}" is absent from compiler registry ${registry.inputFingerprint}. Correct its registration or compile current source before capturing its turntable.`,
+      `Asset "${asset}" is absent from builder registry ${registry.inputFingerprint}. Correct its registration or compile current source before capturing its turntable.`,
     );
   try {
     const validation = typia.validateEquals<IAutoMovieModel>(

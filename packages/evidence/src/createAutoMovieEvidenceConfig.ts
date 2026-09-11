@@ -37,7 +37,14 @@ import {
   parseAutoMovieEvidenceSyntax,
   projectAutoMovieMarkdownSyntax,
 } from "./parseAutoMovieEvidenceSyntax";
+import { projectAutoMovieNativeClaims } from "./projectAutoMovieNativeClaims";
 import { readAutoMovieContractRules } from "./readAutoMovieContractRules";
+import {
+  createAutoMovieAuthoredDiscoveryReferences,
+  createAutoMovieAuthoredFileClaims,
+  createAutoMovieAuthoredPrincipleReferences,
+  selectAutoMovieAuthoredContractFiles,
+} from "./selectAutoMovieAuthoredContractFiles";
 import {
   type IAutoMovieLocalContractProjection,
   projectAutoMovieLocalContractClaims,
@@ -166,7 +173,7 @@ type ContractRelationship =
 interface IAutoMovieContractBindingManifest {
   /** Selected production shape, or null before any branch can be active. */
   kind: ProductionKind | null;
-  /** Exact project-local language contract selected for every authored branch. */
+  /** Exact project-local language module shipped with this production. */
   language: AutoMovieProductionLanguage;
   /** Exact authored population selected by the project declaration. */
   populationScope: AutoMoviePopulationScope;
@@ -226,7 +233,6 @@ interface IAutoMovieContractBindingManifest {
 interface IMarkdownPopulation {
   headings: readonly (2 | 3 | 4)[];
   obligation: boolean;
-  principle: string;
 }
 
 interface ISourcePopulation {
@@ -263,34 +269,30 @@ const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
  */
 const sharedDocsRoot = (_location: string): string => DOCS;
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
-  settings: { headings: [2], obligation: true, principle: "settings.md" },
-  research: { headings: [2], obligation: true, principle: "research.md" },
-  maps: { headings: [2], obligation: true, principle: "maps.md" },
-  models: { headings: [2], obligation: true, principle: "models.md" },
-  spaces: { headings: [2], obligation: true, principle: "spaces.md" },
-  materials: { headings: [2], obligation: true, principle: "materials.md" },
-  instances: { headings: [2], obligation: true, principle: "instances.md" },
-  motions: { headings: [2], obligation: true, principle: "motions.md" },
-  systems: { headings: [2], obligation: true, principle: "systems.md" },
+  settings: { headings: [2], obligation: true },
+  research: { headings: [2], obligation: true },
+  maps: { headings: [2], obligation: true },
+  models: { headings: [2], obligation: true },
+  spaces: { headings: [2], obligation: true },
+  materials: { headings: [2], obligation: true },
+  instances: { headings: [2], obligation: true },
+  motions: { headings: [2], obligation: true },
+  systems: { headings: [2], obligation: true },
   treatments: {
     headings: [2],
     obligation: true,
-    principle: "treatments.md",
   },
   scripts: {
     headings: [2, 3, 4],
     obligation: true,
-    principle: "scripts.md",
   },
   screenplays: {
     headings: [2, 3, 4],
     obligation: true,
-    principle: "screenplays.md",
   },
   briefs: {
     headings: [2, 3, 4],
     obligation: true,
-    principle: "briefs.md",
   },
 };
 const SOURCES: Record<SourceLayer, ISourcePopulation> = {
@@ -385,39 +387,6 @@ const DESIGN_LAYERS = [
   "systems",
 ] as const satisfies readonly MarkdownLayer[];
 type DesignLayer = (typeof DESIGN_LAYERS)[number];
-
-type DiscoveryTarget =
-  | "briefs"
-  | "common"
-  | "designs"
-  | "films"
-  | "instances"
-  | "maps"
-  | "materials"
-  | "models"
-  | "motions"
-  | "screenplays"
-  | "scripts"
-  | "settings"
-  | "spaces"
-  | "treatments"
-  | "systems";
-
-const DISCOVERY_TARGETS: Record<MarkdownLayer, readonly DiscoveryTarget[]> = {
-  settings: ["common", "settings"],
-  research: ["common"],
-  maps: ["common", "designs", "maps"],
-  models: ["common", "designs", "models"],
-  spaces: ["common", "designs", "spaces"],
-  materials: ["common", "designs", "materials"],
-  instances: ["common", "designs", "instances"],
-  motions: ["common", "designs", "motions"],
-  systems: ["common", "designs", "systems"],
-  treatments: ["common", "films", "treatments"],
-  scripts: ["common", "films", "scripts"],
-  screenplays: ["common", "films", "screenplays"],
-  briefs: ["common", "briefs"],
-};
 
 /**
  * Upstream design families whose reviewed units the selected host population
@@ -549,7 +518,6 @@ const EXPECTED_CONTRACTS = [
       "instance-identity-transform",
       "instance-variation-tiers",
       "instance-placement-review",
-      "instance-set-dressing-placement",
     ],
   },
   {
@@ -585,7 +553,6 @@ const EXPECTED_CONTRACTS = [
       "reference-scale",
       "articulation-ownership",
       "model-review-set",
-      "model-story-prop-representation",
       "model-representation-completion",
     ],
   },
@@ -645,7 +612,6 @@ const EXPECTED_CONTRACTS = [
       "delivery-review-condition",
       "settings-coverage-map",
       "operative-subject-inventory",
-      "agency-and-limits",
       "design-dependent-subject-conditions",
       "minimal-departure",
       "internal-coherence",
@@ -756,11 +722,9 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/instances.md",
     anchors: [
-      "instance-information-structure",
       "instance-prototype-boundary",
       "instance-derivation-authority",
       "instance-verification-address",
-      "instance-dressing-placement-boundary",
     ],
   },
   {
@@ -768,7 +732,6 @@ const EXPECTED_CONTRACTS = [
     file: "principles/design/maps.md",
     anchors: [
       "map-addressable-world-identity",
-      "map-information-structure",
       "map-coordinate-extent-scale",
       "map-verification-address",
     ],
@@ -786,7 +749,6 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/materials.md",
     anchors: [
-      "material-information-structure",
       "material-construction-appearance",
       "material-binding-interface",
       "material-verification-address",
@@ -805,7 +767,6 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/models.md",
     anchors: [
-      "model-information-structure",
       "representation-contract",
       "spatial-convention",
       "reviewable-structure",
@@ -826,7 +787,6 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/motions.md",
     anchors: [
-      "motion-information-structure",
       "state-endpoints",
       "temporal-phases",
       "spatial-relation",
@@ -907,7 +867,6 @@ const EXPECTED_CONTRACTS = [
     domain: "core",
     file: "principles/core/settings.md",
     anchors: [
-      "information-structure",
       "fact-status",
       "source-support",
       "capability-boundary",
@@ -937,7 +896,6 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/spaces.md",
     anchors: [
-      "space-information-structure",
       "space-topology",
       "space-boundary-authority",
       "space-verification-address",
@@ -966,7 +924,6 @@ const EXPECTED_CONTRACTS = [
     domain: "design",
     file: "principles/design/systems.md",
     anchors: [
-      "system-information-structure",
       "system-authority-confinement",
       "system-dependency-basis",
       "system-verification-address",
@@ -2524,7 +2481,7 @@ export const validateAutoMovieEvidenceAccounts = (
     const claim = raw as Partial<AutoMovieProductionContractClaim>;
     const binding = claim.autoMovieBinding;
     if (binding?.account === undefined) continue;
-    // Declaration validation has already reconstructed this exact reference pair.
+    // Declaration validation has already reconstructed this obligation reference.
     const reference = (
       raw.reference as ITtscEvidenceGraphMarkdownReference[]
     )[0]!;
@@ -2902,23 +2859,6 @@ const upstreamReference = (
 ): ITtscEvidenceGraphReference =>
   sharedReference(shared, "upstream", file, review, true, true);
 
-const discoveryReferences = (
-  shared: string,
-  layer: MarkdownLayer,
-  review: boolean,
-): ITtscEvidenceGraphReference[] => [
-  ...DISCOVERY_TARGETS[layer].map((target) =>
-    sharedReference(shared, "discovery", `${target}.md`, review, false, true),
-  ),
-  {
-    type: "markdown",
-    root: DOCS,
-    files: ["language/discovery/signals.md"],
-    symbol: "h2",
-    requireReview: review,
-  },
-];
-
 /**
  * Makes one active layer's work-specific contract answer its discovery duties.
  *
@@ -2939,8 +2879,8 @@ const discoveryClaim = (
   evidenceExcludeCarriers: [CONTRACT_INDEX],
   symbol: "file",
   disabled: graph[layer] === "disabled",
-  reference: discoveryReferences(
-    sharedDocsRoot(graph.location),
+  reference: createAutoMovieAuthoredDiscoveryReferences(
+    graph.kind,
     layer,
     requiresReview(graph[layer]),
   ),
@@ -3011,39 +2951,12 @@ const branchClaims = (
   ...claims: ITtscEvidenceGraphClaim[]
 ): IBranchClaim[] => claims.map((claim) => ({ branch, claim }));
 
-/** Shared obligations compared once by a branch-level account population. */
+/** Shared obligations selected for the branch's authored role. */
 const populationObligations = (
   graph: IProductionGraph,
   layer: MarkdownLayer,
-): string[] => {
-  if (!MARKDOWN[layer].obligation) return [];
-  if (layer === "research")
-    return [
-      "obligations/core/common.md",
-      "obligations/core/defaults.md",
-      "language/obligations/common.md",
-    ];
-  const domain: ContractDomain =
-    layer === "settings"
-      ? "core"
-      : layer === "briefs"
-        ? "delivery"
-        : ["treatments", "scripts", "screenplays"].includes(layer)
-          ? "story"
-          : "design";
-  return [
-    "obligations/core/common.md",
-    "obligations/core/defaults.md",
-    "language/obligations/common.md",
-    ...(["treatments", "scripts", "screenplays"].includes(layer)
-      ? ["obligations/story/narratives.md"]
-      : []),
-    `obligations/${domain}/${MARKDOWN[layer].principle}`,
-    ...(layer === "settings" && graph.kind === "film"
-      ? ["obligations/story/subjects.md"]
-      : []),
-  ];
-};
+): string[] =>
+  selectAutoMovieAuthoredContractFiles(graph.kind, layer).obligations;
 
 const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
   const shared = sharedDocsRoot(graph.location);
@@ -3065,36 +2978,10 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
           }),
         ),
       );
-    const principles = [
-      principleReference(shared, "common.md", review),
-      principleReference(shared, "defaults.md", review),
-      {
-        type: "markdown" as const,
-        root: DOCS,
-        files: ["language/principles/common.md"],
-        symbol: "h2" as const,
-        checklist: true,
-        noEvidenceExclude: true,
-        requireReview: review,
-      },
-    ];
-    if (["treatments", "scripts", "screenplays"].includes(name))
-      principles.push(principleReference(shared, "narratives.md", review));
-    if (
-      [
-        "maps",
-        "models",
-        "spaces",
-        "materials",
-        "instances",
-        "motions",
-        "systems",
-        "briefs",
-      ].includes(name)
-    )
-      principles.push(principleReference(shared, "inherited-units.md", review));
-    principles.push(
-      principleReference(shared, MARKDOWN[name].principle, review),
+    const principles = createAutoMovieAuthoredPrincipleReferences(
+      graph.kind,
+      name,
+      review,
     );
     const fileParents: ITtscEvidenceGraphReference[] = [];
     if (!["settings", "research"].includes(name))
@@ -3106,18 +2993,17 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
         lineage(graph, "scripts", "file", review),
         coverage(graph, review),
       );
-    if (fileParents.length !== 0)
-      claims.push(
-        ...branchClaims(name, {
-          name: `${name} files account for inherited settings, designs, and parent files`,
-          type: "markdown",
-          root: DOCS,
-          files: authoredPopulationFiles(graph, name),
-          symbol: "file",
-          disabled: !requiresEvidence(stage),
-          reference: fileParents,
-        }),
-      );
+    claims.push(
+      ...branchClaims(
+        name,
+        ...createAutoMovieAuthoredFileClaims(
+          name,
+          authoredPopulationFiles(graph, name),
+          fileParents,
+          requiresEvidence(stage),
+        ),
+      ),
+    );
     for (const symbol of MARKDOWN[name].headings) {
       const references: ITtscEvidenceGraphReference[] = [...principles];
       if (!["settings", "research"].includes(name))
@@ -3728,6 +3614,6 @@ export const createAutoMovieEvidenceConfig = (
     },
   ];
   return {
-    claims: [...shared, ...(graph.claims ?? [])],
+    claims: [...shared, ...projectAutoMovieNativeClaims(graph.claims ?? [])],
   };
 };

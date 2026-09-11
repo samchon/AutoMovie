@@ -9,7 +9,7 @@ import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/produ
  * exist. Add the reviewed candidate here under its authored shot id, and the
  * repaint runtime joins it to that shot's request on the production design
  * record. This control-plane file is typechecked but deliberately excluded from
- * deterministic compiler content: reviewing derived appearance must not
+ * deterministic builder content: reviewing derived appearance must not
  * invalidate the source render and candidate being reviewed.
  */
 export const repaintSelectionReviews: Readonly<

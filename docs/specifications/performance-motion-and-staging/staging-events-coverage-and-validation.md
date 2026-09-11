@@ -43,12 +43,12 @@ Shot contract는 stable shot identity, source binding, scene·beat evidence, dur
 
 Subject delivery는 identity, required interval, action·state·event, current extent를 사용하는 framing·visibility, contact 또는 expression·gaze 같은 specific feature와 tolerance를 가진다. Opening은 time zero, closing은 declared duration, event는 authoritative sample, camera는 required review time에서 independently measure한다. 각 required visual criterion은 exact frame와 beauty·mask·depth·pose·outline 등 필요한 pass를 지정하고, prose expectation만으로 realization을 증명하지 않는다.
 
-Duration이 frame clock에 놓이지 않거나 source가 다른 scene·shot을 만들거나 participant가 staged되지 않거나 state·event predicate가 비어 있거나 review frame이 없거나 required subject가 측정 불가하면 contract failure다. Upstream story, design, source, asset, compiler·renderer identity가 바뀌면 realization과 review를 stale로 만들고 현재 shot을 다시 compile·capture·review한다.
+Duration이 frame clock에 놓이지 않거나 source가 다른 scene·shot을 만들거나 participant가 staged되지 않거나 state·event predicate가 비어 있거나 review frame이 없거나 required subject가 측정 불가하면 contract failure다. Upstream story, design, source, asset, builder·renderer identity가 바뀌면 realization과 review를 stale로 만들고 현재 shot을 다시 compile·capture·review한다.
 
-<!-- @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-result-provenance acceptance 결과가 current compiler와 frame evidence provenance를 가지게 한다. -->
+<!-- @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-result-provenance acceptance 결과가 current builder와 frame evidence provenance를 가지게 한다. -->
 <!-- @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance delivery와 acceptance 결과를 직접 연결한다. -->
 
-Realization output은 shot input fingerprint와 opening·closing·event predicate별 expected, actual, tolerance와 pass, camera·formation summary, review target inventory를 가진다. Acceptance는 compiler-derived event·metric outcome 또는 exact current frame·pass review를 인용하고, required criteria가 모두 current인 경우에만 shot delivery를 완료한다.
+Realization output은 shot input fingerprint와 opening·closing·event predicate별 expected, actual, tolerance와 pass, camera·formation summary, review target inventory를 가진다. Acceptance는 builder-derived event·metric outcome 또는 exact current frame·pass review를 인용하고, required criteria가 모두 current인 경우에만 shot delivery를 완료한다.
 
 Automatic measurement가 지원하지 않는 pixel occlusion, dramatic readability와 appearance 판단은 `needs-review`로 남겨 current evidence를 요구한다. `unsupported`, `not-run`, `stale`, reviewer `revise`를 pass로 접지 않고, negative twin과 boundary case가 실패해야 positive result를 신뢰한다.
 

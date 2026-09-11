@@ -17,7 +17,7 @@ export interface IAutoMovieTimedAuthoringKind {
 }
 
 /**
- * Resolve timed compiler ownership from the graph declaration, never residue.
+ * Resolve timed builder ownership from the graph declaration, never residue.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Keeps direct briefs independent from the film screenplay ladder.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Dispatches screenplay and brief ownership from the selected production kind.

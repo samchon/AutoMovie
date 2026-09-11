@@ -3,8 +3,6 @@ import path from "node:path";
 /**
  * Read presence without conflating an unsafe recovery marker with absent prose.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Keeps every pending directory entry outside completed library evidence.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Checks the same physical parent boundary around one entry observation without reading its content.
  */
 export const readProductionEntryPresence = (props: {
   /** Absolute physical root belonging to the current production incarnation. */

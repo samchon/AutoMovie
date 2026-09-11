@@ -8,12 +8,6 @@ Recorded, synthesized, generated, procedural와 external audio를 작품 source�
 
 Remote response, mutable library alias와 synthesis result는 작품이 채택한 immutable original bytes와 digest로 닫혀야 하며 같은 URL, prompt 또는 model name을 다시 호출한 결과를 기존 source identity로 덮어쓰지 않아야 한다.
 
-### Provenance와 License {#sound-source-provenance}
-
-Source URL 또는 provider, model과 version, prompt와 controls, license, original·processed digest, processing recipe와 consumer를 추적해야 한다.
-
-외부 generator의 terms review date는 실제 `YYYY-MM-DD` UTC calendar date여야 하고 synthesis 또는 adoption receipt가 보존하는 immutable 실행 instant의 UTC date보다 미래일 수 없다. Configuration preflight와 저장·재개된 receipt 검증은 같은 명시적 clock snapshot 의미를 사용하며 canonical content identity가 ambient wall clock을 읽거나 임의의 만료 기간을 만들어서는 안 된다.
-
 ### Decode Contract {#sound-decode-contract}
 
 Supported container, codec, channel, rate, bit depth, duration, metadata와 expanded sample bound를 명시하고 file extension과 declared MIME만 믿지 않아야 한다.

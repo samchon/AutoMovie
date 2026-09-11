@@ -14,4 +14,4 @@ Film의 `first-pilot`은 `001-`로 시작하는 정확한 lower-kebab delivery-g
 
 `null`은 아직 제작 종류를 선택하지 않은 빈 프로젝트 상태다. 패키지는 이 구조 밖의 설정 파일, 환경 변수나 파일 존재 여부로 누락된 입력값을 보충하지 않는다.
 
-작품 고유 저술 의무 helper 입력은 `name`, 단일 `document`, `account`, `layer`, `stage`, `populationScope`와 선택적인 `documentRoot`·`inapplicable`이다. `documentRoot` 기본은 `docs`이고 `docs/contracts`와 bare filename도 같은 평면 계약 identity를 가리킨다. `files`·`symbol`은 의무 입력이 아니며 원칙 helper에서만 저술 단위를 선택한다. Local `autoMovieBinding`의 단계·범위·disposition은 바깥 선언과 정확히 일치해야 한다. `inapplicable`은 first-pilot에만 허용하며 complete-production/reset으로 옮길 때 제거하고 완전한 의무를 다시 비교한다. Disabled/draft 선언은 inactive 상태로 유지되며 enabled account의 누락된 파일·target·H2와 선언 없는 계정은 거부한다.
+작품 고유 저술 의무 helper 입력은 `name`, 단일 `document`, 종합 증언용 `account` 주소, `layer`, `stage`, `populationScope`와 선택적인 `documentRoot`·`inapplicable`이다. `documentRoot` 기본은 `docs`이고 `docs/contracts`와 bare filename도 같은 평면 계약 identity를 가리킨다. Layer와 scope가 전체 eligible authored H2를 유도한다. Local `autoMovieBinding`의 단계·범위·disposition은 바깥 선언과 정확히 일치해야 한다. `inapplicable`은 first-pilot에만 허용한다. Disabled/draft 선언은 inactive 상태로 유지되며 활성 계약의 누락된 target·H2, 선언 없는 account와 주소 충돌은 거부한다.

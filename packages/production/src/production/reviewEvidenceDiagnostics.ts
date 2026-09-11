@@ -53,7 +53,7 @@ export const reviewEvidenceDiagnostics = (props: {
    * Every frame committed for one target at one fingerprint, in commit order.
    *
    * Reads only bundles filed under that exact fingerprint, so a target whose
-   * source, design, or compiler identity moved reports the frames it owes
+   * source, design, or builder identity moved reports the frames it owes
    * rather than the frames its previous self had.
    */
   captured: (

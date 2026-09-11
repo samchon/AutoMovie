@@ -560,7 +560,7 @@ const collapsedWall = (
   ),
 });
 
-/** The same design with the slab's geometry owned by the compiler. */
+/** The same design with the slab's geometry owned by the builder. */
 const externalModel = (
   environment: IAutoMovieBuiltEnvironment,
 ): IAutoMovieBuiltEnvironment => ({

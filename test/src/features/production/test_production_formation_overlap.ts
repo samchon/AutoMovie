@@ -1,4 +1,8 @@
 import type { IAutoMovieFormationPlacement } from "@automovie/engine";
+import {
+  autoMovieModelColumns,
+  validateAutoMovieFormationOverlap,
+} from "@automovie/engine";
 import type {
   AutoMovieHumanoidBone,
   IAutoMovieDiagnostic,
@@ -8,10 +12,6 @@ import type {
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import {
-  autoMovieModelColumns,
-  validateAutoMovieFormationOverlap,
-} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -266,7 +266,7 @@ const bone = (
  * every one of those compiled clean.
  *
  * A member's size is not asked of the author. It is read from the runtime the
- * compiler already built, as the largest disc that fits inside one of its parts
+ * builder already built, as the largest disc that fits inside one of its parts
  * on the axis the member stands on, so the measure follows the geometry instead
  * of sitting beside it going stale. Inscribed and never circumscribed, because
  * a refusal has to mean two bodies really share a place: everything the reading

@@ -27,7 +27,7 @@ const meshOf = (
 const summary = (
   mesh: IAutoMovieMesh,
   keys: ReadonlyArray<keyof IAutoMovieMeshTopology>,
-): Record<string, number | boolean> => {
+): Record<string, number | boolean | number[]> => {
   const report = inspectAutoMovieMeshTopology(mesh);
   return Object.fromEntries(keys.map((key) => [key, report[key]]));
 };
@@ -197,9 +197,15 @@ export const test_geometry_procedural_topology = (): void => {
     summary(meshOf([0, 0, 0, 1, 0, 0, 1, 0, 0], null), [
       "triangles",
       "degenerate",
+      "degenerateTriangles",
       "watertight",
     ]),
-    { triangles: 1, degenerate: 1, watertight: false },
+    {
+      triangles: 1,
+      degenerate: 1,
+      degenerateTriangles: [0],
+      watertight: false,
+    },
   );
 
   TestValidator.equals(
@@ -230,8 +236,13 @@ export const test_geometry_procedural_topology = (): void => {
 
   TestValidator.equals(
     "an empty mesh is not watertight, because no edges is not no holes",
-    summary(meshOf([], []), ["triangles", "watertight", "volume"]),
-    { triangles: 0, watertight: false, volume: 0 },
+    summary(meshOf([], []), [
+      "triangles",
+      "degenerateTriangles",
+      "watertight",
+      "volume",
+    ]),
+    { triangles: 0, degenerateTriangles: [], watertight: false, volume: 0 },
   );
 
   TestValidator.predicate(

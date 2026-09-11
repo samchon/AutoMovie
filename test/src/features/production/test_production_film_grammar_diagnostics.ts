@@ -215,7 +215,7 @@ const PAIR: readonly ISubject[] = [
  *
  * The analyzer measured all of this before and nobody asked it, so a declared
  * `styleIntent` suppressed nothing and an undeclared break was never named.
- * These cases pin the wire-up at the point the compiler calls it: observations
+ * These cases pin the wire-up at the point the builder calls it: observations
  * built from compiled shot output at the edited boundaries, findings routed as
  * ordinary warnings, and a declaration reported when it excepts nothing.
  *

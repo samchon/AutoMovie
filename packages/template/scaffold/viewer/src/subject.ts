@@ -144,7 +144,7 @@ const DISTANCE_STEP = 1.15;
  * One entry per member of the union, and that totality is the whole reason the
  * table has this shape. A kind added to the viewer's vocabulary cannot reach
  * this page without somebody deciding which of the two things it is, because
- * TypeScript refuses an incomplete `Record` and the compiler names the missing
+ * TypeScript refuses an incomplete `Record` and the builder names the missing
  * kind. A dispatch that ended in a catch-all would take a new kind and do
  * something plausible with it instead, which is the silent skip this project's
  * doctrine forbids and which the starter's own lint rule exists to catch.
@@ -204,7 +204,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
+    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run build.`,
   );
 // Read as text first, because the served bytes are the only revision this page
 // can honestly state: the viewer route carries no digest and no version beside
@@ -465,7 +465,7 @@ const sectionAt = (
  *
  * A placed part and a prototype's part are one kind to the viewer, which is
  * what lets one key name a part without the reviewer having to know which table
- * the compiler wrote it into.
+ * the builder wrote it into.
  */
 const viewerKeyOf = (compiledId: string): string =>
   compiledId.replace(/^(?:element|prototype)-part:/, "part:");

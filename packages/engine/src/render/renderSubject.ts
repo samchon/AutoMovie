@@ -73,7 +73,7 @@ export interface IAutoMovieRenderSubject {
   formations?: readonly IAutoMovieCompiledFormation[];
 
   /**
-   * Bounded compiler-owned particle effects drawn as instanced billboards.
+   * Bounded builder-owned particle effects drawn as instanced billboards.
    *
    * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Includes the declared particle cap rather than the one frame's sampled population.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries effect prototype and instance bounds into worst-case inventory.
@@ -400,7 +400,7 @@ export interface IAutoMovieRenderTextureSource {
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Prevents mask and budget preflight from assembling different drawable closures for the same compiled shot.
  */
 export const autoMovieRenderSubjectOfShot = (props: {
-  /** Fully compiler-owned shot artifact. */
+  /** Fully builder-owned shot artifact. */
   compiled: IAutoMovieCompiledShotSource;
   /** Declared water bodies, if the production has any. */
   waterBodies?: readonly IAutoMovieRenderWaterBody[];
@@ -445,11 +445,11 @@ export const autoMovieRenderSubjectOfShot = (props: {
  * triangle count this repository invented.
  *
  * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Reads every compiled fluid, cloth, planting, instance, scene, and model contribution into the drawable cost closure.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Converts compiler-owned domains and bindings into explicit measured or not-run preflight inputs.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Converts builder-owned domains and bindings into explicit measured or not-run preflight inputs.
  * @author Samchon
  */
 export const autoMovieRenderSubjectOfCompiledShot = (props: {
-  /** Fully compiler-owned shot artifact. */
+  /** Fully builder-owned shot artifact. */
   compiled: IAutoMovieCompiledShotSource;
   /** Known texture dimensions, if the caller resolved the assets. */
   textures?: readonly IAutoMovieRenderTextureSource[];
@@ -519,7 +519,7 @@ export const autoMovieRenderSubjectOfCompiledShot = (props: {
 /**
  * Index one binding list by the drawable it places, keeping the smallest id.
  *
- * Two bindings naming one drawable is an authoring contradiction the compiler
+ * Two bindings naming one drawable is an authoring contradiction the builder
  * refuses, but the subject still has to be a function of the design rather than
  * of array order, or two runs of the same shot would attribute one pond to two
  * rooms and derive two different palettes for one frame.

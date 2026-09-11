@@ -125,7 +125,7 @@ const fakeRenderer = (
 };
 
 /**
- * Film beauty projection must preserve the compiler-owned fade weight and all
+ * Film beauty projection must preserve the builder-owned fade weight and all
  * mutable renderer state.
  *
  * Scenarios:

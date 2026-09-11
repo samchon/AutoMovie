@@ -844,16 +844,16 @@ export class AutoMovieProductionSubjectInspectionService {
         "compile-missing",
         "Subject inspection requires a current source compile. Run the scaffold compile command before opening a subject.",
       );
-    const status = services.compileStatus();
-    if (status.compiler.inputFingerprint !== generated.inputFingerprint)
+    const status = services.buildStatus();
+    if (status.builder.inputFingerprint !== generated.inputFingerprint)
       return refuse(
         "generated-stale",
-        `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run the scaffold compile command before opening a subject.`,
+        `Generated input ${generated.inputFingerprint} differs from current ${status.builder.inputFingerprint}. Run the scaffold compile command before opening a subject.`,
       );
     if (status.success === false)
       return refuse(
         "compile-current-invalid",
-        "Current source does not pass the read-only compiler gate, so a subject read from it would describe a state nothing renders. Correct it and run the scaffold compile command.",
+        "Current source does not pass the read-only builder gate, so a subject read from it would describe a state nothing renders. Correct it and run the scaffold compile command.",
       );
     const production = services.project.graph().production;
     if (production === null)
@@ -1321,7 +1321,7 @@ const resolveSubject = (
  *
  * The viewer harness and the compiled description agree on every id except a
  * placed or reusable part, which the harness writes `part:<node>/<part>` and
- * the compiler writes `element-part:` or `prototype-part:`. An authoring agent
+ * the builder writes `element-part:` or `prototype-part:`. An authoring agent
  * handed a name by one instrument has to be able to paste it into the other, so
  * the divergence is absorbed here instead of being answered with "no such
  * subject". A viewer key may also carry a trailing `@revision`, which names the
@@ -1368,7 +1368,7 @@ const inspectionFrame = (
  *
  * It is keyed by the compiled subject id rather than by the spelling the caller
  * used, so a name pasted from the viewer page and the same subject named the
- * compiler's way publish into one place instead of two.
+ * builder's way publish into one place instead of two.
  *
  * @author Samchon
  */
