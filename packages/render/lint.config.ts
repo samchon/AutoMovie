@@ -50,7 +50,7 @@ const captionSources = [
  */
 const renderSources = [
   ...allSources,
-  "!src/exportModel.ts",
+  "!src/node/exportModelToGLB.ts",
   "!src/screenplay.ts",
 ];
 
@@ -66,7 +66,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "model serialization implements bounded asset requirements",
       type: "typescript",
-      files: ["src/exportModel.ts"],
+      files: ["src/node/exportModelToGLB.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences([
         "requirements/asset-authoring",
@@ -76,7 +76,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "model serialization implements bounded asset specifications",
       type: "typescript",
-      files: ["src/exportModel.ts"],
+      files: ["src/node/exportModelToGLB.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences([
         "specifications/asset-and-representation",
