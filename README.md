@@ -6,7 +6,7 @@ AutoMovie lets a user scaffold a production repository and direct a coding agent
 
 The result is a cheap, controllable, and reproducible alternative to asking a diffusion model to invent an entire video. A fixed asset is performed by agent-authored code and rendered by a deterministic engine, so the same inputs produce the same motion, staging, timing, camera, and media.
 
-See it at [samchon.github.io/automovie](https://samchon.github.io/automovie): the [medieval baron manor](https://samchon.github.io/automovie/manor/), a finished production kept in this repository under [`experimental/medieval-baron-manor`](./experimental/medieval-baron-manor), is generated from its authored source in your browser.
+See it at [samchon.github.io/AutoMovie](https://samchon.github.io/AutoMovie/): the [medieval baron manor](https://samchon.github.io/AutoMovie/manor/), a finished production kept in this repository under [`experimental/medieval-baron-manor`](./experimental/medieval-baron-manor), is generated from its authored source in your browser.
 
 ## The contract
 

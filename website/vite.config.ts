@@ -1,10 +1,12 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
-// Published under the repository's GitHub Pages project path, so every asset
-// URL is prefixed with `/automovie/`; the dev server serves the same prefix.
+// GitHub Pages serves the site under the repository name, and that path is
+// case-sensitive (`/AutoMovie/` answers, `/automovie/` does not). A relative
+// base keeps every asset URL correct wherever the build is mounted, so a
+// repository rename or a local preview needs no rebuild.
 export default defineConfig({
-  base: "/automovie/",
+  base: "./",
   server: {
     host: "127.0.0.1",
     port: 5174,
