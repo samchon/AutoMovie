@@ -166,7 +166,7 @@ export const test_cli_contract_maintenance_windows = (): void => {
   TestValidator.equals(
     "a second directory entry is still an admitted maintenance child",
     linked.io.read(linkedParent, "candidate")!.source,
-    "\ufeffcandidate",
+    `${String.fromCharCode(0xfeff)}candidate`,
   );
   linked.io.close(linkedParent);
   for (const fault of [

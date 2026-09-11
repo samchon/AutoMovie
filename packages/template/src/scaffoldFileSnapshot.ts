@@ -494,6 +494,7 @@ const overwriteScaffoldFile = (props: {
       props.existing,
       descriptor,
       physicalVersion(opened),
+      assertOrdinarySingleLinkFile,
     );
     assertScaffoldOwnership(props.base, props.parent);
     fileSystem.ftruncateSync(descriptor, 0);
@@ -507,6 +508,7 @@ const overwriteScaffoldFile = (props: {
       captureScaffoldFile(props.target),
       descriptor,
       physicalVersion(completed),
+      assertOrdinarySingleLinkFile,
     );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fileSystem.fstatSync(descriptor, { bigint: true });
@@ -519,6 +521,7 @@ const overwriteScaffoldFile = (props: {
       completedSnapshot,
       descriptor,
       physicalVersion(finalStatus),
+      assertOrdinarySingleLinkFile,
     );
     completedSnapshot = assertOpenedScaffoldFileSnapshot(completedSnapshot);
     assertScaffoldOwnership(props.base, props.parent);
@@ -562,15 +565,22 @@ const overwriteScaffoldFile = (props: {
 };
 
 /**
- * Capture one ordinary single-link file before its bytes authorize an operation.
+ * Capture one ordinary file before its bytes authorize an operation.
+ *
+ * Capturing observes a pathname and changes nothing, so it admits a file that
+ * more than one directory entry names. The documented script runner mirrors
+ * every root-direct file of a generated project into its own cache for the
+ * duration of a command, which made a link count here refuse ordinary inputs
+ * such as the project's reference-client configuration. A symbolic link stays
+ * refused, and the writer that truncates in place keeps its stricter admission.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the predecessor generation before preparing a repeated write.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses links and non-file targets as reusable inputs.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses a symbolic link and a non-file target as reusable inputs.
  */
 export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
   const absolute = path.resolve(file);
   const status = fileSystem.lstatSync(absolute, { bigint: true });
-  assertOrdinarySingleLinkFile(status, absolute);
+  assertOrdinaryScaffoldFile(status, absolute);
   return {
     identity: physicalIdentity(status),
     path: absolute,
@@ -578,14 +588,22 @@ export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
   };
 };
 
+/**
+ * Verify a held descriptor against its captured pathname generation.
+ *
+ * The caller supplies the admission because the two callers own different
+ * promises: the in-place writer requires the single entry its truncation
+ * depends on, while a read requires only an ordinary file.
+ */
 const assertScaffoldFileDescriptor = (
   snapshot: IScaffoldFileSnapshot,
   descriptor: number,
   expectedDescriptorVersion: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
 ): void => {
   assertOpenedScaffoldFileSnapshot(snapshot);
   const opened = fileSystem.fstatSync(descriptor, { bigint: true });
-  assertOrdinarySingleLinkFile(opened, snapshot.path);
+  admission(opened, snapshot.path);
   if (
     withoutChangeTime(physicalVersion(opened)) !==
     withoutChangeTime(expectedDescriptorVersion)
@@ -597,7 +615,7 @@ const assertScaffoldFileDescriptor = (
   let failure: IScaffoldDescriptorFailure | undefined;
   try {
     const resident = fileSystem.fstatSync(residentDescriptor, { bigint: true });
-    assertOrdinarySingleLinkFile(resident, snapshot.path);
+    admission(resident, snapshot.path);
     if (writtenVersion(resident) !== writtenVersion(opened))
       throw new Error(
         `scaffold file descriptor changed resident generation: ${snapshot.path}`,
@@ -680,9 +698,19 @@ export const readScaffoldFileSnapshot = (
   try {
     const opened = fileSystem.fstatSync(descriptor, { bigint: true });
     const version = physicalVersion(opened);
-    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    assertScaffoldFileDescriptor(
+      snapshot,
+      descriptor,
+      version,
+      assertOrdinaryScaffoldFile,
+    );
     const bytes = fileSystem.readFileSync(descriptor);
-    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    assertScaffoldFileDescriptor(
+      snapshot,
+      descriptor,
+      version,
+      assertOrdinaryScaffoldFile,
+    );
     result = { snapshot, bytes, identity: physicalIdentity(opened), version };
   } catch (error) {
     failure = { error };
@@ -696,15 +724,33 @@ export const readScaffoldFileSnapshot = (
   return { ...result, snapshot: completed };
 };
 
+/**
+ * Admission for an operation that only observes: a regular file that is not a
+ * symbolic link. It asks nothing about directory entries, because reading bytes
+ * cannot change what a second entry naming the same inode shows.
+ */
+const assertOrdinaryScaffoldFile = (
+  status: fs.BigIntStats,
+  file: string,
+): void => {
+  if (status.isSymbolicLink() || status.isFile() === false)
+    throw new Error(`scaffold file is not one ordinary file: ${file}`);
+};
+
+/**
+ * Admission for the writer that truncates and rewrites the resident inode.
+ *
+ * Exactly one directory entry is load-bearing here and nowhere else: this write
+ * changes the bytes of the inode itself, so every other pathname naming it would
+ * observe the change. Anything that replaces the directory entry instead keeps
+ * the peer pointed at the old inode and uses the ordinary admission above.
+ */
 const assertOrdinarySingleLinkFile = (
   status: fs.BigIntStats,
   file: string,
 ): void => {
-  if (
-    status.isSymbolicLink() ||
-    status.isFile() === false ||
-    status.nlink !== 1n
-  )
+  assertOrdinaryScaffoldFile(status, file);
+  if (status.nlink !== 1n)
     throw new Error(
       `scaffold file is not one ordinary single-link file: ${file}`,
     );
