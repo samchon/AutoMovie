@@ -1,6 +1,7 @@
 import {
   type IAutoMovieProductionRenderFrame,
   canonicalProductionFrameRate,
+  compareCodeUnits,
   equalProductionFrameRates,
   productionFilmEffectEditFingerprint,
   productionFrameBoundaryToGridTick,
@@ -1361,9 +1362,6 @@ const validDigest = (value: string): boolean =>
 
 const digestJson = (value: unknown): AutoMovieContentDigest =>
   digestAutoMovieBytes(canonicalAutoMovieJsonBytes(value));
-
-const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
 
 interface IProductionOwnedPathIdentity {
   file: string;

@@ -20,9 +20,12 @@ import { validateProductionFilmEffectIdentity } from "./validateProductionFilmEf
  * Materialize normalized film cues into current, deterministic effect streams.
  *
  * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Makes an accepted film cue observable through the existing bounded runtime.
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authored-solved Writes each derived stream beside the authored cue identity, frames and intensity it came from, so author input and derived seed, recipe and digest stay distinguishable.
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-scope-refusal Refuses a cue without a world zone, recipe, frame interval or bounded intensity, or with a recipe outside the world-zone tier, instead of running an unbounded or silently empty effect.
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Derives every stream from current content identities rather than playback history.
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-platform-determinism Fixes iteration order and canonical serialization of the materialized runtime so a platform difference surfaces as an identity change rather than silent drift.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Gives film-global and shot-local cues disjoint, checked ownership.
+ * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#simulation-effects-sound-common-invariants Keeps cue identities unique, gives each zone one owner per frame, reduces time to integer frames and refuses a missing zone or recipe instead of guessing it.
+ * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#simulation-effects-sound-prototype-fidelity-ceiling Emits only the bounded world-zone billboard tier with its recipe budget and zone bounds and refuses any other cue recipe rather than approximating it.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Produces immutable streams that can be sampled in any order.
  */
 export const materializeProductionFilmEffects = (props: {

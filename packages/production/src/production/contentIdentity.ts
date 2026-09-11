@@ -1,19 +1,22 @@
 import {
   AutoMovieCanonicalJsonError,
   canonicalizeAutoMovieJson,
+  compareCodeUnits,
 } from "@automovie/engine";
 import { AutoMovieContentDigest } from "@automovie/interface";
 import { createHash } from "node:crypto";
 
 import { decodeAutoMovieUtf8 } from "./strictUtf8";
 
-// The canonical JSON v2 implementation is the engine's, so a browser consumer
-// computes the identity without this Node module. These names stay reachable
-// here because Node project services import them from this module.
+// The canonical JSON v2 implementation and its code-unit order are the
+// engine's, so a browser consumer computes the identity without this Node
+// module and both packages sort with one comparator. These names stay
+// reachable here because Node project services import them from this module.
 export {
   AutoMovieCanonicalJsonError,
   type AutoMovieCanonicalJsonErrorCategory,
   canonicalizeAutoMovieJson,
+  compareCodeUnits,
 } from "@automovie/engine";
 
 /**
@@ -393,12 +396,6 @@ export const fingerprintAutoMovieFields = (
     }
   return `sha256:${hash.digest("hex")}`;
 };
-
-/**
- * Compare UTF-16 code units for deterministic filesystem and JSON ordering.
- */
-export const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
 
 /** Exact lossy predecessor used only to verify a declared v1 source digest. */
 const legacyNormalizeAutoMovieSource = (source: Uint8Array): Uint8Array => {
