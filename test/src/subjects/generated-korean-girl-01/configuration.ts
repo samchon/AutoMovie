@@ -79,7 +79,7 @@ export const portraitEyeSockets: IPortraitEyeSocket[] = [
 export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
-  widthScale: 0.98,
+  widthScale: 1.06,
   // Preserve the measured vertical opening while the lower roll is fitted;
   // the pretarsal component must never compensate by shrinking the eye.
   openingScale: 1.04,
