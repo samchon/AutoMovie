@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import type { IAutoMovieProductionSourceEvaluation } from "./IAutoMovieProductionSourceEvaluation";
+import type { IAutoMovieProductionSourceGateTrace } from "./IAutoMovieProductionSourceGateTrace";
 import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
 import { listAutoMovieProjectModules } from "./listAutoMovieProjectModules";
 import { normalizeSlash } from "./productionBuildDiagnostics";
@@ -40,15 +41,9 @@ export const evaluateAutoMovieProductionSource = (props: {
      * Run the read-only gate at source scope and report every author-owned
      * document its validation read.
      */
-    lintSource(): {
+    lintSource(): IAutoMovieProductionSourceGateTrace & {
       /** The gate's own answer. */
       output: IAutoMovieBuildProjectOutput;
-
-      /** Every document read, in read order, with the text or `null`. */
-      documents: ReadonlyArray<{ path: string; content: string | null }>;
-
-      /** Whether the answer read the project revision into what it judged. */
-      revisionBound: boolean;
     };
   };
 
