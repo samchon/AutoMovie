@@ -4,8 +4,6 @@ import {
   placeFormationSlot,
   rotateFormationLocalOffset,
   sampleFormationSlotMotion,
-} from "@automovie/engine";
-import {
   validateAutoMovieFormationGround,
   validateAutoMovieFormationSlotMotions,
 } from "@automovie/engine";

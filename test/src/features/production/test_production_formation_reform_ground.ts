@@ -1,8 +1,8 @@
 import {
   IAutoMovieFormationPlacement,
   formationSlotPosition,
+  validateAutoMovieFormationGround,
 } from "@automovie/engine";
-import { validateAutoMovieFormationGround } from "@automovie/engine";
 import {
   IAutoMovieFormationDesign,
   IAutoMovieFormationMotion,

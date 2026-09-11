@@ -1,8 +1,8 @@
 import {
   IAutoMovieFormationPlacement,
+  validateAutoMovieFormationGround,
   worldHeightfield,
 } from "@automovie/engine";
-import { validateAutoMovieFormationGround } from "@automovie/engine";
 import type {
   IAutoMovieFormationDesign,
   IAutoMovieSpace,

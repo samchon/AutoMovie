@@ -1,5 +1,7 @@
-import type { IAutoMovieFormationPlacement } from "@automovie/engine";
-import { validateAutoMovieFormationGround } from "@automovie/engine";
+import {
+  type IAutoMovieFormationPlacement,
+  validateAutoMovieFormationGround,
+} from "@automovie/engine";
 import type {
   IAutoMovieDiagnostic,
   IAutoMovieFormationMotion,

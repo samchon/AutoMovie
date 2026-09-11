@@ -1,9 +1,9 @@
 import {
   IAutoMovieFormationPlacement,
+  validateAutoMovieFormationGround,
   worldRamp,
   worldTerrain,
 } from "@automovie/engine";
-import { validateAutoMovieFormationGround } from "@automovie/engine";
 import {
   IAutoMovieFormationDesign,
   IAutoMovieSpace,
