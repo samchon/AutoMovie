@@ -37,4 +37,4 @@ A local edit is sufficient only when the complete trace proves no wider narrativ
 
 In the normal process report or handoff, name the boundary, reviewed files and populations, findings and repairs, verification results, final clean round, and any consequence outside the author's authority. Do not create a dedicated approval artifact, ledger, fingerprint, stage, or status file for this review.
 
-This review does not replace evidence lint, evidence review, compiler gates, or the final [whole-production review](review.md#final-whole-production-review). The final whole-production review still requires two consecutive clean rounds; this process review requires one clean round at each boundary.
+This review does not replace evidence lint, evidence review, builder gates, or the final [whole-production review](review.md#final-whole-production-review). The final whole-production review still requires two consecutive clean rounds; this process review requires one clean round at each boundary.

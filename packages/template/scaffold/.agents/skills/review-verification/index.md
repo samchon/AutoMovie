@@ -1,6 +1,6 @@
 # Review and viewer verification
 
-Review the declared work against its exact current source, compiled artifact, target contracts, and observation denominator. A passing compiler is necessary but never visual proof. Capture writes real PNGs: open the current images and state what they show in the evidence citation that claims realization. A citation with no observation is not a review.
+Review the declared work against its exact current source, compiled artifact, target contracts, and observation denominator. A passing builder is necessary but never visual proof. Capture writes real PNGs: open the current images and state what they show in the evidence citation that claims realization. A citation with no observation is not a review.
 
 ## Required routes
 

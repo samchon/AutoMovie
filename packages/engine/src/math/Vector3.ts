@@ -91,21 +91,50 @@ export namespace Vector3 {
 
   /**
    * Euclidean vector magnitude.
+   * Ordinary components retain the established dot/square-root arithmetic.
+   * Extreme finite components use hypot so a representable magnitude does not
+   * overflow or underflow merely because its square is unrepresentable.
    *
    * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Measures Euclidean distance from explicit vector components.
    * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Measures Euclidean distance from explicit vector components.
    */
-  export const length = (a: IAutoMovieVector3): number => Math.sqrt(dot(a, a));
+  export const length = (a: IAutoMovieVector3): number =>
+    normalizationScale(a) === 0
+      ? Math.sqrt(dot(a, a))
+      : Math.hypot(a.x, a.y, a.z);
 
   /**
    * Return a unit-length copy, or the zero vector for zero length.
+   * Extreme finite vectors are reduced before measuring and dividing, allowing
+   * even subnormal components and an overflowing total magnitude to retain
+   * their direction. Ordinary vectors preserve their existing arithmetic.
    *
    * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Produces a unit direction, with a finite zero-vector result for the degenerate case.
    * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Produces a unit direction, with a finite zero-vector result for the degenerate case.
    */
   export const normalize = (a: IAutoMovieVector3): IAutoMovieVector3 => {
-    const len = length(a);
-    return len === 0 ? create(0, 0, 0) : scale(a, 1 / len);
+    const divisor = normalizationScale(a);
+    const value =
+      divisor === 0
+        ? a
+        : { x: a.x / divisor, y: a.y / divisor, z: a.z / divisor };
+    const len = length(value);
+    return len === 0 ? create(0, 0, 0) : scale(value, 1 / len);
+  };
+
+  /**
+   * Select a scale only outside the safe squared-component range. At magnitude
+   * 2^-511 the largest component's square is normal; three squares of 2^511 still
+   * fit Float64. These are arithmetic thresholds, not restrictions on vector
+   * input. Returning zero keeps ordinary, zero and nonfinite legacy paths.
+   */
+  const normalizationScale = (a: IAutoMovieVector3): number => {
+    const largest = Math.max(Math.abs(a.x), Math.abs(a.y), Math.abs(a.z));
+    return Number.isFinite(largest) &&
+      largest > 0 &&
+      (largest < 2 ** -511 || largest > 2 ** 511)
+      ? largest
+      : 0;
   };
 
   /**

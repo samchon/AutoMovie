@@ -107,7 +107,7 @@ interface IInstanceChunkObject {
  * hundred thousand members holds one batch per chunk, prototype and LOD tier,
  * and each member costs one instance matrix rather than one object.
  *
- * A prototype is either the compiler's generated recipe or a host-loaded
+ * A prototype is either the builder's generated recipe or a host-loaded
  * object; passing `prototypeObjects` is what lets a registered static glTF be
  * the prototype, and it is flattened by the same rigid path a generated recipe
  * takes. Rigid is the whole condition: a skinned, morphed, or multi-material
@@ -125,7 +125,7 @@ export const buildInstancedInstanceSet = (input: {
    * Already-loaded prototype objects keyed by runtime model id.
    *
    * A host that has decoded a registered external asset passes it here; a model
-   * absent from the map is built from its compiler-owned recipe instead.
+   * absent from the map is built from its builder-owned recipe instead.
    */
   prototypeObjects?: ReadonlyMap<string, IAutoMovieModelObject>;
 }): IAutoMovieInstanceSetViewerObject => {
@@ -240,7 +240,7 @@ export const buildInstancedInstanceSet = (input: {
             // off would silently brighten every instanced set while materials
             // built from an `IAutoMovieColor` triple stayed where they were.
             // Decoding explicitly is also what makes the two authoring paths
-            // one conversion: the compiler decodes a recipe palette with this
+            // one conversion: the builder decodes a recipe palette with this
             // same function on its way into `baseColor`.
             let paint = paletteColors.get(slot.palette);
             if (paint === undefined) {
@@ -626,7 +626,7 @@ const instancePoint = (
   // The chosen segment always has positive length. Every slot's arc-length is
   // strictly above zero, an earlier segment is only taken when it covers that
   // length, and the final one is only reached with what is left of a route the
-  // compiler already refused to materialize at zero length.
+  // builder already refused to materialize at zero length.
   const ratio = Math.min(1, remaining / segment.length);
   const tangentX = segment.right.x - segment.left.x;
   const tangentZ = segment.right.z - segment.left.z;
@@ -715,11 +715,11 @@ const boundsRadius = (
  * One instance set's base heading in radians, to the last bit.
  *
  * Not `THREE.MathUtils.degToRad`. That multiplies by a rounded `PI / 180`,
- * while the compiler divides by 180 after multiplying by `Math.PI`, and the two
+ * while the builder divides by 180 after multiplying by `Math.PI`, and the two
  * disagree in the final ulp for a great many headings: a plain three-degree set
  * already puts a slot's compiled `position.z` and the viewer's regenerated one
  * on different doubles. The viewer regenerates a slot rather than reading one,
- * so the arithmetic has to be the compiler's own, not merely equivalent.
+ * so the arithmetic has to be the builder's own, not merely equivalent.
  */
 const instanceHeadingRadians = (facingDeg: number): number =>
   (facingDeg * Math.PI) / 180;

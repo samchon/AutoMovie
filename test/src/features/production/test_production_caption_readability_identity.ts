@@ -43,7 +43,7 @@ const timeline = (
   captions: IAutoMovieFilmTimeline["tracks"]["captions"],
 ): IAutoMovieFilmTimeline => ({
   version: 1,
-  compiler: "caption-identity-fixture",
+  builder: "caption-identity-fixture",
   inputFingerprint: "sha256:caption-identity",
   sourceDigest: "sha256:caption-source",
   id: "caption-identity",

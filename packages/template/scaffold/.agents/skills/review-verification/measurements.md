@@ -1,6 +1,6 @@
 # Offline measurements
 
-Use these measurements after a current compile when a design question is exact in generated geometry or bindings and a frame would answer it only indirectly. They read compiler-owned state rather than source, and they do not become compiler output, delivery evidence, or a review verdict. Open every emitted artifact, read every finding and census, and state the resulting observation in the design review that asked the question.
+Use these measurements after a current compile when a design question is exact in generated geometry or bindings and a frame would answer it only indirectly. They read builder-owned state rather than source, and they do not become builder output, delivery evidence, or a review verdict. Open every emitted artifact, read every finding and census, and state the resulting observation in the design review that asked the question.
 
 These commands refuse missing or stale generated state. Compile again before measuring rather than treating old output as evidence about changed source.
 

@@ -138,7 +138,7 @@ export interface IAutoMovieFormationLodSelection {
 /**
  * Regenerate one exact source-designed formation slot in constant memory.
  *
- * The compiler and ordinary measurement scripts share this pure derivation so a
+ * The builder and ordinary measurement scripts share this pure derivation so a
  * slot queried from loaded project state is exactly the slot materialized into
  * the compiled formation. No filesystem or project state is consulted.
  *
@@ -187,11 +187,11 @@ export const formationSlot = (
  * is part of where that member stands: a consumer that could ask for a position
  * without the ground would be a consumer that places a crowd flat, which is the
  * defect this exists to remove. The compiled formation snapshots exactly these
- * surfaces, so the compiler, the gate, the viewer and an offline measurement
+ * surfaces, so the builder, the gate, the viewer and an offline measurement
  * script all place from one record and cannot answer differently.
  *
  * @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation Retains the authoritative ground snapshot used to check every slot's placement and bounds.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Gives compiler, renderer, and validation one shared terrain input for formation layout.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Gives builder, renderer, and validation one shared terrain input for formation layout.
  */
 export interface IAutoMovieFormationGrounding {
   /**
@@ -227,7 +227,7 @@ export type IAutoMovieFormationPlacement = Pick<
  * The position half of {@link formationSlot}, taken on its own because a
  * consumer that only asks where a member is should not have to hold the hero
  * overrides and model recipe that name it. The compiled formation carries
- * exactly this much, so the compiler can ask about a member without reaching
+ * exactly this much, so the builder can ask about a member without reaching
  * back for the design record beside it.
  *
  * A second implementation of this arithmetic is how a gate and a renderer come
@@ -324,7 +324,7 @@ export const formationGroundRelief = (
  * Every member measures its relief against this one number, and a formation of
  * a hundred thousand members would otherwise ask the same question of the same
  * polygons a hundred thousand times. Keyed by the record itself, exactly as the
- * compiler keys the members it judges a unit by, so nothing outlives the
+ * builder keys the members it judges a unit by, so nothing outlives the
  * placement that asked.
  */
 const formationGroundDatum = (
@@ -473,7 +473,7 @@ export const sampleFormationMotion = (
  * Apply a sampled formation state to one designed world-space point.
  *
  * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Applies spacing in the unit frame, then facing and translation, so repeated motion samples produce the same member position.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Provides the shared point transform used by oracle, compiler, and renderer formation paths.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Provides the shared point transform used by oracle, builder, and renderer formation paths.
  */
 export const transformFormationPoint = (
   point: IAutoMovieVector3,
@@ -509,7 +509,7 @@ export const transformFormationPoint = (
  *
  * This lives beside the point transform it composes rather than beside either
  * caller. Two consumers ask where a unit is: the oracle reports it and the
- * compiler refuses a unit standing off the ground its shot staged, and a
+ * builder refuses a unit standing off the ground its shot staged, and a
  * private copy in one of them is how the two come to disagree.
  *
  * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Recomputes conservative world bounds from every transformed corner for the current cue state.
@@ -549,7 +549,7 @@ export const transformFormationBounds = (
  * placement and motion.
  *
  * Translation keeps authored node/object-motion displacement relative to the
- * compiler-owned hero slot. Rotation applies the current formation facing
+ * builder-owned hero slot. Rotation applies the current formation facing
  * before the authored rotation relative to that slot, while scale remains
  * source-owned.
  *
@@ -703,7 +703,7 @@ export const easingProgress = (
  * choice in the recipe, where an author already orders them, instead of in
  * whichever consumer asked first. It lives here rather than beside the bake
  * because two consumers need the same answer for opposite reasons: the viewer
- * bakes a table per declared gait, and the compiler refuses a cue calling for a
+ * bakes a table per declared gait, and the builder refuses a cue calling for a
  * gait that is not among them. Two spellings of "what can this figure do" is
  * how a production compiles clean and then fails to draw.
  *

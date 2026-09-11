@@ -207,7 +207,7 @@ const ensureCoordinationRoot = (): void => {
 };
 
 // One fenced operation can invoke another inside the same process -- a guarded
-// commit runs the read-only compiler gate -- so a coordinate is reached twice.
+// commit runs the read-only builder gate -- so a coordinate is reached twice.
 // The commit lock counts that nesting itself, which is why these stay direct
 // calls rather than a second depth map over the same paths.
 const acquireCoordinate = (

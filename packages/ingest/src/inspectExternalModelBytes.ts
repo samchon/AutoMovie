@@ -16,7 +16,7 @@ export interface IAutoMovieExternalModelResource {
   /**
    * URI as declared by glTF.
    *
-   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-location-boundary Keeps the declared locator visible for compiler-owned resolution.
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-location-boundary Keeps the declared locator visible for builder-owned resolution.
    * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-locator-redirect-fence Resolution remains outside the inspector's provider-neutral boundary.
    */
   uri: string;
@@ -37,9 +37,9 @@ export interface IAutoMovieExternalModelResource {
 }
 
 /**
- * Byte-level facts accepted by the external-model compiler boundary.
+ * Byte-level facts accepted by the external-model builder boundary.
  *
- * This inspection is intentionally synchronous: the production compiler owns
+ * This inspection is intentionally synchronous: the production builder owns
  * exact resident bytes and must reject malformed glTF/GLB/VRM before source
  * materialization. Hosts still use their native loader to construct the final
  * render mesh from the same content-addressed asset.
@@ -96,7 +96,7 @@ export interface IAutoMovieExternalModelInspection {
   /**
    * Unique non-data external buffer/image dependencies in URI order.
    *
-   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Enumerates the exact external closure the compiler must bind.
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Enumerates the exact external closure the builder must bind.
    * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Emits dependencies in deterministic URI order.
    */
   resources: IAutoMovieExternalModelResource[];
@@ -231,7 +231,7 @@ export interface IAutoMovieExternalMotionInspection {
 }
 
 /**
- * Supported fixed normalization profiles at the compiler ingest boundary.
+ * Supported fixed normalization profiles at the builder ingest boundary.
  *
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families Adds motion as one explicit, versioned glTF profile.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-extensible-media-profile Keeps format expansion additive and bounded.
@@ -282,7 +282,7 @@ export const isAutoMovieExternalModelIngestProfile = (
  *
  * The inspector accepts glTF 2.0 JSON, GLB 2.0, and VRM 0.x/1.x GLB containers,
  * validates scene forests, referenced indices and structural profile promises,
- * and returns every sidecar URI the compiler must bind to manifest-owned bytes.
+ * and returns every sidecar URI the builder must bind to manifest-owned bytes.
  * It never guesses a profile or repairs malformed input.
  *
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Provides the bounded external model and motion inspection capability.
@@ -329,14 +329,13 @@ export const isAutoMovieExternalModelIngestProfile = (
  * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-semantic-preservation Ingest emits no declared or measured bounds, proxy lineage, LOD policy, transition, or derivative freshness result.
  * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Ingest emits no declared or measured bounds, proxy lineage, LOD policy, transition, or derivative freshness result.
  * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-stale-refusal Ingest emits no declared or measured bounds, proxy lineage, LOD policy, transition, or derivative freshness result.
- * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Ingest returns bounded facts and a motion handoff, while the compiler owns the complete canonical conversion, loss, digest, and freshness receipt.
- * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Ingest returns bounded facts and a motion handoff, while the compiler owns the complete canonical conversion, loss, digest, and freshness receipt.
- * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-generation-reproducibility-boundary Ingest returns bounded facts and a motion handoff, while the compiler owns the complete canonical conversion, loss, digest, and freshness receipt.
- * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-freshness Ingest returns bounded facts and a motion handoff, while the compiler owns the complete canonical conversion, loss, digest, and freshness receipt.
+ * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Ingest returns bounded facts and a motion handoff, while the builder owns the complete canonical conversion, loss, digest, and freshness receipt.
+ * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Ingest returns bounded facts and a motion handoff, while the builder owns the complete canonical conversion, loss, digest, and freshness receipt.
+ * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-generation-reproducibility-boundary Ingest returns bounded facts and a motion handoff, while the builder owns the complete canonical conversion, loss, digest, and freshness receipt.
+ * @evidenceExclude requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-freshness Ingest returns bounded facts and a motion handoff, while the builder owns the complete canonical conversion, loss, digest, and freshness receipt.
  * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Public inspection inputs and results admit no credential, token, provider account, or secret-bearing authority.
  * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-source-record The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
  * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
- * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-rights-license-conditions The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
  * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-sensitive-data The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
  * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
  * @evidenceExclude requirements/external-inputs/identity-coordinates-and-units.md#external-identity-content-provenance Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
@@ -395,7 +394,6 @@ export const isAutoMovieExternalModelIngestProfile = (
  * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-secret-reference-boundary The byte inspection contract has no field through which a secret can enter facts, diagnostics, or adoption output.
  * @evidenceExclude specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-source-provenance-snapshot Ingest accepts no secret or rights authority and emits no provenance, generation, sensitivity, derivation, consumer, or publication ledger.
  * @evidenceExclude specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot Ingest accepts no secret or rights authority and emits no provenance, generation, sensitivity, derivation, consumer, or publication ledger.
- * @evidenceExclude specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-rights-publication-gate Ingest accepts no secret or rights authority and emits no provenance, generation, sensitivity, derivation, consumer, or publication ledger.
  * @evidenceExclude specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-sensitive-metadata-projection Ingest accepts no secret or rights authority and emits no provenance, generation, sensitivity, derivation, consumer, or publication ledger.
  * @evidenceExclude specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability Ingest accepts no secret or rights authority and emits no provenance, generation, sensitivity, derivation, consumer, or publication ledger.
  * @evidenceExclude specifications/interchange-and-adoption/revision-refresh-and-offline-cache.md#interchange-external-version-snapshot Ingest performs no version snapshot, refresh transaction, stale propagation, offline certification, cache identity, or unavailable-source recovery.
@@ -465,7 +463,7 @@ export const isAutoMovieExternalModelIngestProfile = (
  * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-layered-validation Separately checks container, graph, resources, accessors, rig, and motion semantics.
  * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-active-content-isolation The supported format subset has no executable active-content surface.
  * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-atomic-adoption-gate Returns no partial inspection after any required check fails.
- * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-validation-result-envelope Uses explicit diagnostics but leaves the shared status envelope to the compiler.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-validation-result-envelope Uses explicit diagnostics but leaves the shared status envelope to the builder.
  * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-quarantine-exposure-removal Quarantine storage and release policy is outside this pure decoder.
  */
 export const inspectAutoMovieExternalModelBytes = (props: {
@@ -475,7 +473,7 @@ export const inspectAutoMovieExternalModelBytes = (props: {
   bytes: Uint8Array;
   /** Caller-selected fixed interpretation profile. */
   profile: string;
-  /** Exact sidecar bytes, resolved inside the compiler-owned asset namespace. */
+  /** Exact sidecar bytes, resolved inside the builder-owned asset namespace. */
   resolveResource?: (uri: string) => Uint8Array | null;
 }): IAutoMovieExternalModelInspection => {
   if (!SUPPORTED_PROFILES.has(props.profile))
@@ -1419,7 +1417,7 @@ const validatePayloadClosure = (props: {
         bytes = props.resolveResource?.(uri) ?? null;
         if (bytes === null)
           throw new Error(
-            `External buffer "${uri}" has no compiler-resolved resident bytes.`,
+            `External buffer "${uri}" has no builder-resolved resident bytes.`,
           );
         if (bytes.byteLength !== length)
           throw new Error(
@@ -1463,7 +1461,7 @@ const validatePayloadClosure = (props: {
       : (props.resolveResource?.(image.uri) ?? null);
     if (bytes === null || bytes.byteLength === 0)
       throw new Error(
-        `External image "${image.uri}" has no non-empty compiler-resolved resident bytes.`,
+        `External image "${image.uri}" has no non-empty builder-resolved resident bytes.`,
       );
   });
   return payloads;

@@ -23,7 +23,7 @@ import { resolveCameraAt } from "./cameraProjection";
 import { nodeSubjectBox } from "./subjectExtent";
 
 /**
- * Geometry-revision and fixed-clock authority supplied by the compiler.
+ * Geometry-revision and fixed-clock authority supplied by the builder.
  *
  * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision Binds one clearance evaluation to the geometry revision read and the revision still current.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Supplies the deterministic clock and freshness authority used before a take is admitted.
@@ -373,7 +373,7 @@ export function compileCameraClearanceReports(props: {
     props.out.push(
       "type",
       "$input.cameraClearance",
-      "a camera with a physical clearance envelope requires compiler-owned geometry revision and fixed-clock context",
+      "a camera with a physical clearance envelope requires builder-owned geometry revision and fixed-clock context",
       undefined,
     );
     return undefined;

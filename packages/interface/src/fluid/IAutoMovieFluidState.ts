@@ -269,7 +269,7 @@ export interface IAutoMovieFluidSpraySample {
 }
 
 /**
- * The bounded cost a fluid domain adds to a shot, for the compiler report.
+ * The bounded cost a fluid domain adds to a shot, for the builder report.
  *
  * Every field is derived from the domain record alone, so a production can be
  * refused for an unaffordable water feature before a single step is

@@ -1,9 +1,9 @@
 # `@automovie/ingest`
 
-`inspectAutoMovieExternalModelBytes` is the synchronous production compiler
+`inspectAutoMovieExternalModelBytes` is the synchronous production builder
 boundary for registered glTF 2.0, GLB 2.0, and VRM bytes. It validates a closed
 ingest profile, container chunks, buffer/accessor payload ranges, render-mesh
-presence, and authoritative normalized humanoid mappings. The compiler supplies
+presence, and authoritative normalized humanoid mappings. The builder supplies
 exact sidecar bytes to the synchronous resolver; missing or short payloads are
 rejected, and the result identifies the closed buffer/image dependency set. It
 does not load files, infer missing sidecars, or guess a humanoid mapping after

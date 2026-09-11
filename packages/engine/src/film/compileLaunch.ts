@@ -25,7 +25,7 @@ export interface IAutoMovieLaunchResult {
    * The projectile node's baked flight clip (translation + aim rotation).
    *
    * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Carries the deterministic translation and aim-rotation samples baked from the engine's analytic launch solution.
-   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Materializes the realized analytic trajectory as the projectile node's compiler-ready motion clip.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Materializes the realized analytic trajectory as the projectile node's builder-ready motion clip.
    */
   clip: IAutoMovieClip;
 
