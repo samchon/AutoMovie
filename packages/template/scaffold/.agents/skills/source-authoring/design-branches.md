@@ -58,7 +58,7 @@ Read [Building reports](../review-verification/measurements.md#building-reports)
 
 Read [Texture scale](../review-verification/measurements.md#texture-scale) when a review depends on a physical or normalized texture scale surviving the geometry that receives it.
 
-Read [Geometry questions](../review-verification/measurements.md#geometry-questions) when an instances review needs where one member stands or what prototype it drew, or whether a formation stands on its ground in a shot, instead of estimating either from a frame.
+Read [Geometry questions](../review-verification/measurements.md#geometry-questions) when a review needs whether a formation stands on its ground in a shot, and the [TypeScript Authoring Handbook](typescript.md) when an instances review needs where one member stands or which prototype it drew, instead of estimating either from a frame.
 
 Read the reported census or empty-population state; command availability and exit code alone never complete the review set.
 
