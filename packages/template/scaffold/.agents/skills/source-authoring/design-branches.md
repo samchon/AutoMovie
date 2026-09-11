@@ -58,6 +58,8 @@ Read [Building reports](../review-verification/measurements.md#building-reports)
 
 Read [Texture scale](../review-verification/measurements.md#texture-scale) when a review depends on a physical or normalized texture scale surviving the geometry that receives it.
 
+Read [Geometry questions](../review-verification/measurements.md#geometry-questions) when an instances review needs where one member stands or what prototype it drew, or whether a formation stands on its ground in a shot, instead of estimating either from a frame.
+
 Read the reported census or empty-population state; command availability and exit code alone never complete the review set.
 
 A library-only space branch is drawn by `building:report` from what it materialized, so it needs no shot; never create a dummy one to make the command run. What it does not have is frames, and the report says so in its own tally, which is what a review citing a materialized building has to cite.
