@@ -5,11 +5,11 @@ import path from "node:path";
  *
  * A module under the project root and outside every `node_modules` directory
  * is authored project code that an edit can change between two builds, while
- * an installed package stays the same for the life of the process. The builder
- * evicts exactly this selection before it evaluates source, so the edit is what
- * runs, and the source status reads exactly this selection after an evaluation
- * to learn which project files the answer executed. One predicate serves both,
- * so the modules one side evicts are the modules the other side accounts for.
+ * an installed package stays the same for the life of the process. Evicting
+ * exactly this selection before a gate run makes an edit the code that runs,
+ * and the source evaluation reads exactly this selection after the run to learn
+ * which project files the answer executed. When both sides use this one
+ * predicate, the modules one side evicts are the modules the other accounts for.
  */
 export const listAutoMovieProjectModules = (props: {
   /** Absolute project root. */

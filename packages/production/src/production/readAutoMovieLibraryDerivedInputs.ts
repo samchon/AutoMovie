@@ -19,9 +19,9 @@ import { contentFingerprintFields } from "./productionBuildIdentity";
  *
  * A library's input identity ends with its declared content inventory and the
  * verified derivation closure, and its execution receives the admitted derived
- * artifacts from the same read. Both the compile and every later currentness
- * check read that closure through this one function, so the fields a result was
- * bound to and the fields a check recomputes cannot drift apart.
+ * artifacts from the same read. A compile and a later currentness check that both
+ * read the closure through this one function cannot drift apart on the fields a
+ * result was bound to, which is why the source snapshot reads it here.
  *
  * An unreadable inventory is not an exception. It becomes the
  * `content:inventory` unsafe field and a `content-input-unsafe` diagnostic, and

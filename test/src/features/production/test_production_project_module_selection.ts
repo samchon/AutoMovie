@@ -26,7 +26,7 @@ const { listAutoMovieProjectModules } = loadSourceModule<{
  *    their loaded order.
  * 2. The root itself, a package under the root's `node_modules`, a package under
  *    a nested `node_modules`, a sibling checkout, a path elsewhere on the same
- *    volume, and a path on another volume are not.
+ *    volume, and a path spelled on another Windows drive are not.
  */
 export const test_production_project_module_selection = (): void => {
   const root = path.join(path.parse(process.cwd()).root, "workspace", "harbor");

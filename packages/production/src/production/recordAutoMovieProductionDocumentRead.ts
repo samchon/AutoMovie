@@ -3,8 +3,8 @@ import type { IAutoMovieProductionSourceGateTrace } from "./IAutoMovieProduction
 /**
  * Wrap one author-owned document reader so every read lands in the gate trace.
  *
- * The builder hands one reader to every validation that reads prose, so the
- * trace holds each path in the order it was read with the exact text that
+ * A builder that hands this one reader to every validation that reads prose gets
+ * a trace holding each path in the order it was read with the exact text that
  * validation saw, a repeated read included. A read that throws records nothing
  * and propagates, because the gate run it belongs to fails with it. Without a
  * trace the reader is returned as it was, so an ordinary compile or lint pays
