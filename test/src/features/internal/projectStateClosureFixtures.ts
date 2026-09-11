@@ -1,5 +1,5 @@
 import type {
-  IAutoMovieCompileProjectOutput,
+  IAutoMovieBuildProjectOutput,
   IAutoMovieDiagnostic,
   IAutoMovieGeneratedManifest,
 } from "@automovie/interface";
@@ -14,14 +14,14 @@ import type {
 export const createProjectStateClosureFixture = () => {
   const manifest: IAutoMovieGeneratedManifest = {
     version: 1,
-    compiler: { packageVersion: "1", protocolVersion: "1" },
+    builder: { packageVersion: "1", protocolVersion: "1" },
     inputFingerprint: `sha256:${"a".repeat(64)}`,
     files: [],
   };
-  const initial: IAutoMovieCompileProjectOutput = {
+  const initial: IAutoMovieBuildProjectOutput = {
     success: true,
     revision: 7,
-    compiler: { version: "1", inputFingerprint: manifest.inputFingerprint },
+    builder: { version: "1", inputFingerprint: manifest.inputFingerprint },
     diagnostics: [],
     materialized: [],
   };
@@ -45,7 +45,7 @@ export const createProjectStateClosureFixture = () => {
     revision: 7,
     manifest,
     manifestReadFailed: false,
-    compileStatus: initial,
+    buildStatus: initial,
     problems: [],
     design,
     read: {
@@ -79,7 +79,7 @@ export const createProjectStateClosureFixture = () => {
   };
 };
 
-/** A compiler-owned file failure whose identity is independent of source input. */
+/** A builder-owned file failure whose identity is independent of source input. */
 export const projectStateClosureTamperDiagnostic =
   (): IAutoMovieDiagnostic => ({
     code: "generated-tampered",

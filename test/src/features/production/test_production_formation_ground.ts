@@ -1,10 +1,10 @@
 import type { IAutoMovieFormationPlacement } from "@automovie/engine";
+import { validateAutoMovieFormationGround } from "@automovie/engine";
 import type {
   IAutoMovieDiagnostic,
   IAutoMovieFormationMotion,
   IAutoMovieSpace,
 } from "@automovie/interface";
-import { validateAutoMovieFormationGround } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts } from "../internal/predicates";

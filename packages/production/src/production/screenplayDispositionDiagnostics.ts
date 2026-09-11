@@ -29,8 +29,8 @@ export const screenplaySceneIncludedAtPhase = (
 /**
  * Validate scene disposition against every phase-local downstream claim.
  *
- * The input sets are normalized compiler facts. Their construction remains
- * with the compiler and edit owners; this helper owns only the state model and
+ * The input sets are normalized builder facts. Their construction remains
+ * with the builder and edit owners; this helper owns only the state model and
  * therefore never guesses whether a path, citation or frame means inclusion.
  */
 export const screenplayDispositionDiagnostics = (props: {

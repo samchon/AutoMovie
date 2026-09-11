@@ -281,7 +281,7 @@ export interface IAutoMovieCamera {
   /**
    * Physical camera-body and optional parent-rig clearance envelopes.
    *
-   * Optional for legacy scenes. When present, a shot compiler must evaluate
+   * Optional for legacy scenes. When present, a shot builder must evaluate
    * this camera on the current scene revision before publishing the take.
    *
    * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Carries the declared physical body and support volumes into the resolved scene.

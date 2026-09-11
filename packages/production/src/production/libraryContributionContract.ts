@@ -27,8 +27,6 @@ const LIBRARY_BRANCHES = [
  * them yet, so compilation refuses their result explicitly instead of
  * promoting a structurally convenient nested record as completion.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Prevents an empty, cross-branch, or unsupported source result from being recorded as its reviewed owner's completed artifact.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Enforces the branch-specific result carrier before derived library state is materialized and keeps unsupported capability explicit.
  * @author Samchon
  */
 export const autoMovieLibraryContributionDiagnostics = (
@@ -50,7 +48,7 @@ export const autoMovieLibraryContributionDiagnostics = (
           : undefined;
   if (expected === undefined)
     return [
-      `Library source branch "${branch}" has no supported standalone result carrier. Keep its reviewed source in authoring until the compiler exposes that semantic result instead of nesting it inside another owner's environment or model.`,
+      `Library source branch "${branch}" has no supported standalone result carrier. Keep its reviewed source in authoring until the builder exposes that semantic result instead of nesting it inside another owner's environment or model.`,
     ];
   const populations = {
     contexts: contribution.contexts ?? [],

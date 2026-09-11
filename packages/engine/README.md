@@ -22,7 +22,7 @@ analyzer.
 besides the surviving findings it returns the declarations that excepted
 nothing, so a marker for a break the edit never makes can be reported rather
 than read as a registered intent. `analyzeFilmGrammar` is its findings half.
-The production compiler calls it over the assembled film timeline, so the edit
+The production builder calls it over the assembled film timeline, so the edit
 is actually read rather than merely readable.
 
 ## Seeded primitives and world kit
@@ -40,9 +40,9 @@ one registered shot. `compileDefinedShot` runs the authored
 stage → block → perform pipeline directly in the engine, so a source module
 produces a deterministic shot artifact without anything wrapped around it.
 
-The returned runtime contains the compiler-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
+The returned runtime contains the builder-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
 
-Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so compiler and direct-link consumers lower the same production contract through the same engine path.
+Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so builder and direct-link consumers lower the same production contract through the same engine path.
 
 ## Interaction events
 
@@ -205,6 +205,9 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `autoMovieStoryInterval` | story 범위를 정규화된 시간 구간으로 변환 |
 | `fluidStateDigest` | 유체 상태의 재현 가능한 digest |
 | `tessellateToMesh` | parametric geometry를 검증 가능한 mesh로 tessellate |
+| `createAutoMovieMeshDepthSampler` | 실제 mesh의 X/Y/Z 방향 표면 깊이를 반복 조회해 부착 형상을 호스트 표면에 맞춤. 직접 얼굴 연구의 귀 부착에서 사용 |
+| `measureAutoMovieMeshClearance` | Measures signed directional separation over complete projected triangle intersections. Shared eyelid contact consumes its per-face minima; ray-parallel faces require another direction. |
+| `separateAutoMovieMeshSequence` | Rigidly separates an explicitly ordered mesh sequence along one axis from all measured pair constraints. The direct dental study uses it for proximal crown spacing. |
 | `resolveAffordanceSeat` | 착석 affordance의 지지 자세 해석 |
 | `pointSegmentDistance` | 공간 검증기가 공유하는 점-선분 거리 계산 |
 | `motionToClip` | motion 계약을 재생 가능한 clip으로 변환 |
@@ -243,7 +246,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 - **Tier 4 (temporal):** 시간 일관성. 키프레임 시간 단조성·duration 이내·각속도 상한.
 - **Tier 5 (topology):** non-manifold edge와 뒤집힌 winding 같은 mesh 구조 오류를 거부한다. 닫힌 solid가 필요한 호출자는 open boundary도 검사한다.
 
-검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자와 production compiler가 이 결과를 소비하며, lint와 compile 진단이 외부 에이전트의 일반적인 작성→실행→수정 루프로 되돌린다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
+검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자와 production builder가 이 결과를 소비하며, lint와 compile 진단이 외부 에이전트의 일반적인 작성→실행→수정 루프로 되돌린다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
 
 ## 좌표·각도 규약
 

@@ -6,3 +6,4 @@ export * from "./IAutoMovieMesh";
 export * from "./IAutoMovieGeometry";
 export * from "./IAutoMovieModelPart";
 export * from "./IAutoMovieModel";
+export * from "./IAutoMovieMeshDeformationField";

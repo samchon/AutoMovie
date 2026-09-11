@@ -57,7 +57,7 @@ export interface IAutoMovieFormationViewerStats {
    *
    * `near` and `far` count anonymous instance slots. `hero` counts promoted
    * hero objects still inside the frustum instead, because an anonymous slot
-   * can never select that tier: the compiler drops the hero tier from the
+   * can never select that tier: the builder drops the hero tier from the
    * anonymous LOD list. Anonymous accounting is therefore the sum of `near`,
    * `far`, `culled` and `removed`, and the hero count belongs beside it rather
    * than inside it.
@@ -148,7 +148,7 @@ interface IChunkObject {
  * it, so the members it singles out are located once and the per-frame work is
  * proportional to how many there are. A slot named but not found here — a
  * promoted hero, or an index outside the unit — simply has no instance to
- * write, which is what the compiler gate already refuses at compile time.
+ * write, which is what the builder gate already refuses at compile time.
  */
 interface ISlotException {
   /** Zero-based slot inside the whole formation. */
@@ -164,7 +164,7 @@ interface ISlotException {
 /**
  * Build one compact formation as chunked instance batches.
  *
- * Heroes are deliberately absent: the compiler promoted them to explicit scene
+ * Heroes are deliberately absent: the builder promoted them to explicit scene
  * nodes. Each LOD recipe is flattened into one mesh, keeping exactly one
  * 64-byte instance matrix and one 4-byte phase scalar per anonymous slot and
  * tier.
@@ -610,9 +610,9 @@ export const buildInstancedFormation = (input: {
  * Regenerate one exact slot from compact runtime parameters.
  *
  * The placement itself is the engine's. A viewer that re-derived the layout
- * arithmetic would be a second answer to the question the compiler already
+ * arithmetic would be a second answer to the question the builder already
  * answered, and the pixels would be the second one: that is how a dressed unit
- * came to be drawn on the exact lattice its compiler had deliberately broken,
+ * came to be drawn on the exact lattice its builder had deliberately broken,
  * and it is how a crowd on a rise would come to be drawn flat. What stays here
  * is only what a compiled record spells differently from a design: heroes are
  * promoted slots rather than overrides.
@@ -793,7 +793,7 @@ const ROOT_ORIGIN: IAutoMovieVector3 = Object.freeze({ x: 0, y: 0, z: 0 });
  * Only the point transform was ever affected. A heading turned into a
  * quaternion still goes through `setFromAxisAngle`, which performs the same
  * rounded multiply the engine's own `Quaternion.fromAxisAngle` performs, so
- * those conversions already agree and converting them "the compiler's way" is
+ * those conversions already agree and converting them "the builder's way" is
  * what would break them.
  */
 const formationSpacingOffset = (

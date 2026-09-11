@@ -24,13 +24,13 @@ const evidence = (kind: "brief" | "film" | "library") =>
   ({ manifest: { kind } }) as IAutoMovieProductionEvidence;
 
 /**
- * Timed compiler ownership follows the declared production kind.
+ * Timed builder ownership follows the declared production kind.
  *
  * Scenarios:
  *
  * 1. A direct brief uses brief owners without a screenplay prerequisite.
  * 2. A film and the compatible evidence-less path retain screenplay ownership.
- * 3. A library is excluded from the timed compiler path.
+ * 3. A library is excluded from the timed builder path.
  */
 export const test_production_timed_authoring_kind = (): void => {
   TestValidator.equals(

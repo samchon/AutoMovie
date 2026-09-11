@@ -40,11 +40,3 @@ Compile은 파생 원장을 읽고 각 record를 live filesystem에 대조한다
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring 새 checkout에서 공개 contract와 tracked bytes만으로 같은 경로를 검증하게 한다. -->
 
 Manifest, generator, input과 output path는 slash-separated canonical project-relative path다. Empty segment, dot traversal, backslash, absolute root, Windows drive prefix, reserved device basename, trailing dot·space와 NUL은 거부한다. Read와 publish는 physical project root를 고정하고 모든 existing ancestor와 leaf의 symlink·junction을 거부하며 atomic rename 직전에 root와 directory identity를 다시 확인한다.
-
-### 예산 경계 {#spec-authoring-precomputed-budget-boundary}
-
-<!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact 사전계산이 source 실행 제한을 없애지 않고 정당한 별도 경로를 제공하게 한다. -->
-
-이 계약은 source 실행 예산을 유지하고 output-size 또는 serialization-time 예산을 새로 정하지 않는다. Large artifact는 크기만으로 거부하지 않으며 compile context로 전달하는 비용은 별도 측정과 정책이 필요한 독립 방어선이다. 따라서 이 경로의 존재를 source나 output payload를 무제한으로 허용한다는 주장으로 사용할 수 없다.
-
-Library source owner는 build 함수 대신 현재 UTF-8 파생 산출물의 경로를 선언하여 완성된 contribution을 선택할 수 있다. 두 방식의 동시 선언, 미등록 경로와 다른 encoding은 거부한다. 선언을 평가하고 설계 소유권을 승인한 뒤 compiler가 검증된 bytes를 해석하며, 일반 build 결과와 같은 DTO·branch·공간 검증을 적용한다. 이 데이터 전달은 authored code를 실행하지 않으므로 모듈과 build의 1초 제한을 변경하지 않는다.

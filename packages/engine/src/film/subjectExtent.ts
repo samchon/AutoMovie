@@ -118,18 +118,18 @@ export const formationMemberExtent = (
  * The unit's designed bounds go through {@link transformFormationBounds} under
  * the cue {@link sampleFormationMotion} reports at that instant, so a mass that
  * has marched, wheeled, or closed its ranks is framed where it actually is.
- * Both reads are the compiler's own: the ground gate that refuses a member
+ * Both reads are the builder's own: the ground gate that refuses a member
  * standing off its staged surface asks the same two functions the same way, and
  * a second implementation here is how a gate and a camera come to disagree
  * about where a unit is.
  *
- * The transformed slot box is then widened by the member radius the compiler
+ * The transformed slot box is then widened by the member radius the builder
  * already derived for LOD projection and raised by the member's own extent,
  * because the box of slot POSITIONS is a footprint: the outermost member's body
  * hangs over its edge and its head stands above it.
  *
  * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion formationSubjectBox unions every member's sampled world extent at the addressed shot time into one live formation bound.
- * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants formationSubjectBox realizes dynamic-bounds invariants: The box one formation's members occupy at a shot-local instant. The unit's designed bounds go through {@link transformFormationBounds} under the cue {@link sampleFormationMotion} reports at that instant, so a mass that has marched, wheeled, or closed its ranks is framed where it actually is. Both reads are the compiler's own: the ground gate that refuses a member standing off its staged surface asks the same two functions the same way, and a second implementation here is how a gate and a camera come to disagree about where a unit is. The transformed slot box is then widened by the member radius the compiler already derived for LOD projection and raised by the member's own extent, because the box of slot POSITIONS is a footprint: the outermost member's body hangs over its edge and its head stands above it.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants formationSubjectBox realizes dynamic-bounds invariants: The box one formation's members occupy at a shot-local instant. The unit's designed bounds go through {@link transformFormationBounds} under the cue {@link sampleFormationMotion} reports at that instant, so a mass that has marched, wheeled, or closed its ranks is framed where it actually is. Both reads are the builder's own: the ground gate that refuses a member standing off its staged surface asks the same two functions the same way, and a second implementation here is how a gate and a camera come to disagree about where a unit is. The transformed slot box is then widened by the member radius the builder already derived for LOD projection and raised by the member's own extent, because the box of slot POSITIONS is a footprint: the outermost member's body hangs over its edge and its head stands above it.
  */
 export const formationSubjectBox = (props: {
   /** The unit being framed. */
@@ -268,7 +268,7 @@ export const nodeSubjectBox = (
 
 /**
  * The model-space box a node subject is framed and graded from: what its model
- * draws when the compiler supplied one, and the horizontally degenerate segment
+ * draws when the builder supplied one, and the horizontally degenerate segment
  * a rig span or the stand-in height describes when it did not.
  *
  * Stated once because a node is measured by the framing solve and again by the
@@ -283,7 +283,7 @@ export const nodeSubjectBox = (
  * horizontal extent even where its vertical one is unusable.
  *
  * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion nodeSubjectExtent exposes state-dependent asset extent: The model-space box a node subject is framed and graded from, the drawn box when a model was compiled and the degenerate segment a rig span or the stand-in height describes when it was not.
- * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectExtent realizes dynamic-bounds invariants: The model-space box a node subject is framed and graded from: what its model draws when the compiler supplied one, and the horizontally degenerate segment a rig span or the stand-in height describes when it did not. Stated once because a node is measured by the framing solve and again by the contract check, and two answers to what he fills is how a shot comes to be graded against a subject nobody framed. A model too short to measure keeps the stand-in height and its own floor, and keeps its measured width: a plaza slab 60 m across and 20 mm thick is a real horizontal extent even where its vertical one is unusable.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectExtent realizes dynamic-bounds invariants: The model-space box a node subject is framed and graded from: what its model draws when the builder supplied one, and the horizontally degenerate segment a rig span or the stand-in height describes when it did not. Stated once because a node is measured by the framing solve and again by the contract check, and two answers to what he fills is how a shot comes to be graded against a subject nobody framed. A model too short to measure keeps the stand-in height and its own floor, and keeps its measured width: a plaza slab 60 m across and 20 mm thick is a real horizontal extent even where its vertical one is unusable.
  */
 export const nodeSubjectExtent = (
   extent: IAutoMovieSubjectBox | null,

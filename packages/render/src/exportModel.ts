@@ -202,7 +202,6 @@ import type { Document, Material, Node } from "@gltf-transform/core";
  * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-runtime-evidence-authority-invariant GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-user-director-input GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-basis Model serialization writes one bounded asset payload from already-validated geometry and owns no project derived ledger, generator basis, generation attempt, compile-time freshness decision, publication path gate, or execution-budget boundary.
- * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Model serialization writes one bounded asset payload from already-validated geometry and owns no project derived ledger, generator basis, generation attempt, compile-time freshness decision, publication path gate, or execution-budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Model serialization writes one bounded asset payload from already-validated geometry and owns no project derived ledger, generator basis, generation attempt, compile-time freshness decision, publication path gate, or execution-budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Model serialization writes one bounded asset payload from already-validated geometry and owns no project derived ledger, generator basis, generation attempt, compile-time freshness decision, publication path gate, or execution-budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Model serialization writes one bounded asset payload from already-validated geometry and owns no project derived ledger, generator basis, generation attempt, compile-time freshness decision, publication path gate, or execution-budget boundary.
@@ -255,7 +254,7 @@ export const exportModelToGLB = async (
   // Acquired here rather than at module scope, because this is the workspace's
   // only runtime edge to `@gltf-transform/core` and the barrel re-exports this
   // module. `@automovie/production` imports one path helper from that barrel,
-  // so an eager import made every generated project's `scripts/compile.ts` load
+  // so an eager import made every generated project's `scripts/build.ts` load
   // a glTF serializer it never calls. Under Node 22 that load fails outright:
   // the package's `require` condition serves `dist/index.cjs`, whose first act
   // is `require("property-graph")`, and `property-graph` is ESM-only, so the
