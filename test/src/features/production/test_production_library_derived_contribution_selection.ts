@@ -79,8 +79,9 @@ const selectionRefused = {
  * 1. The current contribution with no `build` is admitted, and the same
  *    selection with `build` declared is refused at the source path naming the
  *    selected path.
- * 2. A non-string selection (null), an absent path, and an inherited object key
- *    (`toString`) are each refused as a selection failure.
+ * 2. A non-string selection (null), an absent path, and the same current
+ *    contribution reachable only through the context object's prototype rather
+ *    than as its own entry are each refused as a selection failure.
  * 3. The same contribution bytes declared as base64 are refused, because the
  *    owner contract admits only UTF-8 text.
  * 4. Bytes carrying the invalid UTF-8 byte 0x80, projected by a replacing
@@ -121,9 +122,12 @@ export const test_production_library_derived_contribution_selection =
           derivedArtifacts: contexts,
         }),
         outcome({
-          derivedArtifact: "toString",
+          derivedArtifact: ARTIFACT,
           build: false,
-          derivedArtifacts: contexts,
+          derivedArtifacts: Object.create(contexts) as Record<
+            string,
+            IAutoMovieDerivedArtifactSource
+          >,
         }),
         outcome({
           derivedArtifact: ARTIFACT,
