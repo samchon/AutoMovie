@@ -229,9 +229,9 @@ export const deriveAutoMovieDrawing = (props: {
     gaps.push({
       subject: "external-model-geometry",
       status: "not-run",
-      reason: `${unresolvedModels} drawn element(s) cite a compiler-owned runtime model whose geometry this design does not carry`,
+      reason: `${unresolvedModels} drawn element(s) cite a builder-owned runtime model whose geometry this design does not carry`,
       remedy:
-        "author the element's geometry as an environment-owned model, or derive the drawing after the compiler has resolved the external asset",
+        "author the element's geometry as an environment-owned model, or derive the drawing after the builder has resolved the external asset",
     });
 
   const regions: IAutoMovieDrawingRegion[] = [];

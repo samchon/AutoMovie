@@ -74,7 +74,7 @@ export const describeAutoMovieBuildingRecords = (
  * the document path alone matched nothing, every time, in silence.
  *
  * Two owners publishing one building id carry it once. A library owner may name
- * a building another owner also names (the compiler refuses that as duplicate
+ * a building another owner also names (the builder refuses that as duplicate
  * publication at its own address), and a report that drew both would put one
  * sheet on the page twice and double its take-off.
  */

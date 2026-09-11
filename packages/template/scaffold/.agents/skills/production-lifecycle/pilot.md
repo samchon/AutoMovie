@@ -62,6 +62,6 @@ Pilot evidence and reviews never satisfy the expanded population. When every com
 
 ## Relationship to the scratch trial
 
-A disposable `.wiki` trial remains useful before the compiler-visible pilot. It is cheaper and can reveal an obviously missing space, subject, exchange, interface, or observation before any governed host exists. It proves nothing: the graph never reads it, no stage applies to it, and it cannot satisfy either clean vertical review.
+A disposable `.wiki` trial remains useful before the builder-visible pilot. It is cheaper and can reveal an obviously missing space, subject, exchange, interface, or observation before any governed host exists. It proves nothing: the graph never reads it, no stage applies to it, and it cannot satisfy either clean vertical review.
 
-Use the scratch trial as an optional preflight, then run the pilot when the cost of exercising the real contracts and compiler is justified. Promote every retained decision into its canonical owner before the pilot cites or relies on it.
+Use the scratch trial as an optional preflight, then run the pilot when the cost of exercising the real contracts and builder is justified. Promote every retained decision into its canonical owner before the pilot cites or relies on it.

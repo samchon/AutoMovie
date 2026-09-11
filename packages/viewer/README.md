@@ -4,7 +4,7 @@
 layers the production sampler returns for a film frame as a direct render, a
 fade over black, or a cross-dissolve, and refuses any other cardinality or
 weight by name. `renderFadeToBlackFrame` multiplies one whole beauty frame by
-its compiler-owned weight, the same operation the final renderer applies to
+its builder-owned weight, the same operation the final renderer applies to
 captured bytes, and restores the renderer's target and clear state on every
 exit; `disposeFadeToBlack` releases the renderer-owned GPU resources, which
 `mountViewer` already does when it disposes the renderer. Structural passes

@@ -72,7 +72,7 @@ export interface IAutoMovieEffectViewerObject {
 }
 
 /**
- * Build one compiler-owned effect stream as bounded billboard instances.
+ * Build one builder-owned effect stream as bounded billboard instances.
  *
  * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Displays this surface from the deterministic compiled particle sample.
  * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Materializes the same deterministic spawn interval for the viewer.

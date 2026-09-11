@@ -12,8 +12,8 @@ import { TestValidator } from "@nestia/e2e";
  * on a file's presence alone or an operating-system fixture.
  *
  * Scenarios:
- * 1. One or several H2 obligations require the same number of account owners.
- * 2. Missing targets, missing files, empty or unequal owners, undeclared files,
+ * 1. Obligations admit relevant authored owners and optional aggregate accounts.
+ * 2. Missing or empty targets, undeclared account files,
  *    cross-layer paths, and duplicate targets/accounts fail at their identity.
  * 3. Draft and pilot audits retain declaration without demanding physical
  *    accounts; disabled layers refuse retained accounts.
@@ -48,20 +48,22 @@ export const test_evidence_local_account_admission = (): void => {
     ],
     residents: [entry.account, "accounts/models/other.md"],
   });
-  for (const counts of [
-    {},
-    { ["docs/" + entry.account]: 1 },
-    { ["docs/" + entry.account]: 0, [entry.target]: 1 },
-    { ["docs/" + entry.account]: 2, [entry.target]: 1 },
-    { ["docs/" + entry.account]: 1, [entry.target]: 2 },
-    { ["docs/" + entry.account]: 0, [entry.target]: 0 },
-  ])
-    TestValidator.error("missing or mismatched account facts", () =>
+  for (const counts of [{}, { [entry.target]: 0 }])
+    TestValidator.error("missing or empty obligation target", () =>
       validateAutoMoviePopulationAccountHosts({
         ...props,
         readH2Count: (file) => (counts as Record<string, number>)[file],
       }),
     );
+  validateAutoMoviePopulationAccountHosts({
+    ...props,
+    residents: [],
+    readH2Count: (file) => (file === entry.target ? 2 : undefined),
+  });
+  validateAutoMoviePopulationAccountHosts({
+    ...props,
+    readH2Count: (file) => (file === entry.target ? 3 : 1),
+  });
   for (const resident of [
     "accounts/models/undeclared.md",
     "accounts/spaces/local.md",
@@ -161,17 +163,18 @@ export const test_evidence_local_account_admission = (): void => {
       return 1;
     },
   });
-  TestValidator.predicate(
-    "factory reads declared local owner",
+  TestValidator.equals(
+    "factory leaves aggregate owner optional",
     read.includes("docs/" + entry.account),
+    false,
   );
   TestValidator.predicate(
     "factory reads local target",
     read.includes(entry.target),
   );
   TestValidator.predicate(
-    "factory retains common owner",
-    read.includes("docs/accounts/models/core-common.md"),
+    "factory retains common target",
+    read.includes("docs/obligations/core/common.md"),
   );
   validateAutoMovieEvidenceAccounts(
     { ...blank, claims: undefined },
@@ -194,10 +197,9 @@ export const test_evidence_local_account_admission = (): void => {
     },
   );
   TestValidator.equals(
-    "film subject account is declared once",
-    filmReads.filter(
-      (file) => file === "docs/accounts/settings/story-subjects.md",
-    ).length,
+    "film subject target is declared once",
+    filmReads.filter((file) => file === "docs/obligations/story/subjects.md")
+      .length,
     1,
   );
   validateAutoMovieEvidenceAccounts(

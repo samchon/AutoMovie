@@ -410,7 +410,7 @@ export const measureAutoMovieRenderInventory = (props: {
 
   // --- bounded billboard effects ------------------------------------------
   // The viewer uploads one four-vertex plane and instances it up to the
-  // compiler-owned cap. Time sampling may draw fewer (including zero), but a
+  // builder-owned cap. Time sampling may draw fewer (including zero), but a
   // preflight bound must hold at the cue's peak rather than at frame zero.
   for (const effect of subject.effects ?? []) {
     const cap = effect.recipe.budget.maxParticles;

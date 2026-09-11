@@ -47,9 +47,9 @@ export const test_cli_scaffold_capture_package_dependency = (): void => {
   const { capturePackageDependency, assertCapturePackageDependencyCurrent } =
     unit;
   const dependency = {
-    entry: "/installed/compiler/lib/index.js",
+    entry: "/installed/builder/lib/index.js",
     ...capturePackageDependency({
-      specifier: "compiler-alias",
+      specifier: "builder-alias",
       version: "npm:typescript@5.9.3",
     }),
   };
@@ -57,10 +57,10 @@ export const test_cli_scaffold_capture_package_dependency = (): void => {
     "alias retains import and canonical identities",
     dependency,
     {
-      entry: "/installed/compiler/lib/index.js",
+      entry: "/installed/builder/lib/index.js",
       optional: false,
       package: "typescript",
-      specifier: "compiler-alias",
+      specifier: "builder-alias",
     },
   );
   TestValidator.equals(

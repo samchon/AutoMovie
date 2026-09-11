@@ -2,6 +2,7 @@ import { mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { flightSpeedReadout } from "./flightSpeedReadout";
+import { mountPreviewNavigation } from "./previewNavigation";
 import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 
 const { canvas, status } = viewerDocument();
@@ -179,14 +180,18 @@ try {
         : inputNotice || "Click the view to fly");
     return false;
   });
+  let removeNavigation: () => void = () => undefined;
   cleanup = () => {
     held.clear();
     input.abort();
+    removeNavigation();
     if (document.pointerLockElement === canvas) document.exitPointerLock();
     mounted.stop();
   };
   mounted.renderer.setClearColor(VIEWER_BACKGROUND, 1);
   preview.configureRenderer?.(mounted.renderer);
+  if (preview.navigation !== undefined)
+    removeNavigation = mountPreviewNavigation(preview.navigation);
   if (!failed) canvas.style.visibility = "visible";
 
   window.addEventListener(

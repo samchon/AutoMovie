@@ -11,7 +11,6 @@ import {
   normalizeAutoMovieSource,
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
-import { linkProductionSource } from "./linkProductionSource";
 
 /** Current film/brief design-derivation protocol. */
 export const AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL =
@@ -162,7 +161,7 @@ export const autoMovieDesignDerivationBasisDigest = (
  *
  * The production and world records are singletons, so their kind is their
  * whole address; every other record is addressed by kind and id. The emitter,
- * the derivation manifest and the compiler's inspection all name a target
+ * the derivation manifest and the builder's inspection all name a target
  * through this one spelling, so a record can never be derived under one
  * address and inspected under another.
  *
@@ -179,13 +178,11 @@ export const autoMovieDesignTargetAddress = (
 /**
  * Acquire one target-local producer basis from the source graph it executes.
  *
- * Relative runtime imports are followed through the production linker, while
- * type-only imports remain outside the runtime closure. Every included module
- * is normalized before hashing so the basis has the same source-byte semantics
- * as production compilation.
+ * The running project supplies its source inventory. Node and ttsx resolve
+ * imports; this function records input bytes without linking or executing them.
  *
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Captures the exact emitter, export, transitive runtime source and tool identity that produce one record.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Follows the runtime import closure so a shared helper revision reaches only the targets that import it.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Records the supplied project source inventory so a changed helper invalidates the emitted design.
  */
 export const captureAutoMovieDesignDerivationBasis = (props: {
   production: string;
@@ -197,32 +194,20 @@ export const captureAutoMovieDesignDerivationBasis = (props: {
     export: string;
     selector: string | null;
   };
-  readSource: (path: string) => Uint8Array;
+  sourceInputs: () => readonly { path: string; bytes: Uint8Array }[];
   tool: IAutoMovieDesignDerivationBasis["tool"];
 }): IAutoMovieDesignDerivationBasis => {
   assertRelativePath(props.emitter.path);
   assertRelativePath(props.source.path);
-  const entryBytes = normalizeAutoMovieSource(
-    props.readSource(props.source.path),
-  );
-  const textOf = (bytes: Uint8Array): string =>
-    Buffer.from(bytes).toString("utf8");
-  const linked = linkProductionSource({
-    entryPath: props.source.path,
-    entrySource: textOf(entryBytes),
-    read: (sourcePath) =>
-      textOf(normalizeAutoMovieSource(props.readSource(sourcePath))),
-  });
-  if (linked.failures.length !== 0)
+  const inputs = props.sourceInputs();
+  if (!inputs.some((input) => input.path === props.source.path))
     throw new AutoMovieDesignDerivationError(
       "design-derivation-basis-changed",
-      `Design target "${props.target}" has an unreadable runtime source closure: ${linked.failures
-        .map((failure) => `${failure.path}: ${failure.reason}`)
-        .join(" ")}`,
+      `Source "${props.source.path}" is absent from the current project inputs.`,
     );
-  const dependencies = linked.modules.map((module) => ({
-    path: module.path,
-    digest: digestAutoMovieBytes(Buffer.from(module.source, "utf8")),
+  const dependencies = inputs.map((input) => ({
+    path: input.path,
+    digest: digestAutoMovieBytes(normalizeAutoMovieSource(input.bytes)),
   }));
   return canonicalBasis({
     protocol: AUTOMOVIE_DESIGN_DERIVATION_PROTOCOL,
@@ -251,7 +236,7 @@ export const captureAutoMovieDesignDerivationBasis = (props: {
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Records the exact emitter, export, transitive source and tool identity behind each design target.
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Refuses a changed or same-basis-divergent design candidate before publication.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity Compares exact canonical target bytes under one frozen producer identity.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Preserves target-local dependency closure so unrelated source revisions do not stale every design record.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Rechecks the supplied project source inventory before design publication.
  * @author Samchon
  */
 export const createAutoMovieDesignDerivationCandidate = (props: {
@@ -393,7 +378,7 @@ export const runAutoMovieDesignDerivation = (props: {
   /** Toolchain identity the run executes under. */
   tool: IAutoMovieDesignDerivationBasis["tool"];
   /** Owned project source reader used for every transitive module. */
-  readSource: (path: string) => Uint8Array;
+  sourceInputs: () => readonly { path: string; bytes: Uint8Array }[];
   /** Every design record resident before the run, with its stored value. */
   resident: readonly { target: string; recordPath: string; value: unknown }[];
   /** The complete declared producer plan, in publication order. */
@@ -407,7 +392,7 @@ export const runAutoMovieDesignDerivation = (props: {
         recordPath: entry.recordPath,
         emitter: props.emitter,
         source: entry.source,
-        readSource: props.readSource,
+        sourceInputs: props.sourceInputs,
         tool: props.tool,
       }),
     );

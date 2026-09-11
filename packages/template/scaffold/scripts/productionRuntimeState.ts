@@ -41,9 +41,9 @@ export interface IAutoMovieProductionViewerRuntime {
   deliveryCrop: IAutoMovieDeliveryCrop | null;
   /** Exact authored live-soft admission order. */
   liveWearableSoftBodies: string[];
-  /** Current compiler-owned film-global effect runtimes. */
+  /** Current builder-owned film-global effect runtimes. */
   filmEffects: IAutoMovieCompiledFilmEffect[];
-  /** Current compiler and edit identity checked independently of effect bytes. */
+  /** Current builder and edit identity checked independently of effect bytes. */
   filmEffectIdentity: IAutoMovieFilmEffectCurrentIdentity;
 }
 

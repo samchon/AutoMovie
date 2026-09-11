@@ -41,7 +41,7 @@ export class AutoMovieProductionRenderLedgerSchemaError extends Error {
 /**
  * Admit an already materialized value as the aggregate render manifest.
  *
- * Generated-project scripts and the compiler share this one admission so the
+ * Generated-project scripts and the builder share this one admission so the
  * manifest schema is owned by the production package rather than re-derived
  * by every reader.
  *

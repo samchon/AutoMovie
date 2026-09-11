@@ -157,7 +157,7 @@ export const test_cli_scaffold_building_records = (): void => {
         },
       ],
       [
-        // Two owners naming one building id. The compiler refuses duplicate
+        // Two owners naming one building id. The builder refuses duplicate
         // publication at its own address; a report that drew both would put one
         // sheet on the page twice and double its take-off.
         "oneBuildingIdIsGatheredOnce",

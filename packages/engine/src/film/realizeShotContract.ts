@@ -69,8 +69,8 @@ import {
 export const realizeShotContract = (props: {
   contract: IAutoMovieShotContract;
   /**
-   * Full production design for compiler-materialized output. `null` marks the
-   * direct source-stage pass, before compiler-owned formation heroes exist.
+   * Full production design for builder-materialized output. `null` marks the
+   * direct source-stage pass, before builder-owned formation heroes exist.
    */
   production: IAutoMovieProductionDesign | null;
   /** Direct authoring raster when no production design object exists. */
@@ -84,7 +84,7 @@ export const realizeShotContract = (props: {
     Partial<
       Pick<IAutoMovieCompiledShotSource, "models" | "formations" | "effects">
     >;
-  /** Direct authoring rig lookup when compiler-owned models are not attached. */
+  /** Direct authoring rig lookup when builder-owned models are not attached. */
   skeleton?: (node: string) => IAutoMovieSkeleton | null;
   collisions: readonly string[];
 }): {
@@ -105,7 +105,7 @@ export const realizeShotContract = (props: {
   for (const node of props.collisions)
     fail(
       `formation slot "${node}"`,
-      "collides with a coding-agent scene node; ordinary formation slots are compiler-owned",
+      "collides with a coding-agent scene node; ordinary formation slots are builder-owned",
     );
 
   const opening = props.contract.opening.map((state) => {
@@ -209,8 +209,8 @@ export const realizeShotContract = (props: {
               .slice(0, index)
               .reduce((sum, previous) => sum + previous.count, 0),
       );
-    // Shot source owns choreography but not promoted hero nodes. The compiler
-    // compiler adds or corrects those nodes only after compileDefinedShot has
+    // Shot source owns choreography but not promoted hero nodes. The builder
+    // builder adds or corrects those nodes only after compileDefinedShot has
     // returned its source, then invokes this realization again with the full
     // production. Requiring heroes during the direct/source pass makes that
     // materialization unreachable for every formation with an override.

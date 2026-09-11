@@ -6,3 +6,4 @@
 
 - [설정 입력 상태](./input.md)
 - [그래프 구성과 검증](./graph.md)
+- [네이티브 설정 변환](./native-input.md)

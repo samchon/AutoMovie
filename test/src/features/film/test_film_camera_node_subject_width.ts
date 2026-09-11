@@ -258,7 +258,7 @@ const solvedDistance = (
 };
 
 /**
- * The whole shot compiler resolving the same subject: a set piece staged at the
+ * The whole shot builder resolving the same subject: a set piece staged at the
  * origin and framed `full` by the camera the fixture stages, so what reaches
  * {@link compileCameraMove} is `performShot`'s own reading rather than one the
  * test rebuilt beside it.
@@ -377,7 +377,7 @@ const performFacade = (model: IAutoMovieModel): IAutoMovieClip | null => {
  * 8. A wall delivered as an ingested mesh rather than as a generated primitive
  *    draws the same box, because the measurement reads vertices either way.
  * 9. `performShot` itself resolves the subject on those terms, so what is
- *    pinned is the compiler's own reading rather than one rebuilt beside it.
+ *    pinned is the builder's own reading rather than one rebuilt beside it.
  * 10. Boundaries. A node with nothing to measure keeps the horizontally
  *    degenerate stand-in segment it always had, and a slab too thin to measure
  *    vertically keeps its real width while taking the stand-in height.
@@ -546,7 +546,7 @@ export const test_film_camera_node_subject_width = (): void => {
     },
   );
 
-  // 9. the shot compiler itself resolves the subject that way.
+  // 9. the shot builder itself resolves the subject that way.
   const performed = performFacade(model);
   TestValidator.equals(
     "performShot frames a set piece from the box it draws",

@@ -96,7 +96,7 @@ const maxAbs = (
  *    the same positive abduction on each side: no per-side mirror. `draw`
  *    reaches the bow arm forward and folds the string arm back; `throw` winds
  *    the arm back then whips it forward while the trunk coils.
- * 6. Only `strike` (a targeted jab) and unknown kinds return null: the compiler
+ * 6. Only `strike` (a targeted jab) and unknown kinds return null: the builder
  *    skips them for the reach-based synthesiser.
  */
 export const test_motion_gesture = (): void => {

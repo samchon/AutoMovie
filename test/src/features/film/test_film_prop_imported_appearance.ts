@@ -16,7 +16,7 @@ const SIDECAR_BYTES = "assets/chair-albedo.png";
 /**
  * A chair whose pixels come from a registered glTF and whose meaning does not.
  *
- * The model is shaped exactly as the compiler materializes a registered
+ * The model is shaped exactly as the builder materializes a registered
  * external appearance: `imported` origin, the manifest-owned bytes in `asset`,
  * the sealed digest closure, and one registered collision proxy standing in for
  * the visible primitives. Everything the engine measures or simulates is
@@ -115,7 +115,7 @@ const tolerated = (mutate: (spec: IAutoMoviePropSpec) => void): boolean => {
  * A prop may draw a registered external appearance, and stating that reference
  * opens the origin gate exactly as far as the record can be checked: the
  * reference must classify something, the media must be a kind a prop can be,
- * and the compiler-sealed byte closure must be internally coherent. Nothing the
+ * and the builder-sealed byte closure must be internally coherent. Nothing the
  * prop means moves out of the spec, and a prop that names no reference keeps
  * the generated contract it always had, message for message.
  *
@@ -130,7 +130,7 @@ const tolerated = (mutate: (spec: IAutoMoviePropSpec) => void): boolean => {
  * 3. A reference that is blank classifies nothing, and a generated model that
  *    cites one references bytes nothing draws; both are refused by name.
  * 4. A reference with no bytes behind it is refused: a null `asset`, and an absent
- *    compiler-sealed closure, which stops the closure gates rather than
+ *    builder-sealed closure, which stops the closure gates rather than
  *    reporting each of them against a record that is not there.
  * 5. Wrong media is refused: a humanoid ingest profile is a performer and goes
  *    through forgeCast, a rigid appearance maps no humanoid bones, and neither
@@ -267,7 +267,7 @@ export const test_film_prop_imported_appearance = (): void => {
           refuses(
             (spec) => delete spec.model.imported,
             "$input.model.imported",
-            "carries no compiler-sealed ingest closure",
+            "carries no builder-sealed ingest closure",
           ),
       ],
       [

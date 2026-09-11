@@ -312,7 +312,7 @@ const requireDeliveryEvidence = (evidence: {
 /**
  * The delivery-evidence refusal is a type error, not a reviewer's discipline.
  *
- * The body never runs. It exists so the compiler is the thing that proves an
+ * The body never runs. It exists so the builder is the thing that proves an
  * inspection answer cannot be offered where a delivered frame is required; a
  * runtime assertion could only observe the literal `false`, and a later widening
  * to `boolean` would leave that assertion green while the guarantee was gone.
