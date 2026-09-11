@@ -7,3 +7,4 @@ export * from "./materializeCompiledFormation";
 export * from "./materializeCompiledFormationInventory";
 export * from "./materializeCompiledInstanceSet";
 export * from "./materializeCompiledInstanceSetInventory";
+export * from "./selectInstancePrototype";

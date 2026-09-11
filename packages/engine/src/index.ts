@@ -16,6 +16,7 @@ export * from "./render";
 export * from "./formation";
 export * from "./formationCadence";
 export * from "./formationSlot";
+export * from "./formationSlotRecord";
 export * from "./populationRuntime";
 export * from "./subject";
 export * from "./subjectDescription";
