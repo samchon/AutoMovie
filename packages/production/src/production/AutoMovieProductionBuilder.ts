@@ -43,7 +43,6 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-  fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
 import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
@@ -56,6 +55,7 @@ import {
   createAutoMovieLibrarySourceExecutionPlan,
   sameAutoMovieLibraryAuthoringSnapshot,
 } from "./libraryAuthoringSnapshot";
+import { libraryBuildInputFingerprint } from "./libraryBuildInputFingerprint";
 import {
   IAutoMovieExternalModelRuntimeBinding,
   IAutoMovieMaterializedLibraryResult,
@@ -1405,25 +1405,21 @@ export class AutoMovieProductionBuilder {
   /**
    * The builder input identity of one library, recomputed on demand.
    *
-   * A library's inputs include the authoring declaration, selected source bytes,
+   * A library's inputs include the production namespace every build context and
+   * the index carry, the portable authoring projection, selected source bytes,
    * content inventory and verified derivation closure. The same read answers
-   * both the result identity and the atomic publication's concurrent-edit guard.
+   * both the result identity and the atomic publication's concurrent-edit
+   * guard, which compares the resident snapshot digest separately.
    */
   private libraryInputFingerprint(
     snapshot: IAutoMovieLibraryAuthoringSnapshot,
     derivedFields: readonly IAutoMovieFingerprintField[],
   ): AutoMovieContentDigest {
-    return fingerprintAutoMovieFields([
-      ...derivedFields,
-      {
-        role: "library:builder",
-        kind: AUTOMOVIE_PRODUCTION_BUILD_PROTOCOL,
-        payload: canonicalAutoMovieJsonBytes({
-          version: AUTOMOVIE_PRODUCTION_BUILD_VERSION,
-          authoringSnapshot: snapshot.digest,
-        }),
-      },
-    ]);
+    return libraryBuildInputFingerprint({
+      production: this.project.productionId,
+      snapshot,
+      derivedFields,
+    });
   }
 
   /** Read the same verified content closure for execution and publication. */
