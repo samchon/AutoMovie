@@ -807,8 +807,39 @@ export const readScaffoldFileSnapshot = (
   bytes: Buffer;
   identity: string;
   version: string;
+} => readAdmittedScaffoldFileSnapshot(file, assertOrdinaryScaffoldFile);
+
+/**
+ * Read one ordinary file that exactly one directory entry names.
+ *
+ * The caller that refuses an aliased work target reads through this instead of
+ * {@link readScaffoldFileSnapshot}, so its manifest is refused at admission
+ * rather than adopted. Admission is where that promise lives: a second entry
+ * appearing after this read leaves the inode identity unchanged, so the
+ * generation checks that follow are not the place to look for it.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Retains bytes and generation for reuse only from a target no second pathname names.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Admits a reusable source under the narrower judgment, refusing an aliased resident before its bytes authorize anything.
+ */
+export const readSingleLinkScaffoldFileSnapshot = (
+  file: string,
+): {
+  snapshot: IScaffoldFileSnapshot;
+  bytes: Buffer;
+  identity: string;
+  version: string;
+} => readAdmittedScaffoldFileSnapshot(file, assertOrdinarySingleLinkFile);
+
+const readAdmittedScaffoldFileSnapshot = (
+  file: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
+): {
+  snapshot: IScaffoldFileSnapshot;
+  bytes: Buffer;
+  identity: string;
+  version: string;
 } => {
-  const snapshot = captureScaffoldFile(file);
+  const snapshot = captureAdmittedScaffoldFile(file, admission);
   const descriptor = fileSystem.openSync(snapshot.path, "r");
   let failure: IScaffoldDescriptorFailure | undefined;
   let result: {
@@ -820,19 +851,9 @@ export const readScaffoldFileSnapshot = (
   try {
     const opened = fileSystem.fstatSync(descriptor, { bigint: true });
     const version = physicalVersion(opened);
-    assertScaffoldFileDescriptor(
-      snapshot,
-      descriptor,
-      version,
-      assertOrdinaryScaffoldFile,
-    );
+    assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
     const bytes = fileSystem.readFileSync(descriptor);
-    assertScaffoldFileDescriptor(
-      snapshot,
-      descriptor,
-      version,
-      assertOrdinaryScaffoldFile,
-    );
+    assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
     result = { snapshot, bytes, identity: physicalIdentity(opened), version };
   } catch (error) {
     failure = { error };
