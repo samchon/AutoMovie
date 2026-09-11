@@ -35,11 +35,14 @@ import { throwsError } from "../internal/predicates";
  *    attempted, the peer still reads the original bytes under the original
  *    identity, and the name resolves to the successor. This is the case the
  *    single-entry requirement refused.
- * 3. Two entries, authority withheld: refused with the ordinary single-link
+ * 3. Two entries whose change time moves when this operation opens the pathname,
+ *    as a Windows host does for any handle: the replacement still completes and
+ *    the peer keeps its bytes, so the operation's own open cannot refuse it.
+ * 4. Two entries, authority withheld: refused with the ordinary single-link
  *    diagnostic, nothing is unlinked or truncated, and the bytes are untouched.
- * 4. A predecessor whose generation moved after capture is refused before the
+ * 5. A predecessor whose generation moved after capture is refused before the
  *    name is detached, so an unverified authority never removes an entry.
- * 5. A publication that refuses after the entry is detached is reported as
+ * 6. A publication that refuses after the entry is detached is reported as
  *    partial rather than refused, for both a competitor and a create failure,
  *    and the absence is not hidden.
  */
@@ -132,6 +135,33 @@ export const test_cli_scaffold_entry_replacement = (): void => {
     TestValidator.predicate(
       "the successor is a different inode from the peer",
       aliased.state.peerIdentity !== aliased.state.identity,
+    );
+  });
+
+  const ownOpen = createScaffoldSnapshotFileSystem();
+  ownOpen.state.links = 2n;
+  ownOpen.state.advanceChangeTimeOnOpen = true;
+  ownOpen.run(() => {
+    const base = captureScaffoldPhysicalDirectory(ownOpen.root);
+    const written = writeScaffoldFile({
+      base,
+      bytes: Buffer.from("new"),
+      capability: completing(ownOpen, base.identity),
+      expected: captureScaffoldFile(ownOpen.file),
+      force: true,
+      parent: base,
+      replaceAliasedEntries: true,
+      target: ownOpen.file,
+    });
+    TestValidator.equals(
+      "this operation's own open does not refuse the replacement",
+      written.status,
+      "completed",
+    );
+    TestValidator.equals(
+      "the peer bytes survive that replacement too",
+      ownOpen.state.peerBytes?.toString(),
+      "old",
     );
   });
 

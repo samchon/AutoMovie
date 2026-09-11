@@ -15,12 +15,16 @@ import {
 } from "./scaffoldPublication";
 
 /**
- * The two independent filesystem authorities one publication may hold.
+ * The independent filesystem authorities one publication may hold.
  *
  * Admitting a populated root and replacing an exact captured file are separate
  * decisions: a maintenance write into a project that already exists needs the
  * first without the second, so a new path can never overwrite a competitor.
- * `force` remains the compatibility shorthand that grants both at once.
+ * `force` remains the compatibility shorthand that grants those two at once.
+ *
+ * Replacing a target's directory entry is a third decision and `force` does not
+ * grant it, because a caller that means in-place replacement must keep refusing
+ * a target whose inode another pathname also names.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the explicit replacement authority a duplicate final path requires, separately from root admission.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Types exact replacement and populated-root admission as distinct explicit grants.
@@ -44,7 +48,11 @@ export interface IScaffoldPublicationOptions {
   replaceAliasedEntries?: boolean;
 }
 
-/** Resolve each authority from its explicit grant, else from `force`. */
+/**
+ * Resolve root admission and exact replacement from their explicit grant, else
+ * from `force`. Entry replacement resolves from its own grant only, so a caller
+ * cannot acquire it by asking for `force`.
+ */
 const resolveScaffoldPublicationAuthority = (
   options: IScaffoldPublicationOptions | undefined,
 ): {

@@ -618,6 +618,13 @@ const overwriteScaffoldFile = (props: {
  * A publication that refuses after the entry is gone is reported as partial
  * rather than refused: the predecessor no longer exists, so claiming that
  * nothing happened would be untrue.
+ *
+ * The predecessor is rechecked without its change time, because the caller has
+ * already opened this pathname to read the entry count and a Windows host moves
+ * change time when any handle opens a path. Comparing it here would refuse the
+ * replacement on the strength of this operation's own open. Physical identity,
+ * size and modification time are still compared, so a substituted or rewritten
+ * predecessor is still refused before its name is detached.
  */
 const replaceScaffoldFileEntry = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -628,7 +635,7 @@ const replaceScaffoldFileEntry = (props: {
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   try {
-    assertScaffoldFileSnapshot(props.existing);
+    assertOpenedScaffoldFileSnapshot(props.existing);
     assertScaffoldOwnership(props.base, props.parent);
     fileSystem.unlinkSync(props.target);
   } catch (error) {
