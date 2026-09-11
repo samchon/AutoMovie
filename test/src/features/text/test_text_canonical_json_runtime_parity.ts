@@ -31,8 +31,10 @@ import { createHash } from "node:crypto";
  *    bytes, including two-, three- and four-byte scalars that straddle a block
  *    boundary, the engine text equals the hand-written text, and the pure
  *    digest, the Node production digest and `node:crypto` over the hand-written
- *    bytes are one digest. Each arranged byte length is checked first, so a
- *    case that missed its boundary fails instead of passing elsewhere.
+ *    bytes are one digest. Two further cases fix non-ASCII member order and a
+ *    nested value whose numbers include negative zero and an exponent. Each
+ *    arranged byte length is checked first, so a case that missed its boundary
+ *    fails instead of passing elsewhere.
  * 3. Members follow UTF-16 code-unit order rather than insertion order or
  *    collation, an absent member changes neither text nor digest, and a
  *    changed member value changes the digest (the negative twin).
