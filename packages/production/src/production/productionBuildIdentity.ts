@@ -23,6 +23,7 @@ import {
 } from "./productionBuildProtocol";
 import { FILM_SOURCE_PATH } from "./productionFilmAssembly";
 
+/** Include the current content bytes and missing-input states in build identity. */
 export const contentFingerprintFields = (
   inputs: readonly IAutoMovieProductionContentInput[],
 ): IAutoMovieFingerprintField[] =>
@@ -37,6 +38,7 @@ export const contentFingerprintFields = (
           : content.bytes,
   }));
 
+/** Bind generated output to its protocol, design, source and content inputs. */
 export const productionBuildInputFingerprint = (
   productionId: string,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,

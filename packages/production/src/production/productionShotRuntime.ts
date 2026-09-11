@@ -243,6 +243,7 @@ export const sourceRuntimeOf = (props: {
   };
 };
 
+/** Remove source-module binding fields from the contract passed to defineShot. */
 export const contractOfRegistration = (
   contract: IAutoMovieShotContract,
 ): IAutoMovieDefinedShotContract => {

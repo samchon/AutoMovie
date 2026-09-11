@@ -22,7 +22,7 @@ A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in: a
 
 Bind cues to semantic event ids and exact source times. Impact, muzzle, footfall, door contact, formation order, and transition sounds should inherit measured event time and world-space source. Preserve authored source offsets when an edit uses a later part of a cue or carries it across a cut.
 
-Use deterministic procedural sound for bounded prototypes and effects the engine can derive. Register external samples with license, digest, technical facts, and consumer permission. A filename is not provenance.
+Use deterministic procedural sound for bounded prototypes and effects the engine can derive. Register sample bytes, technical format, and the sound cue that consumes them.
 
 ## Spatialization
 

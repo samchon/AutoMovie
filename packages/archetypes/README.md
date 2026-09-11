@@ -83,14 +83,6 @@ An entry may not enter when any one of these holds.
 - **It would give `interface` a runtime dependency.** `interface` stays pure
   types.
 
-One exception stands today. The production sandbox module map names `CAT_GAITS`,
-`HORSE_GAITS`, and `HUMANOID_GAITS` literally, in
-`packages/production/src/production/linkProductionSource.ts` and
-`packages/production/src/production/AutoMovieProductionBuilder.ts`, so those three
-tables cannot be removed without editing `production`. The archetypes have a registry
-seam and the gait tables do not yet; closing that is the gait side's own work,
-and it is not a licence to add more named exports in the meantime.
-
 None of this reaches the scaffold. A generated project inherits examples that
 teach an authoring technique, never a catalogue it can call.
 
@@ -128,12 +120,6 @@ skeleton ids rather than deriving them.
 들어올 수 없는 것은 하나만 해당해도 거절이다. 한 프로덕션의 소재를 완성해 건네는 콘텐츠(가구
 모델, 몰딩 라이브러리, 양식 팩, 이름 붙은 부재 카탈로그), 제품 패키지가 이름으로 import 해야만
 동작하게 되는 것, `interface`에 런타임 의존을 지우는 것.
-
-지금 예외가 하나 있다. production 샌드박스 모듈 맵이 `CAT_GAITS`·`HORSE_GAITS`·`HUMANOID_GAITS`를
-문자열로 열거하므로(`packages/production/src/production/linkProductionSource.ts`,
-`packages/production/src/production/AutoMovieProductionBuilder.ts`), 그 셋은 `production`을 고치지 않고는
-지울 수 없다. 아키타입에는 레지스트리 이음매가 있고 보행 테이블에는 아직 없다. 그것을 닫는
-일은 보행 쪽의 몫이며, 그때까지 이름으로 노출되는 항목을 더 늘려도 된다는 뜻은 아니다.
 
 스캐폴드는 이 중 어느 것도 상속하지 않는다. 생성된 프로젝트가 받는 것은 기법을 가르치는
 예제이지, 호출할 수 있는 카탈로그가 아니다.

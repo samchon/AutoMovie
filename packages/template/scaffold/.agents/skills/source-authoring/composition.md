@@ -2,7 +2,7 @@
 
 A timed AutoMovie delivery is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
 
-[TypeScript](typescript.md) governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
+[TypeScript](typescript.md) governs how any one module must behave: pure builds, typed payloads, explicit units, explicit inputs for reproducible output. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
 
 ## Know when to compose
 
@@ -12,9 +12,7 @@ Compose at the moment you copy a shot module and change its names. That copy is 
 
 ## Each module has one second
 
-The sandbox runs every transpiled module, the registration probe, and the `build` call under a one-second timeout, and a script that exceeds it is refused with `source-execution-timeout` having published nothing. The budget is per invocation rather than per production, so a hundred shot modules each get a second of their own, and the single film module that assembles every placement in the edit gets one second for the whole thing.
-
-That is an arrangement constraint, not a micro-optimization. Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which run outside the sandbox and under no such clock.
+Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which prepare explicit inputs for source execution.
 
 When the result of that derivation is what source actually needs, publish it as a derived artifact and read it back from `context.derivedArtifacts`. Freezing the same table into a TypeScript literal moves the bytes out of the clock without moving the obligation: nothing then proves the literal still follows from the inputs it was computed from. [Compilation](compilation.md) owns that path.
 
@@ -80,7 +78,7 @@ export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
 }
 ```
 
-`design()` is the wire. A class is an authoring surface and never reaches the compile sandbox as itself; everything the builder stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
+`design()` is the wire. A class is an authoring surface; everything the builder stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
 
 ## A group of subjects is a subject
 
@@ -138,7 +136,7 @@ At compile time, inspect `context.formationRuntime[id]` for chunks, bounds, hero
 
 A group of identical members placed on exact geometry reads as one object repeated. Deterministic variation is what makes it read as many individuals, and the seed is what keeps that reproducible: the same design must always compile to the same frames.
 
-Take every varying value from the design's own seed and the member's index. Never from a clock, a counter, a call order, or unseeded randomness, all of which the compile sandbox refuses. A value derived from seed and index needs no storage, survives regeneration, and reproduces on every machine.
+Take every varying value from the design's own seed and the member's index. Never from a clock, a counter, a call order, or unseeded randomness. A value derived from seed and index needs no storage, survives regeneration, and reproduces on every machine.
 
 State the seed in the design record rather than in source, so the variation is a declared property of the thing rather than an accident of the code that read it.
 
@@ -154,7 +152,7 @@ Keep the module readable while you are at it. A citation names a symbol, and a r
 
 `IAutoMovieDefinedShotContract` is exactly the tracked shot contract minus `id` and `source`. The module and the design record are therefore two representations of one fact, and transcribing the second by hand is how they drift apart.
 
-The design record is yours to author, the same as source. Only generated output, renders, production state, and capture state have other owners. Emit the record from an ordinary script outside the compile sandbox, from the same table the modules read.
+The design record is yours to author, the same as source. Only generated output, renders, production state, and capture state have other owners. Emit the record from an ordinary script under Node, from the same table the modules read.
 
 Store it through the project's own design setters, never by writing a path the script worked out for itself. Which tree an artifact lives in is the project's decision: a model, a world, and a formation are shared across productions while a shot contract and an acceptance scenario are not. A script that computes the path restates that layout in a second place, and a record written beside the one the builder reads is a derivation that proves nothing. Read the stored record back first and skip an identical one, because a design mutation deliberately stales every dependent shot and review, and re-storing an unchanged record would invalidate the production for saying nothing new.
 

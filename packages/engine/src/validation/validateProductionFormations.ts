@@ -12,7 +12,6 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { compareCodeUnits } from "../../../production/src/production/contentIdentity";
 import {
   type IAutoMovieFormationPlacement,
   autoMovieModelGaits,
@@ -22,6 +21,7 @@ import {
   sampleFormationMotion,
   sampleFormationSlotMotion,
 } from "../index";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { engineDiagnostic } from "./productionValidationDiagnostics";
 
 /**

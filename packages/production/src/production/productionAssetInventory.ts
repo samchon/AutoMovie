@@ -40,6 +40,12 @@ import { IProductionExternalMotionAdoption } from "./productionExternalMotion";
 import { filmDiagnostic } from "./productionFilmAssembly";
 import { IAutoMovieProductionDesignGraph } from "./validateProductionDesign";
 
+/** Resolve declared asset bytes into model and motion inputs with their consuming targets.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers Resolves registered asset bytes to their declared consuming model or motion.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-source-record Preserves the selected asset path and byte identity.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability Checks the consuming target while adopting model and motion inputs.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-source-provenance-snapshot Carries the asset byte snapshot into its runtime binding.
+ */
 export const productionAssetInventory = (
   manifestPath: IAutoMovieProductionManifest["assetManifest"],
   inputs: readonly IAutoMovieProductionContentInput[],
@@ -1159,6 +1165,7 @@ const refuseUnsupportedExternalInstancing = (
   }
 };
 
+/** Check that compiled scene consumers agree with the declared asset use. */
 export const validateCompiledAssetUses = (
   productionId: string,
   records: readonly IAutoMovieAssetProvenance[],

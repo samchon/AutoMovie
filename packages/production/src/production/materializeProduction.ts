@@ -844,8 +844,6 @@ export const materializeCompiledEffects = (
  * builder wrote, and a second spelling of that path is a second answer to
  * where the library's lineage lives.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Gives the builder and the offline observation command one address for the published library lineage.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Fixes the locator through which the derived delivery population reopens compiled owners.
  */
 export const AUTOMOVIE_LIBRARY_INDEX_PATH = "library/index.json";
 
@@ -857,8 +855,6 @@ export const AUTOMOVIE_LIBRARY_INDEX_PATH = "library/index.json";
  * apart is what lets the publication be measured against a hand-built result
  * rather than only against whatever the sandbox happened to return.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Carries the executed owner whose published artifact the delivery population is charged over.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Types the executed owner result the published owner index is derived from.
  * @author Samchon
  */
 export interface IAutoMovieMaterializedLibraryResult {
@@ -901,9 +897,7 @@ export interface IAutoMovieMaterializedLibraryResult {
  * The result is a pure function of the executed owners, so a second compile of
  * unchanged source produces the same bytes down to the trailing newline.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Makes the compiled topology a library review population is derived from an actual builder-owned artifact rather than an unexecuted source path.
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Publishes each artifact with the owner, source export, and compile identity a receipt is bound to.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Supplies the published owner-to-artifact index the library review denominator is read through.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Records the compile identity the published library artifacts were derived at.
  * @author Samchon
  */
@@ -997,9 +991,7 @@ export const materializeAutoMovieLibraryFiles = (props: {
  * compiled yet, and the compile gate is what refuses the state itself; a reader
  * that threw here would report a compile problem as an observation problem.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Gives an offline observation command the same published owner population the review gate charges.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Supplies the compiled topology the required viewpoint population is derived from.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Reopens the published owner-to-artifact index instead of recomputing a branch list.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Hands the derivation the exact compiled buildings one owner published.
  * @author Samchon
  */
@@ -1030,8 +1022,6 @@ export const autoMovieMaterializedLibraryEnvironments = (props: {
  * one belongs to nobody -- two map owners would each owe its every instant, and
  * one adopted world would be paid for twice.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Reopens the adopted world a map owner published so its observation population is derived from what that owner contributed.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Reads the per-owner context ids the same compile wrote rather than re-executing source.
  * @author Samchon
  */
 export const autoMovieMaterializedLibraryContexts = (props: {

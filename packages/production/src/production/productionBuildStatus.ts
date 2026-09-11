@@ -10,6 +10,7 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 
+/** Compare intended generated files with the bytes currently stored. */
 export const statusesOf = (
   project: AutoMovieProductionProject,
   files: readonly IAutoMovieGeneratedFile[],
@@ -37,6 +38,7 @@ export const statusesOf = (
   });
 };
 
+/** List the source owners used to identify generated output. */
 export const sourceTargetsOf = (
   file: string,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,

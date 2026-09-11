@@ -8,7 +8,7 @@ Deterministic derived artifacts have their own owner inside `automovie`. An expl
 
 Never patch `generated` to fix a source problem. Its manifest records every builder-owned path and digest; unowned or modified output blocks compilation. Edit the owning source or design, then run the scaffold compile command or the package builder API.
 
-Shot source executes in a deterministic boundary. Wall clock, random APIs, process, network, filesystem, timers, and dynamic import are unavailable in the foundation builder. Use explicit design seeds. A named static runtime import is available for project-relative modules and for the names `@automovie/engine` and `@automovie/archetypes` publish to the sandbox. Other packages and default, namespace, or side-effect bindings are refused at the declaration. An unavailable named engine export is refused by name, and the refusal says whether the engine has no such export or the sandbox withholds one it has. [TypeScript](typescript.md) lists the reachable engine set by the question each family answers. Type-only imports are documentation and disappear before execution.
+Shot source runs through ordinary Node module loading under `ttsx`. Keep its output reproducible from explicit inputs and design seeds. Use runtime imports directly from the owning packages; [TypeScript](typescript.md) routes common authoring questions to those APIs.
 
 The build context contains immutable builder-generated `runtimeModels` and compact `formationRuntime`. `engine.formationSlot` regenerates one exact representative without serializing the group.
 

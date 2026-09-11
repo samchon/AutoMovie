@@ -84,8 +84,11 @@ interface IShotAssemblyEntry {
 
 /** The immediately preceding placed shot and its successfully measured closing. */
 export interface ICompiledVideoClosing extends IShotAssemblyEntry {
+  /** The edit occurrence whose terminal state is retained. */
   placement: IAutoMovieVideoEdit;
+  /** Position of the occurrence in the ordered video edit. */
   placementIndex: number;
+  /** Resolved beat-end state, or null when the occurrence has none. */
   closing: IAutoMovieBeatEndState | null;
 }
 
@@ -180,6 +183,7 @@ export const fullHardCutBoundary = (
   );
 };
 
+/** Build the registered shot and connect its models, motion and prior state. */
 export const assembleShotSource = (
   props: IShotAssemblyProps,
 ): IShotAssemblyResult => {
@@ -196,7 +200,17 @@ export const assembleShotSource = (
           const formation = props.context.formationRuntime[id];
           if (formation === undefined)
             throw new RangeError(`Formation "${id}" is unavailable.`);
-          return formationSlot(formation, slot);
+          return formationSlot(
+            {
+              ...formation,
+              capabilities: [],
+              heroOverrides: formation.heroes.map(({ slot, actor }) => ({
+                slot,
+                actor,
+              })),
+            },
+            slot,
+          );
         },
         instanceSlot: (id: string, slot: number) => {
           const instanceSet = props.context.instanceSetRuntime[id];

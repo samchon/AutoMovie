@@ -118,7 +118,6 @@ export interface IAutoMovieLibrarySourceOwner {
  * A registration must choose this path or a build function, never both.
  *
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Selects a verified precomputed contribution without copying its payload through authored execution.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Separates declarative artifact transfer from the unchanged source execution budget.
  */
 export interface IAutoMovieLibraryDerivedSourceOwner {
   /** Exact active design-document and H2 address this export realizes. */

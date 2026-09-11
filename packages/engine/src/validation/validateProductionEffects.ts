@@ -4,7 +4,7 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 
-import { compareCodeUnits } from "../../../production/src/production/contentIdentity";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { engineDiagnostic } from "./productionValidationDiagnostics";
 
 /**

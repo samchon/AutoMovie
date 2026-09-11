@@ -23,12 +23,17 @@ import { canonicalAutoMovieJsonBytes } from "./contentIdentity";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { ISourceBuildResult, buildSourceExport } from "./productionSourceBuild";
 
+/** Project-relative module that declares the film edit. */
 export const FILM_SOURCE_PATH = "src/film.ts";
 
+/** Named export selected from the film entry module. */
 export const FILM_SOURCE_EXPORT = "film";
 
+/** Resolved edit and timeline before their input identity is sealed. */
 export interface ICompiledFilmDraft {
+  /** The source-selected sequence of video and timed tracks. */
   edit: IAutoMovieFilmEdit;
+  /** Frame-resolved edit before build metadata is attached. */
   timeline: Omit<
     IAutoMovieFilmTimeline,
     "builder" | "inputFingerprint" | "sourceDigest"
@@ -64,11 +69,14 @@ export const buildFilmEdit = (props: {
     path: FILM_SOURCE_PATH,
     exportName: FILM_SOURCE_EXPORT,
     source: props.source,
-    readSource: props.readSource,
+    sourceRoot: props.sourceRoot,
     context: props.context,
     validate: (input) => typia.validateEquals<IAutoMovieFilmEdit>(input),
   });
 
+/** Resolve a film edit against built shots and their contract realizations.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-refusal Rejects malformed cue identities, text and intervals during edit assembly.
+ */
 export const assembleFilm = (
   props: IFilmAssemblyProps,
 ): ISourceBuildResult<ICompiledFilmDraft> => {
@@ -324,6 +332,7 @@ export const assembleFilm = (
   };
 };
 
+/** Address a film assembly failure to its owning source module. */
 export const filmDiagnostic = (
   code: AutoMovieDiagnosticCode,
   message: string,

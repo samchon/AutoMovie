@@ -1,17 +1,16 @@
 import {
+  appendValidation,
+  engineDiagnostic,
   resolveAutoMovieMaterial,
-  validateModel,
-  validateMotion,
-  validateShotArtifact,
-} from "@automovie/engine";
-import { appendValidation, engineDiagnostic } from "@automovie/engine";
-import {
+  validateAutoMovieEffects,
   validateAutoMovieFormationGround,
   validateAutoMovieFormationMotions,
   validateAutoMovieFormationOverlap,
   validateAutoMovieFormationSlotMotions,
+  validateModel,
+  validateMotion,
+  validateShotArtifact,
 } from "@automovie/engine";
-import { validateAutoMovieEffects } from "@automovie/engine";
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
@@ -20,6 +19,7 @@ import {
 
 import { validateSceneArtifact } from "../validators/artifacts";
 
+/** Validate a shot together with its scene, models, motions and materials. */
 export const validateCompiledShot = (
   contract: IAutoMovieShotContract,
   value: IAutoMovieCompiledShotSource,

@@ -27,12 +27,19 @@ import {
 } from "./productionBuildProtocol";
 import { createAutoMovieSourceRuntimeModelRegistry } from "./sourceRuntimeModelRegistry";
 
+/** Retain an adopted motion and the input facts required for retargeting. */
 export interface IProductionExternalMotionAdoption {
+  /** The authored external-motion selection. */
   declaration: IAutoMovieProductionExternalMotionAdoption;
+  /** The ingest result that validated the selected input. */
   receipt: IAutoMovieIngestExternalMotionAdoption;
+  /** Files and content identities that comprise the external motion input. */
   sourceClosure: IAutoMovieExternalMotionConversionReceipt["source"]["closure"];
+  /** Coordinate and unit conventions carried by the source motion. */
   sourceBasis: IAutoMovieExternalMotionBasis;
+  /** The selected take within the imported motion input. */
   sourceTake: IAutoMovieExternalMotionTake;
+  /** The normalized source motion before target-skeleton retargeting. */
   sourceMotion: IAutoMovieMotion;
 }
 
@@ -41,9 +48,11 @@ export interface IProductionExternalMotionConversionDraft extends Omit<
   IAutoMovieExternalMotionConversionReceipt,
   "result"
 > {
+  /** Retargeted motion to publish with the conversion receipt. */
   motion: IAutoMovieMotion;
 }
 
+/** Retarget each adopted motion to the actor skeleton selected by the shot. */
 export const resolveExternalMotionClips = (props: {
   adoptions: readonly IProductionExternalMotionAdoption[];
   program: IAutoMovieProductionShotProgram;

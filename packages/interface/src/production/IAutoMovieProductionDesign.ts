@@ -482,7 +482,6 @@ export interface IAutoMovieProductionDesign {
    *
    * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Makes propagation an explicit production input rather than an engine default.
    * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Carries only selected bounded models into deterministic planning.
-   * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Keeps the adopted generator's provider, model, version, rights, and reviewed terms date with the production that chose them.
    * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality Types the adoption as provider-neutral authored data that a credential can neither supply nor start.
    * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-lipsync-join Names the actor whose performance shares the film interval with the voice rather than inferring one from cast order.
    * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-lipsync-join-and-seek Supplies the join key the viseme evaluation resolves at a target film time.

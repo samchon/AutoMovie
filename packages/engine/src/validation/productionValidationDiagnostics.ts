@@ -2,6 +2,7 @@ import { IAutoMovieDiagnostic } from "@automovie/interface";
 
 import { validateModel } from "../index";
 
+/** Append engine violations with the shot identity that owns their input. */
 export const appendValidation = (
   diagnostics: IAutoMovieDiagnostic[],
   id: string,
@@ -19,6 +20,7 @@ export const appendValidation = (
       });
 };
 
+/** Describe a failed shot field without replacing its engine validation. */
 export const engineDiagnostic = (
   id: string,
   field: string,

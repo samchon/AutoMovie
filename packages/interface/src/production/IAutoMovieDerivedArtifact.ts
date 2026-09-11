@@ -143,7 +143,6 @@ export interface IAutoMovieDerivedArtifactSource {
    *
    * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Supplies the precomputed result to authored source.
    * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Publishes content only after every freshness gate succeeds.
-   * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Leaves artifact payload length unconstrained while a later measured policy may bound transfer separately.
    */
   content: string;
 }

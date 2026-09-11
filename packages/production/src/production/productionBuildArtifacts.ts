@@ -31,6 +31,7 @@ import {
   ICompiledFilmDraft,
 } from "./productionFilmAssembly";
 
+/** Serialize the resolved models, shots and motion conversions into generated files. */
 export const materializeGeneratedFiles = (
   productionId: string,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
@@ -137,6 +138,9 @@ export const materializeGeneratedFiles = (
   return files;
 };
 
+/** Serialize the film timeline and effect streams independently of rendered media.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Emits timeline and effect data separately from rendered files.
+ */
 export const materializeFilmArtifacts = (
   draft: ICompiledFilmDraft,
   sourceDigest: AutoMovieContentDigest,

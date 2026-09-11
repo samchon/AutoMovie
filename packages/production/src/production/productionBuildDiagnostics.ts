@@ -12,6 +12,7 @@ import {
 } from "./contentIdentity";
 import { FILM_SOURCE_EXPORT, FILM_SOURCE_PATH } from "./productionFilmAssembly";
 
+/** Locate missing production and world records before source assembly. */
 export const missingDesignDiagnostics = (
   project: AutoMovieProductionProject,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
@@ -51,6 +52,7 @@ export const missingDesignDiagnostics = (
   return diagnostics;
 };
 
+/** Report a source path failure at the shot that selected it. */
 export const sourcePathDiagnostic = (
   id: string,
   sourcePath: string,
@@ -71,6 +73,7 @@ export const sourcePathDiagnostic = (
   };
 };
 
+/** Report a source path failure at the film entry. */
 export const filmSourcePathDiagnostic = (
   error: unknown,
 ): IAutoMovieDiagnostic => ({
@@ -86,12 +89,15 @@ export const filmSourcePathDiagnostic = (
   message: `${errorMessage(error)} Export "${FILM_SOURCE_EXPORT}" with build(context) from ${FILM_SOURCE_PATH}.`,
 });
 
+/** Preserve an Error message when formatting an unknown thrown value. */
 export const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+/** Recognize supported TypeScript module extensions. */
 export const isTypeScriptSourcePath = (file: string): boolean =>
   [".ts", ".tsx", ".mts", ".cts"].includes(path.extname(file).toLowerCase());
 
+/** Enumerate regular files beneath the selected directory. */
 export const listFiles = (root: string): string[] => {
   const files: string[] = [];
   const visit = (directory: string): void => {
@@ -109,6 +115,7 @@ export const listFiles = (root: string): string[] => {
   return files;
 };
 
+/** Order diagnostics consistently by their owning address. */
 export const compareDiagnostics = (
   left: IAutoMovieDiagnostic,
   right: IAutoMovieDiagnostic,
@@ -118,5 +125,6 @@ export const compareDiagnostics = (
   compareCodeUnits(left.code, right.code) ||
   compareCodeUnits(left.message, right.message);
 
+/** Use portable slash separators in diagnostic and artifact paths. */
 export const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");

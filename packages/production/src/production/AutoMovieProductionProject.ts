@@ -1869,8 +1869,6 @@ export class AutoMovieProductionProject {
    * Observe any entry, not merely readable prose, so unsafe recovery markers
    * cannot disappear behind the nullable text-reader contract.
    *
-   * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Keeps interrupted sidecar publication outside the completed observation population.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Counts malformed files, directories, and dangling links as pending markers rather than absent text.
    */
   public proseDocumentExists(relativePath: string): boolean {
     return readProductionEntryPresence({

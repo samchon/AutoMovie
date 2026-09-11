@@ -1,4 +1,9 @@
 /**
+ * @evidenceExclude requirements/agent-authoring/partial-work.md#agent-declared-omission Authored omission declarations are evaluated by the native evidence graph.
+ * @evidenceExclude requirements/agent-authoring/partial-work.md#agent-partial-work-gap-distinction The native evidence graph and authoring procedure classify declared unrealized work.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Native evidence lint evaluates authored omission declarations.
+ * @evidenceExclude requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-story-binding The engine effect validator now implements this binding.
+ * @evidenceExclude specifications/review-and-acceptance/README.md#review-acceptance-system-boundary This section routes review responsibilities across the system.
  * Package-local ledger for contract units the production library does not
  * implement.
  *

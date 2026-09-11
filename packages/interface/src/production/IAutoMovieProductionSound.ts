@@ -754,7 +754,6 @@ export interface IAutoMovieProductionTtsReceipt {
    * UTC instant captured immediately before the generator call that produced
    * this receipt's immutable PCM.
    *
-   * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Records the actual execution instant of generated audio.
    * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#external-result-provider-neutrality Retains the immutable generation instant with the adopted audio result.
    */
   generatedAt: string;

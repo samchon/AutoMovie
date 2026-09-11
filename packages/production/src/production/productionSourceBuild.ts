@@ -33,13 +33,19 @@ interface ISourceBuildProps<T> {
   validate(input: unknown): IValidation<T>;
 }
 
+/** A source result and diagnostics produced while reading its registration and output. */
 export interface ISourceBuildResult<T> {
+  /** The validated build value, or null when source execution failed. */
   value: T | null;
+  /** Failures and warnings observed while loading and validating the source. */
   diagnostics: IAutoMovieDiagnostic[];
   /** Source-owned scene captured from a validated defineShot registration. */
   registrationScene?: string;
 }
 
+/** Load a project module through Node and validate its selected registration and build result.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Loads project modules with ordinary Node execution and validates their results.
+ */
 export const buildSourceExport = <T>(
   props: ISourceBuildProps<T>,
 ): ISourceBuildResult<T> => {

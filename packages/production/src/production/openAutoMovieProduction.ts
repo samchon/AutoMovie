@@ -108,8 +108,6 @@ export const findAutoMovieProjectRoot = (
 /**
  * Open the builder, oracle, and project runtime.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Carries the one graph-derived authoring snapshot into every builder service opened for a library.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Preserves one authoring truth across status, review, final, and publication consumers.
  * @author Samchon
  */
 export const openAutoMovieProduction = (props: {

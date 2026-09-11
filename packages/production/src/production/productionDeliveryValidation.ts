@@ -68,6 +68,7 @@ import {
 import { classifyAutoMovieProductionDeliverableSemanticMask } from "./semanticMaskEvidence";
 import { verifyProductionNonVideoDeliverables } from "./verifyProductionNonVideoDeliverables";
 
+/** Verify published deliverables against their current byte and media facts. */
 export const finalDeliverableDiagnostics = (
   project: AutoMovieProductionProject,
   production: ReturnType<AutoMovieProductionProject["graph"]>["production"],
