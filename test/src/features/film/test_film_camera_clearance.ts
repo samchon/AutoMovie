@@ -131,7 +131,7 @@ const runtimeModels = () => [
  *    are refused at the evaluator boundary.
  * 8. Stage validation rejects malformed nested envelopes and deep-lowers a
  *    valid envelope without retaining author-object aliases.
- * 9. Performance preserves a clear report, while compiler-visible body contact
+ * 9. Performance preserves a clear report, while builder-visible body contact
  *    and a stale geometry snapshot return addressed refusal.
  * 10. A zero-duration public evaluation still detects contact at its single
  *     fixed-clock instant.
@@ -773,7 +773,7 @@ export const test_film_camera_clearance = (): void => {
   });
   const noRuntime = inspectAdapter({ runtime: undefined });
   TestValidator.equals(
-    "legacy camera and missing compiler authority remain distinct",
+    "legacy camera and missing builder authority remain distinct",
     [
       [plain.reports, plain.out.items.length],
       [noRuntime.reports, noRuntime.out.items[0]?.path],
@@ -922,7 +922,7 @@ export const test_film_camera_clearance = (): void => {
     models: [...runtimeModels(), propModel],
   });
   TestValidator.predicate(
-    "an unaligned camera key refines the compiler clock before interval sweep",
+    "an unaligned camera key refines the builder clock before interval sweep",
     offClockContact.reports === undefined &&
       offClockContact.out.items.some(
         (item) =>
@@ -1321,7 +1321,7 @@ export const test_film_camera_clearance = (): void => {
     runtime: { ...baseAdapterProps.runtime, sampleRate: 0 },
   });
   TestValidator.predicate(
-    "an invalid compiler clock is returned at the camera envelope",
+    "an invalid builder clock is returned at the camera envelope",
     evaluatorFault.reports === undefined &&
       evaluatorFault.out.items.some(
         (item) =>
@@ -1486,7 +1486,7 @@ export const test_film_camera_clearance = (): void => {
     },
   });
   TestValidator.predicate(
-    "compiler returns an addressed camera-body refusal",
+    "builder returns an addressed camera-body refusal",
     blocked.success === false &&
       blocked.diagnostics.some(
         (item) =>

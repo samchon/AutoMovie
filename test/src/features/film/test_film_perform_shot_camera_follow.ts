@@ -49,7 +49,7 @@ const marchSynth = () =>
   makeMotion([keyframe(0, march(0)), keyframe(1, march(1))], 1);
 
 /**
- * Pins the follow seam between the shot compiler and the camera grammar: the
+ * Pins the follow seam between the shot builder and the camera grammar: the
  * subject's animated base is its placement plus the compiled clip's root
  * displacement, so a follow move tracks a traveling actor, and every fallback
  * (rootless clip, motionless subject, point subject) stays total.

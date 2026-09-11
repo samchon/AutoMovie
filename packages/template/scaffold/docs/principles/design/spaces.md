@@ -2,14 +2,6 @@
 
 Space documents define where bodies may exist and move: world, site, building, exterior, interior, room, zone, boundary, opening, and route. They do not own the mesh used to depict an object, its finish, or a timed traversal.
 
-## Spatial information structure {#space-information-structure}
-
-Every H2 first identifies its spatial owner, central decision, coordinate basis, and downstream consequence, then develops relations, dimensions, interfaces, limits, and verification in paragraphs with distinct functions. A drawing or table clarifies those decisions rather than replacing them.
-
-Review question: can a reverse outline assign every paragraph, drawing, and table one non-repeated spatial purpose?
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [NASA on verification-ready requirement structure](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
 ## Topology before geometry {#space-topology}
 
 Every space H2 states its applicable containment, adjacency, connection, obstruction, access, and inside/outside relations before choosing implementation geometry.

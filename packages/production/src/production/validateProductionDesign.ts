@@ -474,7 +474,7 @@ export const validateAutoMovieProductionGraph = (
           "design-collection-empty",
           target,
           file,
-          `External motion adoption "${adoption.id}" has no explicit source-node mapping. Declare every adopted channel mapping; the compiler will not infer one.`,
+          `External motion adoption "${adoption.id}" has no explicit source-node mapping. Declare every adopted channel mapping; the builder will not infer one.`,
         );
       for (const mapping of adoption.mapping) {
         if (
@@ -601,7 +601,7 @@ export const validateAutoMovieProductionGraph = (
         "model-archetype-unregistered",
         target,
         file,
-        `Model archetype "${model.archetype}" is not registered with this compiler. Name a registered archetype (${registeredArchetypeNames(archetypes)}) in the tracked model recipe record, or register a builder for "${model.archetype}" before compiling.`,
+        `Model archetype "${model.archetype}" is not registered with this builder. Name a registered archetype (${registeredArchetypeNames(archetypes)}) in the tracked model recipe record, or register a builder for "${model.archetype}" before compiling.`,
       );
     validateModelProfiles(diagnostics, model.profiles ?? [], target, file);
     validateModelParameters(diagnostics, model, archetype, target, file);
@@ -620,7 +620,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-cardinality-invalid",
         target,
         file,
-        "palette must contain exactly one material color in the foundation compiler. Split visually distinct materials into separate recipes until semantic part-role binding is implemented.",
+        "palette must contain exactly one material color in the foundation builder. Split visually distinct materials into separate recipes until semantic part-role binding is implemented.",
       );
     const lodTiers = new Set<string>();
     if (model.lod.length === 0)
@@ -730,7 +730,7 @@ export const validateAutoMovieProductionGraph = (
           "design-attachment-unsupported",
           target,
           file,
-          `Attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned skeleton of archetype "${model.archetype}" does not materialize. Use one of ${archetype.bones.join(", ")} or remove the attachment.`,
+          `Attachment "${attachment.id}" names bone "${attachment.bone}", which the builder-owned skeleton of archetype "${model.archetype}" does not materialize. Use one of ${archetype.bones.join(", ")} or remove the attachment.`,
         );
     }
     if (
@@ -743,7 +743,7 @@ export const validateAutoMovieProductionGraph = (
         "design-attachment-unsupported",
         target,
         file,
-        `Archetype "${model.archetype}" builds no compiler-owned skeleton for bone attachments. Remove attachments or name an archetype whose builder owns one.`,
+        `Archetype "${model.archetype}" builds no builder-owned skeleton for bone attachments. Remove attachments or name an archetype whose builder owns one.`,
       );
   }
 
@@ -2776,7 +2776,7 @@ const validateInstanceSets = (
  *
  * This refuses a tolerance that has stopped being one, and nothing finer. Where
  * members really end up standing once a tolerance is applied is a question
- * about placement, and the compiler answers it against the real dressed
+ * about placement, and the builder answers it against the real dressed
  * positions.
  */
 const validateFormationDressing = (

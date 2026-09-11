@@ -808,7 +808,7 @@ const RESERVED_DIRS = [
  * Check a project-relative asset path: forward slashes, no absolute paths, no
  * `..` escapes, no empty segments. Returns the normalized path, or the fault
  * describing the escape, the non-throwing core shared by the store (which
- * throws on fault) and the compiler surface (which reports it as a violation).
+ * throws on fault) and the builder surface (which reports it as a violation).
  */
 export const checkAssetPath = (
   relativePath: string,

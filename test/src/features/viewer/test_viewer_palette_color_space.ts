@@ -20,7 +20,7 @@ import { nclose } from "../internal/predicates";
  * instance set's `variation.palette`, and the cut pieces that meet them carry a
  * generated model recipe's own material. Both are authored as `#RRGGBB`, so an
  * author reasonably expects the same string to mean the same color. It did not:
- * the viewer decoded the palette from sRGB while the compiler divided the
+ * the viewer decoded the palette from sRGB while the builder divided the
  * recipe's digits by 255 and wrote them into a linear `baseColor`, which put
  * one roof's whole slates at linear 0.21 and its cut slates at 0.49 and drew a
  * bright band along every hip and ridge where the two met.

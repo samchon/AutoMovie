@@ -167,7 +167,7 @@ const chairRing = (props: {
 
 /**
  * The pure placement predicates answer the questions the validator asks, so a
- * source-side loop or search reaches the same verdict the compiler will.
+ * source-side loop or search reaches the same verdict the builder will.
  *
  * Scenarios:
  *

@@ -1,6 +1,6 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
-  AutoMovieProductionCompiler,
+  AutoMovieProductionBuilder,
   AutoMovieProductionProject,
   encodeAutoMoviePathSegment,
   readAutoMovieFilmTimeline,
@@ -83,7 +83,7 @@ export const createProductionCaptureDialogueRuntime = (props: {
         root,
         props.productionId,
       );
-      const current = new AutoMovieProductionCompiler(
+      const current = new AutoMovieProductionBuilder(
         project,
         props.authoringEvidence,
         props.currentAuthoringEvidence,
@@ -105,10 +105,10 @@ export const createProductionCaptureDialogueRuntime = (props: {
       const generated = project.generatedManifest();
       if (
         generated === null ||
-        generated.inputFingerprint !== current.compiler.inputFingerprint
+        generated.inputFingerprint !== current.builder.inputFingerprint
       )
         throw new Error(
-          "Dialogue capture requires generated output from the current source compile. Run npm run compile, then retry.",
+          "Dialogue capture requires generated output from the current source compile. Run npm run build, then retry.",
         );
       if (
         generated.files.some((file) => file.path === "film-timeline.json") ===
@@ -119,11 +119,11 @@ export const createProductionCaptureDialogueRuntime = (props: {
       }
       const timeline = readAutoMovieFilmTimeline(
         project,
-        current.compiler.inputFingerprint,
+        current.builder.inputFingerprint,
       );
       const prepared = await sound.prepare({
         project,
-        compileFingerprint: current.compiler.inputFingerprint,
+        compileFingerprint: current.builder.inputFingerprint,
         timeline,
       });
       if (

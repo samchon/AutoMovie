@@ -33,7 +33,7 @@ const SUBJECT = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };
 
 /**
  * Camera frame actions are a runtime grammar boundary. Unknown move names must
- * fail before the compiler emits a camera clip with no keys.
+ * fail before the builder emits a camera clip with no keys.
  *
  * Scenario: a forged move name throws instead of compiling an empty camera
  * motion.

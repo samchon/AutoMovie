@@ -694,7 +694,7 @@ export const designLineagePhaseSnapshot = (
  * None of the four is phased by it today. The callers are the scaffold's
  * renovation example and the test suite, so nothing here holds a compiled
  * artifact to a phase, and the drift this signature is shaped to prevent is
- * prevented by nobody. Wiring the compiler's scene nodes, the derived drawing's
+ * prevented by nobody. Wiring the builder's scene nodes, the derived drawing's
  * element filter, the schedule, and the draw list through this call is what
  * would turn the paragraph above into a property of the pipeline.
  *

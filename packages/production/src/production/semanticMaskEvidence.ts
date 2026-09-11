@@ -325,7 +325,7 @@ export type AutoMovieProductionDeliverableSemanticMaskFinding =
  * Every ledger that carries deliverable files answers the same question: does
  * this file's semantic receipt, when present, describe exactly these bytes at
  * this path for a mask frame the current plan schedules in this deliverable?
- * The project's terminal commit, the read-only final compiler, and the proxy
+ * The project's terminal commit, the read-only final builder, and the proxy
  * publication preflight all decide it here so no ledger admits a sidecar
  * another one would refuse.
  *

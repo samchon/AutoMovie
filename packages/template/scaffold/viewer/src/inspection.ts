@@ -166,7 +166,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
+    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run build.`,
   );
 const compiled = (await response.json()) as IAutoMovieCompiledShotSource;
 const artifact = { revision: requestedRevision, compiled };
@@ -176,7 +176,7 @@ const artifact = { revision: requestedRevision, compiled };
  *
  * This is the same absorption the runtime performs, in the same order and
  * for the same one divergence: a placed or reusable part is `part:<node>/<part>`
- * to the viewer and `element-part:`/`prototype-part:` to the compiler. First
+ * to the viewer and `element-part:`/`prototype-part:` to the builder. First
  * match wins here because first match wins there, and the pose this page is
  * handed was derived from whichever description the surface picked. Choosing
  * differently would aim the surface's eye at a different thing under the

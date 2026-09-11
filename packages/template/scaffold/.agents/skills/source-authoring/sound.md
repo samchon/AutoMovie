@@ -14,7 +14,7 @@ Give each layer a narrative job. If two sounds compete for the same job, simplif
 
 ## What an authored cue plays
 
-An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source offset the edit begins at, the asset's complete source duration, a gain, fades and a bus. The source duration is the whole asset, not the part the cue uses: the offset plus the duration must fit inside it, and the compiler refuses a cue that does not. The mix plays the asset at unit rate from the offset for exactly the cue's duration, so the same trim sounds the same at any offset and a longer asset is never squeezed into a shorter cue. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
+An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source offset the edit begins at, the asset's complete source duration, a gain, fades and a bus. The source duration is the whole asset, not the part the cue uses: the offset plus the duration must fit inside it, and the builder refuses a cue that does not. The mix plays the asset at unit rate from the offset for exactly the cue's duration, so the same trim sounds the same at any offset and a longer asset is never squeezed into a shorter cue. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
 
 A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in: a bed for music, filtered noise for ambience and effects. That is scaffolding for a film mid-authoring and not the sound design: a review that judges a cue before its asset is decoded is judging the stand-in.
 
@@ -22,7 +22,7 @@ A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in: a
 
 Bind cues to semantic event ids and exact source times. Impact, muzzle, footfall, door contact, formation order, and transition sounds should inherit measured event time and world-space source. Preserve authored source offsets when an edit uses a later part of a cue or carries it across a cut.
 
-Use deterministic procedural sound for bounded prototypes and effects the engine can derive. Register external samples with license, digest, technical facts, and consumer permission. A filename is not provenance.
+Use deterministic procedural sound for bounded prototypes and effects the engine can derive. Register sample bytes, technical format, and the sound cue that consumes them.
 
 ## Spatialization
 

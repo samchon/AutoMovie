@@ -36,7 +36,7 @@ export interface IAutoMovieConstraintViolation {
    * deliberately unphysical. A `"warning"` never fails validation on its own;
    * it rides the same envelope so the build can surface it and the author (or
    * an action's `physicsIntent` marker) can accept or dismiss it. `"warning"`
-   * is the compiler's word for this level, not "advisory".
+   * is the builder's word for this level, not "advisory".
    *
    * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `severity` as the portable data boundary for the diagnostics correction and recheck requirement.
    * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `severity` for the validation diagnostic correction revalidation system contract.

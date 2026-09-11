@@ -10,7 +10,7 @@ Read each applicable sibling in full before acting:
 
 - [Design branches](design-branches.md) separates map, model, space, material, instance, motion, and system ownership.
 - [Models and motions](models-and-motions.md) covers bounded representation, articulation, and deterministic change.
-- [Ownership](ownership.md) separates author-, compiler-, and renderer-owned bytes.
+- [Ownership](ownership.md) separates author-, builder-, and renderer-owned bytes.
 - [TypeScript](typescript.md) defines deterministic module shape and typed registration.
 - [Composition](composition.md) arranges repeated production source as a program that emits shots and records.
 - [Compilation](compilation.md) owns design, source, and final scopes plus atomic publication.
@@ -30,4 +30,4 @@ Read only the craft that the current source change reaches:
 
 `scripts/emitDesign.ts` initially refuses. After reviewed design and source exist, extend only its marked block with explicit imports and `emit` calls for exactly the records this production owns. Preserve its unchanged-record behavior and orphan refusal. It writes and never deletes.
 
-Never edit generated output or renders. Correct authored source, regenerate, and renew stale reviews. Run `npm run lint:source` while authoring, `npm run design` when reviewed design records are ready, and `npm run compile` as the only command allowed to update compiler-owned output. A clean compile proves structure, not appearance; hand rendered claims to [Review verification](../review-verification/SKILL.md).
+Never edit generated output or renders. Correct authored source, regenerate, and renew stale reviews. Run `npm run lint:source` while authoring, `npm run design` when reviewed design records are ready, and `npm run build` as the only command allowed to update builder-owned output. A clean compile proves structure, not appearance; hand rendered claims to [Review verification](../review-verification/SKILL.md).

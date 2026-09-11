@@ -27,7 +27,7 @@ export interface IAutoMovieLibraryBuildContext {
   /** Exact H2 anchor of the reviewed decision this owner realizes. */
   anchor: string;
   /**
-   * Declared precomputed artifacts whose basis and output bytes the compiler
+   * Declared precomputed artifacts whose basis and output bytes the builder
    * verified before execution, keyed by project-relative output path.
    *
    * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Supplies only current declared precomputed inputs to library owners.
@@ -37,7 +37,7 @@ export interface IAutoMovieLibraryBuildContext {
 }
 
 /**
- * What one library source owner hands back to the compiler.
+ * What one library source owner hands back to the builder.
  *
  * Every payload is one a consumer already reads. A built environment becomes
  * the compiled topology the required observation population is derived from, a
@@ -54,7 +54,7 @@ export interface IAutoMovieLibraryBuildContext {
  * the upgrade rather than a preference: every library source written before it
  * existed returns the two, and a project that has not been touched since is not
  * in error. An absent list and an empty one say the same thing here -- this
- * owner adopted no world at the DTO boundary. The compiler nevertheless
+ * owner adopted no world at the DTO boundary. The builder nevertheless
  * refuses an empty map-owner completion, because absence is not delivery.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Fixes the exact result a library source revision is allowed to produce.
@@ -111,14 +111,13 @@ export interface IAutoMovieLibrarySourceOwner {
 /**
  * A library owner whose complete contribution was explicitly precomputed.
  *
- * The compiler reads the declared, current UTF-8 artifact after admitting this
+ * The builder reads the declared, current UTF-8 artifact after admitting this
  * source export against its design owner. It applies the same contribution and
  * spatial validation as a build result. No generator executes during compile,
  * and payload decoding does not consume the authored module's execution budget.
  * A registration must choose this path or a build function, never both.
  *
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact Selects a verified precomputed contribution without copying its payload through authored execution.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Separates declarative artifact transfer from the unchanged source execution budget.
  */
 export interface IAutoMovieLibraryDerivedSourceOwner {
   /** Exact active design-document and H2 address this export realizes. */
@@ -163,7 +162,7 @@ export interface IAutoMovieMaterializedLibraryOwner {
 }
 
 /**
- * The compiler-owned index of everything a library compile materialized.
+ * The builder-owned index of everything a library compile materialized.
  *
  * A film reads its own generated output through the shot and model manifests it
  * already publishes. A library has neither, so this index is how a later
@@ -179,7 +178,7 @@ export interface IAutoMovieMaterializedLibrary {
   /** Closed schema version. */
   version: 1;
   /** Compiler protocol that produced this index. */
-  compiler: string;
+  builder: string;
   /** Production namespace this library was compiled under. */
   production: string;
   /** Compiler input identity this index was derived at. */

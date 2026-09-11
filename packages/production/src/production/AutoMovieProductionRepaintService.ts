@@ -36,7 +36,6 @@ import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
-  assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintGeneratorAdoption,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintOutputPath,
@@ -290,7 +289,7 @@ export class AutoMovieProductionRepaintService {
         `${safeRepaintDiagnosticMessage(error, "Repaint generator adoption could not be inspected safely.")} Correct the reviewed repaint generator adoption before external execution.`,
       );
     }
-    const status = services.compileStatus();
+    const status = services.buildStatus();
     if (status.success === false)
       return failure(
         "repaint-compile-stale",
@@ -304,14 +303,14 @@ export class AutoMovieProductionRepaintService {
         "repaint-registry-unavailable",
         safeRepaintDiagnosticMessage(
           error,
-          "Repaint compiler registry could not be read safely.",
+          "Repaint builder registry could not be read safely.",
         ),
       );
     }
     if (registry.shots.some((shot) => shot.id === requestedShot) === false)
       return failure(
         "repaint-target-missing",
-        `Shot "${requestedShot}" is absent from the current compiler registry. Correct the registration or compile the source that defines it.`,
+        `Shot "${requestedShot}" is absent from the current builder registry. Correct the registration or compile the source that defines it.`,
       );
     const graph = services.project.graph();
     const production = graph.production;
@@ -386,11 +385,6 @@ export class AutoMovieProductionRepaintService {
       preflightAt = repaintRuntimeInstant(now(), "preflight");
       assertAutoMovieRepaintExecutionPolicy(executionPolicy);
       assertRepaintEvidence(evidence);
-      assertAutoMovieExternalGeneratorTermsAt({
-        termsCheckedAt: generator.generatorProvenance.termsCheckedAt,
-        occurredAt: preflightAt,
-        label: "repaint generator provenance",
-      });
     } catch (error) {
       return failure(
         "repaint-host-unavailable",
@@ -473,10 +467,10 @@ export class AutoMovieProductionRepaintService {
     );
     const inputCurrent = (): boolean => {
       try {
-        const status = services.compileStatus();
+        const status = services.buildStatus();
         if (
           status.success === false ||
-          status.compiler.inputFingerprint !== registry.inputFingerprint
+          status.builder.inputFingerprint !== registry.inputFingerprint
         )
           return false;
         const currentRegistry = readAutoMovieProductionRegistry(
@@ -1332,7 +1326,7 @@ const resolveReferences = (
       diagnostic: diagnostic(
         "repaint-reference-manifest-missing",
         input.shot,
-        "Repaint references require the compiler-validated asset manifest and current declared bytes.",
+        "Repaint references require the builder-validated asset manifest and current declared bytes.",
       ),
     };
   let decoded: unknown;

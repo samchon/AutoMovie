@@ -22,7 +22,7 @@ export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
 /**
  * Fingerprint only the bytes capable of changing one render target.
  *
- * A shot depends on its compiler-owned shot payload plus every explicitly
+ * A shot depends on its builder-owned shot payload plus every explicitly
  * declared render content input (viewer, capture scripts, configuration and
  * assets). A path may be both source and render content; an explicit content
  * declaration wins for this purpose. The shot does not depend on unrelated
@@ -62,9 +62,9 @@ export const productionRenderTargetFingerprint = (
       payload: Buffer.from(project.productionId, "utf8"),
     },
     {
-      role: "compiler",
+      role: "builder",
       kind: "identity",
-      payload: canonicalAutoMovieJsonBytes(generated.compiler),
+      payload: canonicalAutoMovieJsonBytes(generated.builder),
     },
   ];
   const targetPath =
