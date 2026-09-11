@@ -10,8 +10,9 @@ import type { IAutoMovieProductionSourceGateTrace } from "./IAutoMovieProduction
  * revision number itself. The engine reads those two values only for a camera
  * that declares a clearance envelope, which makes a read exactly the case in
  * which a revision change alone can move the gate answer. The values are fixed
- * before the evaluation, and reading the sample rate records nothing. Without a
- * trace the runtime is returned as it was.
+ * before the evaluation, every other runtime field is carried as it was, and
+ * reading one of those records nothing. Without a trace the runtime is returned
+ * as it was.
  *
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Marks exactly the gate answers whose current status depends on the revision they recorded.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Adds the revision to the freshness key of an answer only when that answer read it.
@@ -27,6 +28,7 @@ export const recordAutoMovieProductionClearanceRevision = (props: {
   const runtime = props.runtime;
   if (trace === undefined) return runtime;
   return {
+    ...runtime,
     get revision(): string {
       trace.revisionBound = true;
       return runtime.revision;
@@ -35,6 +37,5 @@ export const recordAutoMovieProductionClearanceRevision = (props: {
       trace.revisionBound = true;
       return runtime.currentRevision;
     },
-    sampleRate: runtime.sampleRate,
   };
 };

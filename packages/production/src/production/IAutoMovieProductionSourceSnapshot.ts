@@ -12,7 +12,8 @@ import type { AutoMovieContentDigest } from "@automovie/interface";
  * and, for a library, the resident guard identity that covers the checkout root
  * and the declaration location.
  *
- * Two snapshots are the same observation only when every field is equal. That
+ * Two snapshots observed the same inputs only when every field but the revision
+ * is equal, and the revision counts too for an answer that read it. That
  * equality, taken from a fresh read, is the only fact that lets an earlier
  * successful answer stand for the current one.
  *

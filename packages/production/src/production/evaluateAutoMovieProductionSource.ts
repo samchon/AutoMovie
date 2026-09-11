@@ -38,8 +38,8 @@ export const evaluateAutoMovieProductionSource = (props: {
   /** Builder whose read-only source gate this run executes. */
   builder: {
     /**
-     * Run the read-only gate at source scope and report every author-owned
-     * document its validation read.
+     * Run the read-only gate at source scope and report the documents its
+     * validation read and whether its answer read the project revision.
      */
     lintSource(): IAutoMovieProductionSourceGateTrace & {
       /** The gate's own answer. */
