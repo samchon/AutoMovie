@@ -574,7 +574,7 @@ export const test_engine_geometry_query_selectors = (): void => {
     },
   );
 
-  const ground = (x: number, z: number, world = WORLD) =>
+  const ground = (x: number, z: number, world: typeof WORLD | null = WORLD) =>
     ask({ query: "ground", point: { x, z } }, world);
   TestValidator.equals(
     "ground answers the first containing surface or none",
@@ -618,7 +618,7 @@ export const test_engine_geometry_query_selectors = (): void => {
       [
         "noWorld",
         () => {
-          const answer = ground(0, 5, null as unknown as typeof WORLD);
+          const answer = ground(0, 5, null);
           return (
             answer.kind === "ground" &&
             answer.height === 0 &&

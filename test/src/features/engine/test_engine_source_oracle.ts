@@ -77,8 +77,9 @@ const crowd = materializeCompiledInstanceSet({
  * 1. Distance is Euclidean: a 3-4-12 offset is 13 metres.
  * 2. Ground height is the slope's height under a point on it, and zero over no
  *    surface at all.
- * 3. A formation member is the compiled record's member, hero included, on its
- *    terrain; an instance member is the compiled set's member for every slot.
+ * 3. A formation member is the compiled record's member, hero included, and the
+ *    unit's members follow the slope instead of standing at the anchor's
+ *    height; an instance member is the compiled set's member for every slot.
  * 4. Across two thousand members the default, tall and short prototypes are
  *    chosen about 25%, 50% and 25%, not the 40%, 40% and 20% a doubled default
  *    would give.
@@ -126,9 +127,13 @@ export const test_engine_source_oracle = (): void => {
         "groundOverNothing",
         () => oracle.groundHeight({ x: 100, z: 100 }) === 0,
       ],
+      ["heroNamed", () => oracle.formationSlot("unit", 2).node === "leader"],
       [
-        "heroOnTerrain",
-        () => oracle.formationSlot("unit", 2).node === "leader",
+        "membersFollowSlope",
+        () =>
+          Array.from({ length: 12 }, (_, slot) =>
+            oracle.formationSlot("unit", slot),
+          ).some((member) => Math.abs(member.position.y - 1) > 0.3),
       ],
       ["default", () => Math.abs(share("default") - 0.25) < 0.04],
       ["tall", () => Math.abs(share("tall") - 0.5) < 0.04],
@@ -170,7 +175,8 @@ export const test_engine_source_oracle = (): void => {
       distance: true,
       groundOnSlope: true,
       groundOverNothing: true,
-      heroOnTerrain: true,
+      heroNamed: true,
+      membersFollowSlope: true,
       default: true,
       tall: true,
       short: true,

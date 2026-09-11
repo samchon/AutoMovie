@@ -66,7 +66,7 @@ const onRoad = (
  * Scenarios:
  *
  * 1. A grid member at a quarter turn: column -1 of row 0 lands two metres toward
- *    -z of the anchor, and the middle column of row 1 lands three metres toward
+ *    +z of the anchor, and the middle column of row 1 lands three metres toward
  *    +x, which pins the rotation sense of the heading.
  * 2. A lattice member takes its layer, row and column from the slot index, with
  *    the layer rising along local Y.
