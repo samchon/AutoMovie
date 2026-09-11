@@ -1,6 +1,6 @@
 {
   "name": "@automovie/template",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "The self-contained scaffold every AutoMovie production is created from and the library that materializes it.",
   "main": "src/index.ts",
   "exports": {

@@ -57,7 +57,7 @@ const deliveryTone =
 const timelineResponse = await fetch("/__automovie/film.json");
 if (timelineResponse.ok === false)
   throw new Error(
-    `Compiled film is unavailable (${timelineResponse.status}). Run npm run compile.`,
+    `Compiled film is unavailable (${timelineResponse.status}). Run npm run build.`,
   );
 const timeline = (await timelineResponse.json()) as IAutoMovieFilmTimeline;
 const productionRuntimeResponse = await fetch(

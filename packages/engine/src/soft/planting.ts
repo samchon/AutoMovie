@@ -310,7 +310,7 @@ export const arrangePlantingCluster = (
  *
  * Nothing here grows a branch: a production is refused for an unaffordable
  * green wall before the first derivation, and the same numbers ride into the
- * compiler's report so a reviewer sees what the planting cost.
+ * builder's report so a reviewer sees what the planting cost.
  *
  * The worst case is the complete `k`-ary tree of depth `levels`, which is what
  * an unpruned recipe at full growth actually emits.

@@ -2,7 +2,7 @@ import { AutoMovieGuidePass } from "../../cinematics";
 import {
   IAutoMovieDiagnostic,
   IAutoMovieReviewTarget,
-} from "../IAutoMovieProductionCompiler";
+} from "../IAutoMovieProductionBuild";
 
 /**
  * One view an asset review must be able to see before it can complete.

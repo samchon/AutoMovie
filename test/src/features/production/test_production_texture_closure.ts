@@ -48,12 +48,6 @@ export const test_production_texture_closure = (): void => {
   const asset: IAutoMovieAssetProvenance = {
     path: "assets/tile.png",
     digest: `sha256:${"0".repeat(64)}`,
-    original: {
-      url: "https://example.com/tile.png",
-      digest: `sha256:${"0".repeat(64)}`,
-    },
-    license: { identifier: "CC0-1.0", url: "https://example.com/license" },
-    processing: [],
     uses: [
       {
         production: "library",

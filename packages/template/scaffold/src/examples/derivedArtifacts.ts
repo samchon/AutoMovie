@@ -7,7 +7,7 @@
  * budget, the result becomes a **derived artifact** published by an explicit
  * script, never a megabyte-scale literal pasted into a `.ts` file. The bytes
  * live under `automovie/derived/`, the ledger `automovie/derived-artifacts.json`
- * records them, and the compiler verifies rather than regenerates them. Read
+ * records them, and the builder verifies rather than regenerates them. Read
  * `DERIVED_ARTIFACTS` for the full contract.
  *
  * ## The file that runs is the file that is hashed

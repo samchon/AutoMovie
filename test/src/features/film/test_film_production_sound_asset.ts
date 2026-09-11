@@ -101,7 +101,7 @@ const sample = (pcm: Float32Array, index: number): number => pcm[index * 2]!;
  * the mix and none about the film.
  *
  * The mix then read `sourceDurationFrames` as the span the cue plays and
- * stretched it into the cue's film span, while the compiler and the planner
+ * stretched it into the cue's film span, while the builder and the planner
  * read the same field as the asset's complete duration. Every trim of a longer
  * asset, which is what an authored cue normally is, was therefore played fast.
  * The field is the complete asset, the trim is `sourceOffsetFrame` for

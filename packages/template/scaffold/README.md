@@ -34,7 +34,7 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `book` | `npm run book -- --layer <layer> --title <title>` | Ignored reader edition; follow [Production lifecycle](.agents/skills/production-lifecycle/index.md#working-memory-and-reader-editions). |
 | `capture:doctor` | `npm run capture:doctor` | Verify the installed capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `capture:install` | `npm run capture:install` | Install the project capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `compile` | `npm run compile` | Materialize compiler-owned output; follow [Compilation](.agents/skills/source-authoring/compilation.md). |
+| `compile` | `npm run build` | Materialize builder-owned output; follow [Compilation](.agents/skills/source-authoring/compilation.md). |
 | `contracts:migrate` | `npm run contracts:migrate -- --dry-run` or `npm run contracts:migrate` | Plan the shared-contract baseline change before applying its conflict-free actions. |
 | `derive:example` | `npm run derive:example` | Run the non-production derivation specimen; follow [Ownership](.agents/skills/source-authoring/ownership.md). |
 | `design` | `npm run design` | Emit reviewed design records; follow [Source authoring](.agents/skills/source-authoring/index.md). |
@@ -64,7 +64,7 @@ The table names entry points, not completion evidence. Read the linked procedure
 - `src`, `docs`, `test`, `public`, `lint.config.ts`, `scripts/emitDesign.ts`, and the screenplay index are project-owned inputs.
 - `automovie/design/shared` and `automovie/design/<production>` are tracked design records emitted or authored through their declared owners.
 - `automovie/derived` contains Git-ignored precomputed outputs. Track their generator scripts, inputs, and `automovie/derived-artifacts.json` provenance ledger; run the production's explicit generation command before compiling a fresh checkout. Compilation verifies these outputs and never regenerates them.
-- `generated`, `automovie/productions/<production>`, and `renders` are compiler or runtime outputs; do not edit them.
+- `generated`, `automovie/productions/<production>`, and `renders` are builder or runtime outputs; do not edit them.
 - `src/examples` and `npm run derive:example` are teaching material, not production owners or evidence.
 
 Run the applicable [Author process Self-Review](.agents/skills/review-verification/self-review.md) before handing off a completed authoring, evidence, review, or stage-transition boundary.

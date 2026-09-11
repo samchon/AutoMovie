@@ -81,7 +81,6 @@ import {
 } from "./productionRenderPublicationIdentity";
 import { readProductionEntryPresence } from "./readProductionEntryPresence";
 import {
-  assertAutoMovieExternalGeneratorTermsAt,
   canonicalAutoMovieRepaintGeneratorProvenance,
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintActiveReceiptPath,
@@ -254,7 +253,7 @@ const REPAINT_RETRYABLE_FAILURE_CLASSES: ReadonlySet<AutoMovieRepaintFailureClas
 export class AutoMovieProductionInputRaceError extends Error {}
 
 /**
- * Structured source-read failure used by the compiler diagnostic boundary.
+ * Structured source-read failure used by the builder diagnostic boundary.
  */
 export class AutoMovieProductionSourcePathError extends Error {
   public constructor(
@@ -303,7 +302,7 @@ const REPAINT_REFERENCE_ROLE_COUNT = 7;
  *
  * `automovie/design/<production>` is the human-readable tracked design
  * contract. Project-shared recipes live below `automovie/design/shared`; `src`
- * remains coding-agent owned, while `generated/<production>` is compiler owned
+ * remains coding-agent owned, while `generated/<production>` is builder owned
  * and `renders/<production>` is content addressed. Review observations stay in
  * evidence citations and Git rather than a second project ledger. Every
  * one-artifact mutation is staged before an optimistic revision check and one
@@ -364,7 +363,7 @@ export class AutoMovieProductionProject {
     readOnly = false,
     /**
      * The archetype catalogue every design record in this project is judged
-     * against, and the one its compiler builds from.
+     * against, and the one its builder builds from.
      */
     public readonly archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ) {
@@ -396,7 +395,7 @@ export class AutoMovieProductionProject {
     if (incarnation === undefined) {
       if (readOnly)
         throw new Error(
-          `Read-only verification requires existing state incarnation "${this.incarnationPath}". Run npm run compile once to initialize the project.`,
+          `Read-only verification requires existing state incarnation "${this.incarnationPath}". Run npm run build once to initialize the project.`,
         );
       this.incarnation_ = randomUUID();
       this.writeOwnedJsonAtomic(this.incarnationPath, {
@@ -592,7 +591,7 @@ export class AutoMovieProductionProject {
     );
     if (registry.layoutVersion !== 1)
       throw new Error(
-        `Read-only verification cannot migrate legacy production layout "${this.registryPath}". Run npm run compile once before verifying.`,
+        `Read-only verification cannot migrate legacy production layout "${this.registryPath}". Run npm run build once before verifying.`,
       );
     let productionId = requestedProductionId;
     if (productionId === undefined) {
@@ -609,7 +608,7 @@ export class AutoMovieProductionProject {
       );
     if (registry.productions.includes(productionId) === false)
       throw new Error(
-        `Read-only verification cannot register missing production "${productionId}". Run npm run compile once to initialize it.`,
+        `Read-only verification cannot register missing production "${productionId}". Run npm run build once to initialize it.`,
       );
     const incarnation = productionIncarnationOf(
       registry.incarnations,
@@ -617,7 +616,7 @@ export class AutoMovieProductionProject {
     );
     if (incarnation === undefined)
       throw new Error(
-        `Read-only verification requires an existing incarnation for production "${productionId}". Run npm run compile once to initialize it.`,
+        `Read-only verification requires an existing incarnation for production "${productionId}". Run npm run build once to initialize it.`,
       );
     return { incarnation, legacy: false, productionId };
   }
@@ -1807,7 +1806,7 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Read one compiler-owned file without following an escaping link.
+   * Read one builder-owned file without following an escaping link.
    */
   public readGeneratedFile(relativePath: string): Uint8Array {
     const root = this.generatedRoot();
@@ -1822,7 +1821,7 @@ export class AutoMovieProductionProject {
     const real = fileSystem.realpathSync(file);
     if (isInside(fileSystem.realpathSync(root), real) === false)
       throw new Error(
-        `Generated file "${relativePath}" escapes the compiler-owned root through a symlink or junction. Remove that link before compilation.`,
+        `Generated file "${relativePath}" escapes the builder-owned root through a symlink or junction. Remove that link before compilation.`,
       );
     if (linked.isFile() === false)
       throw new Error(`Generated path "${relativePath}" is not a file.`);
@@ -1834,13 +1833,13 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Read one author-owned text file a compiler-owned record addresses.
+   * Read one author-owned text file a builder-owned record addresses.
    *
    * Named for its first caller and used by more than one: the screenplay index
    * addresses prose documents, and a shot contract addresses the module that
-   * builds it, both of which the compiler reads without owning. The path comes
+   * builds it, both of which the builder reads without owning. The path comes
    * from a record an author edits and is treated as untrusted: it must resolve inside the project and must not be reached
-   * through a link, exactly as a compiler-owned read is. An absent document
+   * through a link, exactly as a builder-owned read is. An absent document
    * returns `null` rather than throwing, because the screenplay checks report a
    * missing document as their own diagnostic and would otherwise turn one
    * authoring mistake into a crash.
@@ -2587,11 +2586,6 @@ export class AutoMovieProductionProject {
       throw new Error(
         "Repaint selection cannot precede the candidate completion instant.",
       );
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
-      occurredAt: selectedAt,
-      label: "repaint selection generator provenance",
-    });
     assertAutoMovieRepaintExecutionPolicy(receipt.executionPolicy!);
     const reason = trimmedText(props.reason, "Repaint selection reason");
     const structuralReview = trimmedText(
@@ -3249,15 +3243,6 @@ export class AutoMovieProductionProject {
           "selection",
           "identity-invalid",
         );
-      try {
-        assertAutoMovieExternalGeneratorTermsAt({
-          termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
-          occurredAt: selection.selectedAt,
-          label: "stored repaint selection generator provenance",
-        });
-      } catch {
-        throw new AutoMovieRepaintRecordInspectionError("currentness", "stale");
-      }
       let output: Uint8Array;
       try {
         output = this.readRenderFile(receipt.output.path);
@@ -3480,18 +3465,13 @@ export class AutoMovieProductionProject {
       throw new Error("Stored repaint receipt parameters are invalid.");
     assertAutoMovieRepaintExecutionPolicy(receipt.executionPolicy!);
     canonicalAutoMovieRepaintGeneratorProvenance(receipt.generatorProvenance);
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
-      occurredAt: receipt.startedAt!,
-      label: "stored repaint generator provenance",
-    });
     const generated = this.generatedManifest();
     if (
       generated === null ||
       generated.inputFingerprint !== receipt.compileFingerprint
     )
       throw new AutoMovieProductionInputRaceError(
-        "Repaint receipt does not target the current compiler input.",
+        "Repaint receipt does not target the current builder input.",
       );
     const sourceManifest = this.verifiedRenderManifest(
       resolveInside(
@@ -3726,7 +3706,7 @@ export class AutoMovieProductionProject {
    *
    * A bundle is filed under the target's fingerprint, so reading only that
    * directory is what makes the answer current: a target whose design, source,
-   * or compiler identity moved has an empty answer here even though its
+   * or builder identity moved has an empty answer here even though its
    * previous self's pixels are still on disk. Each bundle is read through
    * {@link verifiedRenderManifest}, so a manifest whose receipt, path, or
    * frame bytes do not agree contributes nothing rather than counting as
@@ -3911,7 +3891,7 @@ export class AutoMovieProductionProject {
    * The file map is render-root-relative and must exactly equal the manifest's
    * claimed file inventory. Probing happens before staging, the input guard
    * runs before and after all writes and once more after `publicationCurrent`
-   * runs the read-only final compiler gate against staged bytes. commitFiles
+   * runs the read-only final builder gate against staged bytes. commitFiles
    * restores the previous valid publication if a write, guard, final gate, or
    * byte assertion fails before the revision commit. A later cleanup failure
    * preserves the committed revision and tells the caller to reopen it. A
@@ -3953,7 +3933,7 @@ export class AutoMovieProductionProject {
       candidate.compileFingerprint
     )
       throw new AutoMovieProductionInputRaceError(
-        "The terminal publication does not target the current compiler input. Replan and rerender before finalizing.",
+        "The terminal publication does not target the current builder input. Replan and rerender before finalizing.",
       );
     const renderRoot = this.renderRoot();
     const files = new Map<
@@ -4109,7 +4089,7 @@ export class AutoMovieProductionProject {
               digestAutoMovieBytes(bytes) !== file.digest
             )
               throw new AutoMovieProductionInputRaceError(
-                `Committed terminal file "${file.path}" changed during the final compiler gate.`,
+                `Committed terminal file "${file.path}" changed during the final builder gate.`,
               );
           }
         assertLedgerCurrent();
@@ -4172,7 +4152,7 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Atomically commit generated files while an optional compiler input guard
+   * Atomically commit generated files while an optional builder input guard
    * remains current before and after every staged write.
    */
   public commitGenerated(
@@ -4231,7 +4211,7 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Confirm one read-only compiler snapshot under the production commit lock.
+   * Confirm one read-only builder snapshot under the production commit lock.
    *
    * The guard runs twice so a coding-agent input cannot change while a
    * non-materializing diagnostic, design or lint response is being published.
@@ -4914,7 +4894,7 @@ const productionDesignRootOf = (root: string, productionId: string): string =>
 const PROJECT_LAYOUT = {
   formatVersion: 2,
   sourceRoots: ["src"],
-  contentRoots: ["viewer", "scripts", "public"],
+  contentRoots: ["viewer", "scripts", "public", "assets"],
   contentFiles: ["vite.config.ts", "package.json", "package-lock.json"],
   generatedRoot: "generated",
   renderRoot: "renders",
@@ -5581,7 +5561,7 @@ class ProductionAtomicContentionError extends AggregateError {}
  *
  * On Windows a rename onto an existing path fails outright when anything else
  * has a handle open on it, and everything ordinary holds one: an antivirus
- * scanner reading a file the compiler just wrote, the search indexer, a viewer
+ * scanner reading a file the builder just wrote, the search indexer, a viewer
  * page with project state open, a sibling command a second ahead. POSIX renames
  * over an open file without complaint, so this whole guard is a Windows fault on
  * a platform this repository supports rather than a portability nicety.
@@ -6073,7 +6053,7 @@ const classifyCurrentRepaintReceiptError = (
   if (
     inputRace ||
     message.includes("stale") ||
-    message.includes("current compiler input")
+    message.includes("current builder input")
   )
     return { stage: "currentness", failure: "stale" };
   if (

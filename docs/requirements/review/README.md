@@ -52,7 +52,7 @@ PR #2100은 MCP review service와 ledger를 폐기했다. 아래 표는 그 변�
 | `reproducible-context.md#review-context-criteria-reference` | 절차 | Reviewer가 적용한 contract, criterion과 reference revision을 기록한다. |
 | `reproducible-context.md#review-context-unavailable` | 절차 | 다시 열 수 없는 basis는 검토 완료가 아니라 명시적 제한이다. |
 | `scope-and-authority.md#review-validation-decision-boundary` | 절차 | Compiler는 결정 가능한 사실을 거부하고 reviewer는 지각과 의미를 판단한다. |
-| `scope-and-authority.md#review-human-final-authority` | 절차 | Agent Self-Review와 compiler pass는 사람 또는 조직의 외부 승인으로 가장하지 않는다. |
+| `scope-and-authority.md#review-human-final-authority` | 절차 | Agent Self-Review와 builder pass는 사람 또는 조직의 외부 승인으로 가장하지 않는다. |
 | `scope-and-authority.md#review-verdict-scope-boundary` | 절차 | Reviewer는 선언하고 실제로 읽은 범위만 판단한다. |
 | `scope-and-authority.md#review-no-implied-approval` | 절차 | Finding 부재, green check와 시간 경과는 외부 승인을 만들지 않는다. |
 | `subject-inspection.md#review-observable-judgeable-parity` | 제품 | AutoMovie가 직접 검사 target으로 공개한 모든 종류는 실제 observation을 만드는 대응 표면을 가져야 한다. Subject record, viewpoint plan, capture와 coverage가 이 불변식을 구현한다. |

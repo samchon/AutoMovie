@@ -108,7 +108,7 @@ export interface IAutoMovieArchetypeParameterPlan {
  */
 export interface IAutoMovieArchetypeBuildInput {
   /**
-   * Recipe id the compiler is materializing.
+   * Recipe id the builder is materializing.
    *
    * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Keeps the shared archetype definition separate from the recipe occurrence being built.
    * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Carries the recipe-side occurrence without turning it into the registered prototype.
@@ -131,7 +131,7 @@ export interface IAutoMovieArchetypeBuildInput {
   /**
    * Compiler-owned skeleton id an articulated archetype must use.
    *
-   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Gives an articulated builder the exact compiler-owned rig identity it must materialize.
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Gives an articulated builder the exact builder-owned rig identity it must materialize.
    * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the named skeleton basis into construction without inventing another rig id.
    */
   skeleton: string;
@@ -167,7 +167,7 @@ export interface IAutoMovieArchetypeGeometry {
  * The production core keeps the shape of a model recipe and never the
  * catalogue. It resolves `archetype` through a registry of these definitions,
  * so which figures, props, or shells a production can build is a decision that
- * belongs to the catalogue it registers, not to the compiler.
+ * belongs to the catalogue it registers, not to the builder.
  *
  * Every member is data or a pure function of that data: the same parameters
  * must always plan the same keys, measure the same radius, and build the same
@@ -333,7 +333,7 @@ export interface IAutoMovieModelArchetype {
    * Build deterministic geometry from one accepted parameter map.
    *
    * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Lets a registered capability turn accepted facts into primitive or mesh model parts.
-   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Materializes deterministic geometry facts without making the compiler own the catalogue.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Materializes deterministic geometry facts without making the builder own the catalogue.
    */
   build: (input: IAutoMovieArchetypeBuildInput) => IAutoMovieArchetypeGeometry;
 }

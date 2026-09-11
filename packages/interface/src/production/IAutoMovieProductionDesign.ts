@@ -374,7 +374,7 @@ export interface IAutoMovieProductionDesign {
   /**
    * Legacy all-one-lane shorthand or an explicit mixed film delivery.
    *
-   * Deterministic delivery uses compiler/render output directly. Repainted
+   * Deterministic delivery uses builder/render output directly. Repainted
    * delivery keeps that output as technical truth and additionally requires a
    * required feature plus a receipt-bound rendition review for every delivered
    * shot.
@@ -447,7 +447,7 @@ export interface IAutoMovieProductionDesign {
   /**
    * User-selected external motion adoptions, unique by id and clip.
    *
-   * The compiler validates and applies these records but does not choose an
+   * The builder validates and applies these records but does not choose an
    * asset, take, actor, adoption mode, or retarget mapping. Omission preserves
    * the legacy source-computed motion path.
    *
@@ -532,7 +532,7 @@ export interface IAutoMovieProductionDesign {
      * The screenplay names who speaks and source names the actor node, and
      * nothing between them is inferable: cast order and a similar name are
      * both wrong answers. Stating the join in the design is what lets the
-     * compiler refuse a speaker with no line, a duplicate identity, and an
+     * builder refuse a speaker with no line, a duplicate identity, and an
      * actor absent from the shot the line lands in.
      *
      * A binding is for an audible identity with a mouth on screen. An
@@ -655,7 +655,7 @@ export interface IAutoMovieProductionDesign {
    * direction one-way: an analysis reads the context and the building, and
    * neither the context nor a result it produces can become design.
    *
-   * The compiler refuses a context whose ids collide with the building's own
+   * The builder refuses a context whose ids collide with the building's own
    * elements, spaces or boundaries, because a shading mass sharing an id with a
    * wall is a mass the building would appear to own. Optional and purely
    * additive: a production declaring none runs no analysis and is otherwise
@@ -727,7 +727,7 @@ export interface IAutoMovieProductionDesign {
 /**
  * One distance-specific recipe reference emitted as authoring/runtime metadata.
  *
- * The foundation compiler materializes every referenced recipe. The scaffold
+ * The foundation builder materializes every referenced recipe. The scaffold
  * viewer automatically selects anonymous formation tiers from distance and
  * projected contribution with hysteresis; ordinary scene nodes do not yet
  * switch model tiers automatically.
@@ -784,7 +784,7 @@ export interface IAutoMovieModelRecipe {
   /**
    * Non-blank id of the registered archetype that builds this recipe.
    *
-   * The compiler resolves this identifier against the archetype catalogue the
+   * The builder resolves this identifier against the archetype catalogue the
    * production registers and refuses a recipe naming nothing registered. It is
    * opaque here on purpose: which archetypes exist is a decision of that
    * catalogue, not of this contract.
@@ -794,7 +794,7 @@ export interface IAutoMovieModelRecipe {
    */
   archetype: string;
   /**
-   * Registered external appearance asset, or omitted for compiler-generated
+   * Registered external appearance asset, or omitted for builder-generated
    * primitive geometry. The active production asset ledger must carry one
    * matching `model-recipe` use for this exact recipe id.
    *
@@ -816,10 +816,10 @@ export interface IAutoMovieModelRecipe {
   parameters: Record<string, number | string | boolean>;
   /**
    * Exactly one named six-digit `#RRGGBB` material color in the foundation
-   * compiler. Multiple semantic part materials remain unsupported and are
+   * builder. Multiple semantic part materials remain unsupported and are
    * refused instead of silently discarded.
    *
-   * The value is an sRGB swatch, and the compiler decodes it with
+   * The value is an sRGB swatch, and the builder decodes it with
    * `srgbHexToLinearColor` on its way into the material's linear `baseColor`.
    * The same swatch written here and in `IAutoMovieInstanceVariation.palette`
    * therefore renders one color, which is the whole reason both go through one
@@ -841,7 +841,7 @@ export interface IAutoMovieModelRecipe {
    * Semantic abilities visible to source and review, unique within the recipe.
    *
    * The registered archetype decides which labels are meaningful and the
-   * compiler refuses any other; declaring one it does implement still leaves
+   * builder refuses any other; declaring one it does implement still leaves
    * source to author the motion that earns it.
    *
    * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `capabilities` as the portable data boundary for the production design story boundary requirement.
@@ -852,7 +852,7 @@ export interface IAutoMovieModelRecipe {
    * Unique semantic bone sockets.
    *
    * A bone is accepted only when the registered archetype's builder actually
-   * materializes it, so an archetype without a compiler-owned skeleton accepts
+   * materializes it, so an archetype without a builder-owned skeleton accepts
    * none. The materializer does not create attached scene nodes automatically.
    *
    * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `attachments` as the portable data boundary for the production design story boundary requirement.
@@ -865,7 +865,7 @@ export interface IAutoMovieModelRecipe {
     bone: AutoMovieHumanoidBone;
   }>;
   /**
-   * Declarative capability profiles copied onto the compiler-owned runtime
+   * Declarative capability profiles copied onto the builder-owned runtime
    * model. Omitted means that trait-gated engine verbs such as mounting are
    * unavailable.
    *
@@ -1510,7 +1510,7 @@ export interface IAutoMovieWorldDesign {
 /**
  * Review-facing formation behavior vocabulary.
  *
- * The compiler does not infer or restrict source motion from these labels.
+ * The builder does not infer or restrict source motion from these labels.
  * Observable shot predicates and review evidence remain authoritative.
  *
  * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Exposes `AutoMovieFormationCapability` as the portable data boundary for the formation motion validation requirement.
@@ -1726,7 +1726,7 @@ export interface IAutoMovieFormationDesign {
   /**
    * Unique intended formation behaviors for source/review coordination.
    *
-   * These labels are not a compiler permission boundary and do not prove that
+   * These labels are not a builder permission boundary and do not prove that
    * source implemented or avoided a motion.
    *
    * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `capabilities` as the portable data boundary for the formation unit local variation requirement.
@@ -1793,7 +1793,7 @@ export type IAutoMovieShotSpatialSelector =
       id: string;
     }
   | {
-      /** Centroid of every compiler-materialized formation slot. */
+      /** Centroid of every builder-materialized formation slot. */
       kind: "formation";
       /** Exact formation design id. */
       id: string;
@@ -1812,7 +1812,7 @@ export type IAutoMovieShotSpatialSelector =
     };
 
 /**
- * A scalar comparison evaluated by the deterministic compiler.
+ * A scalar comparison evaluated by the deterministic builder.
  *
  * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieScalarPredicate` as the portable data boundary for the production design story boundary requirement.
  * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieScalarPredicate` for the narrative intent story design ownership system contract.
@@ -1842,7 +1842,7 @@ export interface IAutoMovieScalarPredicate {
 }
 
 /**
- * One compiler-evaluable state or event fact.
+ * One builder-evaluable state or event fact.
  *
  * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotPredicate` as the portable data boundary for the production design story boundary requirement.
  * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotPredicate` for the narrative intent story design ownership system contract.
@@ -2102,7 +2102,7 @@ export interface IAutoMovieShotContract {
     /**
      * Finite maximum allowed pixel-occlusion ratio, inclusive from zero to one.
      *
-     * The compiler projects subject root points but does not measure this
+     * The builder projects subject root points but does not measure this
      * ratio. The external reviewer must compare current mask, depth, outline or
      * beauty frames against it.
      */
@@ -2157,7 +2157,7 @@ export type IAutoMovieAcceptanceCriterion =
       /** Numeric metric criterion. */
       kind: "metric";
       /**
-       * Supported compiler-owned metric.
+       * Supported builder-owned metric.
        *
        * Physics and occlusion metrics remain geometry/frame review concerns
        * until their operands and measurement protocols are explicit.

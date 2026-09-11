@@ -1,6 +1,6 @@
 import type {
   AutoMovieContentDigest,
-  IAutoMovieCompileProjectOutput,
+  IAutoMovieBuildProjectOutput,
   IAutoMovieDiagnostic,
   IAutoMovieGeneratedManifest,
 } from "@automovie/interface";
@@ -27,12 +27,12 @@ export const closeAutoMovieProjectState = (input: {
   revision: number;
   manifest: IAutoMovieGeneratedManifest | null;
   manifestReadFailed: boolean;
-  compileStatus: IAutoMovieCompileProjectOutput | null;
+  buildStatus: IAutoMovieBuildProjectOutput | null;
   problems: readonly IAutoMovieProjectStateProblem[];
   design: IAutoMovieProductionDesignGraph;
   read: {
     revision: () => number;
-    compile: () => IAutoMovieCompileProjectOutput;
+    compile: () => IAutoMovieBuildProjectOutput;
     design: () => IAutoMovieProductionDesignGraph;
     manifest: () => IAutoMovieGeneratedManifest | null;
   };
@@ -43,16 +43,16 @@ export const closeAutoMovieProjectState = (input: {
   const problems = [...input.problems];
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const seenDiagnostics = new Set<string>();
-  const initialFingerprint = input.compileStatus?.compiler.inputFingerprint;
+  const initialFingerprint = input.buildStatus?.builder.inputFingerprint;
   const manifestFingerprint = input.manifest?.inputFingerprint ?? null;
   const manifestJson = JSON.stringify(input.manifest);
   let currentFingerprint: AutoMovieContentDigest | null = null;
   let compileInvalid = false;
   let design = input.design;
   const includeCompile = (
-    result: IAutoMovieCompileProjectOutput,
+    result: IAutoMovieBuildProjectOutput,
   ): AutoMovieContentDigest => {
-    currentFingerprint = result.compiler.inputFingerprint;
+    currentFingerprint = result.builder.inputFingerprint;
     if (result.success === false) compileInvalid = true;
     for (const diagnostic of result.diagnostics) {
       const key = JSON.stringify([
@@ -69,7 +69,7 @@ export const closeAutoMovieProjectState = (input: {
     }
     return currentFingerprint;
   };
-  if (input.compileStatus !== null) includeCompile(input.compileStatus);
+  if (input.buildStatus !== null) includeCompile(input.buildStatus);
   if (
     manifestFingerprint !== null &&
     initialFingerprint !== undefined &&
@@ -99,7 +99,7 @@ export const closeAutoMovieProjectState = (input: {
         code: "project-state-changed",
         path: null,
         message:
-          "Project revision, generated ownership, or compiler input changed while state was loading. Retry against one stable repository snapshot.",
+          "Project revision, generated ownership, or builder input changed while state was loading. Retry against one stable repository snapshot.",
       });
   } catch (error) {
     problems.push({

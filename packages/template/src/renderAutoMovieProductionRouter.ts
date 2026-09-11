@@ -142,7 +142,7 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 - \`npm run reference -- --request '<JSON>'\` uses the same read-only Markdown provider as the local MCP server: \`get_index_of_layer\`, \`get_index_of_file\`, \`read_section_without_annotations\`, and \`read_file_without_annotations\`. These tools navigate authored content; they do not edit files, execute production commands, inspect TypeScript, or replace full evidence review.
 - \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
 - \`npm run book -- --layer <layer> --title <title>\` binds any supported authored layer into one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. It preserves numbered script/screenplay groups, keeps other layers flat, removes evidence comments and citation anchors, and preserves visible prose and headings.
-- \`npm run compile\` is the only command that may update compiler-owned output.
+- \`npm run build\` is the only command that may update builder-owned output.
 `;
 };
 

@@ -220,7 +220,7 @@ export const createCompiledShotRuntime = async (
     deliveryCrop?: IAutoMovieDeliveryCrop;
     /** Explicitly admitted live moving soft-body domain ids. */
     liveWearableSoftBodies?: readonly string[];
-    /** Current compiler-owned film-global effect runtimes. */
+    /** Current builder-owned film-global effect runtimes. */
     filmEffects?: readonly IAutoMovieCompiledFilmEffect[];
     /** Current identity established independently from the runtime array. */
     filmEffectIdentity?: IAutoMovieFilmEffectCurrentIdentity;
@@ -336,7 +336,7 @@ export const createCompiledShotRuntime = async (
   for (const effect of filmEffectObjects) scene.scene.add(effect.object.object);
   // Water, cloth and planting are independent domains a building binds rather
   // than scene nodes, so nothing in the node list builds them. Each binding is
-  // lowered through the same engine call the compiler validated it with, and
+  // lowered through the same engine call the builder validated it with, and
   // the result goes to the viewer's own builder: the runtime derives no
   // geometry of its own, exactly as it derives none for a model.
   const fluidDomains = new Map(

@@ -55,7 +55,7 @@ const entry = (
 });
 
 /**
- * The multi-camera half of #1187 at the camera compiler: one beat's coverage
+ * The multi-camera half of #1187 at the camera builder: one beat's coverage
  * take compiles through the SAME framing grammar as the hero take, with the
  * covering camera as the parameter, and pairs the clip with the take's per-span
  * intent records as one `IAutoMovieShotCoverage`. The grammar solves each
@@ -121,7 +121,7 @@ export const test_film_camera_coverage = (): void => {
     );
   }
 
-  // 2. same grammar as the hero compiler; intent rides in span order.
+  // 2. same grammar as the hero builder; intent rides in span order.
   const intents = [
     intent(0),
     intent(1, { move: "push-in", focus: null, focalLength: 35 }),

@@ -50,7 +50,7 @@ export const autoMovieLibraryContributionDiagnostics = (
           : undefined;
   if (expected === undefined)
     return [
-      `Library source branch "${branch}" has no supported standalone result carrier. Keep its reviewed source in authoring until the compiler exposes that semantic result instead of nesting it inside another owner's environment or model.`,
+      `Library source branch "${branch}" has no supported standalone result carrier. Keep its reviewed source in authoring until the builder exposes that semantic result instead of nesting it inside another owner's environment or model.`,
     ];
   const populations = {
     contexts: contribution.contexts ?? [],

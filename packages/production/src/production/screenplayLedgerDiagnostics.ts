@@ -47,7 +47,7 @@ export const screenplayLedgerDiagnostics = (props: {
    * A record that cites a scene the index never declares is usually a record
    * that should have been deleted, and the author reading "shot contract
    * \"opening\" cites scene \"SCN-001\"" looks for the cause in `src` because
-   * nothing said the citation was written in a compiler-owned JSON file. Two
+   * nothing said the citation was written in a builder-owned JSON file. Two
    * measured productions spent authoring turns exactly there.
    */
   designRecordPath: (target: IAutoMovieDesignTarget) => string;
@@ -343,7 +343,7 @@ export const screenplayLedgerDiagnostics = (props: {
       if (scenes.has(entry.scene) === false)
         refuse(
           "screenplay-citation-scene-absent",
-          `${label} cites scene "${entry.scene}", which the screenplay index does not declare. That citation is written in the compiler-owned design record this diagnostic's path names, so correct the scene id, restore its active or OMITTED record, or delete a design record the production no longer owns, then compile again.`,
+          `${label} cites scene "${entry.scene}", which the screenplay index does not declare. That citation is written in the builder-owned design record this diagnostic's path names, so correct the scene id, restore its active or OMITTED record, or delete a design record the production no longer owns, then compile again.`,
           owner,
         );
       if (
@@ -353,7 +353,7 @@ export const screenplayLedgerDiagnostics = (props: {
       )
         refuse(
           "screenplay-citation-claim-absent",
-          `${label} cites continuity claim "${entry.claim}", which the screenplay index does not declare, so the trace is attached to no canon fact and no proof owner. That citation is written in the compiler-owned design record this diagnostic's path names, so correct the claim id, add the claim to the index, or delete a design record the production no longer owns, then compile again.`,
+          `${label} cites continuity claim "${entry.claim}", which the screenplay index does not declare, so the trace is attached to no canon fact and no proof owner. That citation is written in the builder-owned design record this diagnostic's path names, so correct the claim id, add the claim to the index, or delete a design record the production no longer owns, then compile again.`,
           owner,
         );
     }

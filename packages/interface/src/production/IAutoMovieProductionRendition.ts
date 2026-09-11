@@ -39,7 +39,7 @@ export interface IAutoMovieProductionRepaintInput {
    */
   productionId: string;
   /**
-   * Current compiler-owned registry fingerprint.
+   * Current builder-owned registry fingerprint.
    *
    * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `compileFingerprint` as the portable data boundary for the repaint reference roles requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `compileFingerprint` for the asset spec repaint controls references system contract.

@@ -255,7 +255,7 @@ export const exportModelToGLB = async (
   // Acquired here rather than at module scope, because this is the workspace's
   // only runtime edge to `@gltf-transform/core` and the barrel re-exports this
   // module. `@automovie/production` imports one path helper from that barrel,
-  // so an eager import made every generated project's `scripts/compile.ts` load
+  // so an eager import made every generated project's `scripts/build.ts` load
   // a glTF serializer it never calls. Under Node 22 that load fails outright:
   // the package's `require` condition serves `dist/index.cjs`, whose first act
   // is `require("property-graph")`, and `property-graph` is ESM-only, so the

@@ -3,18 +3,18 @@ import {
   createAutoMovieArchetypeRegistry,
 } from "@automovie/archetypes";
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
-import { compileAutoMovieProduction } from "@automovie/production";
+import { buildAutoMovieProduction } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
 import { assertAutoMovieNoArguments } from "./commandArguments";
 import { readAutoMovieProjectProductionId } from "./projectIdentity";
 
-assertAutoMovieNoArguments("compile", process.argv.slice(2));
+assertAutoMovieNoArguments("build", process.argv.slice(2));
 
 /**
  * The archetypes this production builds from.
  *
- * The compiler resolves every `archetype` in `automovie/design/shared/models` against
+ * The builder resolves every `archetype` in `automovie/design/shared/models` against
  * this registry and refuses a recipe naming anything outside it, so this is
  * where a production adds its own builder or drops one it never uses.
  */
@@ -25,7 +25,7 @@ const archetypes = createAutoMovieArchetypeRegistry(
 /**
  * This project's own graph-derived authoring identity.
  *
- * The compiler reads the production shape from here. A library has no film,
+ * The builder reads the production shape from here. A library has no film,
  * no shot and no design tree, so without this declaration it would be compiled
  * down the film path and refused for records it was never going to carry; with
  * it, the reviewed design owners and their source branches are what gets
@@ -53,7 +53,7 @@ const authoringEvidence = currentAuthoringEvidence();
  */
 readAutoMovieProjectProductionId(root);
 
-const output = compileAutoMovieProduction({
+const output = buildAutoMovieProduction({
   projectRoot: root,
   scope: "source",
   archetypes,

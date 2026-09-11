@@ -37,7 +37,7 @@ import { namedFacts } from "../internal/predicates";
  * 1. A unit root no space claims is named, because nothing else lists it.
  * 2. A unit root a space claims is not named: that space lists it.
  * 3. An element with a parent is never named, whether or not a space claims it
- *    and whether or not the compiler drew its parent, because its parent lists
+ *    and whether or not the builder drew its parent, because its parent lists
  *    it.
  * 4. The fixture carrying all three is a legal building, so the rule is read
  *    off a record the engine accepts rather than off an invented one.

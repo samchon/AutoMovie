@@ -53,7 +53,7 @@ Every rendered pair keeps the same roots, files, symbols, exclusion rule, and ca
 
 `obligations/design/models.md#model-review-set` defines the finite review plan. Write its views, neutral background, scale, and comparison criteria before rendering. Its obligation reference remains an error, as do model construction, determinism, and fidelity boundaries.
 
-A rendered-review warning authorizes the next source compile, capture, turntable, or inspection step, not acceptance or a final delivery claim. Open every required current output, compare it with the authored target and finite plan, then write the substantive review using the native fingerprint. Source edits require renewed observation even when a target fingerprint did not change: physical review identities also bind source, compile generation, and the applicable observation plan. The compiler's `review` and `final` physical evidence gates remain errors. Film and brief owe the models their compiled staging consumes; a library owes the exact active graph-derived design owners and their applicable finite observations. Compilation success, a warning-only graph, a render call, and a stored review sentence do not replace those observations.
+A rendered-review warning authorizes the next source compile, capture, turntable, or inspection step, not acceptance or a final delivery claim. Open every required current output, compare it with the authored target and finite plan, then write the substantive review using the native fingerprint. Source edits require renewed observation even when a target fingerprint did not change: physical review identities also bind source, compile generation, and the applicable observation plan. The builder's `review` and `final` physical evidence gates remain errors. Film and brief owe the models their compiled staging consumes; a library owes the exact active graph-derived design owners and their applicable finite observations. Compilation success, a warning-only graph, a render call, and a stored review sentence do not replace those observations.
 
 ## Tags
 
@@ -86,7 +86,7 @@ Move a layer from `disabled` to `draft` only after its initially applicable disc
 
 Move a layer from `draft` to `evidence` after the full layer has a complete first version, stable anchored topology and ordered files, a scope and omission audit, and applicable discovery results under [Production-specific contract](work-specific.md). Read each selected principle against its governed units and confirm that relevant H2 owners collectively fulfill every selected obligation. Commit that coherent draft before changing the state.
 
-Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint has no errors. Commit that evidence state before review. Review each relationship independently under [Review](../review-verification/review.md) and its [semantic-review procedure](../review-verification/semantic-review.md), copy only compiler-issued fingerprints, and compile again. Only the configured rendered-realization warnings may remain while producing their first observations; finish them before claiming the layer is reviewed or the production is complete.
+Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint has no errors. Commit that evidence state before review. Review each relationship independently under [Review](../review-verification/review.md) and its [semantic-review procedure](../review-verification/semantic-review.md), copy only builder-issued fingerprints, and compile again. Only the configured rendered-realization warnings may remain while producing their first observations; finish them before claiming the layer is reviewed or the production is complete.
 
 A child may enter `draft` only after every direct parent's declaration is in `review` and its error-level relationships are paid. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the source declaration corresponding to every active map, model, space, material, instance, motion, and system branch to be in `review`. Only those sources' configured rendered-realization warnings may remain for the resulting compile and capture to pay. Production source waits for settings. Film source waits for production source and shots under the same distinction between a review-stage declaration and a completed rendered observation.
 
@@ -98,16 +98,16 @@ This gate is on entering `review` rather than on entering `draft` because motion
 
 ## Diagnostics
 
-A diagnostic is routed through the [conformance owner map](conformance.md) before repair. The compiler owns mechanically decidable syntax, graph, attachment, and freshness failures. [Independent semantic review](../review-verification/semantic-review.md) owns truth, role, literal support, absence, and exchange judgments.
+A diagnostic is routed through the [conformance owner map](conformance.md) before repair. The builder owns mechanically decidable syntax, graph, attachment, and freshness failures. [Independent semantic review](../review-verification/semantic-review.md) owns truth, role, literal support, absence, and exchange judgments.
 
-A compiler diagnostic is a question about the artifact, not an instruction to add a tag.
+A builder diagnostic is a question about the artifact, not an instruction to add a tag.
 
 An error follows the halt-and-repair sequence below. A configured rendered-realization warning keeps its observation unpaid while allowing the source compile and capture work described in [Rendered realization review](#rendered-realization-review). It does not waive that work or bypass the independent `review` and `final` physical evidence gates.
 
 1. Stop the current evidence batch and any downstream work behind its gate.
 2. Read the full diagnostic, complete host, complete target with selected descendants, config, and necessary upstream and downstream context.
 3. State the intended semantic relationship without relying on the existing annotation.
-4. Compare plausible defects in target, host, ownership, hierarchy, statement or placement, claim population or cardinality, and compiler behavior.
+4. Compare plausible defects in target, host, ownership, hierarchy, statement or placement, claim population or cardinality, and builder behavior.
 5. Fix the earliest actual owner and every affected dependant.
 6. Reread the repaired scopes literally before writing evidence or resuming the batch.
 
@@ -135,4 +135,4 @@ During migration, reread each obligation at its relevant authored or aggregate o
 
 ## Verification
 
-Run the scoped generated-project source lint at every transition and final package gate, not at prose checkpoints. After changing a claim, a target, or a stage, delete the citation the change was meant to require and confirm the compiler refuses before restoring it. For discovery, separately prove that a retained result with no contract host fails, an exclusion outside `contracts/index.md` fails, and a nested contract is refused instead of ignored. A configured claim that selected no host reports the same green as a satisfied one. A pure deletion that changes no stage, claim, config, source, or schema needs exact target and diff inspection rather than an unrelated build.
+Run the scoped generated-project source lint at every transition and final package gate, not at prose checkpoints. After changing a claim, a target, or a stage, delete the citation the change was meant to require and confirm the builder refuses before restoring it. For discovery, separately prove that a retained result with no contract host fails, an exclusion outside `contracts/index.md` fails, and a nested contract is refused instead of ignored. A configured claim that selected no host reports the same green as a satisfied one. A pure deletion that changes no stage, claim, config, source, or schema needs exact target and diff inspection rather than an unrelated build.

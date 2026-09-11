@@ -13,7 +13,7 @@ import type {
 } from "@automovie/interface";
 import {
   AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
-  AutoMovieProductionCompiler,
+  AutoMovieProductionBuilder,
   AutoMovieProductionProject,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderJobPlan,
@@ -206,7 +206,7 @@ export const createProductionRenderPublicationRuntime = (props: {
         false
     )
       throw new Error(
-        "The current proxy publication does not match this final plan's compiler-owned EDL and source frame format. Replan and finalize both tiers.",
+        "The current proxy publication does not match this final plan's builder-owned EDL and source frame format. Replan and finalize both tiers.",
       );
     try {
       assertRenderPlanHead(
@@ -338,7 +338,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
     // final gate inside the terminal commit and the final compile after it,
     // both against the exact plan being published.
     if (plan.tier.kind === "final") {
-      const gate = new AutoMovieProductionCompiler(
+      const gate = new AutoMovieProductionBuilder(
         AutoMovieProductionProject.openReadOnly(root, productionId),
         props.currentAuthoringEvidence(),
         props.currentAuthoringEvidence,
@@ -828,7 +828,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
       } else if (deliverable.kind === "captions") {
         if (plan.tracks.captions.split("-->").length < 2) {
           if (deliverable.required)
-            throw new Error("Required captions contain no timed compiler cue.");
+            throw new Error("Required captions contain no timed builder cue.");
         } else
           owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
       } else if (deliverable.kind === "audio-mix") {
@@ -1038,7 +1038,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
           props.currentAuthoringEvidence,
         ) === snapshot,
       publicationCurrent: () => {
-        const staged = new AutoMovieProductionCompiler(
+        const staged = new AutoMovieProductionBuilder(
           AutoMovieProductionProject.openReadOnly(root, productionId),
           props.currentAuthoringEvidence(),
           props.currentAuthoringEvidence,
@@ -1046,19 +1046,19 @@ export const createProductionRenderFinalizationRuntime = (props: {
         ).lint({ scope: "final" });
         if (staged.success === false)
           throw new Error(
-            `Staged terminal publication failed the read-only final compiler gate: ${JSON.stringify(
+            `Staged terminal publication failed the read-only final builder gate: ${JSON.stringify(
               staged.diagnostics,
             )}`,
           );
       },
       expectedRevision: project.revision(),
     });
-    const final = new AutoMovieProductionCompiler(
+    const final = new AutoMovieProductionBuilder(
       AutoMovieProductionProject.openReadOnly(root, productionId),
       props.currentAuthoringEvidence(),
       props.currentAuthoringEvidence,
       plan,
-    ).compile({ scope: "final" });
+    ).build({ scope: "final" });
     if (final.success === false)
       throw new Error(
         `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,

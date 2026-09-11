@@ -67,7 +67,7 @@ import type { IAutoMovieProductionSoundEvidence } from "./IAutoMovieProductionSo
 import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
 /**
- * Closed diagnostic identities currently emitted by compiler and lint.
+ * Closed diagnostic identities currently emitted by builder and lint.
  *
  * This tuple is the canonical registry key set. A user-facing behavioral
  * catalog must exhaustively map it, and producers may not invent an unlisted
@@ -396,7 +396,7 @@ export interface IAutoMovieDiagnosticReference {
 }
 
 /**
- * A stable production diagnostic returned by compiler and lint.
+ * A stable production diagnostic returned by builder and lint.
  *
  * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieDiagnostic` as the portable data boundary for the asset generation provider independence requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieDiagnostic` for the asset spec generation provider choice system contract.
@@ -496,7 +496,7 @@ export interface IAutoMovieProductionManifest {
   /**
    * Project-global asset provenance ledger.
    *
-   * When declared, compiler asset references are restricted to the byte-exact
+   * When declared, builder asset references are restricted to the byte-exact
    * paths in this manifest.
    *
    * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `assetManifest` as the portable data boundary for the agent declared omission requirement.
@@ -509,7 +509,7 @@ export interface IAutoMovieProductionManifest {
    * When declared, every generator, input, and output byte is verified before
    * authored source executes, and only current artifacts enter source context.
    *
-   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Makes the tracked derived-artifact ledger an explicit compiler input.
+   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Makes the tracked derived-artifact ledger an explicit builder input.
    * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Selects the one canonical project-relative ledger path.
    */
   derivedArtifactManifest?: "automovie/derived-artifacts.json";
@@ -642,7 +642,7 @@ export interface IAutoMovieExternalMotionConversionDecision {
   /**
    * Native or humanoid-retarget conversion mode.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents the compiler from silently changing the selected adoption technique.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents the builder from silently changing the selected adoption technique.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Retains the selected mode as receipt data.
    */
   mode: IAutoMovieExternalMotionAdoptionMode["kind"];
@@ -805,7 +805,7 @@ export interface IAutoMovieExternalMotionReceiptCharacterization {
 }
 
 /**
- * Canonical converted motion result sealed by compiler-owned digests.
+ * Canonical converted motion result sealed by builder-owned digests.
  *
  * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires the canonical receipt identity to bind the exact output bytes.
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Types the motion identity, receipt digest, output path, and output digest relation.
@@ -827,10 +827,10 @@ export interface IAutoMovieExternalMotionConversionResult {
    */
   motionDigest: AutoMovieContentDigest;
   /**
-   * Production-relative compiler-owned result file path.
+   * Production-relative builder-owned result file path.
    *
    * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires path notation to be normalized in the canonical result.
-   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Identifies the generated output inventoried by the compiler manifest.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Identifies the generated output inventoried by the builder manifest.
    */
   outputPath: string;
   /**
@@ -851,14 +851,14 @@ export interface IAutoMovieExternalMotionConversionResult {
  */
 export interface IAutoMovieExternalMotionConversionCompiler {
   /**
-   * Exact compiler package version.
+   * Exact builder package version.
    *
    * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Records which conversion tool build interpreted the pinned source closure.
-   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Invalidates receipt identity when the compiler implementation version changes.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Invalidates receipt identity when the builder implementation version changes.
    */
   packageVersion: string;
   /**
-   * Exact compiler content-protocol version.
+   * Exact builder content-protocol version.
    *
    * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Records the conversion protocol governing settings and canonical output.
    * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Invalidates receipt identity when the interpretation protocol changes.
@@ -869,12 +869,12 @@ export interface IAutoMovieExternalMotionConversionCompiler {
 /**
  * Compiler-sealed receipt for one external motion conversion.
  *
- * The compiler serializes this receipt as its own generated file and lists that
+ * The builder serializes this receipt as its own generated file and lists that
  * file in {@link IAutoMovieGeneratedManifest.files}; it does not mutate or embed
  * the preserved source bytes.
  *
  * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires a canonical receipt and output digest for every meaningful conversion result.
- * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Types the compiler-owned receipt whose file identity is inventoried beside its output.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Types the builder-owned receipt whose file identity is inventoried beside its output.
  * @author Samchon
  */
 export interface IAutoMovieExternalMotionConversionReceipt {
@@ -891,7 +891,7 @@ export interface IAutoMovieExternalMotionConversionReceipt {
    * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires the conversion tool and version to remain bound to the receipt result.
    * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes tool and profile versions part of deterministic receipt identity.
    */
-  compiler: IAutoMovieExternalMotionConversionCompiler;
+  builder: IAutoMovieExternalMotionConversionCompiler;
   /**
    * Production-declared external motion adoption identity.
    *
@@ -921,7 +921,7 @@ export interface IAutoMovieExternalMotionConversionReceipt {
    */
   target: IAutoMovieExternalMotionConversionTarget;
   /**
-   * Ordered compiler-performed transform ledger.
+   * Ordered builder-performed transform ledger.
    *
    * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires all mapping and conversion facts in the receipt.
    * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Preserves semantic transform order in canonical identity.
@@ -938,7 +938,7 @@ export interface IAutoMovieExternalMotionConversionReceipt {
    * Source-to-target compatibility findings before user authorization.
    *
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Keeps compatibility findings separate from overrides and mapping decisions.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Preserves the compiler's characterization beside the authored decision.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Preserves the builder's characterization beside the authored decision.
    */
   characterization: IAutoMovieExternalMotionReceiptCharacterization;
   /**
@@ -951,7 +951,7 @@ export interface IAutoMovieExternalMotionConversionReceipt {
 }
 
 /**
- * One compiler-owned generated file.
+ * One builder-owned generated file.
  *
  * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `IAutoMovieGeneratedFile` as the portable data boundary for the asset generated adoption modes requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `IAutoMovieGeneratedFile` for the asset spec generation adoption output system contract.
@@ -970,7 +970,7 @@ export interface IAutoMovieGeneratedFile {
    * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `owner` as the portable data boundary for the asset generated adoption modes requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `owner` for the asset spec generation adoption output system contract.
    */
-  owner: "compiler";
+  owner: "builder";
   /**
    * File-byte digest.
    *
@@ -1004,10 +1004,10 @@ export interface IAutoMovieGeneratedManifest {
   /**
    * Compiler identity.
    *
-   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `compiler` as the portable data boundary for the asset generated adoption modes requirement.
-   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `compiler` for the asset spec generation adoption output system contract.
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `builder` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `builder` for the asset spec generation adoption output system contract.
    */
-  compiler: {
+  builder: {
     /** Package version. */
     packageVersion: string;
     /** Content protocol version. */
@@ -1046,10 +1046,10 @@ export interface IAutoMovieProductionRegistryManifest {
   /**
    * Compiler protocol that produced this registry.
    *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `compiler` as the portable data boundary for the agent narrowest valid check requirement.
-   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `compiler` for the spec authoring partial verification invariant system contract.
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `builder` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `builder` for the spec authoring partial verification invariant system contract.
    */
-  compiler: string;
+  builder: string;
   /**
    * Exact production namespace.
    *
@@ -1058,7 +1058,7 @@ export interface IAutoMovieProductionRegistryManifest {
    */
   productionId: string;
   /**
-   * Current aggregate compiler input fingerprint.
+   * Current aggregate builder input fingerprint.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `inputFingerprint` as the portable data boundary for the agent narrowest valid check requirement.
    * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `inputFingerprint` for the spec authoring partial verification invariant system contract.
@@ -1089,7 +1089,7 @@ export interface IAutoMovieProductionRegistryManifest {
     path: string;
   }>;
   /**
-   * Current compiler-owned film id, or null before film materialization.
+   * Current builder-owned film id, or null before film materialization.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `film` as the portable data boundary for the agent narrowest valid check requirement.
    * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `film` for the spec authoring partial verification invariant system contract.
@@ -1474,13 +1474,13 @@ export interface IAutoMovieProductionPublicationIdentity {
    */
   productionId: string;
   /**
-   * Exact compiler input used by the plan.
-   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates delivery after compiler-input change.
+   * Exact builder input used by the plan.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates delivery after builder-input change.
    * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the input precondition.
    */
   compileFingerprint: AutoMovieContentDigest;
   /**
-   * Exact compiler-owned edit used by the plan.
+   * Exact builder-owned edit used by the plan.
    * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-provenance Records the editorial generation.
    * @evidence specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md#spec-delivery-provenance-integrity Binds the package to one edit.
    */
@@ -1620,10 +1620,10 @@ export interface IAutoMovieProductionRenderManifest {
    */
   version: 2;
   /**
-   * Exact compiler input that produced every listed output.
+   * Exact builder input that produced every listed output.
    *
-   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates the manifest after compiler-input change.
-   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the compiler-input precondition.
+   * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Invalidates the manifest after builder-input change.
+   * @evidence specifications/execution-and-recovery/artifacts-and-atomic-publication.md#execution-publication-preconditions Supplies the builder-input precondition.
    */
   compileFingerprint: AutoMovieContentDigest;
   /**
@@ -2178,14 +2178,14 @@ export interface IAutoMovieSourceOracle {
    */
   groundHeight(point: { x: number; z: number }): number;
   /**
-   * Regenerate one exact compiler-owned formation slot without expanding it.
+   * Regenerate one exact builder-owned formation slot without expanding it.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationSlot` as the portable data boundary for the agent source result link requirement.
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationSlot` for the spec authoring source derivation state system contract.
    */
   formationSlot(formation: string, slot: number): IAutoMovieFormationSlot;
   /**
-   * Regenerate one exact compiler-owned general instance without expanding it.
+   * Regenerate one exact builder-owned general instance without expanding it.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `instanceSlot` as the portable data boundary for the agent source result link requirement.
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `instanceSlot` for the spec authoring source derivation state system contract.
@@ -2586,7 +2586,7 @@ export interface IAutoMovieEffectCue {
    */
   id: string;
   /**
-   * Supported compiler-owned recipe family.
+   * Supported builder-owned recipe family.
    *
    * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `recipe` as the portable data boundary for the effects authoring control requirement.
    * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `recipe` for the effect tier state machine system contract.
@@ -2736,7 +2736,7 @@ export interface IAutoMovieFilmBuildContext {
  */
 export interface IAutoMovieFilmSource {
   /**
-   * Build one finished-film edit from frozen compiler context.
+   * Build one finished-film edit from frozen builder context.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `build` as the portable data boundary for the agent source result link requirement.
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `build` for the spec authoring source derivation state system contract.
@@ -2761,10 +2761,10 @@ export interface IAutoMovieCompiledFilmEdit {
   /**
    * Compiler protocol that validated the edit.
    *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `compiler` as the portable data boundary for the agent narrowest valid check requirement.
-   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `compiler` for the spec authoring partial verification invariant system contract.
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `builder` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `builder` for the spec authoring partial verification invariant system contract.
    */
-  compiler: string;
+  builder: string;
   /**
    * Exact aggregate compile input.
    *
@@ -2888,10 +2888,10 @@ export interface IAutoMovieFilmTimeline {
   /**
    * Compiler protocol that derived the timeline.
    *
-   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `compiler` as the portable data boundary for the story time state review scope requirement.
-   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `compiler` for the narrative intent temporal state handoff system contract.
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `builder` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `builder` for the narrative intent temporal state handoff system contract.
    */
-  compiler: string;
+  builder: string;
   /**
    * Exact aggregate compile input.
    *
@@ -2926,7 +2926,7 @@ export interface IAutoMovieFilmTimeline {
    * Integer legacy timelines may omit this field and are interpreted as
    * `fps/1`; fractional timelines must preserve their explicit identity.
    *
-   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the compiler-owned frame clock as one canonical rational identity without a decimal reconstruction.
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Preserves the builder-owned frame clock as one canonical rational identity without a decimal reconstruction.
    * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Supplies the canonical rational clock to caption, sound, and delivery consumers.
    */
   frameRate?: IAutoMovieProductionFrameRate;
@@ -3055,14 +3055,14 @@ export interface IAutoMovieShotBuildContext {
    */
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
   /**
-   * Compact compiler-derived formation runtimes keyed by formation id.
+   * Compact builder-derived formation runtimes keyed by formation id.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationRuntime` as the portable data boundary for the agent source result link requirement.
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationRuntime` for the spec authoring source derivation state system contract.
    */
   formationRuntime: Readonly<Record<string, IAutoMovieCompiledFormation>>;
   /**
-   * Compact compiler-derived general instance runtimes keyed by set id.
+   * Compact builder-derived general instance runtimes keyed by set id.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `instanceSetRuntime` as the portable data boundary for the agent source result link requirement.
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `instanceSetRuntime` for the spec authoring source derivation state system contract.
@@ -3705,7 +3705,7 @@ export interface IAutoMovieCompiledInstanceSet {
 }
 
 /**
- * One compiler-resolved reusable prototype in a general instance set.
+ * One builder-resolved reusable prototype in a general instance set.
  *
  * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `IAutoMovieCompiledInstancePrototype` as the portable data boundary for the asset prototype and instance requirement.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `IAutoMovieCompiledInstancePrototype` for the asset prototype and instance system contract.
@@ -4179,7 +4179,7 @@ export interface IAutoMovieCompiledEffect {
  * Compiler-owned film-global effect runtime consumed by preview and capture.
  *
  * The inner effect is the existing bounded deterministic stream. This wrapper
- * fixes its authority, full-rate clock, and compiler identities so a persisted
+ * fixes its authority, full-rate clock, and builder identities so a persisted
  * runtime cannot be replayed against a different edit or on a proxy-local
  * frame clock.
  *
@@ -4196,9 +4196,9 @@ export interface IAutoMovieCompiledFilmEffect {
   clock: "timeline-frame";
   /** Current production identity. */
   production: string;
-  /** Current compiler-owned film identity. */
+  /** Current builder-owned film identity. */
   film: string;
-  /** Current aggregate compiler input. */
+  /** Current aggregate builder input. */
   compileFingerprint: AutoMovieContentDigest;
   /** Current normalized edit identity. */
   editFingerprint: AutoMovieContentDigest;
@@ -4328,7 +4328,7 @@ export interface IAutoMovieShotSourceOutput {
   eventSamples: Array<{
     /** Exact event-contract id. */
     id: string;
-    /** Shot-local time at which the compiler evaluates its predicates. */
+    /** Shot-local time at which the builder evaluates its predicates. */
     time: number;
   }>;
   /**
@@ -4346,7 +4346,7 @@ export interface IAutoMovieShotSourceOutput {
    */
   motions: IAutoMovieMotion[];
   /**
-   * Optional compact formation-level cues. The compiler materializes an empty
+   * Optional compact formation-level cues. The builder materializes an empty
    * list when omitted; source never emits arbitrary per-member curves.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationMotions` as the portable data boundary for the agent source result link requirement.
@@ -4355,7 +4355,7 @@ export interface IAutoMovieShotSourceOutput {
   formationMotions?: IAutoMovieFormationMotion[];
   /**
    * Optional sparse per-member exceptions inside compact formations. The
-   * compiler materializes an empty list when omitted; the cost is the number of
+   * builder materializes an empty list when omitted; the cost is the number of
    * exceptions, never the number of members.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationSlotMotions` as the portable data boundary for the agent source result link requirement.
@@ -4379,7 +4379,7 @@ export interface IAutoMovieShotSourceOutput {
 }
 
 /**
- * Fully compiler-owned shot artifact consumed by render and oracle services.
+ * Fully builder-owned shot artifact consumed by render and oracle services.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieCompiledShotSource` as the portable data boundary for the agent source result link requirement.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieCompiledShotSource` for the spec authoring source derivation state system contract.
@@ -4458,7 +4458,7 @@ export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput
 }
 
 /**
- * One scalar predicate and the value measured by the compiler.
+ * One scalar predicate and the value measured by the builder.
  *
  * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieCompiledPredicateResult` as the portable data boundary for the diagnostics derived result finding requirement.
  * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieCompiledPredicateResult` for the validation derived result finding system contract.
@@ -4739,7 +4739,7 @@ export interface IAutoMovieShotSource {
 /**
  * Thin engine program plus production-only compact cues.
  *
- * Formation and effect cues remain declarative compiler inputs; dense actor
+ * Formation and effect cues remain declarative builder inputs; dense actor
  * motion, scene, and shot artifacts are deliberately absent.
  *
  * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `IAutoMovieProductionShotProgram` as the portable data boundary for the formation membership requirement.
@@ -4748,7 +4748,7 @@ export interface IAutoMovieShotSource {
 export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
   /**
    * Source-owned generated models assembled by ordinary TypeScript. Imported
-   * assets remain compiler-owned production inputs rather than sandbox output.
+   * assets remain builder-owned production inputs rather than sandbox output.
    *
    * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `models` as the portable data boundary for the formation membership requirement.
    * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `models` for the performance formation hierarchy membership command system contract.
@@ -4773,7 +4773,7 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
   /**
    * Observation documents the building source read, carried as provenance.
    *
-   * A reading is never promoted into the design. They are here so the compiler
+   * A reading is never promoted into the design. They are here so the builder
    * can hold each document against the bytes it claims to have observed and
    * refuse a citation whose file has moved on.
    *
@@ -5054,7 +5054,7 @@ export interface IAutoMovieProductionInspection {
    */
   design: IAutoMovieProductionDesignInventory;
   /**
-   * Coding-agent and compiler ownership status.
+   * Coding-agent and builder ownership status.
    *
    * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `source` as the portable data boundary for the asset generation provider independence requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `source` for the asset spec generation provider choice system contract.
@@ -5222,7 +5222,7 @@ export interface IAutoMovieDesignMutationOutput {
 }
 
 /**
- * One materialized compiler file and its write status.
+ * One materialized builder file and its write status.
  *
  * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieMaterializedFile` as the portable data boundary for the asset generation provider independence requirement.
  * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieMaterializedFile` for the asset spec generation provider choice system contract.
@@ -5240,10 +5240,10 @@ export interface IAutoMovieMaterializedFile extends IAutoMovieGeneratedFile {
 /**
  * A compile request with progressively stricter gates.
  *
- * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Exposes `IAutoMovieCompileProjectInput` as the portable data boundary for the diagnostics input finding requirement.
- * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Types `IAutoMovieCompileProjectInput` for the validation input finding system contract.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Exposes `IAutoMovieBuildProjectInput` as the portable data boundary for the diagnostics input finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Types `IAutoMovieBuildProjectInput` for the validation input finding system contract.
  */
-export interface IAutoMovieCompileProjectInput {
+export interface IAutoMovieBuildProjectInput {
   /**
    * Highest atomic gate to enforce. `design` validates the tracked graph only;
    * `source` additionally compiles sandboxed TypeScript and materializes owned
@@ -5260,10 +5260,10 @@ export interface IAutoMovieCompileProjectInput {
 /**
  * Result of an atomic production compile.
  *
- * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieCompileProjectOutput` as the portable data boundary for the diagnostics derived result finding requirement.
- * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieCompileProjectOutput` for the validation derived result finding system contract.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieBuildProjectOutput` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieBuildProjectOutput` for the validation derived result finding system contract.
  */
-export interface IAutoMovieCompileProjectOutput {
+export interface IAutoMovieBuildProjectOutput {
   /**
    * Whether every error-level check through the requested scope passed. False
    * means no partial generated publication occurred.
@@ -5282,10 +5282,10 @@ export interface IAutoMovieCompileProjectOutput {
   /**
    * Compiler and input identity.
    *
-   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `compiler` as the portable data boundary for the diagnostics derived result finding requirement.
-   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `compiler` for the validation derived result finding system contract.
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `builder` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `builder` for the validation derived result finding system contract.
    */
-  compiler: {
+  builder: {
     /** Compiler package version. */
     version: string;
     /** Current design and source fingerprint. */

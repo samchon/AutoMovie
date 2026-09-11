@@ -80,7 +80,7 @@ export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
 }
 ```
 
-`design()` is the wire. A class is an authoring surface and never reaches the compile sandbox as itself; everything the compiler stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
+`design()` is the wire. A class is an authoring surface and never reaches the compile sandbox as itself; everything the builder stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
 
 ## A group of subjects is a subject
 
@@ -88,7 +88,7 @@ A cluster holds figures, a group holds clusters, a building holds wings and stor
 
 Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
-Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the compiler stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
+Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the builder stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
 
 Buildings use the same rule without pretending they are formations. A building class emits `IAutoMovieBuiltEnvironment`; its element hierarchy carries local full TRS and reusable model ids, while its independent logical-space hierarchy carries rooms, floors, voids, boundaries, openings, and stair/lift/bridge connectivity. One such record may hold several independent building units through its `buildings` root table plus the sky-bridges that couple them, so a keep, its yawed annex, and the bridge between them are one `design()` and one `render()` rather than three subjects that have to agree. Write a repeated storey as a loop over its index: the slab, its logical space, its room, its door, and the stair up to it all derive from the same number, and the looped record must be the same artifact as the hand-expanded one. `render(context)` delegates to `lowerBuiltEnvironment(design())`, and the shot consumes that derived contribution:
 
@@ -128,7 +128,7 @@ Project source is linked, so a shot may import other modules under your source r
 
 ## Let the engine carry the repetition
 
-A formation design materializes its members from count, layout, anchor, facing, and seed, and the compiler stores bounded chunks rather than scene nodes. A thousand-member unit costs one record. Large non-formation populations use compact instance sets the same way.
+A formation design materializes its members from count, layout, anchor, facing, and seed, and the builder stores bounded chunks rather than scene nodes. A thousand-member unit costs one record. Large non-formation populations use compact instance sets the same way.
 
 Do not expand either into per-member scene nodes or per-member curves. Author the unit's cues and let the runtime regenerate members from index and seed. Promoting a member to a named actor is for a persistent named performer with a close camera or unique prop, not for reaching individual behavior.
 
@@ -156,7 +156,7 @@ Keep the module readable while you are at it. A citation names a symbol, and a r
 
 The design record is yours to author, the same as source. Only generated output, renders, production state, and capture state have other owners. Emit the record from an ordinary script outside the compile sandbox, from the same table the modules read.
 
-Store it through the project's own design setters, never by writing a path the script worked out for itself. Which tree an artifact lives in is the project's decision: a model, a world, and a formation are shared across productions while a shot contract and an acceptance scenario are not. A script that computes the path restates that layout in a second place, and a record written beside the one the compiler reads is a derivation that proves nothing. Read the stored record back first and skip an identical one, because a design mutation deliberately stales every dependent shot and review, and re-storing an unchanged record would invalidate the production for saying nothing new.
+Store it through the project's own design setters, never by writing a path the script worked out for itself. Which tree an artifact lives in is the project's decision: a model, a world, and a formation are shared across productions while a shot contract and an acceptance scenario are not. A script that computes the path restates that layout in a second place, and a record written beside the one the builder reads is a derivation that proves nothing. Read the stored record back first and skip an identical one, because a design mutation deliberately stales every dependent shot and review, and re-storing an unchanged record would invalidate the production for saying nothing new.
 
 ```ts
 import type {
@@ -182,7 +182,7 @@ export const plannedShotRecord = (
 });
 ```
 
-A shot's source binding names a module path and a static export, so the exports themselves stay statically written. Generating those modules from the table is ordinary code generation over source you own; keep the emitted files out of the compiler's generated root, which has a different owner.
+A shot's source binding names a module path and a static export, so the exports themselves stay statically written. Generating those modules from the table is ordinary code generation over source you own; keep the emitted files out of the builder's generated root, which has a different owner.
 
 ## Assemble the edit from the same table
 

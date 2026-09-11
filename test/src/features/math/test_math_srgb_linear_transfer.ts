@@ -8,7 +8,7 @@ import { nclose, throwsError } from "../internal/predicates";
  * whatever a renderer happens to emit.
  *
  * Authored palette colors arrive as `#RRGGBB` swatches while materials consume
- * linear triples, and until this pair existed the compiler crossed that
+ * linear triples, and until this pair existed the builder crossed that
  * boundary by dividing the digits by 255 and calling the result linear. That is
  * a transcription rather than a conversion and lands roughly 2.3x too bright
  * at midtones. Every expectation below is computed by hand from the standard's
