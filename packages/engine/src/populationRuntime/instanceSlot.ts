@@ -20,9 +20,11 @@ import { IAutoMovieInstanceSetPlacement } from "./IAutoMovieInstanceSetPlacement
  * or explicit layout, no per-axis scale, no rotation range and no visibility
  * probability keeps its original output, which names no prototype.
  *
- * The compiled instance-set kernel measures chunk bounds through this function
- * and the shot-source oracle answers `instanceSlot` through it, so a member
- * asked for while a shot compiles is the member the compiled set regenerates.
+ * The compiled instance-set kernel measures chunk bounds through this function,
+ * the shot-source oracle answers `instanceSlot` through it, and a subject
+ * description and the viewer regenerate members through it, so a member asked
+ * for while a shot compiles, described in a review, or drawn is the member the
+ * compiled set regenerates.
  * The input is the compiled shape for that reason: reading a compiled set as a
  * design once counted its default prototype twice.
  *
