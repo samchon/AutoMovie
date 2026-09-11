@@ -514,7 +514,7 @@ const seedRestArticulation = (
  *
  * Every other verb returns `null` (the host supplies its rig-specific content,
  * or a richer synthesiser does), and an unknown actor returns `null`. This is
- * the bridge that makes the action compiler actually produce motion from the
+ * the bridge that makes the action builder actually produce motion from the
  * declarative gait/profile data: the thin verb in, dense motion out.
  *
  * `lookAt` resolves against {@link aimPointsOf} instead of `nodes` because a

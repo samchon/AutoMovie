@@ -71,7 +71,7 @@ const MATERIAL_SEGMENTS: ReadonlySet<string> = new Set([
  * Returned as data rather than pushed as a violation because the honest
  * category is a REPORT, not a refusal: the asset still renders, and refusing a
  * licensed model for carrying a sheen lobe would be the engine deciding what
- * art a production may buy. The caller (the production compiler) turns this
+ * art a production may buy. The caller (the production builder) turns this
  * into a warning diagnostic that names each one.
  *
  * @evidence requirements/asset-authoring/validation.md#asset-validation-gap `unsupportedAutoMovieMaterialExtensions` returns every declared surface extension that cannot be restated instead of upgrading it to supported.

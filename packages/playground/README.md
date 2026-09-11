@@ -43,7 +43,7 @@ pnpm --filter @automovie/playground preview
 - `attach-view.ts`: `attachTo`가 부모 손 FK를 따라 오브젝트 motion을 만든다.
 - `launch-view.ts`: `launch`가 투사체 motion과 피격 react를 함께 만든다.
 - `impact-view.ts`: 충돌/반동 계열을 장면으로 확인한다.
-- `trampoline-view.ts`, `gesture-view.ts`, `showcase-view.ts`, `film-view.ts`: `performShot`과 관련 action compiler가 생성한 clip을 확인한다.
+- `trampoline-view.ts`, `gesture-view.ts`, `showcase-view.ts`, `film-view.ts`: `performShot`과 관련 action builder가 생성한 clip을 확인한다.
 
 셋째, 모델/리그 빌드 스크립트다.
 

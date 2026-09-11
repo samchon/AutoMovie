@@ -119,7 +119,7 @@ const placed = (
  * flat floor compiles to the frames it compiled to before.
  *
  * The relief is read through the one engine placement every consumer calls,
- * because a compiler that judged a unit at one height while a renderer drew it
+ * because a builder that judged a unit at one height while a renderer drew it
  * at another would be worse than the flat placement it replaced.
  *
  * Scenarios:

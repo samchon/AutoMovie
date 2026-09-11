@@ -46,7 +46,7 @@ export interface IAutoMovieRepaintAttemptRecord {
   attemptId: string;
   /** @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop Records budget order. */
   ordinal: number;
-  /** @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Locks compiler input. */
+  /** @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Locks builder input. */
   compileFingerprint: AutoMovieContentDigest;
   /** @evidence requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance Locks deterministic source bytes. */
   sourceRenderFingerprint: AutoMovieContentDigest;

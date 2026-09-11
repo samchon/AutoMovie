@@ -61,7 +61,7 @@ export function validateAutoMovieLocalContractClaims(
         )
       )
         throw new Error(
-          `Production-local claim ${JSON.stringify(raw.name)} uses authored obligation coverage; migrate it to createAutoMovieProductionObligationClaim with an account path.`,
+          `Production-local claim ${JSON.stringify(raw.name)} requires an obligation declaration for distributed coverage.`,
         );
       continue;
     }
@@ -99,16 +99,16 @@ export function validateAutoMovieLocalContractClaims(
       )
     )
       throw new Error(
-        `Production-local account ${binding.account} must retain its canonical claim severity, exact owner, obligation reference, and complete authored H2 population.`,
+        `Production-local account ${binding.account} must retain its canonical claim severity, obligation reference, and complete authored H2 host population.`,
       );
   }
 }
 
 /**
- * Separates local contract targets from an account's compared population.
+ * Projects local contract targets and their eligible authored population.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Reports the exact contract, account owner, population, and scope without making compared authored units look like contract rules.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Projects validated local claims into positive bindings and explicit pilot-only audits with separate population references.
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Reports the exact contract, eligible owners, population, and scope.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Projects validated local claims into positive bindings and explicit pilot-only audits with authored host populations.
  */
 export function projectAutoMovieLocalContractClaims(
   claims: readonly ITtscEvidenceGraphClaim[],
@@ -129,7 +129,13 @@ export function projectAutoMovieLocalContractClaims(
         reference.type === "markdown",
     );
     const population =
-      binding.account === undefined ? undefined : references[1]!;
+      binding.account === undefined
+        ? undefined
+        : {
+            root: claim.root ?? ".",
+            files: raw.files.slice(1),
+            symbols: symbols(raw.symbol),
+          };
     const projection: IAutoMovieLocalContractProjection = {
       claim: raw.name ?? "",
       layer: binding.layer,
@@ -137,19 +143,14 @@ export function projectAutoMovieLocalContractClaims(
       enforced: raw.disabled !== true,
       populationScope: binding.populationScope,
       relationship:
-        binding.account === undefined ? "checklist" : "population-account",
+        binding.account === undefined ? "checklist" : "distributed-coverage",
       host: {
         root: claim.root ?? ".",
         files: [...raw.files],
         symbols: symbols(raw.symbol),
       },
-      targets: (population === undefined
-        ? references
-        : references.slice(0, 1)
-      ).map(projectReference),
-      ...(population === undefined
-        ? {}
-        : { population: projectReference(population) }),
+      targets: references.map(projectReference),
+      ...(population === undefined ? {} : { population }),
     };
     (binding.disposition === "binding" ? localBindings : localAudits).push(
       projection,
@@ -161,8 +162,8 @@ export function projectAutoMovieLocalContractClaims(
 /**
  * Manifest identity of one local relationship after declaration validation.
  *
- * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Keeps a local obligation's compared population separate from its contract target.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Names account/checklist ownership, enforcement, and optional authored comparison population.
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Keeps a local obligation's eligible authored population separate from its contract target.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Names coverage/checklist ownership, enforcement, and eligible authored populations.
  * @author Samchon
  */
 export interface IAutoMovieLocalContractProjection {
@@ -176,15 +177,15 @@ export interface IAutoMovieLocalContractProjection {
   enforced: boolean;
   /** Exact pilot, complete-production, or reset scope retained from the binding. */
   populationScope: AutoMovieProductionContractClaim["autoMovieBinding"]["populationScope"];
-  /** Distinguishes authored-unit checklists from dedicated obligation accounts. */
-  relationship: "checklist" | "population-account";
+  /** Distinguishes per-unit principles from collective obligation coverage. */
+  relationship: "checklist" | "distributed-coverage";
   /**
    * Native host root, file selectors, and symbols for the accountable units.
    * An omitted root becomes "." and an omitted symbol selector becomes [].
    */
   host: { root: string; files: readonly string[]; symbols: readonly string[] };
   /**
-   * Markdown contract references, excluding an account's compared population.
+   * Markdown contract references.
    * Roots and symbols use the same omitted-value normalization as the host.
    */
   targets: readonly {
@@ -193,8 +194,8 @@ export interface IAutoMovieLocalContractProjection {
     symbols: readonly string[];
   }[];
   /**
-   * Complete authored H2 reference compared by an obligation account.
-   * Checklist bindings omit this field because their hosts answer independently.
+   * Complete authored H2 population eligible to fulfill the obligation.
+   * Checklist bindings answer independently through their host population.
    */
   population?: {
     root: string;

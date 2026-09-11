@@ -6,7 +6,7 @@ import { loadSourceModule } from "./loadSourceModule";
  * The private parser seam needed by snapshot and injected-failure units.
  *
  * Only the empty-root syntax injection and observed snapshot fields are typed
- * here. Private package source stays outside the test compiler's rootDir.
+ * here. Private package source stays outside the test builder's rootDir.
  */
 export const referenceParser = loadSourceModule<{
   parseReference(

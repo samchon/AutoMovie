@@ -45,7 +45,7 @@ const hasExpression = (motion: {
 /**
  * End-to-end acceptance: a two-actor beat compiles through the **whole**
  * executable core, the reference synthesizer (gait travel, look-at, emote) and
- * the region-layering compiler, into one performance clip per actor.
+ * the region-layering builder, into one performance clip per actor.
  *
  * The beat: HERO walks over to GUARD while looking at her and smiling; GUARD
  * stands her ground, glaring back and scowling. So HERO layers three disjoint

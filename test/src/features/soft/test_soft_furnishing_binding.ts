@@ -93,7 +93,7 @@ const check = (props: {
  *    is `not-run` rather than falling through to a solve it never performed.
  * 8. The lowering never throws. A shot second that is not a real number, and one
  *    landing past the step budget the domain declared for itself, are each
- *    reported as `not-run` with no geometry — this is the call a compiler makes
+ *    reported as `not-run` with no geometry — this is the call a builder makes
  *    once per furnishing per second, and a curtain whose budget stops inside
  *    the cut must not take the render down with it.
  */

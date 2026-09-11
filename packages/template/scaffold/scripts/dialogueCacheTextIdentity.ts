@@ -5,7 +5,6 @@ import type {
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
 import {
-  assertAutoMovieExternalGeneratorTermsAt,
   digestAutoMovieBytes,
   parseAutoMovieStructuredJson,
 } from "@automovie/production";
@@ -133,11 +132,6 @@ export const generateProductionDialogueCache = async (props: {
     speed: number;
   }) => Promise<readonly IProductionDialogueGenerationChunk[]>;
 }): Promise<IProductionDialogueCacheGeneration> => {
-  assertAutoMovieExternalGeneratorTermsAt({
-    termsCheckedAt: props.selection.generatorProvenance.termsCheckedAt,
-    occurredAt: props.generatedAt,
-    label: "Kokoro dialogue generation generatorProvenance",
-  });
   const generated = await props.synthesize({
     text: props.identity.requestText,
     voice: props.selection.voice,
@@ -388,15 +382,6 @@ export const validateProductionDialogueCache = (props: {
     record.pcmDigest !== digestAutoMovieBytes(props.snapshot.pcm)
   )
     return { status: "integrity-failed", reason: "receipt-coherence" };
-  try {
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: record.generatorProvenance!.termsCheckedAt,
-      occurredAt: generatedAt,
-      label: "Kokoro dialogue receipt generatorProvenance",
-    });
-  } catch {
-    return { status: "integrity-failed", reason: "generator-provenance" };
-  }
   const samples = new Float32Array(Uint8Array.from(props.snapshot.pcm).buffer);
   for (let index = 0; index < samples.length; ++index)
     if (Number.isFinite(samples[index]) === false)

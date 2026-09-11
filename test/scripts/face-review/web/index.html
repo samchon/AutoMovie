@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direct face study</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="importmap">
+      { "imports": { "three": "/three.module.js" } }
+    </script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <strong>Direct face study</strong
+        ><span>Current exported AutoMovie mesh</span>
+      </div>
+      <button id="reload">Reload export</button
+      ><button id="save">Save PNG + receipt</button>
+    </header>
+    <details id="build-notice" hidden>
+      <summary id="build-summary"></summary>
+      <pre id="build-output"></pre>
+    </details>
+    <main>
+      <aside>
+        <h2>Camera</h2>
+        <div id="views" class="buttons"></div>
+        <h2>Surface</h2>
+        <div id="modes" class="buttons"></div>
+        <label class="check"
+          ><input id="calibration" type="checkbox" checked /> Axis
+          calibration</label
+        >
+        <p class="hint">
+          Drag to orbit. Wheel to zoom. Right-drag to pan. Front looks down −Z;
+          +X appears right and +Y up.
+        </p>
+        <h2>Visible parts</h2>
+        <div id="groups" class="buttons"></div>
+        <p class="hint">
+          Only exported parts can be hidden. In the basic assembly, nasal skin
+          belongs to head; Nasal parts hides its interior only.
+        </p>
+        <input
+          id="filter"
+          placeholder="Filter part name"
+          aria-label="Filter part name"
+        />
+        <div id="parts"></div>
+      </aside>
+      <section id="render-panel">
+        <div id="canvas-slot"></div>
+        <div id="status" role="status">Loading…</div>
+        <p class="hint">
+          WebGL inspection lighting. Use Blender Cycles captures for stable
+          precision checks.
+        </p>
+      </section>
+      <section id="reference-panel">
+        <h2>Frozen input reference</h2>
+        <div id="reference-frame">
+          <img
+            id="reference-image"
+            src="/reference.png"
+            alt="Frozen input photograph for this face study"
+          />
+        </div>
+        <p class="hint" id="reference-note">
+          Original image. The orbit camera is not registered to this photograph.
+        </p>
+        <details>
+          <summary>Frame identity</summary>
+          <pre id="identity"></pre>
+        </details>
+      </section>
+    </main>
+    <script type="module" src="/app.mjs"></script>
+  </body>
+</html>

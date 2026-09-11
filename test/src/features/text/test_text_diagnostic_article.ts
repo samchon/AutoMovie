@@ -258,7 +258,7 @@ const DOMAIN_ARTICLE: Record<string, string> = {
  * The article each action verb is named with.
  *
  * `satisfies` rather than a runtime enumeration: the verbs are a discriminated
- * union with no constant to iterate, so the compiler is what refuses a new verb
+ * union with no constant to iterate, so the builder is what refuses a new verb
  * nobody has stated an article for. The three cases above read from it, so it
  * is a checked constant rather than dead weight.
  */

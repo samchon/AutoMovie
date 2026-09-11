@@ -32,6 +32,15 @@ const { inspectAutoMovieBuilding } = loadSourceModule<{
   ),
 );
 
+/**
+ * Building observations retain their input basis and compressed populations.
+ *
+ * Scenarios:
+ * 1. No declared ground reports not-run, while unique geometry is still counted.
+ * 2. Repeated geometry contributes its redundant serialized byte cost.
+ * 3. One compressed population is grounded or floating at the declared plane.
+ * 4. Empty models and populations contribute no geometry records.
+ */
 export const test_cli_scaffold_building_inspection = (): void => {
   const model = makeProp([
     primitivePart("box", { type: "box", width: 1, height: 1, depth: 1 }),
@@ -129,6 +138,11 @@ export const test_cli_scaffold_building_inspection = (): void => {
       1,
     );
   const floating = inspect({ groundY: -2, tolerance: 0 });
+  TestValidator.equals(
+    "the lower reference plane is measured",
+    floating.support.status,
+    "measured",
+  );
   if (floating.support.status === "measured")
     TestValidator.equals(
       "same population above reference ground",

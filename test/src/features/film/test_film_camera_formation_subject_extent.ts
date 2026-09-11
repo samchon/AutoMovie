@@ -136,7 +136,7 @@ const seesCentroid = (camera: IAutoMovieResolvedCamera, far = 200): boolean =>
  *
  * A compiled formation stores where its members STAND, so its bounds are a
  * footprint: flat, and one member's body-width narrower than the unit really
- * is. The member's own extent supplies the height and the compiler's projection
+ * is. The member's own extent supplies the height and the builder's projection
  * radius the overhang, which is why the box below is `[-50.5, 50.5] × [0.2,
  * 2.4] × [-0.5, 20.5]` for a line designed `[-50, 50] × [0, 20]` whose member
  * occupies `[0.2, 2.4]`.

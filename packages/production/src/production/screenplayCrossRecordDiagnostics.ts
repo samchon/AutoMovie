@@ -148,7 +148,7 @@ export const screenplayCrossRecordDiagnostics = (props: {
   if (screenplay.production !== props.expectedProduction)
     refuse(
       "screenplay-production-mismatch",
-      `The screenplay index belongs to production "${screenplay.production}" while the active compiler owns "${props.expectedProduction}". Production identity compares exactly and cannot be inferred from a path. Open the correct index or repair its owner, then compile again.`,
+      `The screenplay index belongs to production "${screenplay.production}" while the active builder owns "${props.expectedProduction}". Production identity compares exactly and cannot be inferred from a path. Open the correct index or repair its owner, then compile again.`,
     );
   if (props.graph.shots.size !== 0 && screenplay.screenplay.lock === null)
     refuse(

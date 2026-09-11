@@ -382,7 +382,7 @@ export const test_ingest_external_model_validation_matrix = (): void => {
       () =>
         rejects(
           baseDocument(),
-          "has no compiler-resolved resident bytes",
+          "has no builder-resolved resident bytes",
           "gltf-static-v1",
           () => null,
         ),
@@ -402,7 +402,7 @@ export const test_ingest_external_model_validation_matrix = (): void => {
       () =>
         rejects(
           changed(["images"], [{ uri: "image.png" }]),
-          "has no non-empty compiler-resolved resident bytes",
+          "has no non-empty builder-resolved resident bytes",
           "gltf-static-v1",
           resolveOnlyBuffer,
         ),
@@ -412,7 +412,7 @@ export const test_ingest_external_model_validation_matrix = (): void => {
       () =>
         rejects(
           changed(["images"], [{ uri: "image.png" }]),
-          "has no non-empty compiler-resolved resident bytes",
+          "has no non-empty builder-resolved resident bytes",
           "gltf-static-v1",
           (uri) => (uri === "mesh.bin" ? basePayload() : Buffer.alloc(0)),
         ),
