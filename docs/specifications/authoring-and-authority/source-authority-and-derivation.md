@@ -18,8 +18,13 @@ Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파�
 
 <!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring 이 입력이 숨은 editor 상태가 아닌 읽고 diff할 수 있는 일반 source가 되게 한다. -->
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring 이 입력이 공개 contract와 문서화된 toolchain만으로 새 checkout에서 재현 가능하게 한다. -->
+<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link 이 입력 목록이 결과 identity가 추적할 production namespace, source revision과 input bytes를 정하고 checkout 위치를 그 목록에서 뺀다. -->
 
 파생 시도는 exact source revision, normalized source bytes, 채택 자산 digest, 공개 contract version과 명시 configuration을 입력으로 받는다. 개인 machine path, editor cache, 대화 기억과 선언되지 않은 network state는 입력이 될 수 없다.
+
+Checkout의 물리 root와 configuration에 적힌 절대 위치는 한 attempt를 보호하는 resident 사실이다. Publication guard는 이 값을 비교해 다른 root에서 읽은 evidence와 attempt 도중 교체된 root를 거부하지만, 결과 identity에는 넣지 않는다. 결과 identity는 production namespace, 선택 configuration, graph-selected owner edge, normalized source와 채택·파생 bytes를 포함한다. 따라서 같은 입력과 namespace를 연 두 checkout은 같은 identity를 갖고, namespace나 이 입력 중 하나가 달라지면 다른 identity를 갖는다.
+
+Identity 계산 규칙이 바뀌면 이전 규칙으로 기록된 결과는 현재 identity와 일치하지 않으므로 다시 파생할 때까지 `stale`이다. 새 규칙은 이전 결과를 current로 승계하지 않는다.
 
 ### 파생 출력과 lineage {#spec-authoring-derivation-output-lineage}
 

@@ -24,6 +24,8 @@ Target 입력은 stable identity, 포함 범위, dependency identity, expected o
 
 한 attempt는 target closure 전체가 같은 source snapshot에서 검증된 성공 artifact이거나 current target으로 publish 가능한 artifact가 없는 structured failure여야 한다. 이전 성공 bytes, 현재 실패 일부와 임의 substitute를 섞은 결과를 current target으로 publish할 수 없다.
 
+Publish 직전 확인은 attempt 시작 시 확보한 resident snapshot, 즉 물리 root, configuration에 적힌 절대 위치, project incarnation과 revision을 다시 확보한 값과 비교한다. 이식 가능한 결과 identity가 같다는 사실은 이 비교를 대신하지 않는다. 다른 root의 evidence, root 교체, incarnation 또는 revision 경합과 중간 source 변경은 부분 결과를 publish하지 않는 structured failure가 된다.
+
 ### 결과와 checkpoint {#spec-authoring-partial-result-checkpoint}
 
 <!-- @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control 이 출력이 부분 결과를 채택, 수정 또는 폐기하는 사용자 선택을 보존한다. -->

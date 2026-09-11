@@ -20,6 +20,8 @@ AutoMovie는 여러 작품이 공유하는 일반 표현, 연산, validation과 
 
 Project는 문서화된 toolchain과 공개 contract만으로 새 checkout에서 재현할 수 있어야 하며, 개인 machine의 숨은 asset 경로와 editor cache에 의존하지 않는다.
 
+같은 source, 채택 bytes와 production namespace를 다른 위치의 checkout에서 열면 결과는 같은 identity를 가져야 하며, checkout 위치가 달라졌다는 이유만으로 stale이 되지 않아야 한다.
+
 ### 저작 도구의 교체 가능성 {#agent-authoring-tool-replaceability}
 
 사용자는 project source와 공개 contract를 유지한 채 코딩 에이전트, 그 client, 외부 service 또는 local tool을 교체할 수 있어야 한다. 특정 session, vendor account 또는 비공개 remote state만이 편집을 이어 갈 수 있는 소유권 잠금을 만들지 않아야 한다.

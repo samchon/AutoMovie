@@ -41,7 +41,10 @@ export interface IAutoMovieLibraryAuthoringSnapshot {
   version: 1;
   /** Protocol that gives the snapshot identity its meaning. */
   protocol: typeof AUTOMOVIE_LIBRARY_AUTHORING_SNAPSHOT_PROTOCOL;
-  /** Absolute normalized builder project root. */
+  /**
+   * Absolute normalized builder project root. The publication guard compares
+   * it; result identity never includes it.
+   */
   root: string;
   /** Package identity observed with the authoring graph. */
   packageName: string;
@@ -59,7 +62,11 @@ export interface IAutoMovieLibraryAuthoringSnapshot {
   sourceOwners: readonly IAutoMovieProductionEvidenceSourceOwnerBinding[];
   /** Normalized bytes identity of every selected source member. */
   sources: readonly IAutoMovieLibraryAuthoringSourceSnapshot[];
-  /** Canonical digest of the complete snapshot. */
+  /**
+   * Canonical digest of the complete resident snapshot, including `root` and
+   * the absolute `configuration.location`. Only the publication guard compares
+   * it; result identity binds the portable projection that omits both.
+   */
   digest: AutoMovieContentDigest;
 }
 
@@ -104,6 +111,12 @@ export interface IAutoMovieLibrarySourceExecutionPlan {
  * the builder. Missing selected members remain in the identity as `null`, so
  * deletion is a stale transition rather than an exception that skips the
  * publication guard.
+ *
+ * The acquisition is resident. Evidence read from another root is refused
+ * here, and the digest covers the root and the declaration location, so two
+ * acquisitions compare equal only inside one checkout. What a library result
+ * depends on is the portable projection of this snapshot, which is why the
+ * same work opened elsewhere keeps its identity without weakening this guard.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-change-impact-visibility Makes every selected owner, binding, export and normalized source revision part of the guarded library input.
  * @evidence requirements/agent-authoring/partial-work.md#agent-atomic-compilation Gives pre-publication currentness one complete graph-derived snapshot to reacquire.
