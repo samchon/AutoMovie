@@ -4,6 +4,7 @@ import {
   renderProductionSound,
   resolveProductionFrameRate,
 } from "@automovie/engine";
+import { decodeProductionAudioAsset } from "@automovie/ingest";
 import type {
   AutoMovieContentDigest,
   IAutoMovieCompiledShotSource,
@@ -15,7 +16,6 @@ import {
   type AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionRenderJobPlan,
-  decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   parseAutoMovieStructuredJson,

@@ -11,6 +11,10 @@ import {
   sampleProductionFilmEffects,
   sampleProductionRenderFrame,
 } from "@automovie/engine";
+import type {
+  IAutoMovieProductionAudioProcessing,
+  IAutoMovieProductionWaveSourceFormat,
+} from "@automovie/ingest";
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
@@ -35,10 +39,6 @@ import {
   canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
 } from "./contentIdentity";
-import type {
-  IAutoMovieProductionAudioProcessing,
-  IAutoMovieProductionWaveSourceFormat,
-} from "./decodeProductionAudioAsset";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
