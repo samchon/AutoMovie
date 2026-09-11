@@ -35,7 +35,7 @@ const UTF8_BOM = Uint8Array.of(0xef, 0xbb, 0xbf);
  *
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata Refuses a precomputed structured record whose object repeats a member name instead of letting one silently chosen value reach validation.
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Refuses a selected artifact whose context text no longer reproduces its verified output digest, so stale or lossy bytes never enter as the current contribution.
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Names the source path, export, artifact record, failed stage, byte offset and JSON Pointer of every refusal it returns.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Names the source path and export behind every refusal, and adds the artifact record, failed stage, byte offset and JSON Pointer whenever the selected bytes themselves are refused.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection Passes the exact artifact bytes through the ordered encoding, syntax and duplicate-member stages before any schema sees them.
  * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Confirms JSON only where a library owner selects the artifact, leaving every other UTF-8 artifact to travel as plain text.
  * @author Samchon
