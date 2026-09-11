@@ -28,19 +28,34 @@ import {
 export interface IScaffoldPublicationOptions {
   /** Permit publication below an already populated root. */
   allowExistingRoot?: boolean;
-  /** Compatibility shorthand that enables both authorities. */
+  /** Compatibility shorthand that enables root admission and exact replacement. */
   force?: boolean;
   /** Permit replacement of an exact captured ordinary file. */
   overwriteExistingFiles?: boolean;
+  /**
+   * Permit replacing a target's directory entry when another entry names it.
+   *
+   * This authority is never implied by `force`, because a caller that means
+   * in-place replacement must keep refusing a target whose inode another
+   * pathname also names: rewriting that inode would change what the other
+   * pathname shows. Only a caller whose surface is regenerated rather than
+   * recovered grants it.
+   */
+  replaceAliasedEntries?: boolean;
 }
 
 /** Resolve each authority from its explicit grant, else from `force`. */
 const resolveScaffoldPublicationAuthority = (
   options: IScaffoldPublicationOptions | undefined,
-): { allowExistingRoot: boolean; overwriteExistingFiles: boolean } => ({
+): {
+  allowExistingRoot: boolean;
+  overwriteExistingFiles: boolean;
+  replaceAliasedEntries: boolean;
+} => ({
   allowExistingRoot: options?.allowExistingRoot ?? options?.force === true,
   overwriteExistingFiles:
     options?.overwriteExistingFiles ?? options?.force === true,
+  replaceAliasedEntries: options?.replaceAliasedEntries === true,
 });
 
 /**
@@ -189,6 +204,7 @@ export const publishFiles = (
           bytes: Uint8Array.from(entry.bytes),
           force: authority.overwriteExistingFiles,
           parent,
+          replaceAliasedEntries: authority.replaceAliasedEntries,
           target: entry.target,
         });
       } catch (error) {
