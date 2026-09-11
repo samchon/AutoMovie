@@ -1,5 +1,7 @@
 import {
   deriveProductionSoundPlan,
+  materializeCompiledFormation,
+  materializeCompiledInstanceSet,
   productionPhonemesToVisemes,
   productionSoundSpectrogram,
   productionSoundWaveform,
@@ -11,10 +13,6 @@ import {
   IAutoMovieFilmTimeline,
   IAutoMovieShotContract,
 } from "@automovie/interface";
-import {
-  materializeCompiledFormation,
-  materializeCompiledInstanceSet,
-} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts } from "../internal/predicates";
@@ -147,25 +145,27 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     models: [],
     formations: [
       materializeCompiledFormation({
-        id: "formation",
-        modelRecipe: "formation-model",
-        count: 1,
-        layout: {
-          kind: "line",
-          ranks: 1,
-          files: 1,
-          spacing: { lateral: 1, depth: 1 },
+        formation: {
+          id: "formation",
+          modelRecipe: "formation-model",
+          count: 1,
+          layout: {
+            kind: "line",
+            ranks: 1,
+            files: 1,
+            spacing: { lateral: 1, depth: 1 },
+          },
+          anchor: { x: -4, y: 0, z: -6 },
+          facingDeg: 0,
+          seed: 1,
+          capabilities: ["advance"],
+          heroOverrides: [],
         },
-        anchor: { x: -4, y: 0, z: -6 },
-        facingDeg: 0,
-        seed: 1,
-        capabilities: ["advance"],
-        heroOverrides: [],
       }),
     ],
     instanceSets: [
-      materializeCompiledInstanceSet(
-        {
+      materializeCompiledInstanceSet({
+        instanceSet: {
           id: "instances",
           modelRecipe: "instance-model",
           count: 1,
@@ -184,16 +184,8 @@ const compiled = (): IAutoMovieCompiledShotSource =>
             traits: [],
           },
         },
-        {
-          id: "world",
-          units: "meter",
-          landmarks: [],
-          surfaces: [],
-          routes: [],
-          effectRecipes: [],
-          effectZones: [],
-        },
-      ),
+        world: { routes: [] },
+      }),
     ],
     effects: [],
   }) satisfies IAutoMovieCompiledShotSource;

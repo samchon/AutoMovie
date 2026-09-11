@@ -1,11 +1,10 @@
 import {
   type IAutoMovieCameraClearanceRuntime,
   compileDefinedShot,
+  createAutoMovieSourceOracle,
   defineShot,
-  formationSlot,
   inheritProductionLighting,
   makeActorSynthesizer,
-  worldGroundHeight,
 } from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
@@ -17,13 +16,11 @@ import {
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
-  IAutoMovieVector3,
   IAutoMovieVideoEdit,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import typia from "typia";
 
-import { materializeInstanceSlot } from "./materializeProduction";
 import { boundFolds } from "./productionEnvironmentValidation";
 import {
   IProductionExternalMotionAdoption,
@@ -191,38 +188,13 @@ export const assembleShotSource = (
     ...props,
     context: {
       ...structuredClone(props.context),
-      engine: {
-        distance: (left: IAutoMovieVector3, right: IAutoMovieVector3) =>
-          Math.hypot(left.x - right.x, left.y - right.y, left.z - right.z),
-        groundHeight: (point: { x: number; z: number }) =>
-          worldGroundHeight(props.context.world.surfaces, point) ?? 0,
-        formationSlot: (id: string, slot: number) => {
-          const formation = props.context.formationRuntime[id];
-          if (formation === undefined)
-            throw new RangeError(`Formation "${id}" is unavailable.`);
-          return formationSlot(
-            {
-              ...formation,
-              capabilities: [],
-              heroOverrides: formation.heroes.map(({ slot, actor }) => ({
-                slot,
-                actor,
-              })),
-            },
-            slot,
-          );
-        },
-        instanceSlot: (id: string, slot: number) => {
-          const instanceSet = props.context.instanceSetRuntime[id];
-          if (instanceSet === undefined)
-            throw new RangeError(`Instance set "${id}" is unavailable.`);
-          return materializeInstanceSlot(
-            instanceSet,
-            props.context.world,
-            slot,
-          );
-        },
-      },
+      // Answered from the compiled runtime the context carries, so a member a
+      // source asks for is the member the compiled record regenerates.
+      engine: createAutoMovieSourceOracle({
+        world: props.context.world,
+        formationRuntime: props.context.formationRuntime,
+        instanceSetRuntime: props.context.instanceSetRuntime,
+      }),
     },
     target: `shot:${props.id}`,
     label: "thin shot program",
