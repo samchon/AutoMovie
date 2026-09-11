@@ -1,6 +1,7 @@
 export * from "./captionPlan";
 export * from "./captionSidecar";
 export * from "./captionSlice";
+export * from "./caption";
 export * from "./chunkSequenceRender";
 export * from "./guidePasses";
 export * from "./headlessCapture";

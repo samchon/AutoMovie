@@ -95,6 +95,7 @@ export const verifyAutoMovieProductionSemanticMaskEvidence = (props: {
  *
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-gaps Reports unavailable and incomplete semantic products with their exact retained cause.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Admits only a current self-verified palette with zero unresolved and unnamed runtime population as complete.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps a not-run observation, an unsupported schema version, a foreign shot and an invalid record as four distinct statuses with their own retained reason, and never folds any of them into the complete status a publication may consume.
  */
 export const classifyAutoMovieProductionSemanticMaskEvidence = (props: {
   observation: AutoMovieCaptureObservation<IAutoMovieProductionSemanticMaskEvidence>;

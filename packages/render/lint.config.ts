@@ -35,6 +35,8 @@ const topicReferences = (
 const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
 const captionSources = [
+  "src/caption/**/*.ts",
+  "!src/caption/index.ts",
   "src/captionPlan.ts",
   "src/captionSidecar.ts",
   "src/captionSlice.ts",

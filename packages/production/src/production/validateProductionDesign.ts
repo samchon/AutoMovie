@@ -17,9 +17,9 @@ import {
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import { parseAutoMovieCaptionLanguage } from "@automovie/render";
 import path from "node:path";
 
-import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   compareCodeUnits,
   encodeAutoMoviePathSegment,
