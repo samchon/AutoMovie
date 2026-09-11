@@ -7,8 +7,11 @@ settings:
 catalogs:
   gltf:
     '@gltf-transform/core':
-      specifier: ^4.1.1
-      version: 4.4.0
+      specifier: ^4.5.0
+      version: 4.5.0
+    '@gltf-transform/extensions':
+      specifier: ^4.5.0
+      version: 4.5.0
   media:
     '@huggingface/transformers':
       specifier: ^3.8.1
@@ -338,7 +341,7 @@ importers:
         version: link:../interface
       '@gltf-transform/core':
         specifier: catalog:gltf
-        version: 4.4.0
+        version: 4.5.0
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
@@ -434,7 +437,7 @@ importers:
     devDependencies:
       '@gltf-transform/core':
         specifier: catalog:gltf
-        version: 4.4.0
+        version: 4.5.0
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.29.0
@@ -531,7 +534,7 @@ importers:
         version: link:../interface
       '@gltf-transform/core':
         specifier: catalog:gltf
-        version: 4.4.0
+        version: 4.5.0
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
@@ -663,7 +666,10 @@ importers:
         version: link:../packages/viewer
       '@gltf-transform/core':
         specifier: catalog:gltf
-        version: 4.4.0
+        version: 4.5.0
+      '@gltf-transform/extensions':
+        specifier: catalog:gltf
+        version: 4.5.0
       '@huggingface/transformers':
         specifier: catalog:media
         version: 3.8.1
@@ -1065,8 +1071,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@gltf-transform/core@4.4.0':
-    resolution: {integrity: sha512-cOPxOhHFFz5hwmix+li1+Nnq5qMV/QD3fTCsVlApxxFACtFdjkt2R/juseD4gvZ7D2c/yl6OilKH0pvI735YyQ==}
+  '@gltf-transform/core@4.5.0':
+    resolution: {integrity: sha512-JlvShvnB4AtfGZqjnESS/wfPJbpVnyHhTwJBbWN4qXqkB3C5HIoxxpu/orwGBge6Pc0zObeWj70lVf+4gbuu0A==}
+
+  '@gltf-transform/extensions@4.5.0':
+    resolution: {integrity: sha512-J4cKzrmEr75YkrtdI4cKosBg2vDC4rT56aq/QoijW7GT1Y9gSEMJbqyFO9xcFO3FNpZaZiDrHWUqE5Okrl5nOQ==}
 
   '@hono/node-server@2.1.1':
     resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
@@ -2040,6 +2049,9 @@ packages:
   kokoro-js@1.2.1:
     resolution: {integrity: sha512-oq0HZJWis3t8lERkMJh84WLU86dpYD0EuBPtqYnLlQzyFP1OkyBRDcweAqCfhNOpltyN9j/azp1H6uuC47gShw==}
 
+  ktx-parse@1.1.0:
+    resolution: {integrity: sha512-mKp3y+FaYgR7mXWAbyyzpa/r1zDWeaunH+INJO4fou3hb45XuNSwar+7llrRyvpMWafxSIi99RNFJ05MHedaJQ==}
+
   libopus-wasm@0.2.0:
     resolution: {integrity: sha512-x/2Gu1/C6L3IICY09zyfp984AWiOYjn53u4WfdY3yh+3KTzMN8Xkm77q3lenWMVIk5SnSzjGEkQT+VQMFHLBHQ==}
     engines: {node: '>=20'}
@@ -2787,9 +2799,14 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@gltf-transform/core@4.4.0':
+  '@gltf-transform/core@4.5.0':
     dependencies:
       property-graph: 4.1.0
+
+  '@gltf-transform/extensions@4.5.0':
+    dependencies:
+      '@gltf-transform/core': 4.5.0
+      ktx-parse: 1.1.0
 
   '@hono/node-server@2.1.1(hono@4.13.7)':
     dependencies:
@@ -3666,6 +3683,8 @@ snapshots:
     dependencies:
       '@huggingface/transformers': 3.8.1
       phonemizer: 1.2.1
+
+  ktx-parse@1.1.0: {}
 
   libopus-wasm@0.2.0: {}
 
