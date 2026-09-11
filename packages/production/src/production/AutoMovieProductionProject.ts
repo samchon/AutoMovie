@@ -628,7 +628,11 @@ export class AutoMovieProductionProject {
       this.automovieRoot,
       productionId,
     );
-    const incarnation = readOwnedJson(this.rootReal, incarnationPath);
+    // An unregistered id is refused before its state root is read, so a
+    // damaged record an ended namespace left cannot mask that refusal.
+    const incarnation = registry.productions.includes(productionId)
+      ? readOwnedJson(this.rootReal, incarnationPath)
+      : undefined;
     planAutoMovieProductionRegistration({
       registry: {
         productions: registry.productions,
