@@ -18,11 +18,13 @@ import {
   decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-  normalizeProductionH264Mp4,
   parseAutoMovieStructuredJson,
   readAutoMovieFilmTimeline,
-  trimProductionAudioPresentation,
 } from "@automovie/production";
+import {
+  normalizeProductionH264Mp4,
+  trimProductionAudioPresentation,
+} from "@automovie/render/node";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

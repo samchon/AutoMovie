@@ -16,7 +16,6 @@ import {
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
   assertProductionRenderDialogueRuntimeIdentity,
-  assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
   classifyAutoMovieProductionSemanticMaskEvidence,
   createAutoMovieProductionSemanticMaskReceipt,
@@ -24,10 +23,13 @@ import {
   encodeAutoMoviePathSegment,
   isAutoMovieLocalProcessOwner,
   probeProductionMedia,
-  probeProductionVideoMp4,
   productionRenderMaterializationDecision,
-  resolveProductionVideoProfile,
 } from "@automovie/production";
+import {
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import { probeProductionVideoMp4 } from "@automovie/render/node";
 import path from "node:path";
 import type { PNG } from "pngjs";
 
