@@ -20,16 +20,16 @@ import {
   IAutoMovieProductionDesign,
   IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
+import {
+  parseAutoMovieCaptionLanguage,
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttIdentifier,
+  serializeAutoMovieWebVttSingleLineText,
+} from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import { autoMovieFileSystem as fileSystem } from "../project/fileSystem";
-import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
-import {
-  serializeAutoMovieWebVttCueText,
-  serializeAutoMovieWebVttIdentifier,
-  serializeAutoMovieWebVttSingleLineText,
-} from "./captionText";
 import {
   canonicalAutoMovieJsonBytes,
   canonicalizeAutoMovieJson,

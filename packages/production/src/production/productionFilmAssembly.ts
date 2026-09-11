@@ -11,14 +11,14 @@ import {
   IAutoMovieProductionFrameRate,
   IAutoMovieShotContract,
 } from "@automovie/interface";
-import typia from "typia";
-
-import { parseAutoMovieCaptionLanguage } from "./captionLanguage";
 import {
   canonicalizeAutoMovieCaptionText,
   isAutoMovieWebVttIdentifier,
+  parseAutoMovieCaptionLanguage,
   serializeAutoMovieWebVttSingleLineText,
-} from "./captionText";
+} from "@automovie/render";
+import typia from "typia";
+
 import { canonicalAutoMovieJsonBytes } from "./contentIdentity";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { ISourceBuildResult, buildSourceExport } from "./productionSourceBuild";

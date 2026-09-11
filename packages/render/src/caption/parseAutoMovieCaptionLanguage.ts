@@ -42,7 +42,9 @@ const GRANDFATHERED_LANGUAGE_TAGS = new Set([
 ]);
 
 const ALPHA = /^[A-Za-z]+$/u;
+
 const ALPHANUMERIC = /^[A-Za-z0-9]+$/u;
+
 const DIGIT = /^[0-9]+$/u;
 
 /**
@@ -134,11 +136,6 @@ export const parseAutoMovieCaptionLanguage = (
 
   return index === subtags.length ? { display: value, comparisonKey } : null;
 };
-
-/** Return the case-insensitive identity of a well-formed language tag. */
-export const autoMovieCaptionLanguageComparisonKey = (
-  value: string,
-): string | null => parseAutoMovieCaptionLanguage(value)?.comparisonKey ?? null;
 
 const isVariant = (value: string): boolean =>
   (value.length >= 5 && value.length <= 8) ||
