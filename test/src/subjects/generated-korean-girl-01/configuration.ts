@@ -79,7 +79,7 @@ export const portraitEyeSockets: IPortraitEyeSocket[] = [
 export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
-  widthScale: 1.06,
+  widthScale: 0.98,
   // Preserve the measured vertical opening while the lower roll is fitted;
   // the pretarsal component must never compensate by shrinking the eye.
   openingScale: 1.04,
@@ -94,8 +94,8 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // immediately below its margin; a separate infraorbital layer supplies the
   // broader transition into the cheek. These millimetre dimensions are authored
   // image-guided fits, not population averages or clinical measurements.
-  foldWidth: 1.6,
-  foldDepth: 0.22,
+  foldWidth: 1.15,
+  foldDepth: 0.14,
   upperLidVolume: 0.18,
   // The source shows a roughly six-millimetre pretarsal roll immediately below
   // the lashes. Keep the crest visible, then let the lower shoulder fall away
