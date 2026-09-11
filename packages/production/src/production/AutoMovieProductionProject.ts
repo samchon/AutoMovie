@@ -27,6 +27,10 @@ import {
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import {
+  assertProductionRenditionClipDelivery,
+  probeProductionVideoMp4,
+} from "@automovie/render/node";
 import { randomUUID } from "node:crypto";
 import type { BigIntStats, Dirent, Stats } from "node:fs";
 import path from "node:path";
@@ -52,12 +56,9 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
-import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
+import { planAutoMovieProductionLayoutMigration } from "./planAutoMovieProductionLayoutMigration";
 import { planAutoMovieProductionRegistration } from "./planAutoMovieProductionRegistration";
-import {
-  probeProductionMedia,
-  probeProductionVideoMp4,
-} from "./probeProductionMedia";
+import { probeProductionMedia } from "./probeProductionMedia";
 import {
   AUTOMOVIE_REGISTERED_ARCHETYPES,
   AutoMovieModelArchetypeRegistry,
@@ -667,46 +668,56 @@ export class AutoMovieProductionProject {
   }
 
   private migrateLegacyProductionLayout(): void {
-    const moves: Array<{ source: string; destination: string }> = [];
-    for (const directory of ["models", "formations"])
-      moves.push({
-        source: path.join(this.automovieRoot, "design", directory),
-        destination: path.join(this.sharedDesignRoot, directory),
-      });
-    moves.push({
-      source: path.join(this.automovieRoot, "design", "world.json"),
-      destination: path.join(this.sharedDesignRoot, "world.json"),
+    const moves = planAutoMovieProductionLayoutMigration({
+      automovieRoot: this.automovieRoot,
+      sharedDesignRoot: this.sharedDesignRoot,
+      productionDesignRoot: this.productionDesignRoot,
+      productionStateRoot: this.productionStateRoot,
+      productionSegment: this.productionSegment,
+      outputRoots: [
+        {
+          directory: "generated",
+          root: this.resolveOwnedDirectory(this.manifest_.generatedRoot),
+        },
+        {
+          directory: "renders",
+          root: this.resolveOwnedDirectory(this.manifest_.renderRoot),
+        },
+      ],
+      // A project that produced nothing has no output root to namespace.
+      // Permit that missing root while still rejecting every existing
+      // linked/non-directory ancestor before the root itself is read, and
+      // report a non-directory as absent so the ownership layout refuses it by
+      // name instead of this plan inventing a move for it.
+      outputState: (root) => {
+        assertPhysicalDirectoryAncestors(
+          this.rootReal,
+          path.dirname(root),
+          true,
+        );
+        const state = lstatOrNull(root);
+        if (state === null) return { kind: "absent" };
+        if (state.isSymbolicLink()) return { kind: "linked" };
+        if (state.isDirectory() === false) return { kind: "absent" };
+        return {
+          kind: "entries",
+          entries: fileSystem
+            .readdirSync(root, { withFileTypes: true })
+            .map((entry) => ({ name: entry.name, isFile: entry.isFile() })),
+        };
+      },
+      resident: (source) => {
+        assertPhysicalDirectoryAncestors(
+          this.rootReal,
+          path.dirname(source),
+          true,
+        );
+        return lstatOrNull(source) !== null;
+      },
     });
-    moves.push({
-      source: path.join(this.automovieRoot, "design", "production.json"),
-      destination: path.join(this.productionDesignRoot, "production.json"),
-    });
-    for (const directory of ["shots", "acceptance", "screenplay"])
-      moves.push({
-        source: path.join(this.automovieRoot, "design", directory),
-        destination: path.join(this.productionDesignRoot, directory),
-      });
-    for (const entry of [
-      "revision.json",
-      "generated-manifest.json",
-      "render-manifest.json",
-      "render-manifest-receipt.json",
-      "render-receipts",
-      "audit",
-    ])
-      moves.push({
-        source: path.join(this.automovieRoot, entry),
-        destination: path.join(this.productionStateRoot, entry),
-      });
-    for (const relativeRoot of [
-      this.manifest_.generatedRoot,
-      this.manifest_.renderRoot,
-    ]) {
-      const outputRoot = this.resolveOwnedDirectory(relativeRoot);
-      moves.push({
-        source: outputRoot,
-        destination: path.join(outputRoot, this.productionSegment),
-      });
+    if (moves.length === 0) {
+      this.adoptProductionLayoutVersion();
+      return;
     }
 
     const temporary = path.join(
@@ -752,9 +763,9 @@ export class AutoMovieProductionProject {
     try {
       for (const [index, move] of moves.entries()) {
         assertMigrationFence();
-        // A fresh project has no legacy tree to migrate. Permit that missing
-        // tail while still rejecting every existing linked/non-directory
-        // ancestor before the source itself is inspected.
+        // The plan observed each of these entries a moment ago. Tolerate one
+        // that has since left while still rejecting every existing
+        // linked/non-directory ancestor before the source itself is inspected.
         assertPhysicalDirectoryAncestors(
           this.rootReal,
           path.dirname(move.source),
@@ -836,12 +847,6 @@ export class AutoMovieProductionProject {
         if (lstatOrNull(move.temporary) === null)
           fileSystem.renameSync(move.destination, move.temporary);
         assertResidentMove(move.temporary, move.identity);
-        if (
-          path.dirname(move.destination) === move.source &&
-          lstatOrNull(move.source)?.isDirectory() === true &&
-          fileSystem.readdirSync(move.source).length === 0
-        )
-          fileSystem.rmdirSync(move.source);
       }
       for (const move of [...staged].reverse()) {
         const existing = lstatOrNull(move.source);
@@ -871,6 +876,24 @@ export class AutoMovieProductionProject {
       }
     }
     this.assertProjectRootIdentity();
+  }
+
+  /**
+   * Adopt the namespaced layout without moving anything.
+   *
+   * A registration that predates the layout is not the same fact as a project
+   * that holds the old one. A fresh project is created at layout version 0 and
+   * owns no legacy tree, so the plan finds nothing to move and adopting the
+   * version is the whole migration. Nothing is staged, which is what leaves the
+   * documents the scaffold ships where version control tracks them.
+   */
+  private adoptProductionLayoutVersion(): void {
+    const registry = validateProductionRegistry(
+      readOwnedJson(this.rootReal, this.registryPath),
+      this.registryPath,
+    );
+    registry.layoutVersion = 1;
+    this.writeOwnedJsonAtomic(this.registryPath, registry);
   }
 
   /**
