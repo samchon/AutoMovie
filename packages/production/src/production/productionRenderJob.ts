@@ -405,8 +405,6 @@ export type IAutoMovieProductionAudioAssetIdentity =
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Maps every output frame number of a tier to exactly one full-rate timeline frame and one exact time, so a proxy numbering has no duplicate, gap or off-by-one.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Slices every chunk from one global frame schedule, so a chunk or a retry carries exactly the frames a full render would.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Declares the one timeline frame per output frame at which capture resolves every shot layer and film effect.
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-cache-identity Folds every current film effect runtime digest and the edit fingerprint into each chunk identity, so a changed stream never reuses a rendered chunk.
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Keeps a proxy tier's output frames on the builder's full-rate timeline frame, so a reduced output rate never changes the film clock effects are sampled on.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Generates the ordered frame set from the exact rational clock and slices chunks from it, so subrange and full execution share each global frame's state.
  */
 export const planProductionRenderJob = (props: {

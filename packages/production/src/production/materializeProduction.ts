@@ -2,6 +2,7 @@ import {
   IAutoMovieFormationGrounding,
   Quaternion,
   formationSlot,
+  materializeCompiledEffects,
   mixSeed,
   productionRuntimeModelId,
   productionRuntimeSkeletonId,
@@ -11,7 +12,6 @@ import {
 import {
   AutoMovieContentDigest,
   IAutoMovieBuiltEnvironment,
-  IAutoMovieCompiledEffect,
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledInstanceSet,
   IAutoMovieCompiledShotSource,
@@ -765,76 +765,6 @@ export const materializeCompiledShot = (props: {
     },
     collisions,
   };
-};
-
-/**
- * Materialize shot-local cues into builder-owned deterministic streams.
- */
-export const materializeCompiledEffects = (
-  props: {
-    world?: IAutoMovieWorldDesign;
-    fps?: number;
-    fixedStepSeconds?: number;
-    cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
-  } & (
-    | { contract: IAutoMovieShotContract; seedOwner?: never }
-    | {
-        contract?: never;
-        seedOwner: { production: string; film: string };
-      }
-  ),
-): IAutoMovieCompiledEffect[] => {
-  if (props.world === undefined) return [];
-  const recipes = new Map(
-    props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
-  );
-  const zones = new Map(props.world.effectZones.map((zone) => [zone.id, zone]));
-  return [...props.cues]
-    .sort((left, right) => compareCodeUnits(left.id, right.id))
-    .flatMap((cue): IAutoMovieCompiledEffect[] => {
-      const zone = zones.get(cue.zone);
-      const recipe = zone === undefined ? undefined : recipes.get(zone.recipe);
-      if (zone === undefined || recipe === undefined) return [];
-      const seedDigest = digestAutoMovieBytes(
-        canonicalAutoMovieJsonBytes(
-          props.seedOwner === undefined
-            ? {
-                protocol: "automovie.effect-stream.v1",
-                shot: props.contract!.id,
-                cue: cue.id,
-                recipeSeed: recipe.seed,
-                zoneSeed: zone.seed,
-              }
-            : {
-                protocol: "automovie.film-effect-seed.v1",
-                owner: props.seedOwner,
-                cue: cue.id,
-                recipe,
-                zone,
-              },
-        ),
-      );
-      const core = {
-        version: 1 as const,
-        id: cue.id,
-        zone: zone.id,
-        kind: recipe.kind,
-        bounds: structuredClone(zone.bounds),
-        seed: Number.parseInt(seedDigest.slice(7, 20), 16),
-        recipe: structuredClone(recipe),
-        start: cue.start,
-        end: cue.end,
-        intensity: structuredClone(cue.intensity),
-        ...(cue.event === undefined ? {} : { event: cue.event }),
-        fixedStepSeconds: props.fixedStepSeconds ?? 1 / (props.fps ?? 24),
-      };
-      return [
-        {
-          ...core,
-          digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
-        },
-      ];
-    });
 };
 
 /**
