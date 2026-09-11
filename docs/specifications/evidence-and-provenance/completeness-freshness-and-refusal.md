@@ -14,6 +14,8 @@ Complete는 모든 required row가 current positive evidence로 충족되고 blo
 
 Freshness key는 subject revision, source와 dependency closure identities, activity와 execution identity, observation conditions, criterion 또는 rubric revision과 reviewer decision identity를 포함해야 한다. Evaluator는 stored key와 current key를 field별로 비교해 current, stale 또는 indeterminate와 changed roles를 출력해야 한다.
 
+Freshness key는 그것이 판정하는 산출물의 bytes 안이 아니라 evidence record에 담긴다. 산출물이 자기 key의 revision을 bytes에 기록하면 그 기록이 다시 key를 움직여 판정이 수렴하지 않는다.
+
 Output path 존재, 생성 시각과 이전 success는 current 판정의 충분조건이 아니다. 새 optional field를 모르는 reader는 identity 차이를 무시하지 않고 indeterminate와 compatibility-unknown reason을 반환해야 한다.
 
 ### Outcome classification lattice {#evp-outcome-classification-lattice}

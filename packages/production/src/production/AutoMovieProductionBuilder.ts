@@ -50,6 +50,7 @@ import {
 import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
+import { generatedOwnershipDiagnosticMessage } from "./generatedOwnershipDiagnosticMessage";
 import { autoMovieLibraryArtifactSourceTargets } from "./libraryArtifactTargets";
 import {
   IAutoMovieLibraryAuthoringSnapshot,
@@ -1720,9 +1721,11 @@ export class AutoMovieProductionBuilder {
           phase: "compile",
           target: entry.path,
           path: normalizeSlash(path.relative(this.project.root, file)),
-          message: repairDeclaredFiles
-            ? `Generated digest is ${String(actual)} but current source and design derive ${entry.digest}. The builder will regenerate this builder-owned file.`
-            : `Generated digest is ${String(actual)} but current source and design derive ${entry.digest}. Run the scaffold compile command to regenerate it before accepting lint.`,
+          message: generatedOwnershipDiagnosticMessage({
+            actual,
+            expected: entry.digest,
+            repair: repairDeclaredFiles,
+          }),
         });
     }
     if (

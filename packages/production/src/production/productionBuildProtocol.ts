@@ -14,9 +14,19 @@
  * artifacts, so a version 9 reader cannot assume source path and digest alone
  * identify the authored target that was admitted.
  *
+ * Version 11 removes `revision` and `currentRevision` from a compiled shot's
+ * camera clearance reports, so a version 10 reader must not expect either one
+ * on a report. The two were equal on every publishable report, and recording
+ * them made a take's bytes a function of the project revision counter:
+ * publishing the take moved the counter, the next derivation recorded the
+ * moved value, and neither repair nor lint could converge. Bumping the
+ * protocol is what makes an older generated tree report `generated-stale` and
+ * ask for one recompile, rather than failing the exact-shape read of a stored
+ * shot with a message that blames current source.
+ *
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_BUILD_PROTOCOL = "automovie.builder.v10";
+export const AUTOMOVIE_PRODUCTION_BUILD_PROTOCOL = "automovie.builder.v11";
 
 /**
  * Compiler package version used in generated identity.

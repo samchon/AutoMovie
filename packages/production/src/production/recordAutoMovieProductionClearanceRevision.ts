@@ -5,16 +5,19 @@ import type { IAutoMovieProductionSourceGateTrace } from "./IAutoMovieProduction
 /**
  * Hand a camera clearance evaluation its revisions and note when it reads them.
  *
- * A clearance report records the geometry revision it measured and the one
- * current at the gate, so a compiled take that keeps a report depends on the
- * revision number itself. The engine reads those two values only for a camera
- * that declares a clearance envelope, which makes a read exactly the case in
- * which a revision change alone can move the gate answer. The values are fixed
- * before the evaluation, every other runtime field is carried as it was, and
- * reading one of those records nothing. Without a trace the runtime is returned
- * as it was.
+ * A clearance evaluation compares the geometry revision it measured against
+ * the one current at the gate and refuses a take whose two disagree. The engine
+ * reads those values only for a camera that declares a clearance envelope,
+ * which makes a read exactly the case in which a revision change alone can move
+ * the gate answer. The compiled take itself keeps no revision, because artifact
+ * bytes are a function of design, source, evidence and protocol rather than of
+ * the revision counter, so the dependence belongs to the retained answer's
+ * freshness key and this is where it is recorded. The values are fixed before
+ * the evaluation, every other runtime field is carried as it was, and reading
+ * one of those records nothing. Without a trace the runtime is returned as it
+ * was.
  *
- * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Marks exactly the gate answers whose current status depends on the revision they recorded.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Marks exactly the gate answers whose current status depends on the revision they read.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Adds the revision to the freshness key of an answer only when that answer read it.
  */
 export const recordAutoMovieProductionClearanceRevision = (props: {

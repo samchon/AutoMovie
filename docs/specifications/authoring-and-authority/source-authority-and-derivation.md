@@ -42,6 +42,10 @@ Identity 계산 규칙이 바뀌면 이전 규칙으로 기록된 결과는 현�
 
 성공한 파생 결과는 target identity, source snapshot, contract 또는 runtime identity, output digest와 검증 상태를 제공해야 한다. 이 lineage가 없는 artifact는 현재 결과로 열거나 후속 evidence의 parent로 사용할 수 없다.
 
+파생 bytes의 입력 집합과 freshness key의 입력 집합은 같지 않다. 한 artifact의 bytes는 production namespace, design, source, authoring evidence, 채택한 content와 derivation protocol만의 함수이며 snapshot revision은 그 입력이 아니다. Lineage는 artifact bytes 안이 아니라 그 옆의 owned-output manifest가 제공하므로, revision만 움직인 write는 어떤 artifact의 bytes도 바꾸지 않아야 한다.
+
+Revision을 자기 bytes에 기록한 artifact는 영향받지 않은 결과를 재생성한다. 그 재생성이 다시 revision을 올리고 다음 derivation이 올라간 값을 기록하므로 repair가 수렴하지 않으며, 진단은 source나 design이 바뀌었다고 말하게 된다.
+
 Graph-selected TypeScript 결과는 normalized source digest뿐 아니라 실행된 project-relative path와 named export, 그 export가 인용한 정확한 Markdown target을 하나의 owner edge로 보존한다. Review와 final은 이 edge가 현재 fingerprint로 검토되지 않았거나 0개 또는 여러 개로 해석되거나 runtime이 다른 owner를 주장하면 실행과 귀속을 모두 거부한다. Helper import는 허용하지만 graph-selected top-level owner로 승격하지 않는다.
 
 ### 변경 영향 불변식 {#spec-authoring-source-change-impact-invariant}
