@@ -1,0 +1,38 @@
+{
+  "actions": [
+    {
+      "action": "write",
+      "afterSha256": "sha256:2fd3ab4f9f78d57d32f12eb71c6f432a0f4163847bc4292a12ea12df7af8fba5",
+      "beforeSha256": "sha256:4d27fdb93802d51a326440fafd19c7f37b8032d5a1976ef3e243594bc16a284a",
+      "from": null,
+      "path": "docs/obligations/core/settings.md",
+      "status": "published"
+    },
+    {
+      "action": "write",
+      "afterSha256": "sha256:3fb7a643937ffcbc6525d762df446bea15b5cef2d7481f3a76bad799ee39e569",
+      "beforeSha256": "sha256:6efcd709dfd44de68c548519a8c0a62d38ed2f55f4fc8803c4517ff8d5a44faf",
+      "from": null,
+      "path": "docs/obligations/design/spaces.md",
+      "status": "published"
+    }
+  ],
+  "from": {
+    "identity": "sha256:c0dffef7d5eb8ec3abfdb3e57ddd49bfc20d62e34825933d2cb56225b9460924",
+    "version": "0.1.0"
+  },
+  "language": "korean",
+  "observedInputDigest": "sha256:9597dd768d6d894689668eedceb2aabecdcafb02b4f1a222fdc8d602f96dd749",
+  "planDigest": "sha256:c0d6eee68ac218a4c3af909df7bdae0bdae1bddacbd43c0127606f39b6ff3bcf",
+  "protocol": "automovie.contract-migration-receipt.v1",
+  "publicationGeneration": "c0d6eee68ac218a4c3af909df7bdae0bdae1bddacbd43c0127606f39b6ff3bcf",
+  "to": {
+    "identity": "sha256:2dab28f81ea39e80005c84520904c40b10824d3f8eb7ba763922333133d9013c",
+    "version": "0.1.1"
+  },
+  "validation": {
+    "status": "completed",
+    "targetBaselineIdentity": "sha256:2dab28f81ea39e80005c84520904c40b10824d3f8eb7ba763922333133d9013c"
+  },
+  "version": 1
+}

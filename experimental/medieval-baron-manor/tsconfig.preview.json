@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": false,
+    "noEmitOnError": true,
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/automovie/source-preview",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "inlineSourceMap": true,
+    "inlineSources": true
+  },
+  "files": ["viewer/src/preview.ts"],
+  "include": []
+}

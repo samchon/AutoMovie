@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "target": "docs/spaces/001-manor.review.json",
+  "before": null,
+  "candidate": {
+    "path": "docs/spaces/001-manor.review.json.7fea1922-012b-41d2-be70-9f1143f1ffc2.after",
+    "file": {
+      "identity": "2248149864:9570149208430103",
+      "source": "{\n  \"version\": 1,\n  \"units\": [\n    {\n      \"anchor\": \"manor-space\",\n      \"sources\": [\n        \"src/spaces/manor.ts\"\n      ],\n      \"observations\": [\n        {\n          \"id\": \"whole-manor-context\",\n          \"evidence\": \"artifact\"\n        }\n      ],\n      \"receipts\": []\n    }\n  ]\n}\n",
+      "version": "2248149864:9570149208430103:284:1789126873333316000"
+    }
+  },
+  "archive": "docs/spaces/001-manor.review.json.7fea1922-012b-41d2-be70-9f1143f1ffc2.before"
+}

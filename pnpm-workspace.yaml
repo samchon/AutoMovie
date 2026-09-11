@@ -1,8 +1,12 @@
-﻿packages:
+packages:
   - config
   - docs
   - packages/*
   - test
+  # The finished manor production is a committed workspace member so the website
+  # imports its authored source and textures; a disposable sandbox is not one.
+  - experimental/medieval-baron-manor
+  - website
 
 overrides:
   "@huggingface/transformers>sharp": "file:packages/template/scaffold/vendor/sharp-disabled"
