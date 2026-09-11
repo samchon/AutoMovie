@@ -89,11 +89,13 @@ export const test_subject_hair_fringe = (): void => {
   TestValidator.predicate(
     "invalid fringe bias refuses",
     throwsError(
-      () => buildPortraitHairProxy(undefined, forehead, [], { fringeBias: NaN }),
+      () =>
+        buildPortraitHairProxy(undefined, forehead, [], { fringeBias: NaN }),
       "fringe bias",
     ) &&
       throwsError(
-        () => buildPortraitHairProxy(undefined, forehead, [], { fringeBias: 0.46 }),
+        () =>
+          buildPortraitHairProxy(undefined, forehead, [], { fringeBias: 0.46 }),
         "fringe bias",
       ),
   );
