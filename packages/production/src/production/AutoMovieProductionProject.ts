@@ -4882,9 +4882,9 @@ interface IAutoMovieRenderBundleReceipt {
  *
  * It is portable identity only: the registered production ids and the design
  * layout they use, identical in every checkout of the same history. A resident
- * record written before this split may still carry an inline `incarnations`
- * member. Validation still refuses a malformed one, but no open reads it as a
- * generation, and the next registry publication drops it.
+ * record may still carry the retired inline `incarnations` member. Validation
+ * still refuses a malformed one, but no open reads it as a generation, and the
+ * next registry publication drops it.
  */
 interface IAutoMovieProductionRegistry {
   version: 1;
