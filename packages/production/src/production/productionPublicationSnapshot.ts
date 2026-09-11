@@ -18,6 +18,12 @@ import {
  * and unowned-output diagnostics. The explicit state fields close the remaining
  * adapter boundary: cached manifest semantics, exact manifest and incarnation
  * bytes, and builder-owned bytes.
+ *
+ * A publication asks this more than once: when its snapshot is taken and again
+ * on each side of the commit lock. A caller that supplies the project's
+ * retained source status answers every one of those with a fresh read of the
+ * gate's inputs and runs the gate only when they moved. Without one, each call
+ * runs a new builder with freshly read evidence.
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change Recomputes the publication input fingerprint from the current inputs so a changed source or tool never inherits an earlier approval.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Reopens reviewed authoring bindings with the source builder before binding the terminal publication snapshot.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reapproval-after-change Makes terminal currentness depend on the newly compiled source and authoring identity after an input changes.
@@ -26,6 +32,8 @@ export const productionPublicationInputFingerprint = (
   project: AutoMovieProductionProject,
   /** Supply the live reader whenever the generated compile used authoring evidence. */
   currentAuthoringEvidence?: () => IAutoMovieProductionEvidence,
+  /** Retained read-only source gate status of this project, when the caller holds one. */
+  sourceStatus?: () => IAutoMovieBuildProjectOutput,
 ): AutoMovieContentDigest => {
   const generated = project.generatedManifest();
   if (generated === null)
@@ -63,10 +71,12 @@ export const productionPublicationInputFingerprint = (
   return readProductionPublicationInputFingerprint({
     snapshot,
     currentAuthoringEvidence,
-    compile: (authoring, current) =>
-      new AutoMovieProductionBuilder(project, authoring, current).lint({
-        scope: "source",
-      }),
+    compile:
+      sourceStatus ??
+      ((authoring, current) =>
+        new AutoMovieProductionBuilder(project, authoring, current).lint({
+          scope: "source",
+        })),
   });
 };
 

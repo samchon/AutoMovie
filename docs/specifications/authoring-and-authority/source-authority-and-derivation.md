@@ -14,6 +14,12 @@
 
 Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파생 결과는 `current`, `stale`, `missing`, `refused` 중 하나이며, 결과가 참조한 snapshot과 현재 snapshot이 동일하고 자체 검증이 성공한 경우에만 `current`다.
 
+<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check 좁은 확인이 입력이 그대로인 동안 이전 gate 판정을 다시 사용해 확인 경계마다 source 전체 실행을 반복하지 않게 한다. -->
+
+Read-only source gate의 판정도 파생 결과다. 판정의 snapshot은 builder 입력 identity, library resident guard identity, screenplay index, validation이 실제로 읽은 문서 bytes, builder 소유 output의 전체 목록과 각 digest로 이루어진다. 새로 읽은 snapshot의 모든 항목이 이전 snapshot과 같고, 그 판정이 성공했으며, 판정이 실행한 project module이 모두 fingerprint된 입력일 때만 이전 판정을 다시 `current`로 사용할 수 있다. 한 항목이라도 다르거나 snapshot을 끝까지 읽지 못하면 gate를 다시 실행한다. 실패한 판정은 다시 사용하지 않으므로 매번 gate를 실행해 진단과 원래 원인을 그대로 반환한다. 생성 시각, 경로 존재, watcher 알림이나 이전 성공만으로 판정을 다시 사용해서는 안 된다.
+
+Revision은 snapshot을 읽은 시점을 나타내며, 읽는 도중 바뀌면 그 snapshot은 사용하지 않는다. 입력을 바꾸는 project 쓰기는 위 항목 중 하나를 함께 바꾸므로, render commit처럼 입력을 바꾸지 않는 쓰기로 revision만 바뀌었다면 판정을 다시 실행하지 않고 새 revision을 표시해 반환한다. 다만 camera clearance report처럼 판정 결과가 revision 값 자체를 기록했다면 revision도 입력이므로, revision이 바뀌면 gate를 다시 실행한다.
+
 ### Source 입력 {#spec-authoring-source-input}
 
 <!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring 이 입력이 숨은 editor 상태가 아닌 읽고 diff할 수 있는 일반 source가 되게 한다. -->
