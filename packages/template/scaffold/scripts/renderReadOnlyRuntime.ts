@@ -203,7 +203,7 @@ export const inspectCurrentProductionRender = async <
           resources: [],
           runtimeComparison: "stale" as const,
           correction:
-            "Stored render plan differs from current compiler-owned inputs. Run automovie render plan, then rerender only the new chunk identities.",
+            "Stored render plan differs from current builder-owned inputs. Run automovie render plan, then rerender only the new chunk identities.",
         }),
         inspected.resources,
       );

@@ -8,7 +8,7 @@ import type {
  *
  * An instance set is the other way to put many bodies on screen: unlike a
  * formation it has no rows to keep, so it states a scatter and the per-member
- * variation the compiler draws from its seed. Nothing is expanded into scene
+ * variation the builder draws from its seed. Nothing is expanded into scene
  * nodes.
  */
 export const onlookerScatter = (
@@ -53,7 +53,7 @@ export const treeScatter = (
  * (panels on a ceiling, modules on a wall, bays down a length), because it
  * states the rule instead of the result. The set holds three counts and one
  * spacing no matter how many members it produces, so changing a count or the
- * spacing stays ordinary TypeScript and the compiler still keeps the result as
+ * spacing stays ordinary TypeScript and the builder still keeps the result as
  * bounded instance chunks rather than expanding ten thousand repeats into scene
  * nodes.
  *
@@ -185,7 +185,7 @@ export const slopedFacadeWindows = (
 /**
  * An explicit transform block: a placement law written as a program.
  *
- * The compact layouts state a rule the compiler already knows. When the rule is
+ * The compact layouts state a rule the builder already knows. When the rule is
  * the author's own: a helix here, but equally a vault rib, a catenary, a
  * measured survey, or anything else a function can produce. This is how it is
  * expressed without inventing new layout vocabulary: emit one exact

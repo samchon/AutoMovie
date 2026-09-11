@@ -603,7 +603,7 @@ export const autoMovieBuildingAnalysis = (props: {
 /**
  * Ask one building every question this project derives, at one revision.
  *
- * Every artifact below is a projection of the same compiler-owned record, taken
+ * Every artifact below is a projection of the same builder-owned record, taken
  * in one pass, so a sheet and a take-off cannot be readings of two different
  * revisions of one design. That is the reason this is one derivation and not
  * five commands: the drawings, the schedules, the quantities, the installation

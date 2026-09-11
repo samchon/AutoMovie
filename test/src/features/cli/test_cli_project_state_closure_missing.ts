@@ -64,7 +64,7 @@ export const test_cli_project_state_closure_missing = (): void => {
 
   for (const endingAvailable of [true, false]) {
     const fixture = createProjectStateClosureFixture();
-    fixture.input.compileStatus = null;
+    fixture.input.buildStatus = null;
     fixture.input.problems = [
       {
         code: "compile-status-unavailable",
@@ -90,7 +90,7 @@ export const test_cli_project_state_closure_missing = (): void => {
     TestValidator.equals(
       `last available identity ${endingAvailable}`,
       result.freshness.currentFingerprint,
-      endingAvailable ? fixture.initial.compiler.inputFingerprint : null,
+      endingAvailable ? fixture.initial.builder.inputFingerprint : null,
     );
     TestValidator.equals(
       `input problems unchanged ${endingAvailable}`,

@@ -33,7 +33,7 @@ const emitter = (id: string, maxParticles: number) => ({
  * A fluid domain states its own bounded cost before a single step is
  * integrated, and a state's digest is the compact evidence a run reproduced.
  *
- * Both exist so a production can be judged rather than trusted: a compiler
+ * Both exist so a production can be judged rather than trusted: a builder
  * report can refuse an unaffordable water feature up front, and two machines
  * can compare eight characters instead of shipping arrays to each other.
  *

@@ -96,7 +96,7 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
 
 /**
  * `makeActorSynthesizer`: the reference content seam that lets the action
- * compiler fatten verbs from declarative gait/profile data.
+ * builder fatten verbs from declarative gait/profile data.
  *
  * Scenarios:
  *

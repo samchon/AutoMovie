@@ -3,7 +3,7 @@ import * as THREE from "three";
 /**
  * The minimum film-layer shape needed to decide beauty composition.
  *
- * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Keeps the compiler-owned layer weight intact at the viewer boundary.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Keeps the builder-owned layer weight intact at the viewer boundary.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Selects composition from the already sampled frame rather than resampling an edit.
  * @author Samchon
  */
@@ -16,7 +16,7 @@ export interface IAutoMovieFilmBeautyLayer {
  * Closed beauty-composition decision for one sampled film frame.
  *
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Names fade and dissolve as beauty-only compositions so a structural pass is never handed one.
- * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Preserves the compiler-owned one- or two-layer schedule without inventing a fallback.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Preserves the builder-owned one- or two-layer schedule without inventing a fallback.
  */
 export type AutoMovieFilmBeautyComposition<
   Layer extends IAutoMovieFilmBeautyLayer = IAutoMovieFilmBeautyLayer,
@@ -31,14 +31,14 @@ export type AutoMovieFilmBeautyComposition<
     };
 
 /**
- * Resolve a compiler-sampled beauty layer list into one explicit compositor.
+ * Resolve a builder-sampled beauty layer list into one explicit compositor.
  *
  * One fractional layer means color over black, while two complementary layers
  * retain the existing cross-dissolve. Invalid weights and cardinalities are
  * refused by name instead of being clamped or rendered as an opaque shot.
  *
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Decides continuous color composition for sampled beauty layers only, leaving structural passes to the dominant-layer rule.
- * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Consumes the compiler's exact transition weights without a private sampler.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Consumes the builder's exact transition weights without a private sampler.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Distinguishes direct, fade, and dissolve schedules at the projection boundary.
  */
 export const resolveAutoMovieFilmBeautyComposition = <
@@ -84,7 +84,7 @@ class FadeStateRestorationError extends AggregateError {}
 const states = new WeakMap<THREE.WebGLRenderer, IFadeState>();
 
 /**
- * Render one beauty frame over black at its compiler-owned linear weight.
+ * Render one beauty frame over black at its builder-owned linear weight.
  *
  * The callback is rendered into an sRGB offscreen target, then one full-screen
  * alpha-over pass applies the weight uniformly to opaque and transparent scene

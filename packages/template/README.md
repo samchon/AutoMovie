@@ -12,7 +12,7 @@ Every rendered project is self-contained:
 - `.agents/skills/{contract,production-lifecycle,evidence-graph,source-authoring,review-verification}` exposes five distinct contract and authoring triggers with conditionally loaded sibling procedures;
 - `AGENTS.md` routes those skills, while `CLAUDE.md` only imports the provider-neutral router.
 
-`renderScaffold` excludes working artifacts from its source population. A `node_modules`, `.git`, or `.cache` directory in the scaffold, and any file carrying a compiler-output shape, belong to whoever ran a tool in that directory rather than to the template, and none reaches a generated project. That exclusion is load-bearing rather than tidy: the repository ignores the paths a stray type-check emits under the scaffold, so nothing else in the toolchain can see one, and a generated project's loader prefers an emitted `.js` to the `.ts` beside it.
+`renderScaffold` excludes working artifacts from its source population. A `node_modules`, `.git`, or `.cache` directory in the scaffold, and any file carrying a builder-output shape, belong to whoever ran a tool in that directory rather than to the template, and none reaches a generated project. That exclusion is load-bearing rather than tidy: the repository ignores the paths a stray type-check emits under the scaffold, so nothing else in the toolchain can see one, and a generated project's loader prefers an emitted `.js` to the `.ts` beside it.
 
 The generated scaffold's [static-document policy](./scaffold/README.md#static-document-updates) distinguishes tracked overview snapshots from the ignored instruction surface and migratable contract targets. Package upgrades never overwrite a production's tracked README files.
 

@@ -26,7 +26,7 @@ import {
  *   while it still holds this session's token. A foreign token is another
  *   session's lock and is never removed.
  * - **Acquisition is re-entrant inside one process.** A guarded commit runs the
- *   compiler's read-only input-snapshot confirmation, which commits its own
+ *   builder's read-only input-snapshot confirmation, which commits its own
  *   snapshot, so one single-threaded process reaches the same lock twice. That
  *   is the same holder rather than a second session; without counting it the
  *   process waits out its own timeout and reports itself as the contender. The

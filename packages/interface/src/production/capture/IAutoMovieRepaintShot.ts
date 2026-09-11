@@ -2,7 +2,7 @@ import { AutoMovieGuidePass } from "../../cinematics";
 import {
   IAutoMovieDiagnostic,
   IAutoMovieProductionMediaProbe,
-} from "../IAutoMovieProductionCompiler";
+} from "../IAutoMovieProductionBuild";
 import { AutoMovieContentDigest } from "../IAutoMovieProductionDesign";
 
 /**
@@ -136,22 +136,19 @@ export interface IAutoMovieRepaintRuntimeIdentity {
 }
 
 /**
- * Reviewed adoption facts for the external generator behind repaint.
+ * Descriptive metadata and cost basis for the generator behind repaint.
  *
- * Credentials are deliberately absent. This record travels with every
- * accepted rendition so a provider, rights, terms, cost, or consumer change is
- * a new generation identity rather than untracked metadata.
+ * The cost basis and production consumer accompany the selected runtime.
  *
- * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Carries the current rights and terms review beside the selected provider and model.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types the rights, terms, cost, and reasoned-consumer portion of repaint output provenance.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types the cost basis and production consumer accompanying the selected generator.
  */
 export interface IAutoMovieRepaintGeneratorProvenance {
-  /** Stable provider, repository, or local-tool source address. */
-  source: string;
-  /** License identifier or stable terms location reviewed for this use. */
-  license: string;
-  /** Calendar date, `YYYY-MM-DD`, on which current terms were checked. */
-  termsCheckedAt: string;
+  /** Optional descriptive source location. */
+  source?: string;
+  /** Optional descriptive license metadata. */
+  license?: string;
+  /** Optional descriptive date metadata. */
+  termsCheckedAt?: string;
   /** Authored cost basis, including an explicit local-compute basis. */
   cost: string;
   /** Typed production consumer and authored reason for this adoption. */
@@ -172,7 +169,7 @@ export interface IAutoMovieRepaintGeneratorProvenance {
 export interface IAutoMovieRepaintGeneratorAdoption {
   /** Provider, model, version, and execution boundary the adapter must report. */
   runtimeIdentity: IAutoMovieRepaintRuntimeIdentity;
-  /** Reviewed source, rights, terms, cost, and reasoned consumer. */
+  /** Cost basis, production consumer, and optional descriptive metadata. */
   generatorProvenance: IAutoMovieRepaintGeneratorProvenance;
 }
 
@@ -271,7 +268,7 @@ export interface IAutoMovieRepaintReceipt {
    */
   shot: string;
   /**
-   * Current compiler registry fingerprint.
+   * Current builder registry fingerprint.
    *
    * @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Exposes `compileFingerprint` as the portable data boundary for the repaint independent artifact requirement.
    * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Types `compileFingerprint` for the asset spec repaint output provenance system contract.
@@ -460,7 +457,7 @@ export namespace IAutoMovieRepaintShot {
      */
     productionId: string;
     /**
-     * Exact current compiler-registry shot id.
+     * Exact current builder-registry shot id.
      *
      * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `shot` as the portable data boundary for the repaint reference roles requirement.
      * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `shot` for the asset spec repaint controls references system contract.

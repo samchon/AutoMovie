@@ -1,6 +1,6 @@
-/** Hide stale frames while the source compiler refuses or replaces them. */
+/** Hide stale frames while the source builder refuses or replaces them. */
 const notice = document.createElement("div");
-notice.id = "live-compiler";
+notice.id = "live-builder";
 Object.assign(notice.style, {
   position: "fixed",
   inset: "12px 12px auto auto",
@@ -21,11 +21,11 @@ let unavailable = false;
 const observe = async (): Promise<void> => {
   const canvas = document.querySelector<HTMLCanvasElement>("#view");
   try {
-    const response = await fetch("/__automovie/live-compiler.json", {
+    const response = await fetch("/__automovie/live-builder.json", {
       cache: "no-store",
     });
     if (response.ok === false)
-      throw new Error("Viewer compiler is unavailable.");
+      throw new Error("Viewer builder is unavailable.");
     const state = (await response.json()) as {
       generation: number;
       phase: "compiling" | "ready" | "error";

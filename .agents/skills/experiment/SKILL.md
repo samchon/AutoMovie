@@ -62,7 +62,7 @@ cd experimental/<name>
 claude          # or: codex
 ```
 
-Give the agent a brief and let it work. The agent authors; you observe and record. Do not write its source on its behalf or run its scripts for it, since the point is to see what the project affords a model that has only the shipped skill, the contracts, and the compiler's refusals.
+Give the agent a brief and let it work. The agent authors; you observe and record. Do not write its source on its behalf or run its scripts for it, since the point is to see what the project affords a model that has only the shipped skill, the contracts, and the builder's refusals.
 
 Read [records.md](records.md) before launching a benchmark. It owns the self-contained campaign record, frozen provenance, causal claim ceiling, judgment calibration, ordered operation and recovery receipts, and close audit. Opening the issue from its linked template records a proposal; it does not authorize launch.
 

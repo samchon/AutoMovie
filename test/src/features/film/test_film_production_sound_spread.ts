@@ -45,7 +45,7 @@ const CLOSED = 0.5;
 const CUE_END = 2;
 
 /**
- * One rank of `count` members on a stated line, as the compiler materializes
+ * One rank of `count` members on a stated line, as the builder materializes
  * it.
  */
 const unit = (props: {
@@ -187,7 +187,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
 const timeline = (): IAutoMovieFilmTimeline =>
   ({
     version: 1,
-    compiler: "test",
+    builder: "test",
     inputFingerprint: digest,
     sourceDigest: digest,
     id: "film",

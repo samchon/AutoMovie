@@ -32,7 +32,7 @@ const frame = (
 });
 
 /**
- * Pins the moving paths and the compiler's edge branches. Subject height 2 at
+ * Pins the moving paths and the builder's edge branches. Subject height 2 at
  * the origin, `full` framing (1.15×, aim at half height y = 1), 90° FOV →
  * framed distance `d = 1.15`.
  *

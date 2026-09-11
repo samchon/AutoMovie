@@ -4,18 +4,18 @@ import type {
 } from "@ttsc/evidence";
 
 /**
- * Input for one authored layer's whole-population obligation accounts.
+ * Input for one authored layer's distributed obligation coverage.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps the account owner, compared population, and obligation families in one graph declaration.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Defines the inputs from which exact-one account claims are derived.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps eligible authored and aggregate owners beside their applicable obligation families.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Defines the authored hosts and optional account hosts that collectively cover selected obligations.
  * @author Samchon
  */
 export interface IAutoMoviePopulationAccountClaimsProps {
-  /** Authored branch whose complete H2 population is compared. */
+  /** Authored branch whose H2 population collectively fulfills obligations. */
   layer: string;
   /** Project-relative authored files selected for that branch. */
   populationFiles: readonly string[];
-  /** Shared obligation documents answered once by dedicated account H2s. */
+  /** Shared obligation documents answered by relevant H2 owners. */
   obligationFiles: readonly string[];
   /** Whether the branch currently enforces evidence. */
   enabled: boolean;
@@ -24,16 +24,16 @@ export interface IAutoMoviePopulationAccountClaimsProps {
 }
 
 /**
- * Creates one account claim for every whole-population obligation family.
+ * Creates distributed coverage for each selected obligation family.
  *
- * An account H2 owns exactly one obligation H2 and must cite every H2 in the
- * population it compares. Unit-local principle and lineage claims remain
- * unchanged, so moving a population comparison does not weaken their graph.
+ * Authored H2s and the family's optional aggregate account are equally valid
+ * owners. Their evidence collectively covers the obligation targets. The
+ * item's substantive scope determines how many contributors it needs.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps whole-population accounts inside the same generated-project graph as their authored hosts.
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Derives one stable account owner per obligation document without changing graph cardinality.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Separates whole-population comparison hosts from unit-local evidence carriers.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Emits account claims in caller-declared obligation order with exact-one ownership.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result Derives stable optional account addresses in the declared obligation order.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Selects all relevant authored hosts and the optional aggregate account for ordinary coverage.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result Emits coverage claims in caller-declared obligation order.
  * @author Samchon
  */
 export function createAutoMoviePopulationAccountClaims(
@@ -71,7 +71,7 @@ export function createAutoMoviePopulationAccountClaims(
       throw new Error(`${props.layer} repeats population obligation ${file}.`);
     seen.add(file);
     return createAutoMoviePopulationAccountClaim({
-      name: `${props.layer} population accounts answer each ${file} obligation once`,
+      name: `${props.layer} owners collectively fulfill ${file} obligations`,
       account: `accounts/${props.layer}/${file.replace(/^obligations\//u, "").replaceAll("/", "-")}`,
       document: file,
       documentRoot: "docs",
@@ -83,16 +83,14 @@ export function createAutoMoviePopulationAccountClaims(
 }
 
 /**
- * Builds the native exact-owner and complete-population references together.
+ * Builds ordinary obligation coverage over authored and aggregate owners.
  *
- * Callers validate the shared or production-local path declaration before
- * handing it here; this builder gives both account families identical native
- * cardinality without maintaining another evidence evaluator. Both references
- * are explicit errors; local callers must also preserve the canonical claim's
- * activation and omitted claim-level severity.
+ * Callers validate the shared or production-local path declaration. Each
+ * target needs positive evidence from a relevant host in the selected layer.
+ * The aggregate account is an available host for a population-wide conclusion.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Makes every account own one obligation and compare every authored H2.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits the shared and local exact-one reference beside their no-exclusion population checklist.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Lets a layer's relevant authored or aggregate owner fulfill an obligation.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits one no-exclusion ordinary coverage reference over the selected obligation targets.
  */
 export function createAutoMoviePopulationAccountClaim(props: {
   name: string;
@@ -103,10 +101,7 @@ export function createAutoMoviePopulationAccountClaim(props: {
   enabled: boolean;
   requireReview: boolean;
 }): Extract<ITtscEvidenceGraphClaim, { type: "markdown" }> & {
-  reference: [
-    ITtscEvidenceGraphMarkdownReference,
-    ITtscEvidenceGraphMarkdownReference,
-  ];
+  reference: [ITtscEvidenceGraphMarkdownReference];
 } {
   const obligation: ITtscEvidenceGraphMarkdownReference = {
     type: "markdown",
@@ -115,27 +110,15 @@ export function createAutoMoviePopulationAccountClaim(props: {
     files: [props.document],
     symbol: "h2",
     noEvidenceExclude: true,
-    uniqueEvidence: true,
-    singleEvidencePerSymbol: true,
-    requireReview: props.requireReview,
-  };
-  const population: ITtscEvidenceGraphMarkdownReference = {
-    type: "markdown",
-    severity: "error",
-    root: "docs",
-    files: [...props.populationFiles],
-    symbol: "h2",
-    checklist: true,
-    noEvidenceExclude: true,
     requireReview: props.requireReview,
   };
   return {
     name: props.name,
     type: "markdown",
     root: "docs",
-    files: [props.account],
+    files: [props.account, ...props.populationFiles],
     symbol: "h2",
     disabled: !props.enabled,
-    reference: [obligation, population],
+    reference: [obligation],
   };
 }

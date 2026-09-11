@@ -639,7 +639,7 @@ export class ExampleSuspendedFromElement extends ExamplePlacedProp {
  *
  * The sliding part is an articulation joint with a channel limit, so how far it
  * can come out is data the engine clamps and reports against, and the volume it
- * sweeps is a keep-out box. A prop parked in that box is named by the compiler
+ * sweeps is a keep-out box. A prop parked in that box is named by the builder
  * instead of discovered by someone watching a drawer clip through a chair.
  */
 export class ExampleAgainstBoundary extends ExamplePlacedProp {

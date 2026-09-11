@@ -1,7 +1,7 @@
 {
   "name": "@automovie/production",
   "version": "0.1.0",
-  "description": "AutoMovie production library: the deterministic compiler, the tracked project store, capture, inspection, and the render job.",
+  "description": "AutoMovie production assembly, tracked project storage, capture, inspection, and rendering.",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -14,7 +14,6 @@
   "keywords": [
     "automovie",
     "production",
-    "compiler",
     "evidence",
     "filmmaking"
   ],
@@ -52,8 +51,7 @@
     "@automovie/render": "workspace:^",
     "mp4box": "catalog:media",
     "pngjs": "catalog:media",
-    "typia": "catalog:samchon",
-    "typescript-compiler": "npm:typescript@5.9.3"
+    "typia": "catalog:samchon"
   },
   "devDependencies": {
     "@types/node": "catalog:utils",

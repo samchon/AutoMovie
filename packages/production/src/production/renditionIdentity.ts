@@ -50,101 +50,40 @@ export const canonicalAutoMovieRepaintRuntimeIdentity = (
   return canonicalizeAutoMovieJson(identity);
 };
 
-/** Validate and canonicalize reviewed repaint-generator provenance.
- * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity Records the provider, model and terms review of a generated rendition without claiming that a seed reproduces it.
- * @evidence requirements/repaint/identity-and-provenance.md#repaint-nondeterminism-record Canonicalizes the provider and model facts of a rendition as provenance, not as a promise that the same seed reproduces it.
- * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot Records the provider, exact model and terms review of a generated rendition as canonical provenance without inferring reproducibility.
+/**
+ * Validate the cost basis, consumer, and supplied descriptive metadata.
+ *
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity Canonicalizes generator consumer facts without treating them as a replay guarantee.
+ * @evidence requirements/repaint/identity-and-provenance.md#repaint-nondeterminism-record Keeps the selected generator context distinct from a promise to reproduce output bytes.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot Canonicalizes the generator context accompanying an execution receipt.
  */
 export const canonicalAutoMovieRepaintGeneratorProvenance = (
   provenance: IAutoMovieRepaintGeneratorProvenance,
 ): string => {
   if (
-    hasExactKeys(provenance, [
-      "source",
-      "license",
-      "termsCheckedAt",
-      "cost",
-      "consumer",
-    ]) === false ||
-    isNonBlank(provenance.source) === false ||
-    isNonBlank(provenance.license) === false ||
-    autoMovieExternalLocatorRefusal(provenance.source) !== null ||
-    autoMovieExternalLocatorRefusal(provenance.license) !== null ||
-    canonicalAutoMovieExternalGeneratorTermsDate(provenance.termsCheckedAt) !==
-      provenance.termsCheckedAt ||
+    hasExactKeys(
+      provenance,
+      ["cost", "consumer"],
+      ["source", "license", "termsCheckedAt"],
+    ) === false ||
+    ["source", "license", "termsCheckedAt"].some((field) => {
+      const value =
+        provenance[field as "source" | "license" | "termsCheckedAt"];
+      return (
+        value !== undefined &&
+        (typeof value !== "string" ||
+          autoMovieExternalLocatorRefusal(value) === "credential-bearing")
+      );
+    }) ||
     isNonBlank(provenance.cost) === false ||
     hasExactKeys(provenance.consumer, ["kind", "reason"]) === false ||
     provenance.consumer.kind !== "repaint" ||
     isNonBlank(provenance.consumer.reason) === false
   )
     throw new Error(
-      "Repaint generator provenance requires exact non-blank source, license, real YYYY-MM-DD terms review, cost, and a reasoned repaint consumer, with no credential or hidden field.",
+      "Repaint generator context requires a cost basis and reasoned repaint consumer; supplied descriptive metadata must be strings without credentials.",
     );
   return canonicalizeAutoMovieJson(provenance);
-};
-
-/**
- * Canonicalize one real external-generator terms review calendar date.
- *
- * This content-identity operation deliberately has no wall-clock dependency.
- * Execution and adoption boundaries compare the result with their captured
- * UTC instant through `assertAutoMovieExternalGeneratorTermsAt`.
- *
- * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Keeps a real reviewed terms date in generator provenance without making content identity depend on the current clock.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Separates canonical generator identity from runtime-fact validation.
- * @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance Requires a generator's terms review to be a real UTC calendar date that is not after the recorded execution instant.
- */
-export const canonicalAutoMovieExternalGeneratorTermsDate = (
-  value: unknown,
-): string => {
-  if (
-    isNonBlank(value) === false ||
-    /^\d{4}-\d{2}-\d{2}$/u.test(value) === false
-  )
-    throw new Error(
-      "External generator termsCheckedAt must be a real YYYY-MM-DD date.",
-    );
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (
-    Number.isNaN(parsed.getTime()) ||
-    parsed.toISOString().slice(0, 10) !== value
-  )
-    throw new Error(
-      "External generator termsCheckedAt must be a real YYYY-MM-DD date.",
-    );
-  return value;
-};
-
-/**
- * Refuse a terms review that lies after one captured execution/adoption time.
- *
- * The caller supplies the instant so preflight, persisted-receipt validation,
- * UTC-midnight tests, and resumed work all use the same explicit fact instead
- * of consulting ambient time inside a content-identity helper.
- *
- * @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-terms Prevents a repaint execution from claiming terms were reviewed on a later UTC calendar day.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Binds reviewed generator terms to the immutable execution or adoption instant retained by the receipt.
- */
-export const assertAutoMovieExternalGeneratorTermsAt = (props: {
-  termsCheckedAt: unknown;
-  occurredAt: Date | string;
-  label: string;
-}): string => {
-  const termsCheckedAt = canonicalAutoMovieExternalGeneratorTermsDate(
-    props.termsCheckedAt,
-  );
-  const occurredAt =
-    props.occurredAt instanceof Date
-      ? new Date(props.occurredAt.getTime())
-      : new Date(props.occurredAt);
-  if (Number.isNaN(occurredAt.getTime()))
-    throw new Error(`${props.label} requires a valid execution instant.`);
-  const executionDate = occurredAt.toISOString().slice(0, 10);
-  if (termsCheckedAt > executionDate)
-    throw new Error(
-      `${props.label}.termsCheckedAt ${termsCheckedAt} is later than execution UTC date ${executionDate}.`,
-    );
-  return termsCheckedAt;
 };
 
 /** Validate and canonicalize one exact repaint generator adoption. */
@@ -327,14 +266,17 @@ export const productionRepaintActiveReceiptPath = (shot: string): string =>
     `${encodeAutoMoviePathSegment(shot)}.json`,
   );
 
-const hasExactKeys = (value: unknown, keys: readonly string[]): boolean => {
+const hasExactKeys = (
+  value: unknown,
+  keys: readonly string[],
+  optional: readonly string[] = [],
+): boolean => {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     return false;
-  const actual = Object.keys(value).sort(compareCodeUnits);
-  const expected = [...keys].sort(compareCodeUnits);
+  const actual = Object.keys(value);
   return (
-    actual.length === expected.length &&
-    actual.every((key, index) => key === expected[index])
+    keys.every((key) => Object.hasOwn(value, key)) &&
+    actual.every((key) => keys.includes(key) || optional.includes(key))
   );
 };
 
