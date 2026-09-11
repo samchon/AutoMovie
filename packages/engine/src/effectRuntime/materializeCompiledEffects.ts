@@ -21,7 +21,6 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
  * the Node builder digest of the same stream.
  *
  * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Derives every stream seed from its stable owner, cue, recipe and zone identity rather than from run order.
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-platform-determinism Fixes cue order by code unit and the canonical serialization of each stream digest so a host difference changes identity instead of drifting silently.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-sound-story-lifecycle-identity Folds the owning shot or production and film, the cue and its bound event into each stream's identity.
  * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Fixes the instance seed from which every spawn draw of the stream is derived.
  */

@@ -16,8 +16,6 @@ import { resolveProductionFrameRate } from "./productionTimebase";
  *
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Resolves a frame from its global film time so a chunk or retry yields the same frame as a full render.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Selects the segment whose start-inclusive, end-exclusive range contains the frame with integer comparisons.
- * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-timing Derives every dissolve and fade weight from the integer frame offset inside the transition, independent of seek order or chunk boundary.
- * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-refusal Refuses a dissolve that has no outgoing segment instead of drawing it as a hard cut.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Gives direct seek, subrange and chunk execution one state per global frame number and refuses a frame outside the schedule.
  */
 export const sampleProductionRenderFrame = (

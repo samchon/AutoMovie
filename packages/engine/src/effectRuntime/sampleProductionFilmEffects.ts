@@ -14,7 +14,6 @@ import { validateProductionFilmEffectRuntime } from "./validateProductionFilmEff
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-arbitrary-seek Samples without retaining a cursor or depending on call order.
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Uses the timeline frame even when a proxy output frame has a different index.
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-step-boundary Samples every effect at one declared film frame boundary so anchors, emitters and environment read the same time.
- * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-current-stale Refuses a runtime whose production, film, compile or edit identity is not the one the consumer established.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Reconstructs the same state for repeated and reordered seeks.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Performs one exact rational frame-to-seconds conversion at the sampler boundary.
  */

@@ -8,8 +8,8 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
  * This is the one order a runtime population is written in and verified
  * against. The materializer and the population verifier both read it here, so
  * the order a builder persists cannot drift from the order a consumer checks.
- *
- * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-platform-determinism Fixes the population order by integer frame and code unit so host sort or locale cannot reorder a runtime.
+ * Integer frames and code units decide it, so neither host sort nor locale can
+ * reorder a runtime.
  */
 export const sortProductionFilmEffectCues = (
   cues: IAutoMovieFilmTimeline["tracks"]["effects"],

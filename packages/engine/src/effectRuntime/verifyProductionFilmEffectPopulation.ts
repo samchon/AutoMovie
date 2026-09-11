@@ -21,7 +21,6 @@ import { validateProductionFilmEffectRuntime } from "./validateProductionFilmEff
  *
  * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Refuses a runtime that silently drops or alters an accepted film cue.
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-cache-identity Binds the persisted population to the timeline identity rather than reusing a stale artifact.
- * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-current-stale Refuses a population compiled for another compile or edit identity even when every entry is well formed.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Requires exactly one current runtime for every accepted cue.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#checkpoint-cache-identity-and-validity Rejects a persisted stream whose identity or population differs from its current input.
  */
