@@ -81,18 +81,30 @@ export const measureAutoMovieGeometry = (props: {
   /** Current design the question is asked of. */
   design: {
     /** Active production design, or null before one exists. */
-    production: IAutoMovieProductionDesign | null;
+    production: Pick<IAutoMovieProductionDesign, "frameFormat"> | null;
     /** Project-shared world design, or null before one exists. */
-    world: IAutoMovieWorldDesign | null;
+    world: Pick<
+      IAutoMovieWorldDesign,
+      "landmarks" | "surfaces" | "routes"
+    > | null;
     /** Formation designs keyed by id. */
-    formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
+    formations: ReadonlyMap<
+      string,
+      Pick<IAutoMovieFormationDesign, "id" | "count" | "facingDeg">
+    >;
     /** Shot contracts keyed by id. */
-    shots: ReadonlyMap<string, IAutoMovieShotContract>;
+    shots: ReadonlyMap<
+      string,
+      Pick<IAutoMovieShotContract, "participants" | "camera">
+    >;
   };
   /** Current compiled shots keyed by shot id. */
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
   /** Canonical film timeline of the current compile, or null without one. */
-  timeline: IAutoMovieFilmTimeline | null;
+  timeline: Pick<
+    IAutoMovieFilmTimeline,
+    "id" | "fps" | "totalFrames" | "segments"
+  > | null;
 }): IAutoMovieGeometryResult => {
   const request = props.request;
   const shots = props.compiled;
@@ -748,7 +760,7 @@ export const measureAutoMovieGeometry = (props: {
 
 const resolveSelector = (
   selector: IAutoMovieGeometrySelector,
-  world: IAutoMovieWorldDesign | null,
+  world: Pick<IAutoMovieWorldDesign, "landmarks"> | null,
   shots: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
   options: { shot?: string; time?: number } = {},
 ): IAutoMovieVector3 => {
@@ -1069,7 +1081,7 @@ const toModelPoint = (
  * is what an oracle answering a point off the world has always reported.
  */
 const groundSample = (
-  world: IAutoMovieWorldDesign | null,
+  world: Pick<IAutoMovieWorldDesign, "surfaces"> | null,
   point: { x: number; z: number },
 ): { height: number; surface: string | null; walkable: boolean } => {
   const surface = worldGroundSurface(world?.surfaces ?? [], point);
