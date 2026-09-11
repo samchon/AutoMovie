@@ -79,7 +79,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
     return code;
   };
   return {
-    name: "automovie-source-preview-compiler",
+    name: "automovie-source-preview-builder",
     enforce: "pre",
     async resolveId(source, importer) {
       const requested = new URLSearchParams(source.split("?", 2)[1]).get(
@@ -121,7 +121,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
       const [file, query] = id.split("?", 2);
       if (file === undefined || !compilerModule(file)) return;
       const relative = relativeSource(file);
-      // This fixed diagnostic shell can report a compiler error before any
+      // This fixed diagnostic shell can report a builder error before any
       // authored module exists. It contains no scene or production imports.
       const parameters = new URLSearchParams(query);
       if (
@@ -155,7 +155,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
           worker.once("exit", (code) =>
             resolve({
               type: "exception",
-              error: `Source compiler exited without a result (${code}).`,
+              error: `Source builder exited without a result (${code}).`,
             }),
           );
         }).catch(
@@ -172,7 +172,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         }
         if (result.type !== "exception")
           for (const diagnostic of result.diagnostics ?? [])
-            if (diagnostic.file !== undefined)
+            if (typeof diagnostic.file === "string")
               rememberInput(path.resolve(root, diagnostic.file));
         if (result.type === "success") {
           const entries = Object.entries(result.output);

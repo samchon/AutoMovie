@@ -185,7 +185,7 @@ interface IDescriptionContext {
    * ownership is total, every element descending from exactly one unit's roots,
    * so a walk down the parent relation reaches everything the record owns.
    *
-   * Every child is listed, whether or not the compiler staged a node for it,
+   * Every child is listed, whether or not the builder staged a node for it,
    * because a transform-only group is describable in its own right. Substituting
    * a group's drawn descendants for the group was measured and rejected: on one
    * authored building it would have made a unit's root space list every staged
@@ -349,7 +349,7 @@ const describeElement = (
 };
 
 /**
- * Describe one built element the compiler stages no scene node for.
+ * Describe one built element the builder stages no scene node for.
  *
  * A transform-only group is an authored element: it has an identity, a kind, a
  * parent, and a logical space, and other elements hang from it. What it does not

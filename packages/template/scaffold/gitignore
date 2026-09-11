@@ -8,8 +8,6 @@ automovie/*
 !automovie/contract-migrations/
 !automovie/contract-migrations/**
 !automovie/derived-artifacts.json
-!automovie/derived/
-!automovie/derived/**
 !automovie/design/
 !automovie/design/**
 automovie/capture/

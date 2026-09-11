@@ -38,7 +38,7 @@ import { productionBuildingStudies } from "./productionStudies";
  *
  * A drawing, a schedule, a take-off and a performance study are questions an
  * author asks about a design. None of them is part of a frame, so none of them
- * is compiler output: the compiler owns what the renderer draws, and a sheet
+ * is builder output: the builder owns what the renderer draws, and a sheet
  * somebody orders material from is not that. They are also not shot source. A
  * shot or film build function runs in a deterministic no-I/O sandbox that may
  * import only the engine names on its published surface, and every derivation
@@ -46,13 +46,13 @@ import { productionBuildingStudies } from "./productionStudies";
  * that wrote a file would not be deterministic.
  *
  * So this is the third place, and the one the guides name for this work: an
- * ordinary Node script with the whole engine available, reading compiler-owned
+ * ordinary Node script with the whole engine available, reading builder-owned
  * state and writing sidecars nobody compiles.
  *
  * ## What it reads
  *
  * Current generated state, never source. A building reaches this script the way
- * it reaches the renderer: a subject contributed it, the compiler validated
+ * it reaches the renderer: a subject contributed it, the builder validated
  * and retained it, so a sheet is a projection of exactly the bytes a frame was
  * drawn from. Requiring the state to be `current` is what makes that true: a
  * stale compile would produce documents for a design that no longer exists.
@@ -153,7 +153,7 @@ export const runAutoMovieBuildingDerivation = (props: {
         ([, environment]) => environment,
       );
     // No guard around these two reads. The cases one would catch; a project
-    // with no compiler-owned tree, a library before its first compile; are
+    // with no builder-owned tree, a library before its first compile; are
     // both refused above this line already: `requireCurrentAutoMovieProjectState`
     // runs at module level and stops an uncompiled or stale project, and
     // importing `../lint.config` validates the evidence declaration before this

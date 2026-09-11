@@ -2,18 +2,6 @@
 
 Settings state the production's facts, constraints, identities, and capabilities before any representation, motion, narrative order, or shot is selected.
 
-## Information structure {#information-structure}
-
-After the fact-status declaration, every H2 briefly identifies its owner, central decision, applicable boundary, and downstream consequence, then develops definitions, conditions, evidence, relationships, exceptions, and results in paragraphs with distinct functions. Tables and lists support a comparison or mapping rather than replacing the reasoning that makes the facts usable.
-
-A paragraph carries one central claim or inseparable claim set. Split independently reviewable conditions, evidence sets, exceptions, and consequences; merge fragments that cannot perform a coherent function. Do not judge structure by a fixed word or paragraph count.
-
-Review question: can a reverse outline give every paragraph one distinct job without finding repeated orientation or bundled decisions?
-
-This item owns information order inside one H2. The settings addressable-canon obligation owns separation between H2 owners, and the common substantive-completion principle owns the delivered depth.
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
-
 ## Fact status {#fact-status}
 
 Every settings unit distinguishes an externally supported fact, a production invention, an inherited default, a derived value, a contested matter, and an unresolved decision, and states the scope in which that status is valid. Inference, dispute, and provisional choice do not masquerade as settled external fact.

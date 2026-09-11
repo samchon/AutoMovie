@@ -52,6 +52,7 @@ const productionRequirementContracts = [
 
 const productionSpecificationContracts = [
   "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+  "specifications/authoring-and-authority/deterministic-precomputed-artifacts.md",
   "specifications/authoring-and-authority/partial-targets-and-atomic-results.md",
   "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
   "specifications/authoring-and-authority/source-authority-and-derivation.md",

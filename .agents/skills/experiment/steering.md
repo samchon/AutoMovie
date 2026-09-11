@@ -6,6 +6,10 @@ Read this document when the experiment is driven by a Claude Code or Codex sessi
 
 [records.md](records.md#operate-one-frozen-run-as-a-state-machine) owns the lifecycle state and receipts. Before launch, intervention, replacement, or cleanup, record the transition there; live process evidence never substitutes for that durable order.
 
+## Timed turn observer
+
+For an authorized native authoring turn, use the [benchmark turn observer](../../../build/README.md#benchmark-turn-observer) with the frozen run's declared command, cadence, private record directory and verification checks. The tool reference owns its plan schema, output and process behavior. Read the resulting observations before applying the [run state machine](records.md#operate-one-frozen-run-as-a-state-machine); the observer does not make the coordinator's judgment.
+
 ## A Turn Is The Unit Of Work
 
 `codex exec resume <session-uuid> "<message>"` runs exactly one turn and exits. Two readings of the process table are therefore both wrong: a live process is not proof the agent is working, and an exited process is not proof it has stopped.

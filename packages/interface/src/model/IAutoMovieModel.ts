@@ -147,7 +147,7 @@ export interface IAutoMovieModel {
     assets: Array<{
       /** Canonical project-relative path. */
       path: string;
-      /** SHA-256 sealed by the compiler. */
+      /** SHA-256 sealed by the builder. */
       digest: `sha256:${string}`;
     }>;
     /** Authoritative normalized humanoid slot to glTF node index mapping. */

@@ -8,7 +8,7 @@ A comparison run is still an experiment, so [Read The Result](SKILL.md#read-the-
 
 ## Fix The Harness Before The First Writer Starts
 
-Freeze the common harness, the shipped skills, the contract family behavior, the stage semantics, the compiler gates, the review completion rule, and the observation plan before any writer launches.
+Freeze the common harness, the shipped skills, the contract family behavior, the stage semantics, the builder gates, the review completion rule, and the observation plan before any writer launches.
 
 A subject-breadth comparison changes only the subject and reports patterns across those named subjects without a causal contrast. A controlled comparison keeps the subject fixed, changes exactly one predeclared axis, repeats both conditions independently, and freezes every other basis. A harness edited between productions invalidates either design because the earlier production already paid its cost against the earlier harness.
 
@@ -44,7 +44,7 @@ Clean-round requirements belong to the procedures that declare them, and no gate
 
 ## Judge Each Gate By Its Own Purpose
 
-Two ladders run at once and neither substitutes for the other. The graph stage ladder is what a reviewer judges, and the compiler scope ladder is what the compiler judges. The stage ladder runs `disabled -> draft -> evidence -> review`, and the three transitions below are the ones a reviewer is asked to decide. The [review skill's rule that a claim the compiler can decide is not a review criterion](../review/SKILL.md#a-claim-the-compiler-can-decide-is-not-a-review-criterion) owns that division.
+Two ladders run at once and neither substitutes for the other. The graph stage ladder is what a reviewer judges, and the builder scope ladder is what the builder judges. The stage ladder runs `disabled -> draft -> evidence -> review`, and the three transitions below are the ones a reviewer is asked to decide. The [review skill's rule that a claim the builder can decide is not a review criterion](../review/SKILL.md#a-claim-the-builder-can-decide-is-not-a-review-criterion) owns that division.
 
 | Gate | Judged on | Not yet judged on |
 | --- | --- | --- |

@@ -28,9 +28,9 @@ export const autoMovieExternalLocatorRefusal = (
 };
 
 /**
- * Versioned production-compiler input protocol.
+ * Versioned production-builder input protocol.
  */
-export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
+export const AUTOMOVIE_BUILD_FINGERPRINT_PROTOCOL =
   "automovie.compile.input.v2";
 
 /** Current source-text normalization algorithm. */

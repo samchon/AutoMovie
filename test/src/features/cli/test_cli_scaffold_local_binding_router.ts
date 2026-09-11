@@ -17,10 +17,10 @@ export const test_cli_scaffold_local_binding_router = (): void => {
     stage: "review",
     enforced: true,
     populationScope: { mode: "first-pilot" },
-    relationship: "population-account",
+    relationship: "distributed-coverage",
     host: {
       root: "docs",
-      files: ["accounts/models/local.md"],
+      files: ["accounts/models/local.md", "models/**/*.md"],
       symbols: ["h2"],
     },
     targets: [{ root: "docs", files: ["contracts/local.md"], symbols: ["h2"] }],
@@ -85,7 +85,7 @@ export const test_cli_scaffold_local_binding_router = (): void => {
     "Local binding `population account`",
     "host root `docs`, files `accounts/models/local.md`",
     "contract targets root `docs`, files `contracts/local.md`",
-    "compared population root `docs`, files `models/**/*.md`",
+    "authored population root `docs`, files `models/**/*.md`",
     "`draft`, not enforced",
     "Local inapplicable audit `pilot audit`",
     "severity `error`, review not required",
@@ -100,6 +100,6 @@ export const test_cli_scaffold_local_binding_router = (): void => {
     .find((line) => line.includes("draft contract"))!;
   TestValidator.predicate(
     "plain checklist has no population invented",
-    !draft.includes("compared population"),
+    !draft.includes("authored population"),
   );
 };

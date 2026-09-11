@@ -27,7 +27,7 @@ export interface IAutoMoviePreviewNavigation {
 }
 
 /**
- * A production-owned source view before compiler publication. The producer
+ * A production-owned source view before builder publication. The producer
  * imports its real authored modules; no generated artifact or receipt is made.
  */
 export interface IAutoMovieSourcePreview {

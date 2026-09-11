@@ -137,7 +137,7 @@ const LOWER_LIMB = Math.max(LIMB_RADIUS * 2, HEIGHT * 0.14);
  * 2. Every rest offset is the stated fraction of `height`, and the two sides
  *    mirror across `x` exactly rather than approximately.
  * 3. The parts are the thirteen the builder emits, in order, each riding its own
- *    bone and carrying the compiler's material.
+ *    bone and carrying the builder's material.
  * 4. Each part's geometry is the shape and the dimensions its proportion states: a
  *    box that is wider than it is deep, a head of its own radius, capsules
  *    whose radius and length differ, and a hand slightly wider than the arm it

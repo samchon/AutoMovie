@@ -6,9 +6,9 @@
 
 모든 생성 프로젝트는 같은 공통 원칙·의무·상위 수정·작품별 발견 문서 목록과 각 문서의 명시적 H2 대상을 사용해야 한다. 목록과 실제 문서가 어긋나거나 대상이 누락·중복·충돌하면 그래프를 만들 수 없어야 한다.
 
-원칙은 선택된 모든 저술 H2/H3/H4 단위가 각 항목을 자기 자신에 대해 답하는 무배제 checklist여야 한다. 저술 계층의 의무는 전용 account H2가 한 의무 항목과 그 계층의 완전한 H2 모집단을 함께 열거하거나 의미 있는 그룹으로 비교하는 무배제 coverage여야 하며, 한 단위가 다른 단위의 원칙 답변을 대신하거나 H2/H3/H4 단위마다 같은 모집단 질문을 반복하도록 배선해서는 안 된다. 같은 의무를 여러 계층이 선택하면 각 계층 account는 자기 모집단에 대해 독립적으로 답해야 한다. TypeScript source 계약은 account H2 대신 그 source family가 선택한 public export 모집단이 같은 coverage를 진다.
+원칙은 선택된 모든 저술 H2/H3/H4 단위가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 의무는 같은 계층의 관련 H2들이 공동으로 충족하는 무배제 coverage다. 실제 담당 H2 또는 모집단 결론을 소유한 account H2에서 해당 의무를 증언하며, 기여자가 여럿이면 필요한 소유자가 함께 답한다. Source 의무도 선택된 public export 모집단의 같은 coverage를 따른다.
 
-설정과 디자인 foundation은 provider, consumer, 적용 상태와 구체적 사유를 한 topology account 행렬로 보여야 한다. 선택된 edge의 누락, 실제 foundation이 아닌 provider, 비활성 분기에 남은 positive edge, 선행 순서를 어긴 edge를 거부하고, provider 또는 consumer가 실제 선택 밖일 때만 구체적인 `inapplicable` 행을 허용해야 한다. Unit-local foundation evidence는 각 단위가 실제 사용한 부모를 계속 설명하며 topology account를 대신하지 않는다.
+설정과 디자인 foundation은 provider, consumer, 적용 상태와 구체적 사유를 한 topology account 행렬로 보여야 한다. 선택된 edge의 누락, 실제 foundation이 아닌 provider, 비활성 분기에 남은 positive edge, 선행 순서를 어긴 edge를 거부하고, provider 또는 consumer가 실제 선택 밖일 때만 구체적인 `inapplicable` 행을 허용해야 한다. Unit-local foundation evidence는 각 단위가 실제 사용한 부모를 계속 설명하며 topology account를 대신하지 않는다. 기술 디자인의 foundation 관계는 실제 소비하는 H2에서 진술한다. 서사와 brief의 문서 단위 parentage는 해당 파일에서 진술한다.
 
 상위 수정은 실제 저술 부모를 상속하는 각 design·brief·서사 H2/H3/H4와 source export가 자기 부모를 시험한 결과를 직접 답하는 checklist여야 한다. 하위 작업이 드러낸 결함은 가장 이른 부모에서 고치고 양의 답에 그 발견과 수리를 기록해야 한다. 부모가 충분했다면 구체적으로 시험한 부모 결정과 결과를 밝힌 제외를 허용해야 하며, 부모 없는 단위·조용한 통과·반복된 일반 문장으로 대신할 수 없어야 한다. 설정과 조사는 저술 부모를 상속하지 않으므로 이 family를 선택해서는 안 된다.
 
@@ -16,7 +16,7 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 서로 다른 host에서 인용·경로·수치만 바뀐 review frame이 반복되거나 review 이유가 target의 Review question을 그대로 포함하면 그 위치와 반복 수를 결정적인 Self-Review alarm으로 보여야 한다. 이 alarm은 새로운 검토를 지시하되 corpus에 맞춘 자동 거부나 의미 판정이 되어서는 안 되며, target 모집단을 실제로 읽었는지도 결과에 밝혀야 한다.
 
-공통·선택 언어·작품 고유 저술 의무는 같은 전용 account 계약을 따라야 한다. 작품 고유 계정도 하나의 선언으로 대상 의무, 소유 계층과 경로, 완전한 비교 모집단, 현재 단계와 적용 범위를 함께 식별하며, 선언 없는 계정이나 중복 소유로 완료를 주장할 수 없어야 한다.
+계약의 적용은 저술 역할로 결정한다. 언어 탐색, 문체 기본값과 선택 언어의 문체 원칙·의무, 서사 원칙·의무는 treatments, scripts, screenplays가 선택한다. Settings, research와 기술 design은 공통 기반과 자기 전문 계약을 선택하며 film, brief, library에서 같은 경계를 유지한다. 공통 의무와 작품 고유 의무는 관련 저술 H2와 선언된 선택적 account를 통해 충족한다.
 
 ### 작품별 발견의 증명 {#agent-production-evidence-discovery}
 

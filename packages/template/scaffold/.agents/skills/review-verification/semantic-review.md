@@ -1,6 +1,6 @@
 # Independent semantic review
 
-This procedure owns semantic evidence judgment. The evidence compiler owns structural validation and fingerprint issuance; it never writes a finding. Mechanical tooling may locate rows, report diagnostics and alarms, and append one verified fingerprint to an already-authored structural slot. A generator, codemod, formatter, or bulk rewrite must never create, complete, paraphrase, or normalize the semantic sentence.
+This procedure owns semantic evidence judgment. The evidence builder owns structural validation and fingerprint issuance; it never writes a finding. Mechanical tooling may locate rows, report diagnostics and alarms, and append one verified fingerprint to an already-authored structural slot. A generator, codemod, formatter, or bulk rewrite must never create, complete, paraphrase, or normalize the semantic sentence.
 
 Read the [conformance owner map](../evidence-graph/conformance.md) before repairing a semantic or structural evidence failure.
 
@@ -10,7 +10,7 @@ Process one relationship at a time:
 
 1. Resolve the exact target H2, complete host, necessary lineage, and configured host kind from the immutable revision under review. Record the submitted commit and target and host blob identities in the commit or pull-request chronology.
 2. Leave the fingerprint slot empty. Read the target and host literally, perform the semantic pass below, write the finding, and inspect that prose while no fingerprint is present.
-3. Freeze the accepted semantic row. Ask the compiler or a dedicated token inserter for the current fingerprint, then let that tool append only the token in the structural slot. Reject an operation that changes review prose or any protected authored byte.
+3. Freeze the accepted semantic row. Ask the builder or a dedicated token inserter for the current fingerprint, then let that tool append only the token in the structural slot. Reject an operation that changes review prose or any protected authored byte.
 4. Run evidence lint and verify the resulting row against the same immutable target and host blobs. A moved branch, changed blob, unresolved anchor, different population, or edited semantic row invalidates the transaction and requires a new literal read.
 
 The durable Git commit or pull-request chronology records the fingerprint-empty semantic row, its author, the immutable revision and target and host identities, then the fingerprint insertion and proof that only the token slot changed. Do not create a repository approval, waiver, status, or review ledger. A private session path, `.wiki` note, or remembered context is not transferable provenance.
@@ -23,7 +23,7 @@ Use the configured claim and ask only the subject that host kind owns:
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Authored H2, H3, or H4                | Whether this exact unit performs one principle, dependency, lineage, upstream, or observation predicate          |
 | Authored file                         | What the complete selected file realizes for a file-level relation                                               |
-| Population-obligation account         | One comparison over every selected population member and exactly one obligation                                  |
+| Population obligation | The actual contributing owners and any comparison required by the target |
 | Settings-coverage or topology account | The declared all-host, dense, sparse, or absent edge population                                                  |
 | Work-contract H2                      | The unit, file, or population operation explicitly selected by its additive claim                                |
 | Discovery carrier                     | What the complete production-specific search found and which existing owners make an additional rule unnecessary |
@@ -48,7 +48,7 @@ A quotation is optional and must be exact and complete. Otherwise give a stable 
 
 When literal support fails, define the mismatch class from the failed field and relationship, not from a filename prefix. Audit that class across both the target's complete host population and the host's complete target set. Record the immutable basis, literal locations, mismatched actor, object, site, authority, operation, state, or consequence, reproducible class membership, and every affected edge in the pull-request review. Repair the earliest true owner and propagate every consequence before restarting the transaction.
 
-For a population obligation, read every selected unit. The account identifies the population, enumerates or groups every member, performs the required comparison, cites exactly one obligation, and carries exactly one review. A list of local observations is not a population classification.
+For an obligation, inspect its actual contributors against the complete target. A population-wide comparison reads the population whose relation the target governs and records the conclusion with its authored or aggregate owner. Each acknowledgement and review describes that relationship.
 
 ## Evidence-gate audit
 
@@ -74,7 +74,7 @@ Use these cases when reviewing the harness or a production's completed evidence 
 | Generic majority or slotted nouns                                              | Fail with the reusable predicate or clause skeleton and every class member.                                                        |
 | Category or semantic-role substitution                                         | Fail at the literal predicate or host-role check.                                                                                  |
 | Unit evidence offered for a file or population relation                        | Fail because the host operation cannot answer the configured subject.                                                              |
-| Complete population account                                                    | Pass the structural discriminator only when it covers every selected member once, then continue literal and exchange checks.       |
+| Population comparison | Read the population and actual contributing owners required by the target, then continue the literal and exchange checks. |
 | Exact lineage relation versus a sibling's result                               | Pass only the exact child-parent edge and fail the exchanged attachment.                                                           |
 | Discovery or population exclusion contradicted by one selected host            | Fail the exclusion and report the complete contradicted class.                                                                     |
 | False quotation, converted notation, or asserted absence without a full search | Fail literal support.                                                                                                              |
@@ -86,4 +86,4 @@ Use these cases when reviewing the harness or a production's completed evidence 
 | Honest similarity                                                              | Pass only when both axes establish distinct literal host facts and target-specific falsifiers.                                     |
 | Target, host, population, or semantic-row edit after judgment                  | Invalidate the judgment and restart from a new immutable basis.                                                                    |
 
-Run the complete matrix with current compiler-issued fingerprints where applicable so fingerprint freshness cannot decide the semantic result. A harness passes only when identical immutable inputs produce identical alarm membership and every semantic verdict still comes from literal review.
+Run the complete matrix with current builder-issued fingerprints where applicable so fingerprint freshness cannot decide the semantic result. A harness passes only when identical immutable inputs produce identical alarm membership and every semantic verdict still comes from literal review.

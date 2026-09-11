@@ -723,8 +723,8 @@ export interface IAutoMovieShotProgram {
   /**
    * Runtime facts for every articulated stage actor that performs a verb.
    *
-   * Geometry and gait curves remain compiler-owned through {@link model}; the
-   * source states only the scale-dependent values a generic compiler cannot
+   * Geometry and gait curves remain builder-owned through {@link model}; the
+   * source states only the scale-dependent values a generic builder cannot
    * infer without guessing.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes `actors` as the portable data boundary for the agent ordinary code authoring requirement.
@@ -826,7 +826,7 @@ export type IAutoMovieDefinedShotContract = Omit<
  * One source-level shot registration.
  *
  * The export is the artifact: id, staged scene, measurable contract, and
- * deterministic builder travel together so a repository compiler can bind
+ * deterministic builder travel together so a repository builder can bind
  * module path, export name, and artifact identity without a second manifest
  * claiming what the source contains.
  *
