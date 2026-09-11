@@ -26,7 +26,8 @@ import { canonicalizeAutoMovieJson } from "./contentIdentity";
  * all end there, so no read failure can turn into a success and the gate's own
  * diagnostics or exception carry the original cause. A failed answer is never
  * retained, so an invalid project runs the gate and reports its diagnostics on
- * every call.
+ * every call, and neither it nor an answer that executed an undeclared module
+ * pays for a second read after the run, because neither could be kept.
  *
  * A successful answer is retained only when it is provably the answer for one
  * snapshot. The snapshots read before and after the run must agree on every
@@ -86,7 +87,9 @@ export const retainAutoMovieProductionSourceStatus = (props: {
     }
     const evaluation = props.evaluate();
     const after =
-      before === null
+      before === null ||
+      evaluation.output.success === false ||
+      evaluation.undeclaredModules.length !== 0
         ? null
         : observe(() =>
             props.acquire(
@@ -129,7 +132,10 @@ const sameInputs = (
     : canonicalizeAutoMovieJson({ ...left, revision: null }) ===
       canonicalizeAutoMovieJson({ ...right, revision: null });
 
-/** Whether one successful run is the answer for the snapshot read after it. */
+/**
+ * Whether one successful, fully declared run is the answer for the snapshot
+ * read after it.
+ */
 const provesSnapshot = (
   before: IAutoMovieProductionSourceSnapshot,
   evaluation: IAutoMovieProductionSourceEvaluation,
@@ -137,8 +143,6 @@ const provesSnapshot = (
 ): boolean => {
   const output = evaluation.output;
   if (
-    output.success === false ||
-    evaluation.undeclaredModules.length !== 0 ||
     output.revision !== after.revision ||
     output.builder.inputFingerprint !== after.inputFingerprint ||
     after.generated.inputFingerprint !== after.inputFingerprint ||

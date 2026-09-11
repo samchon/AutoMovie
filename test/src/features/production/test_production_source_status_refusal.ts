@@ -30,7 +30,8 @@ const thrownBy = (task: () => unknown): unknown => {
  * Scenarios:
  *
  * 1. An invalid source runs the gate and returns its diagnostic at each of three
- *    boundaries.
+ *    boundaries, reading the project once at each, because a failed answer is
+ *    never read again after its run.
  * 2. After a reused success, an invalid edit returns the new failure rather than
  *    the reused success, and the next boundary runs the gate again.
  * 3. A gate exception propagates as the same error object, and the next boundary
@@ -42,8 +43,8 @@ const thrownBy = (task: () => unknown): unknown => {
  *    reused.
  * 5. A snapshot that cannot be completed runs the gate at every boundary.
  * 6. A success that executed a project module outside the fingerprinted content
- *    runs the gate at every boundary, and the same success without that module
- *    is reused.
+ *    runs the gate and reads the project once at every boundary, and the same
+ *    success without that module is reused.
  */
 export const test_production_source_status_refusal = (): void => {
   const invalid = createSourceStatusWorld();
@@ -51,9 +52,9 @@ export const test_production_source_status_refusal = (): void => {
   const failing = runsPerCall(invalid, invalid.status(), 3);
   const failure = answerOf(invalid.state, [SOURCE_FAILURE]);
   TestValidator.equals(
-    "an invalid source runs the gate and reports it at every boundary",
-    failing,
-    { runs: [1, 1, 1], answers: [failure, failure, failure] },
+    "an invalid source runs the gate, reports it and reads once per boundary",
+    { ...failing, reads: invalid.counts.acquisitions },
+    { runs: [1, 1, 1], answers: [failure, failure, failure], reads: 3 },
   );
 
   const broken = createSourceStatusWorld();
@@ -138,13 +139,15 @@ export const test_production_source_status_refusal = (): void => {
   undeclared.state.undeclaredModules = ["lint.config.ts"];
   const undeclaredStatus = undeclared.status();
   const withUndeclared = runsPerCall(undeclared, undeclaredStatus, 3).runs;
+  const undeclaredReads = undeclared.counts.acquisitions;
   undeclared.state.undeclaredModules = [];
   TestValidator.equals(
     "an executed module outside the fingerprinted content blocks reuse",
     {
       withUndeclared,
+      undeclaredReads,
       declared: runsPerCall(undeclared, undeclaredStatus, 2).runs,
     },
-    { withUndeclared: [1, 1, 1], declared: [1, 0] },
+    { withUndeclared: [1, 1, 1], undeclaredReads: 3, declared: [1, 0] },
   );
 };
