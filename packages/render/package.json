@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@automovie/engine": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@gltf-transform/core": "catalog:gltf",
     "mp4box": "catalog:media",

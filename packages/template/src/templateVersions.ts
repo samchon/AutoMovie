@@ -12,6 +12,7 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   cli: "^0.1.0",
   engine: "^0.1.0",
   evidence: "^0.1.0",
+  ingest: "^0.1.0",
   interface: "^0.1.0",
   mcp: "^0.1.0",
   production: "^0.1.0",

@@ -1,7 +1,7 @@
 {
   "name": "@automovie/ingest",
   "version": "0.1.0",
-  "description": "automovie ingest: load glTF/GLB into the core node graph and clips (headless, no three.js)",
+  "description": "automovie ingest: admit external media inputs — glTF/GLB documents into the core node graph and clips, RIFF/WAVE audio into decoded samples (headless, no three.js)",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

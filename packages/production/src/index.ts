@@ -23,7 +23,6 @@ export * from "./production/legacyImportPlan";
 export * from "./production/strictUtf8";
 export * from "./production/structuredJsonIngress";
 export * from "./production/assetAcquisition";
-export * from "./production/decodeProductionAudioAsset";
 export * from "./production/derivedArtifacts";
 export * from "./production/designReferenceDiagnostics";
 export * from "./production/inspectDesignReferenceAsset";

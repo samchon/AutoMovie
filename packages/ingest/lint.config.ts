@@ -1,5 +1,27 @@
-import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
+import {
+  type ITtscEvidenceGraphConfig,
+  type ITtscEvidenceGraphReference,
+  evidence,
+} from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
+
+/**
+ * Contract documents named one by one, at the section level.
+ *
+ * A topic population would enrol every document in the folder and make this
+ * package answer for units it does not implement, so a domain whose contracts
+ * live beside other owners' contracts is selected document by document.
+ */
+const documentReferences = (
+  files: readonly string[],
+): ITtscEvidenceGraphReference[] => [
+  {
+    type: "markdown",
+    root: "../../docs",
+    files: [...files],
+    symbol: ["h3"],
+  },
+];
 
 /**
  * Every supported public declaration under `src` is selected for contract evidence.
@@ -9,6 +31,19 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * because it re-exports declarations that already answer at their definition.
  */
 const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
+
+/**
+ * The audio media-input domain: WAVE source facts, decode, and processing.
+ *
+ * These sources answer for the sound and audio-delivery contracts of the bytes
+ * they read, which their claim names document by document rather than by topic
+ * folder: the sound and delivery folders also hold the mixing, cue scheduling,
+ * dialogue, loudness and provenance-recording units that belong to the engine
+ * mixer and the production layer, not to an input decoder. The barrel is
+ * subtracted because it re-exports declarations that answer at their
+ * definition.
+ */
+const audioSources = ["src/audio/**/*.ts", "!src/audio/index.ts"];
 
 /**
  * The public ingest surface answers for stable contract populations.
@@ -76,6 +111,18 @@ const graph: ITtscEvidenceGraphConfig = {
           symbol: ["h3"],
         },
       ],
+    },
+    {
+      name: "audio media input implements its decode and source contracts",
+      type: "typescript",
+      files: audioSources,
+      symbol: ["type", "function", "property"],
+      reference: documentReferences([
+        "requirements/sound/sources-and-external-assets.md",
+        "requirements/delivery-and-accessibility/audio-streams-and-channels.md",
+        "requirements/evidence-and-provenance/generation-transformation-and-derivation.md",
+        "specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md",
+      ]),
     },
   ],
 };
