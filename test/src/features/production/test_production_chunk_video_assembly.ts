@@ -37,7 +37,7 @@ const rangeTimeline = (): IAutoMovieFilmTimeline => {
   let startFrame = 0;
   return {
     version: 1,
-    compiler: "automovie.production.compiler.v5",
+    builder: "automovie.production.builder.v5",
     inputFingerprint: digest("1"),
     sourceDigest: digest("2"),
     id: "assembly",

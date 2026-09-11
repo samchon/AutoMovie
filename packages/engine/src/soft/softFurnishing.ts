@@ -339,7 +339,7 @@ export interface IAutoMovieSoftFurnishingFrame {
  * whole difference between a frame a reviewer can act on and a still curtain
  * nobody knew was still because the solver gave up.
  *
- * Nothing here throws. This is the call a compiler makes once per furnishing
+ * Nothing here throws. This is the call a builder makes once per furnishing
  * per shot second, so a curtain whose declared step budget stops before the cut
  * does must come back reported rather than take the whole render down with it —
  * and that budget is the author's own declaration, which is exactly the kind of

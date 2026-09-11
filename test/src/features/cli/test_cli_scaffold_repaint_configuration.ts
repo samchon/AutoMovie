@@ -112,9 +112,6 @@ const selection = (): IRepaintSelection => ({
       execution: "local",
     },
     generatorProvenance: {
-      source: "https://models.example/studio/repaint-model",
-      license: "license-records/repaint-model.md",
-      termsCheckedAt: "2026-08-28",
       cost: "local compute; no per-request provider fee",
       consumer: {
         kind: "repaint",
@@ -331,8 +328,6 @@ const receipt = (
  * 5. Final publication accepts receipts only when generator adoption, complete
  *    request, execution time, structural authority, and shot population still
  *    exactly match.
- * 6. Future terms-review dates fail before execution and from stored receipts,
- *    while same-day, past, leap-day, and UTC-midnight boundaries stay valid.
  */
 export const test_cli_scaffold_repaint_configuration =
   async (): Promise<void> => {
@@ -375,9 +370,6 @@ export const test_cli_scaffold_repaint_configuration =
       voice: "af_heart",
       speed: 1,
       generatorProvenance: {
-        source: "https://models.example/kokoro",
-        license: "Apache-2.0",
-        termsCheckedAt: "2026-08-28",
         cost: "local compute",
         consumer: {
           kind: "dialogue-synthesis",
@@ -386,12 +378,12 @@ export const test_cli_scaffold_repaint_configuration =
       },
     } as const;
     TestValidator.equals(
-      "dialogue provenance admits a credential-free URL and non-URL license identifier",
+      "dialogue configuration preserves the selected runtime and execution metadata",
       configuration.readProductionDialogueSynthesis(dialogue, OCCURRED_AT),
       dialogue,
     );
     TestValidator.predicate(
-      "dialogue provenance refuses credential-bearing and malformed absolute locators",
+      "dialogue metadata refuses embedded credentials",
       [
         {
           ...dialogue,
@@ -404,21 +396,7 @@ export const test_cli_scaffold_repaint_configuration =
           ...dialogue,
           generatorProvenance: {
             ...dialogue.generatorProvenance,
-            source: "https://[invalid",
-          },
-        },
-        {
-          ...dialogue,
-          generatorProvenance: {
-            ...dialogue.generatorProvenance,
             license: "https://user:secret@licenses.example/kokoro",
-          },
-        },
-        {
-          ...dialogue,
-          generatorProvenance: {
-            ...dialogue.generatorProvenance,
-            license: "https://[invalid",
           },
         },
       ].every(
@@ -471,15 +449,8 @@ export const test_cli_scaffold_repaint_configuration =
         },
       },
       ...[
-        ["source", ""],
-        ["source", " padded "],
         ["source", "https://user:secret@models.example/repaint"],
-        ["source", "https://[invalid"],
-        ["license", ""],
         ["license", "https://user:secret@licenses.example/repaint"],
-        ["license", "https://[invalid"],
-        ["termsCheckedAt", "today"],
-        ["termsCheckedAt", "2026-02-30"],
         ["cost", ""],
       ].map(([key, value]) => ({
         ...authored,
@@ -1154,7 +1125,7 @@ export const test_cli_scaffold_repaint_configuration =
             ...value,
             generatorProvenance: {
               ...value.generatorProvenance,
-              termsCheckedAt: "2026-08-29",
+              cost: "different execution cost",
             },
           })),
         }),
@@ -1191,46 +1162,5 @@ export const test_cli_scaffold_repaint_configuration =
     TestValidator.predicate(
       "publication refuses missing, repeated, malformed, changed, or over-authoritative receipts",
       receiptFailures.every((message) => message !== null),
-    );
-
-    const calendarSelection = (termsCheckedAt: string): IRepaintSelection => ({
-      ...authored,
-      generator: {
-        ...authored.generator,
-        generatorProvenance: {
-          ...authored.generator.generatorProvenance,
-          termsCheckedAt,
-        },
-      },
-    });
-    TestValidator.equals(
-      "terms review uses the injected UTC day without entering content identity",
-      {
-        past: configuration.readProductionRepaintSelection(
-          calendarSelection("2024-02-29"),
-          "2026-08-28T00:00:00.000Z",
-        )?.generator.generatorProvenance.termsCheckedAt,
-        sameDayBeforeMidnight: configuration.readProductionRepaintSelection(
-          calendarSelection("2026-08-28"),
-          "2026-08-28T23:59:59.999Z",
-        )?.generator.generatorProvenance.termsCheckedAt,
-        sameDayAfterMidnight: configuration.readProductionRepaintSelection(
-          calendarSelection("2026-08-29"),
-          "2026-08-29T00:00:00.000Z",
-        )?.generator.generatorProvenance.termsCheckedAt,
-        futureRefused:
-          messageOf(() =>
-            configuration.readProductionRepaintSelection(
-              calendarSelection("2026-08-29"),
-              "2026-08-28T23:59:59.999Z",
-            ),
-          ) !== null,
-      },
-      {
-        past: "2024-02-29",
-        sameDayBeforeMidnight: "2026-08-28",
-        sameDayAfterMidnight: "2026-08-29",
-        futureRefused: true,
-      },
     );
   };

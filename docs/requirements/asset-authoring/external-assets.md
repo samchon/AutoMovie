@@ -24,9 +24,9 @@ Group과 assembly 합성은 채택한 자산의 identity와 내부 hierarchy를 
 
 Native conversion은 source element와 result identity의 대응, 좌표·단위 변환, 병합, 근사, loss와 unsupported extension을 기록하여 사용자가 변환 결과를 수정하고 다시 만들 수 있게 해야 한다.
 
-### Provenance와 digest {#asset-external-provenance-digest}
+### 자산 식별과 digest {#asset-external-provenance-digest}
 
-외부 자산은 source, acquisition time, license, digest, format, unit, coordinate convention, version과 consumer identity를 가져야 한다.
+외부 자산은 project-relative path, current digest, format, unit, coordinate convention과 consumer identity로 식별되어야 한다.
 
 ### Bounded decoder {#asset-bounded-decoder}
 

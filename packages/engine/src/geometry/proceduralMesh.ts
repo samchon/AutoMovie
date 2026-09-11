@@ -7,6 +7,7 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { convexHull2D } from "../math/hull";
+import { rotationBetween } from "../math/rotationBetween";
 import { autoMoviePlanarRegionFailure } from "./planarRegion";
 
 /**
@@ -434,6 +435,9 @@ export const extrudeAutoMovieProfile = (props: {
  * because a circle of no radius has no arc to travel. Its collapsed triangles
  * remain the topology this operator already declares; their UVs stay finite,
  * and they are the one place the atlas has no handedness to report.
+ * The duplicate seam vertices share their accumulated face normals before
+ * normalization. Every duplicate of an axis pole shares that pole's normal
+ * as well, so the UV cut does not introduce a lighting discontinuity.
  *
  * How far that shear goes is worth stating, because it decides what finish the
  * surface can carry. The map is exactly equiareal, its Jacobian determinant one
@@ -517,7 +521,15 @@ export const revolveAutoMovieProfile = (props: {
       indices.push(current, current + 1, next);
       indices.push(current + 1, next + 1, next);
     }
-  return meshOf(positions, indices, uvs);
+  const normalGroups = props.profile.map((point, index) =>
+    point.x === 0
+      ? Array.from(
+          { length: props.segments + 1 },
+          (_, segment) => segment * count + index,
+        )
+      : [index, props.segments * count + index],
+  );
+  return meshOf(positions, indices, uvs, normalGroups);
 };
 
 /**
@@ -526,6 +538,8 @@ export const revolveAutoMovieProfile = (props: {
  * This is the code path for moulding, rails, pipes, arches, and other members
  * whose section repeats along a path. Adjacent path points must be distinct.
  * Both ends are capped, so a sweep along a simple path is a closed solid.
+ * The section frame follows successive path tangents by shortest-arc transport,
+ * preserving its orientation through bends instead of reselecting world axes.
  *
  * No texture coordinates are emitted, for the same reason
  * {@link extrudeAutoMovieProfile} emits none: each ring is one strip of shared
@@ -557,13 +571,10 @@ export const sweepAutoMovieProfile = (props: {
   props.path.forEach((point, index) =>
     finiteVector(point, `sweep path[${index}]`),
   );
+  const frames = pathFrames(props.path, "sweep path");
   const positions: number[] = [];
   props.path.forEach((point, index) => {
-    const tangent = tangentAt(props.path, index, "sweep path");
-    const guide =
-      Math.abs(tangent.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
-    const right = Vector3.normalize(Vector3.cross(guide, tangent));
-    const up = Vector3.normalize(Vector3.cross(tangent, right));
+    const { right, up } = frames[index]!;
     for (const profilePoint of profile)
       positions.push(
         point.x + right.x * profilePoint.x + up.x * profilePoint.y,
@@ -979,6 +990,7 @@ export const extrudeAutoMovieRegion = (props: {
  * operation: two sections that differ only in scale is a taper, two that differ
  * in shape is a loft, and the same section declared at both ends is a sweep of
  * a section {@link sweepAutoMovieProfile} would have hulled.
+ * Both operations share the same transported section frame along the path.
  *
  * Correspondence is authored, never inferred. Every section declares the same
  * rings with the same point counts wound the same way, and point `k` of a ring
@@ -1101,12 +1113,9 @@ export const loftAutoMovieSections = (props: {
         ),
     );
   const total = travelled[travelled.length - 1]!;
+  const frames = pathFrames(props.path, "loft path");
   const stations = props.path.map((point, index) => {
-    const tangent = tangentAt(props.path, index, "loft path");
-    const guide =
-      Math.abs(tangent.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
-    const right = Vector3.normalize(Vector3.cross(guide, tangent));
-    const up = Vector3.normalize(Vector3.cross(tangent, right));
+    const { tangent, right, up } = frames[index]!;
     const profile = loftSectionAt(
       plans,
       props.sections,
@@ -1903,11 +1912,9 @@ const bridgeIsClear = (
 /**
  * Cut ears off one counter-clockwise ring until three corners are left.
  *
- * The loop counts down from the ring's own size rather than testing for
- * failure, because the two-ears theorem gives a validated simple ring an ear at
- * every step: the polygon reaching here has been refused if it crosses itself,
- * touches another ring, or carries a hole outside the region, and a guard here
- * would be a second answer to a question already settled.
+ * Each cut retains every remaining boundary vertex, including a straight-edge
+ * subdivision. Input validation does not prove that a floating-point ear search
+ * succeeded; a failed search must refuse before an invalid index is emitted.
  */
 const earClip = (
   points: readonly IAutoMovieProfilePoint[],
@@ -1920,6 +1927,8 @@ const earClip = (
     const at = working.findIndex((_corner, index) =>
       isEar(points, working, index),
     );
+    if (at === -1)
+      throw new Error("polygon triangulation could not find a valid ear");
     triangles.push(
       working[(at + size - 1) % size]!,
       working[at]!,
@@ -1932,12 +1941,11 @@ const earClip = (
 };
 
 /**
- * Is the corner at `at` an ear: convex, with no reflex corner inside it?
+ * Is the corner at `at` an ear: convex, with no other vertex in or on it?
  *
- * Only reflex corners can block an ear, and only strictly inside ones, which is
- * what lets a bridged ring work: a bridge repeats one corner of each ring it
- * joins, and a repeated corner sits on the candidate triangle's boundary rather
- * than in its interior.
+ * A vertex on the proposed diagonal blocks the cut too: skipping it can leave
+ * only a zero-area chain for the remaining triangulation. A bridge repeats its
+ * endpoints by index; those copies are the triangle's own corners, not blockers.
  */
 const isEar = (
   points: readonly IAutoMovieProfilePoint[],
@@ -1951,37 +1959,29 @@ const isEar = (
   const corner = points[ring[at]!]!;
   const next = points[ring[nextAt]!]!;
   if (cross2(previous, corner, next) <= PLANAR_EPSILON) return false;
-  return ring.every((vertex, index) => {
-    if (index === previousAt || index === at || index === nextAt) return true;
+  return ring.every((vertex) => {
+    if (
+      vertex === ring[previousAt] ||
+      vertex === ring[at] ||
+      vertex === ring[nextAt]
+    )
+      return true;
     return (
-      isReflex(points, ring, index) === false ||
-      insideTriangle(previous, corner, next, points[vertex]!) === false
+      insideOrOnTriangle(previous, corner, next, points[vertex]!) === false
     );
   });
 };
 
-/** Does the ring turn clockwise at this corner, cutting into the region? */
-const isReflex = (
-  points: readonly IAutoMovieProfilePoint[],
-  ring: readonly number[],
-  at: number,
-): boolean =>
-  cross2(
-    points[ring[(at + ring.length - 1) % ring.length]!]!,
-    points[ring[at]!]!,
-    points[ring[(at + 1) % ring.length]!]!,
-  ) < -PLANAR_EPSILON;
-
-/** Is the point strictly inside the counter-clockwise triangle `a b c`? */
-const insideTriangle = (
+/** Is the point inside or on the counter-clockwise triangle `a b c`? */
+const insideOrOnTriangle = (
   a: IAutoMovieProfilePoint,
   b: IAutoMovieProfilePoint,
   c: IAutoMovieProfilePoint,
   point: IAutoMovieProfilePoint,
 ): boolean =>
-  cross2(a, b, point) > PLANAR_EPSILON &&
-  cross2(b, c, point) > PLANAR_EPSILON &&
-  cross2(c, a, point) > PLANAR_EPSILON;
+  cross2(a, b, point) >= -PLANAR_EPSILON &&
+  cross2(b, c, point) >= -PLANAR_EPSILON &&
+  cross2(c, a, point) >= -PLANAR_EPSILON;
 
 /** One loft section's rings in canonical declaration order. */
 const loftSectionRings = (
@@ -2060,19 +2060,58 @@ const tangentAt = (
   return Vector3.normalize(delta);
 };
 
+interface IPathFrame {
+  tangent: IAutoMovieVector3;
+  right: IAutoMovieVector3;
+  up: IAutoMovieVector3;
+}
+
+/** Seed one frame, then transport it without introducing axis-switch twists. */
+const pathFrames = (
+  path: readonly IAutoMovieVector3[],
+  label: string,
+): IPathFrame[] => {
+  let previous: IPathFrame | undefined;
+  return path.map((_, index) => {
+    const tangent = tangentAt(path, index, label);
+    const transported =
+      previous === undefined
+        ? Vector3.cross(
+            Math.abs(tangent.y) < 0.9
+              ? { x: 0, y: 1, z: 0 }
+              : { x: 1, y: 0, z: 0 },
+            tangent,
+          )
+        : Quaternion.rotateVector(
+            rotationBetween(previous.tangent, tangent),
+            previous.right,
+          );
+    const up = Vector3.normalize(Vector3.cross(tangent, transported));
+    const right = Vector3.normalize(Vector3.cross(up, tangent));
+    const frame = { tangent, right, up };
+    previous = frame;
+    return frame;
+  });
+};
+
 const meshOf = (
   positions: number[],
   indices: number[],
   uvs: number[] | null = null,
+  normalGroups: readonly (readonly number[])[] = [],
 ): IAutoMovieMesh => ({
   positions,
-  normals: normalsOf(positions, indices),
+  normals: normalsOf(positions, indices, normalGroups),
   uvs,
   indices,
   skin: null,
 });
 
-const normalsOf = (positions: number[], indices: number[]): number[] => {
+const normalsOf = (
+  positions: number[],
+  indices: number[],
+  normalGroups: readonly (readonly number[])[] = [],
+): number[] => {
   const normals = new Array<number>(positions.length).fill(0);
   for (let index = 0; index < indices.length; index += 3) {
     const a = indices[index]! * 3;
@@ -2093,6 +2132,21 @@ const normalsOf = (positions: number[], indices: number[]): number[] => {
       normals[offset] += normal.x;
       normals[offset + 1] += normal.y;
       normals[offset + 2] += normal.z;
+    }
+  }
+  // Combine incident face areas before normalizing duplicated smooth vertices.
+  // Their positions and UVs remain separate at the texture seam.
+  for (const group of normalGroups) {
+    const sum = { x: 0, y: 0, z: 0 };
+    for (const vertex of group) {
+      sum.x += normals[vertex * 3]!;
+      sum.y += normals[vertex * 3 + 1]!;
+      sum.z += normals[vertex * 3 + 2]!;
+    }
+    for (const vertex of group) {
+      normals[vertex * 3] = sum.x;
+      normals[vertex * 3 + 1] = sum.y;
+      normals[vertex * 3 + 2] = sum.z;
     }
   }
   for (let index = 0; index < normals.length; index += 3) {

@@ -20,6 +20,7 @@ import {
   readAutoMovieHostViewerHost,
 } from "./hostBoundary";
 import { pageKey, pageSubject } from "./inspectionPageKey";
+import { viewerWatchOptions } from "./viewerWatchOptions";
 
 interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
@@ -68,7 +69,12 @@ const startSession = async (
     logLevel: "silent",
     plugins: [generatedShotPlugin(projectRoot, productionId)],
     resolve: { dedupe: ["three"] },
-    server: { host: viewerHost, port: 0, strictPort: false },
+    server: {
+      host: viewerHost,
+      port: 0,
+      strictPort: false,
+      watch: viewerWatchOptions(projectRoot),
+    },
   });
   try {
     await server.listen();

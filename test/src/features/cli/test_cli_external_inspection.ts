@@ -190,7 +190,7 @@ export const test_cli_external_inspection = (): void => {
                 profile: "gltf-motion-v1",
                 readResource: () => null,
               }),
-            "no compiler-resolved resident bytes",
+            "no builder-resolved resident bytes",
           ),
       ],
     ]),

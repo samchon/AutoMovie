@@ -21,6 +21,7 @@ import {
   createCaptureExecutableSnapshot,
   openCaptureExecutable,
 } from "./captureExecutableSnapshot";
+import { readCaptureGraphicsBackend } from "./captureGraphicsBackend";
 import {
   type IProductionCaptureRuntimeClosureSnapshot,
   snapshotProductionCaptureRuntimeClosure,
@@ -145,7 +146,7 @@ export const parseCaptureBrowserConfig = (
 
 const require = createRequire(import.meta.url);
 const BROWSER_NAME = "chromium";
-const REQUESTED_BACKEND = "angle:swiftshader";
+const GRAPHICS_BACKEND = readCaptureGraphicsBackend(process.env);
 const DEVICE_SCALE_FACTOR = 1;
 const DESCRIPTOR_BOUND_CLI_LOADER = [
   'const fs = require("node:fs");',
@@ -1179,7 +1180,7 @@ export const launchCaptureBrowser = async (
         ...launch,
         ...(executablePath === undefined ? {} : { executablePath }),
         headless: true,
-        args: ["--use-angle=swiftshader"],
+        args: GRAPHICS_BACKEND.args,
       });
     browser =
       executable === null
@@ -1320,7 +1321,7 @@ export const inspectCaptureGraphics = async (
       "Capture WebGL is unavailable or did not report vendor and renderer. Run npm run capture:doctor and inspect the backend/driver diagnostic.",
     );
   return {
-    requestedBackend: REQUESTED_BACKEND,
+    requestedBackend: GRAPHICS_BACKEND.requestedBackend,
     ...graphics,
   };
 };

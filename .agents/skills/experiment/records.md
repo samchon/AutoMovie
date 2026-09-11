@@ -2,7 +2,7 @@
 
 Read this document before launching a benchmark or comparison campaign. It owns the durable record, causal claim, judgment, and operation protocol. [briefing.md](briefing.md) owns what the writer sees, [steering.md](steering.md) owns live-session mechanics, and [comparison.md](comparison.md) owns several units under one harness.
 
-Start from the repository's [experiment campaign issue template](../../../.github/ISSUE_TEMPLATE/experiment-campaign.md). The issue is the self-contained launch contract and durable conclusion. Live operational notes may stay in `.wiki`, generated evidence stays with its production, and measurements that must outlive a deleted sandbox go under [`experiments/baselines/`](../../../experiments/baselines/README.md). Chat history and private notes are never the only carrier of a run fact.
+Start from the repository's [experiment campaign issue template](../../../.github/ISSUE_TEMPLATE/experiment-campaign.md). The issue is the self-contained launch contract and durable conclusion. Live operational notes may stay in `.wiki`, generated evidence stays with its production, and measurements that must outlive a deleted sandbox belong in the issue. Chat history and private notes are never the only carrier of a run fact.
 
 ## Reconcile The Operative Handoff
 

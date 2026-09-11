@@ -2,7 +2,7 @@
 
 ## 파생 산출물 경계 {#spec-authoring-precomputed-boundary}
 
-파생 산출물은 tracked generator와 declared input을 소비해 ordinary project script가 만든 tracked bytes다. Generation은 compile 전에 명시적으로 실행되고 compile은 generator를 실행하지 않는다. Shot과 film source의 모듈 평가 및 build 호출에 적용되는 실행 시간 예산은 그대로 유지된다.
+파생 산출물은 tracked generator와 declared input을 소비해 ordinary project script가 만든 tracked bytes다. Generation은 compile 전에 명시적으로 실행되고 compile은 generator를 실행하지 않는다. Shot, film, library source의 모듈 평가 및 build 호출에 적용되는 실행 시간 예산은 그대로 유지된다. Library도 검증된 파생 bytes를 build context로 전달하며, 원장·basis·output 및 외부 자산 경로의 변경은 컴파일 입력 지문과 게시 직전 재확인에 포함한다.
 
 ### Manifest와 namespace {#spec-authoring-precomputed-manifest}
 
@@ -11,6 +11,8 @@
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-facts Generator, input과 결과 bytes를 사용자 project가 소유하는 검토 가능한 사실로 둔다. -->
 
 Production manifest는 별도 파생 원장 `automovie/derived-artifacts.json`을 선택한다. 그 원장의 output은 `automovie/derived/` 아래에만 놓이며 같은 path를 `automovie/assets.json`이 외부 또는 비결정적 생성 자산으로 등록할 수 없다. 파생 record는 output path와 source-context encoding, generator path와 digest, canonical input path와 digest의 정렬된 목록, basis digest와 output digest를 가진다. Timestamp, host path, process id와 machine metadata는 record에 들어가지 않는다.
+
+더 이상 활성 입력으로 사용하지 않는 항목은 명시적 퇴역 작업으로 원장에서 제외할 수 있다. 퇴역은 generation과 같은 잠금 및 원자적 manifest 게시를 사용하고 기존 output bytes와 다른 항목을 보존한다. 퇴역한 path는 source context에 제공하지 않으며, 이미 없는 항목을 다시 퇴역해도 원장을 다시 쓰지 않는다.
 
 ### Basis identity {#spec-authoring-precomputed-basis}
 
@@ -38,9 +40,3 @@ Compile은 파생 원장을 읽고 각 record를 live filesystem에 대조한다
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring 새 checkout에서 공개 contract와 tracked bytes만으로 같은 경로를 검증하게 한다. -->
 
 Manifest, generator, input과 output path는 slash-separated canonical project-relative path다. Empty segment, dot traversal, backslash, absolute root, Windows drive prefix, reserved device basename, trailing dot·space와 NUL은 거부한다. Read와 publish는 physical project root를 고정하고 모든 existing ancestor와 leaf의 symlink·junction을 거부하며 atomic rename 직전에 root와 directory identity를 다시 확인한다.
-
-### 예산 경계 {#spec-authoring-precomputed-budget-boundary}
-
-<!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-derived-artifact 사전계산이 source 실행 제한을 없애지 않고 정당한 별도 경로를 제공하게 한다. -->
-
-이 계약은 source 실행 예산을 유지하고 output-size 또는 serialization-time 예산을 새로 정하지 않는다. Large artifact는 크기만으로 거부하지 않으며 compile context로 전달하는 비용은 별도 측정과 정책이 필요한 독립 방어선이다. 따라서 이 경로의 존재를 source나 output payload를 무제한으로 허용한다는 주장으로 사용할 수 없다.

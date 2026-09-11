@@ -6,7 +6,7 @@ Use it for a film set, a bounded brief, or a standalone library, including a reu
 
 ## Judge the declared work
 
-Begin with one observable question about one exact revision: which place or route is being judged, who or what must use it, under which production condition, and what result would falsify the design. A family house, a warehouse aisle, a plaza, a spacecraft compartment, and an abstract motion volume do not share one ideal plan. Judge each against the production's own use, access, setting, references, capabilities, and constraints.
+Begin with one observable question about one exact revision: which place, form, spatial relation, or requested function is being judged, under which production condition, and what result would falsify the design. Select observations from the delivered work's references, representation, topology, scale, and authored functions. An operational study starts from an explicitly requested actor, task, route, or performance claim.
 
 Do not import a preferred floor-plan type, period rule, furniture set, or material palette. When the production claims an era, structural language, fidelity ceiling, or reference relationship, ask whether its own decisions agree with that claim. Judge the promised blocking representation rather than demanding unpromised finish, but never use the prototype ceiling to excuse wrong topology, dimensions, clearance, placement, or envelope agreement. When the production makes no style or era claim, do not invent one in review.
 
@@ -28,9 +28,9 @@ Look for an orphaned room, a connector that lands in no usable zone, two spaces 
 
 Plan clarity is not rectangular neatness. A complex organization can be legible when its hierarchy, entries, choices, landmarks, and returns are intentional. A simple rectangle can fail when the only route dead-ends, the destination is hidden behind an unrelated room, or the plan's labels describe connections the built boundaries do not admit.
 
-## Measure before interpreting
+## Measure the declared spatial question
 
-For a film or brief whose compiled shots stage a built environment, follow [Building reports](../review-verification/measurements.md#building-reports) and run `npm run building:report` against current state. Read the `space` schedule before inventing a second room index. Each space row keeps its `parent`, `adjacent`, `connectors`, bounded `contents`, authored `place.declared` box, and measured `place.content` box. A large declared cell with a small content box may be deliberate emptiness, a sparse room, or missing realization; the two boxes expose the question but do not answer it for you.
+When the review needs derived drawings, schedules, quantities, or declared performance studies, follow [Building reports](../review-verification/measurements.md#building-reports) and run `npm run building:report` against current state. Read its `space` schedule for the relevant `parent`, `adjacent`, `connectors`, bounded `contents`, authored `place.declared` box, and measured `place.content` box. Interpret each measurement against the spatial claim that requested it.
 
 The standard report derives one plan per building unit at world Y = 1.2 metres, plus one reflected ceiling plan, section, elevation, services plan, and finish plan. One root plan is not automatically one plan per storey, and the fixed world cut is not automatically relative to a raised unit. If the required level is not actually exposed by that cut, the review set needs a production-owned view at the relevant level before anyone claims that storey was checked.
 
@@ -38,7 +38,7 @@ Read every reported gap and remedy at the artifact that produced it. Use each as
 
 ## Walk circulation
 
-Trace the actual route in order, not only its endpoints. Start outside the entrance, cross each opening and connector, turn where the user turns, and arrive where the task occurs. Repeat for every independently required actor, camera, operator, vehicle, or service path. Check the production's declared clear width and height through the whole route, including the swept travel of doors and other operable leaves.
+For an authored traversal or operational route, trace its actual sequence from the declared start through each opening and connector to the destination. Review each requested actor, camera, operator, vehicle, or service path against its authored profile, clear width and height, and relevant operable travel.
 
 The plan settles topology and nominal dimensions. Traversal settles sequence, orientation, occlusion, and the clearance left after contents and populations are placed. A route can be connected in the graph and still fail because a repeated set blocks it, a door opens into its narrowest point, the next threshold cannot be found from the current one, or the destination is visible only after walking past it.
 
@@ -54,7 +54,7 @@ Privacy and view are exchanges, not quantities to maximize. Follow the line of s
 
 ## Judge proportion and scale in use
 
-Compare storey height to plan depth, opening size and spacing to the wall that holds them, connector rise and run to its landings, and room volume to the bodies and actions it must contain. Use declared dimensions and measured extents as the basis, then look at the place from the height and distance of its intended user. Numbers can prove a clearance and still fail to make the scale readable.
+Compare storey height to plan depth, openings to their host walls, connectors to their landings, and the represented objects to their shared reference scale. Use declared dimensions and measured extents, then inspect the place at the review's chosen height and distance. For an authored use task, also compare the relevant room and object dimensions with the task's actor and action profile.
 
 Look for scale drift across owners: an exterior that implies one storey count while the section carries another, furniture or equipment that makes a nominally large room unusable, a door sized from its leaf instead of its void, or repeated members whose density changes the apparent scale and access of the space. Do not repair a scale failure by shrinking the observing camera or omitting the comparison subject.
 
@@ -80,7 +80,7 @@ Repetition should reveal an authored rule rather than evaluation order. Random-l
 | Plan | containment, adjacency, thresholds, route choice, usable width, population footprint | an orphaned zone, a blocked path, a door with no wall void, or a service route crossing the public one against declared intent |
 | Section | levels, heights, slab and roof relation, stairs and ramps, vertical openings, clear headroom | incompatible storey datums, a connector missing its landing, or an exterior opening at no interior height |
 | Elevation | massing, storey expression, opening rhythm and ownership, envelope continuity, material transitions | a blank host behind an authored opening, an outside level absent inside, or a finish boundary with no construction reason |
-| Perspective | human scale, depth, threshold sequence, junctions, material reading, view and privacy | a room that measures correctly but reads at the wrong scale, an obscured entrance, or an exposed private zone |
+| Perspective | reference scale, depth, visible connections, junctions, material reading, authored sight lines | incompatible proportions, an obscured connection, or a surface that reads incorrectly |
 | Traversal | ordered access, orientation, occlusion, turning and operating clearance, return path | a graph-connected route that cannot be followed, found, or passed by its declared user |
 
 No single observation substitutes for another. A world map cannot prove a site threshold, a plan cannot prove eye-level orientation, a perspective cannot prove a continuous route, and a traversal cannot reconcile an unseen roof or floor datum. The applicable map and space review sets are finite because each view answers a different failure class.
@@ -90,7 +90,7 @@ No single observation substitutes for another. A world map cannot prove a site t
 Spatial quality is a relation among observations, so finish by opening the complete review set rather than choosing one favourable view.
 
 1. When maps are active, open their declared map or plan views, profiles or sections, network and route results, state comparisons, source-resolution comparisons, and boundary or seam checks at the exact reviewed revision. Name the extent, coordinate basis, phase, scale, selected feature families, and sample limits.
-2. For a staged film or brief environment, follow the building-report procedure, open the relevant plan, section, elevation, schedule rows, and gaps, and name the exact report revision. For a library, open the neutral observation population its reviewed space design declared; do not substitute the staged-shot command's empty result.
+2. Open the plan, section, elevation, and neutral observations selected by the reviewed spatial claims. Where the review uses a building report, also read its relevant schedule rows and gaps at the same revision.
 3. Open the current neutral perspectives for the exact spaces, surfaces, and populations under review. Follow [inspection](../review-verification/inspection.md) for stable subject identities, content versus declared bounds, sections, and the limit of the hand-driven subject page.
 4. Traverse every required route from its declared start to destination and back where return matters, beginning on the external map network when that approach is promised. For a staged environment, use the hand-driven inspection page to see the sequence and the report or engine measurements to settle dimensions and obstruction. Name the revision, start, destination, user, viewpoint or coordinates, and any sample limit.
 5. State what the map, plan, section, elevation, perspectives, state comparisons, and traversal actually showed in the evidence citations on the design or source owners that claim the result is realized. A citation that names no observation is not a spatial judgment.

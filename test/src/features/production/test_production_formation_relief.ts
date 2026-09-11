@@ -1,5 +1,6 @@
 import {
   IAutoMovieFormationPlacement,
+  validateAutoMovieFormationGround,
   worldRamp,
   worldTerrain,
 } from "@automovie/engine";
@@ -8,10 +9,7 @@ import {
   IAutoMovieSpace,
   IAutoMovieWorldSurface,
 } from "@automovie/interface";
-import {
-  materializeCompiledFormation,
-  validateAutoMovieFormationGround,
-} from "@automovie/production";
+import { materializeCompiledFormation } from "@automovie/production";
 import { regenerateFormationSlot } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 
@@ -176,10 +174,10 @@ const refusals = (
  * 2. On a bank the compiled bounds and centroid carry the relief, so every
  *    consumer reading a unit's extent — culling, framing, subject extent —
  *    reads a unit that has height rather than a flat slab.
- * 3. The viewer regenerates exactly the placement the compiler materialized, slot
+ * 3. The viewer regenerates exactly the placement the builder materialized, slot
  *    for slot. Two answers to where a member stands is how a gate and a
  *    renderer come to disagree, and the drawn one would be the second.
- * 4. A promoted hero's compiler-owned transform carries the relief too, so the
+ * 4. A promoted hero's builder-owned transform carries the relief too, so the
  *    named member of a unit stands with the anonymous ones rather than at the
  *    group's height.
  * 5. A unit compiled with no terrain declared is exactly the unit that compiled
@@ -239,7 +237,7 @@ export const test_production_formation_relief = (): void => {
   );
 
   TestValidator.predicate(
-    "the viewer regenerates exactly the placement the compiler materialized",
+    "the viewer regenerates exactly the placement the builder materialized",
     Array.from({ length: COUNT }, (_unused, slot) => slot).every((slot) => {
       const drawn = regenerateFormationSlot(compiled, slot).position;
       const rank = Math.floor(slot / FILES);

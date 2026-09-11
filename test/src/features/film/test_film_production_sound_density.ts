@@ -180,7 +180,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
 const timeline = (): IAutoMovieFilmTimeline =>
   ({
     version: 1,
-    compiler: "test",
+    builder: "test",
     inputFingerprint: digest,
     sourceDigest: digest,
     id: "film",

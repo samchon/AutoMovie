@@ -131,7 +131,7 @@ export const readAutoMovieFilmTimeline = (
   });
 
 /**
- * Read and validate the current compiler-owned film effect runtime artifact.
+ * Read and validate the current builder-owned film effect runtime artifact.
  *
  * The timeline and the effects are read from one manifest snapshot, so the
  * population check below compares the runtime against the edit it was

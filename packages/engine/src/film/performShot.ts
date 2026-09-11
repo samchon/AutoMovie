@@ -171,12 +171,12 @@ const orderEvents = (
 
 /**
  * A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion
- * clips the compiler synthesised for it. The clips travel alongside the shot
+ * clips the builder synthesised for it. The clips travel alongside the shot
  * because the shot references them by id, the host registers them wherever its
  * clip store lives.
  *
- * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot supports reproducible staging and performance: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
- * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot realizes deterministic staging replay and validation: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot supports reproducible staging and performance: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the builder synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot realizes deterministic staging replay and validation: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the builder synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
  * @author Samchon
  */
 export type IAutoMoviePerformedShot =
@@ -825,7 +825,7 @@ export const performShot = (props: {
    * Refuse an arm verb asked of a rig whose elbow cannot bend that arm.
    *
    * The reference synthesizer answers such a verb with `null`, and a `null`
-   * synthesis is SKIPPED by the compiler, so without this gate the shot would
+   * synthesis is SKIPPED by the builder, so without this gate the shot would
    * come back successful having quietly performed nothing (#1349's failure
    * shape, one verb lower). Stated here, at the action that asked, so the
    * correction round gets the rig's own geometry rather than a missing clip.
@@ -852,7 +852,7 @@ export const performShot = (props: {
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
   // Where a masked-content violation lands for each entry in `stageActions`,
-  // index for index. The compiler reports a masked clip by its position in the
+  // index for index. The builder reports a masked clip by its position in the
   // list it was handed, and that list is neither `actions` (frames are filtered
   // out) nor stable (engine-injected reacts are appended), so the mapping is
   // carried rather than recomputed from object identity, which a list repeating
@@ -1842,7 +1842,7 @@ export const performShot = (props: {
     });
   }
 
-  // An authored channel the compiler does not apply is REPORTED (#1349). The
+  // An authored channel the builder does not apply is REPORTED (#1349). The
   // region mask itself is deliberate, but it used to discard content in
   // silence: for example, explicitly forcing a retargeted quadruped gait to
   // `lowerBody` excludes its front-leg ARM chains. The remedy is a field the
@@ -2033,7 +2033,7 @@ export const performShot = (props: {
   // it (a `launch` `onHit` aimed at a camera, injecting a react named on the
   // struck id) is refused at the aim, so a camera subject falls out on the
   // `motion === undefined` clause; the facing clause is what keeps the read
-  // total for the compiler. Without a staged facing there is no node-local root
+  // total for the builder. Without a staged facing there is no node-local root
   // to rotate into the world, so such a subject holds still: `at: null`, the
   // documented degenerate case a `follow` move already handles.
   const framedSubject = (
@@ -2243,7 +2243,7 @@ export const performShot = (props: {
   };
 
   // The producer states the contract its output satisfies. Until #1320 the shot
-  // contract lived only beside the commit gate, so every field this compiler
+  // contract lived only beside the commit gate, so every field this builder
   // forgot became a shot returned as success that a consumer then refused, five
   // times over (#1224, #1308, #1314, #1316, #1318). One definition now, checked
   // here, against the same scene and clips the caller is about to receive.

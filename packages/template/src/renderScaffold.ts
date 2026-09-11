@@ -116,13 +116,12 @@ const renderKey = (
 const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
 
 /**
- * File shapes the scaffold never ships, whatever a host leaves there.
+ * Compiler-output shapes excluded unless an exact authored runtime owns them.
  *
- * The scaffold's authored tree is Markdown, TypeScript, JSON, HTML, the two
- * dotfile stand-ins renamed above, a licence and directory placeholders. It
- * contains no JavaScript and no declaration file, so a file carrying a
- * compiler-output shape was emitted into the directory by a tool run rather
- * than authored, and it belongs to the same class as the lint cache above.
+ * Most authored sources are Markdown, TypeScript, JSON and HTML. The source
+ * preview also owns a Node worker and a browser diagnostic shell that must run
+ * before the authored TypeScript can compile. Their exact JavaScript paths are
+ * declared below; every other builder-output shape remains unshipped.
  *
  * The reason to name the class rather than the two directories alone is that
  * this one is invisible where it happens. Running the type-checker without
@@ -137,6 +136,12 @@ const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
  */
 const UNSHIPPED_FILES =
   /(?:\.(?:c|m)?js(?:\.map)?|\.d\.(?:c|m)?ts|\.tsbuildinfo)$/u;
+
+/** Executable bootstrap sources, never inferred from files left by a build. */
+const AUTHORED_JAVASCRIPT = new Set([
+  "scripts/compileSourcePreview.mjs",
+  "viewer/src/sourcePreviewClient.js",
+]);
 
 /**
  * Every shipped file under `root`, root-relative, in deterministic sorted
@@ -161,8 +166,14 @@ const listFiles = (root: string): string[] => {
       if (entry.isDirectory()) {
         if (UNSHIPPED_DIRECTORIES.has(entry.name)) continue;
         walk(full);
-      } else if (entry.isFile() && UNSHIPPED_FILES.test(entry.name) === false)
-        out.push(path.relative(root, full));
+      } else if (entry.isFile()) {
+        const relative = path.relative(root, full);
+        if (
+          UNSHIPPED_FILES.test(entry.name) === false ||
+          AUTHORED_JAVASCRIPT.has(toPosix(relative))
+        )
+          out.push(relative);
+      }
     }
   };
   walk(root);
@@ -261,18 +272,17 @@ export const scaffoldAssetDirectory = (
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Ships the contracts that distinguish missing implementation work from an unavailable product capability.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits examples as reusable authoring guidance while leaving each production's content in project-owned source.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Materializes an editable scaffold whose capability additions remain separate from project-owned content.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its compiler.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its compiler.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its compiler.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its compiler.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its compiler.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-basis Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
- * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits scaffold bytes but does not execute the generated compiler that records output lineage.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits scaffold bytes but does not execute the generated builder that records output lineage.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change or emit its impact report.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change.
  * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable scaffold whose documentation and examples expose reusable authoring capabilities.
@@ -362,14 +372,14 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary The boundary between reusable capability and one work's facts is drawn by the packages a rendered project depends on, not by the act of rendering the template.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes External image, audio, model, and motion bytes are adopted by an authored project through its asset registry; the template ships none of them.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability Tool replaceability is a property of the rendered project's dependencies and public contracts, which rendering copies rather than decides.
- * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refusing an asset of unclear source, license, or digest is the compiler's judgment over an authored production; the template carries no assets to adjudicate.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refusing an asset of unclear source, license, or digest is the builder's judgment over an authored production; the template carries no assets to adjudicate.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility The split of system and project responsibility is stated by the contracts the template ships, not performed by rendering them.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Capability state belongs to the packages a project installs; rendering emits the same bytes whatever those packages can currently do.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-not-content-invariant The invariant is held by what the template contains, which is a harness and no production content; rendering copies that set without deciding it.
- * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Distinguishing a missing implementation from an unavailable capability is a diagnosis the generated project's compiler makes, not a rendering outcome.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Derivation state lives in the generated project's compiler and its tracked output; rendering has no state beyond the bytes it returns.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures are raised where a write or a compile meets an existing tree, which is the writer's and the compiler's job rather than the renderer's.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is a single total act with nothing to resume; resumption belongs to the render job and the compiler.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Distinguishing a missing implementation from an unavailable capability is a diagnosis the generated project's builder makes, not a rendering outcome.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Derivation state lives in the generated project's builder and its tracked output; rendering has no state beyond the bytes it returns.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures are raised where a write or a compile meets an existing tree, which is the writer's and the builder's job rather than the renderer's.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is a single total act with nothing to resume; resumption belongs to the render job and the builder.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Scaffold rendering returns bytes and does not own a repository experiment root or approve sandbox packing and installation.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership The build launcher retains its sandbox ancestry and manifest approval across packing and installation; rendering template bytes does not perform those operations.
  * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.

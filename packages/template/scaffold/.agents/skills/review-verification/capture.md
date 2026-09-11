@@ -8,9 +8,11 @@ A registered capture browser starts, draws, and commits bytes. `npm run preview`
 
 Run `capture:install` and `capture:doctor` before the first capture of a session. A missing or drifted browser is refused by name there, which is cheaper than reading it out of a failed render.
 
+The host may set `AUTOMOVIE_CAPTURE_GRAPHICS_BACKEND=default` to let the browser select its graphics backend. Omission or `swiftshader` keeps the shipped software backend. Freeze this choice for the capture session: it changes the requested runtime identity and may change pixels. Read the doctor's observed vendor and renderer before claiming a real GPU; `default` requests browser selection and does not prove hardware acceleration. Keep that same host setting for every capture whose receipt belongs to the session.
+
 ## Request
 
-Choose exactly one compiler-registry target, and the choice is between these two:
+Choose exactly one builder-registry target, and the choice is between these two:
 
 - A shot names `kind: "shot"`, an explicit `productionId`, registry `id`, non-negative shot-local `time` no greater than the shot's duration, and optional pass. The returned time is snapped to the nearest frame index on the production clock.
 - An asset turntable names `kind: "asset"`, registry `id`, azimuth `angleDeg` in `[0, 360)`, optional elevation in `[-85, 85]`, `rest` or `rom-extremes` pose, optional `part`, and optional pass. A turntable runs on a fixed twelve-second clock where time is `angleDeg / 30`, so an azimuth is one exact frame index. Production may be omitted only when the project has an unambiguous default. `rom-extremes` is available only for a model whose compiled form carries a skeleton, so a prop, a panel, or a building part is captured in `rest`.
@@ -35,14 +37,16 @@ Use `npm run preview` for one view you want for a specific question. Use `npm ru
 
 ## Success evidence
 
-`captured:true` means the target resolved through the current compiler registry, the browser returned a decodable PNG, raster and snapped time matched the request, and the bytes reopened through an atomic render manifest. Check all of:
+`captured:true` means the target resolved through the current builder registry, the browser returned a decodable PNG, raster and snapped time matched the request, and the bytes reopened through an atomic render manifest. Check all of:
 
 - `reviewTarget` identifies the asset or shot whose evidence changed.
-- `receipt.compileFingerprint` and `receipt.targetFingerprint` bind compiler and target state.
+- `receipt.compileFingerprint` and `receipt.targetFingerprint` bind builder and target state.
 - `receipt.rendererIdentity`, `bundle`, and `outputDigest` bind runtime and pixels.
 - `frame.digest` equals the receipt output digest and the frame includes path, pass, dimensions, index, and snapped time.
 
 Only that exact receipt-backed frame may be cited in review. Never cite a console screenshot, a guessed output path, or a previous bundle.
+
+When reviewing a render receipt, inspect version 3's raw integer timebase and exact rational frame identity. Reject epsilon comparison, decimal reconstruction, or runtime substitution when establishing that identity.
 
 ## Refusal catalog
 
@@ -51,10 +55,10 @@ Refusals arrive in two shapes and only one of them carries diagnostics. A refusa
 - Production invalid or unregistered: choose a trimmed registered namespace; do not retry with filesystem paths.
 - Registry unavailable or target missing: correct source/design and run the ordinary compile command.
 - Compile not current: `generated-stale` and `compile-current-invalid` say the generated output is not a clean build of current source. Compile before asking for pixels; every capture is bound to the compile it came from.
-- Target absent from compiled output: `preview-target-missing` is not the same refusal as an unregistered target. The registry knows the name and the compiler published nothing for it.
+- Target absent from compiled output: `preview-target-missing` is not the same refusal as an unregistered target. The registry knows the name and the builder published nothing for it.
 - Input out of range: `preview-input-invalid` covers a shot time past the shot's duration, an asset azimuth or elevation outside its interval, a raster larger than the production frame, and `rom-extremes` asked of a model with no skeleton. Correct the request rather than the project.
 - Host refusal: repair the configured capture runtime using the scaffold doctor command.
-- Receipt invalid: discard the pixels. The browser, compiler state, or manifest changed during capture; retry after the repository is stable.
+- Receipt invalid: discard the pixels. The browser, builder state, or manifest changed during capture; retry after the repository is stable.
 - `captured:false`: read every returned diagnostic, correct its owner, and repeat the same target. It is never partial evidence.
 
 Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set, which is exactly what `npm run turntable` draws. Capture what the contract declares, and let `review-evidence-missing` name the exact target, time, and pass still owed.

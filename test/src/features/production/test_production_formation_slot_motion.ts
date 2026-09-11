@@ -4,6 +4,8 @@ import {
   placeFormationSlot,
   rotateFormationLocalOffset,
   sampleFormationSlotMotion,
+  validateAutoMovieFormationGround,
+  validateAutoMovieFormationSlotMotions,
 } from "@automovie/engine";
 import type {
   IAutoMovieFormationMotionState,
@@ -11,10 +13,6 @@ import type {
   IAutoMovieFormationSlotState,
   IAutoMovieSpace,
 } from "@automovie/interface";
-import {
-  validateAutoMovieFormationGround,
-  validateAutoMovieFormationSlotMotions,
-} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose, vclose } from "../internal/predicates";

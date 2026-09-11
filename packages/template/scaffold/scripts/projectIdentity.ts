@@ -6,6 +6,8 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
+import { hasProductionArtifactEntries } from "./productionArtifactEntries";
+
 /**
  * Why the generated host selected one stable production namespace.
  *
@@ -158,14 +160,19 @@ const hasProductionOwnedState = (root: string): boolean => {
   const automovie = path.join(root, "automovie");
   const design = path.join(automovie, "design");
   if (fs.existsSync(path.join(design, "production.json"))) return false;
-  for (const directory of [
-    path.join(automovie, "productions"),
-    path.join(root, "generated"),
-    path.join(root, "renders"),
-  ])
+  for (const [namespace, directory] of [
+    ["productions", path.join(automovie, "productions")],
+    ["generated", path.join(root, "generated")],
+    ["renders", path.join(root, "renders")],
+  ] as const)
     if (
       fs.existsSync(directory) &&
-      fs.readdirSync(directory, { withFileTypes: true }).length !== 0
+      hasProductionArtifactEntries({
+        directory: namespace,
+        entries: fs
+          .readdirSync(directory, { withFileTypes: true })
+          .map((entry) => ({ name: entry.name, isFile: entry.isFile() })),
+      })
     )
       return true;
   if (fs.existsSync(design) === false) return false;

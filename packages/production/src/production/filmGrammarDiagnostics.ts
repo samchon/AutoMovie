@@ -26,7 +26,7 @@ import type {
 type IAutoMovieFilmSegment = IAutoMovieFilmTimeline["segments"][number];
 
 /**
- * Read the assembled edit, and file what it says through the compiler.
+ * Read the assembled edit, and file what it says through the builder.
  *
  * The film-grammar analyzer has always measured axis crossings, jump cuts,
  * eyeline matches, screen direction, shot size and re-establishment from
@@ -50,7 +50,7 @@ type IAutoMovieFilmSegment = IAutoMovieFilmTimeline["segments"][number];
  *
  * The analyzer refuses a malformed edit by throwing, so callers hand it a
  * timeline whose placements already hold: one unique shot per placement, each
- * with a positive edited range. That is exactly what the compiler's own film
+ * with a positive edited range. That is exactly what the builder's own film
  * checks establish, which is why it reads the grammar only from an edit that
  * carries no error-level finding.
  */
@@ -122,7 +122,7 @@ export const filmGrammarDiagnostics = (props: {
  * What one placed shot contributes to the read, or null when it cannot be
  * observed at all.
  *
- * Everything here is measured from compiler-owned output: the staged camera and
+ * Everything here is measured from builder-owned output: the staged camera and
  * its compiled move, the performed box of each subject the contract requires
  * readable, and the framing the compiled camera intent claims. Nothing is
  * inferred from prose, and a subject the shot never staged simply is not one.

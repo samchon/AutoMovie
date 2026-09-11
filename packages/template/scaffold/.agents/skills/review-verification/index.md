@@ -1,6 +1,6 @@
 # Review and viewer verification
 
-Review the declared work against its exact current source, compiled artifact, target contracts, and observation denominator. A passing compiler is necessary but never visual proof. Capture writes real PNGs: open the current images and state what they show in the evidence citation that claims realization. A citation with no observation is not a review.
+Review the declared work against its exact current source, compiled artifact, target contracts, and observation denominator. A passing builder is necessary but never visual proof. Capture writes real PNGs: open the current images and state what they show in the evidence citation that claims realization. A citation with no observation is not a review.
 
 ## Required routes
 
@@ -11,7 +11,8 @@ Read the applicable sibling in full before acting:
 - [Production review](review.md) owns evidence review and final whole-production review.
 - [Capture](capture.md) owns exact targets, passes, receipts, and refusal recovery.
 - [Inspection](inspection.md) owns render-free structural descriptions of compiled subjects, parts, instances, and spaces.
-- [Offline measurements](measurements.md) owns current-state building reports and texture-scale census.
+- [Live viewing](live-viewing.md) owns the persistent compiled viewer and the separate source preview while authoring.
+- [Offline measurements](measurements.md) owns current-state building drawings, placement and storage measurements, and texture-scale census.
 - [Debugging](debugging.md) owns diagnostics-first correction across ownership, derived artifacts, compile, inspection, capture, and render.
 - [Recording authored work](recording-work.md) owns coherent staging, commit boundaries, messages, and strict text checks; read it before committing production work.
 

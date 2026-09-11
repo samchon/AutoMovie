@@ -54,7 +54,7 @@ export const autoMovieSourceContentDiagnosticCode = (
  * The message is composed by whoever found it, because only that caller knows
  * the record's address inside the program and the correction its own fold owns.
  * What travels with it here is the classification the engine already made and
- * the compiler used to drop.
+ * the builder used to drop.
  */
 export interface IAutoMovieSourceContentFinding {
   /** Tier the engine judged this by, which decides the diagnostic identity. */

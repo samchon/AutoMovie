@@ -22,7 +22,7 @@ analyzer.
 besides the surviving findings it returns the declarations that excepted
 nothing, so a marker for a break the edit never makes can be reported rather
 than read as a registered intent. `analyzeFilmGrammar` is its findings half.
-The production compiler calls it over the assembled film timeline, so the edit
+The production builder calls it over the assembled film timeline, so the edit
 is actually read rather than merely readable.
 
 ## Seeded primitives and world kit
@@ -40,9 +40,9 @@ one registered shot. `compileDefinedShot` runs the authored
 stage → block → perform pipeline directly in the engine, so a source module
 produces a deterministic shot artifact without anything wrapped around it.
 
-The returned runtime contains the compiler-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
+The returned runtime contains the builder-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
 
-Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so compiler and direct-link consumers lower the same production contract through the same engine path.
+Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so builder and direct-link consumers lower the same production contract through the same engine path.
 
 ## Interaction events
 
@@ -246,7 +246,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 - **Tier 4 (temporal):** 시간 일관성. 키프레임 시간 단조성·duration 이내·각속도 상한.
 - **Tier 5 (topology):** non-manifold edge와 뒤집힌 winding 같은 mesh 구조 오류를 거부한다. 닫힌 solid가 필요한 호출자는 open boundary도 검사한다.
 
-검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자와 production compiler가 이 결과를 소비하며, lint와 compile 진단이 외부 에이전트의 일반적인 작성→실행→수정 루프로 되돌린다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
+검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자와 production builder가 이 결과를 소비하며, lint와 compile 진단이 외부 에이전트의 일반적인 작성→실행→수정 루프로 되돌린다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
 
 ## 좌표·각도 규약
 

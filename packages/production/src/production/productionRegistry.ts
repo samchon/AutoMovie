@@ -6,7 +6,7 @@ import { digestAutoMovieBytes } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 
 /**
- * Read and authenticate the current compiler-owned evidence target registry.
+ * Read and authenticate the current builder-owned evidence target registry.
  */
 export const readAutoMovieProductionRegistry = (
   project: AutoMovieProductionProject,
@@ -14,7 +14,7 @@ export const readAutoMovieProductionRegistry = (
   const generated = project.generatedManifest();
   if (generated === null)
     throw new Error(
-      "Evidence requires a current compiler registry. Run the scaffold compile command first.",
+      "Evidence requires a current builder registry. Run the scaffold compile command first.",
     );
   const entry = generated.files.find(
     (file) => file.path === "manifests/compile.json",

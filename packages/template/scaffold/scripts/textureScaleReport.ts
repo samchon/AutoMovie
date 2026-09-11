@@ -115,8 +115,8 @@ export interface IAutoMovieTextureScaleReport {
  * import it: a build function runs in a deterministic no-I/O sandbox over a
  * published engine surface this validator is deliberately off. The question it
  * answers is also not a frame: it is whether a finish will read at the size it
- * was authored at, so it is not compiler output either. That leaves the third
- * place, an ordinary Node script over compiler-owned state, which is where the
+ * was authored at, so it is not builder output either. That leaves the third
+ * place, an ordinary Node script over builder-owned state, which is where the
  * `GEOMETRY` and `MODEL_RECIPE` guides send an author for it.
  *
  * ## What it decides
