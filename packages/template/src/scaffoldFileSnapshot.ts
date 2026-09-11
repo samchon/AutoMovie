@@ -674,10 +674,35 @@ const replaceScaffoldFileEntry = (props: {
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the predecessor generation before preparing a repeated write.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses a symbolic link and a non-file target as reusable inputs.
  */
-export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
+export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot =>
+  captureAdmittedScaffoldFile(file, assertOrdinaryScaffoldFile);
+
+/**
+ * Capture one ordinary file that exactly one directory entry names.
+ *
+ * A caller whose own contract refuses an aliased work target uses this instead
+ * of {@link captureScaffoldFile}. The repository's experiment launcher is that
+ * caller: it promises not to adopt a linked manifest as a work target, and its
+ * only enforcement of that promise is the admission it captures through. The
+ * relaxed capture exists for a generated project, whose root-direct inputs the
+ * documented script runner mirrors while a command runs, and that reason does
+ * not transfer to a launcher choosing what to operate on.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins a predecessor generation for reuse only while one directory entry names it, so an aliased target never becomes the approved input.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Narrows reusable-input admission past the ordinary judgment by also refusing a target another pathname names.
+ */
+export const captureSingleLinkScaffoldFile = (
+  file: string,
+): IScaffoldFileSnapshot =>
+  captureAdmittedScaffoldFile(file, assertOrdinarySingleLinkFile);
+
+const captureAdmittedScaffoldFile = (
+  file: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
+): IScaffoldFileSnapshot => {
   const absolute = path.resolve(file);
   const status = fileSystem.lstatSync(absolute, { bigint: true });
-  assertOrdinaryScaffoldFile(status, absolute);
+  admission(status, absolute);
   return {
     identity: physicalIdentity(status),
     path: absolute,
