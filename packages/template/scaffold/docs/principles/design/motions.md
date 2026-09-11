@@ -2,16 +2,6 @@
 
 Motion documents specify deterministic change of represented state over time. They consume settings capabilities and whichever reviewed map, model, space, material, instance, or system interface owns the changed property, without redefining any of them.
 
-## Motion information structure {#motion-information-structure}
-
-Every H2 first identifies its subject, entry and exit, active time domain, and observable consequence, then develops phases, interpolation, spatial relations, invariants, limits, composition, parameters, and review samples in paragraphs with distinct functions. A table may make samples or parameter ranges clearer but does not replace the transition rule.
-
-Review question: can a reverse outline give every paragraph one temporal or verification function without finding mixed transitions or repeated orientation?
-
-This item owns information order inside a motion H2. The motion addressability obligation owns the boundary between H2 units.
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
-
 ## State endpoints {#state-endpoints}
 
 Every motion H2 names its complete entry state, exit state, and the properties allowed to change. A hold is an authored interval with identical endpoints, not an absence of specification.

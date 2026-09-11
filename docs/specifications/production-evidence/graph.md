@@ -8,9 +8,11 @@
 
 팩터리는 `docs/principles`, `docs/obligations`, domain 별 `docs/upstream/{design,story,delivery}`와 `docs/discovery`의 정규화된 상대 경로와 명시적 H2 anchor 목록을 하나의 고정 inventory로 읽는다. 그래프를 구성하기 전에 inventory의 파일·anchor identity와 실제 문서 트리가 서로 정확히 일치하는지 검사한다.
 
-모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 각 저술 의무 문서에는 `docs/accounts/<layer>`의 전용 account 파일을 배정한다. Account H2는 정확히 한 의무 H2를 소유하고 같은 계층의 완전한 H2 모집단을 `checklist: true`, `noEvidenceExclude: true`로 비교한다. 저술 H2/H3/H4에는 이 모집단 질문을 반복하지 않는다. TypeScript source 의무는 그 family가 선택한 public export 모집단에 기존 coverage 방식으로 연결한다. 한 공용 reference builder가 checklist 여부와 진실한 무결과 허용 여부를 명시적으로 받아 family별 flag 조합을 한 곳에서 드러내야 한다.
+모든 원칙 reference는 선택된 저술 H2/H3/H4 host에 `checklist: true`, `noEvidenceExclude: true`로 연결한다. 각 의무 문서에는 해당 계층의 전체 authored H2와 선택적 `docs/accounts/<layer>` 파일을 host로 하는 ordinary coverage reference 하나를 만든다. Reference는 H2 target, `noEvidenceExclude: true`, 단계에 맞는 `requireReview`와 error severity를 갖는다. Native coverage가 관련 소유자들의 합집합으로 target을 충족하는지 검사한다. TypeScript 의무는 선택된 public export 모집단의 같은 coverage를 따른다.
 
-팩터리는 settings가 모든 후속 저술 계층에 제공하는 edge와 `DESIGN_FOUNDATIONS`의 edge를 하나의 provider-consumer topology로 투영한다. 각 행은 `uses | inapplicable` 상태와 사유를 가지며 inspector는 missing consumer, extra provider, disabled residue, wrong order, unknown branch, duplicate declaration과 빈 사유를 결정적 순서로 보고한다. Motions와 systems의 상호 edge만 같은 coordinated order를 허용한다. Manifest와 project reader는 이 matrix와 diagnostics를 그대로 공개하며 unit-local foundation claim은 별도로 유지한다.
+계약 selector는 저술 역할과 제작 종류를 입력으로 받는다. 언어 탐색, 문체 기본값, 언어 문체와 서사 family는 treatments·scripts·screenplays에만 선택한다. Settings·research·design·brief는 공통 기반과 전문 family를 선택하고, film settings만 story subjects를 추가한다. Manifest와 native claim은 같은 selector 결과를 사용한다.
+
+팩터리는 settings가 모든 후속 저술 계층에 제공하는 edge와 `DESIGN_FOUNDATIONS`의 edge를 하나의 provider-consumer topology로 투영한다. 각 행은 `uses | inapplicable` 상태와 사유를 가지며 inspector는 missing consumer, extra provider, disabled residue, wrong order, unknown branch, duplicate declaration과 빈 사유를 결정적 순서로 보고한다. Motions와 systems의 상호 edge만 같은 coordinated order를 허용한다. Manifest와 project reader는 이 matrix와 diagnostics를 그대로 공개하며 unit-local foundation claim은 별도로 유지한다. 기술 디자인의 settings·design foundation claim은 H2 host에 배선한다. File host의 parentage claim은 treatments·scripts·screenplays·briefs에만 배선하며 기존 coverage와 lineage 관계를 보존한다.
 
 상위 수정 reference는 상속하는 design·brief·서사 H2/H3/H4와 source export에 `checklist: true`로 연결하고 제외를 허용한다. 각 host는 하위 저작이 드러내어 가장 이른 부모에서 수리한 결함을 양의 evidence로 기록하거나, 실제 부모와 시험한 결정을 밝힌 제외로 충분성을 기록한다. 설정과 조사는 이 reference를 선택하지 않는다. 별도의 무배제 parent-differentiation 원칙과 실제 계보 관계가 자식의 layer-owned 추가 결정과 한 개 이상의 실제 부모를 각각 검사하므로, 상위 수정 제외가 부모 없는 host를 정당화할 수 없다.
 
@@ -52,9 +54,9 @@ Source에서 렌더 대상 authored owner로 향하는 reference는 같은 roots
 
 팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
 
-작품 고유 저술 의무 선언은 평면 계약 문서 하나와 정규화된 `accounts/<layer>/<name>.md` 파일 하나를 묶는다. 같은 공통 account builder가 정확히 한 의무 H2를 답하는 `uniqueEvidence`·`singleEvidencePerSymbol` reference와 완전한 authored H2 `checklist` reference를 만든다. 문서의 의무 H2마다 account H2가 정확히 하나 있어야 하며, 각 계층에서 같은 계약 문서의 중복 account 선언, 같은 account 파일의 중복 선언과 공통 예약 파일 충돌을 거부한다. 소유 layer와 populationScope가 비교 파일 selector를 유도하므로 임의의 일부 authored 파일로 denominator를 줄일 수 없다.
+작품 고유 저술 의무 선언은 평면 계약 문서 하나, 소유 layer와 populationScope, 선택적 종합 증언을 쓸 account 주소를 묶는다. 공통 builder는 선언된 account와 layer·scope가 유도한 전체 authored H2를 host로 하고, 계약 H2를 ordinary coverage target으로 선택한다. 같은 계층에서 같은 계약 문서의 중복 선언, account 주소 중복과 공통 예약 주소 충돌을 거부한다. 활성 계약 target은 존재하며 H2를 가져야 한다.
 
-`autoMovieBinding.account`를 가진 claim은 실제 native host와 두 reference가 그 typed 선언에서 재생성한 값과 일치해야 한다. Manifest의 `localBindings`와 pilot-only `localAudits`는 account host, 계약 `targets`, 별도 비교 `population`, `relationship`, 단계와 범위를 그대로 투영한다. `readAutoMovieContractRules`의 optional structured metadata 소유자는 계속 평면 계약 H2이며 account나 비교 대상 H2는 새 rule이 아니다. 이전 helper의 authored `files`·`symbol` 호출은 account 경로로 명시적으로 이관하고 복수 문서는 문서별 선언으로 나눈다. Authored 사실과 원칙·계보 관계를 보존하면서 기존 직접 의무 annotation을 새 전체 모집단 비교로 교체하고 새 관계를 실제로 다시 검토한다.
+`autoMovieBinding.account`를 가진 claim은 실제 native host와 obligation reference가 typed 선언에서 재생성한 값과 일치해야 한다. Manifest의 `localBindings`와 pilot-only `localAudits`는 eligible host, 계약 `targets`, authored `population`, `distributed-coverage` 관계, 단계와 범위를 투영한다. `readAutoMovieContractRules`의 structured metadata는 평면 계약 H2가 소유한다.
 
 ### 결정론적 출력과 사전 실패 {#spec-authoring-production-evidence-deterministic-result}
 

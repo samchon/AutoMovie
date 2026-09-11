@@ -209,7 +209,7 @@ const assertInstructionPath = (value: string): string => {
   return value;
 };
 
-/** Render the local obligation's complete contract and compared population. */
+/** Render the local obligation's contract and eligible authored population. */
 const renderLocalBinding = (
   binding: IAutoMovieProductionEvidence["manifest"]["localBindings"][number],
   disposition: "binding" | "inapplicable audit",
@@ -223,7 +223,7 @@ const renderLocalBinding = (
   const population =
     binding.population === undefined
       ? ""
-      : `; compared population root ${inlineCode(binding.population.root)}, files ${codeList(binding.population.files)}, symbols ${codeList(binding.population.symbols)}`;
+      : `; authored population root ${inlineCode(binding.population.root)}, files ${codeList(binding.population.files)}, symbols ${codeList(binding.population.symbols)}`;
   return `- Local ${disposition} ${inlineCode(binding.claim)}: branch ${inlineCode(binding.layer)} (${inlineCode(binding.stage)}, ${binding.enforced ? "enforced" : "not enforced"}), ${inlineCode(binding.relationship)}; host root ${inlineCode(binding.host.root)}, files ${codeList(binding.host.files)}, symbols ${codeList(binding.host.symbols)}; contract targets ${targets}${population}.`;
 };
 

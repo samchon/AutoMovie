@@ -23,7 +23,7 @@ Use the configured claim and ask only the subject that host kind owns:
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Authored H2, H3, or H4                | Whether this exact unit performs one principle, dependency, lineage, upstream, or observation predicate          |
 | Authored file                         | What the complete selected file realizes for a file-level relation                                               |
-| Population-obligation account         | One comparison over every selected population member and exactly one obligation                                  |
+| Population obligation | The actual contributing owners and any comparison required by the target |
 | Settings-coverage or topology account | The declared all-host, dense, sparse, or absent edge population                                                  |
 | Work-contract H2                      | The unit, file, or population operation explicitly selected by its additive claim                                |
 | Discovery carrier                     | What the complete production-specific search found and which existing owners make an additional rule unnecessary |
@@ -48,7 +48,7 @@ A quotation is optional and must be exact and complete. Otherwise give a stable 
 
 When literal support fails, define the mismatch class from the failed field and relationship, not from a filename prefix. Audit that class across both the target's complete host population and the host's complete target set. Record the immutable basis, literal locations, mismatched actor, object, site, authority, operation, state, or consequence, reproducible class membership, and every affected edge in the pull-request review. Repair the earliest true owner and propagate every consequence before restarting the transaction.
 
-For a population obligation, read every selected unit. The account identifies the population, enumerates or groups every member, performs the required comparison, cites exactly one obligation, and carries exactly one review. A list of local observations is not a population classification.
+For an obligation, inspect its actual contributors against the complete target. A population-wide comparison reads the population whose relation the target governs and records the conclusion with its authored or aggregate owner. Each acknowledgement and review describes that relationship.
 
 ## Evidence-gate audit
 
@@ -74,7 +74,7 @@ Use these cases when reviewing the harness or a production's completed evidence 
 | Generic majority or slotted nouns                                              | Fail with the reusable predicate or clause skeleton and every class member.                                                        |
 | Category or semantic-role substitution                                         | Fail at the literal predicate or host-role check.                                                                                  |
 | Unit evidence offered for a file or population relation                        | Fail because the host operation cannot answer the configured subject.                                                              |
-| Complete population account                                                    | Pass the structural discriminator only when it covers every selected member once, then continue literal and exchange checks.       |
+| Population comparison | Read the population and actual contributing owners required by the target, then continue the literal and exchange checks. |
 | Exact lineage relation versus a sibling's result                               | Pass only the exact child-parent edge and fail the exchanged attachment.                                                           |
 | Discovery or population exclusion contradicted by one selected host            | Fail the exclusion and report the complete contradicted class.                                                                     |
 | False quotation, converted notation, or asserted absence without a full search | Fail literal support.                                                                                                              |
