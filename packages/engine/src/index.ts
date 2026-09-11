@@ -21,6 +21,7 @@ export * from "./subjectDescription";
 export * from "./subjectDiff";
 export * from "./subjectReview";
 export * from "./effect";
+export * from "./effectRuntime";
 export * from "./fluid";
 export * from "./soft";
 export * from "./service";
