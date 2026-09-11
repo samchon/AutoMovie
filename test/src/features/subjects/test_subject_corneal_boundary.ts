@@ -25,6 +25,12 @@ import { nclose, throwsError } from "../internal/predicates";
 export const test_subject_corneal_boundary = (): void => {
   const shape: IPortraitEyeShape = {
     ...portraitEyeShape,
+    // Keep this optical-boundary fixture independent of the subject's fitted
+    // iris/aperture proportions; the scenario measures limbus ownership only.
+    irisRadius: 6.4,
+    pupilRadius: 2.55,
+    widthScale: 1,
+    openingScale: 1.04,
     cornealBoundary: undefined,
     lidContact: undefined,
     browFibres: 0,

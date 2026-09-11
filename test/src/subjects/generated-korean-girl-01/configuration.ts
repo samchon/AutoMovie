@@ -1,11 +1,15 @@
 import type { IPortraitComponent } from "../portraitComponents";
-import { createPortraitReliefLayer } from "../portraitRelief";
+import {
+  createPortraitReliefCurveLayer,
+  createPortraitReliefLayer,
+} from "../portraitRelief";
 import type { IPortraitSurfaceLayer } from "../portraitSurface";
 import {
   type IPortraitNasalDetail,
   portraitNasalLayerFor,
   portraitOrbitalRelief,
   portraitPerioralRelief,
+  portraitPhiltralCurves,
 } from "./anatomy";
 import {
   type IPortraitCheekShape,
@@ -17,10 +21,12 @@ import { createPortraitDentalComponent } from "./dentalComponent";
 import type { IPortraitDentalRow } from "./dentalRow";
 import { portraitEyebrowProfile } from "./eyebrows";
 import {
+  type IPortraitAegyoSalShape,
   type IPortraitEyeShape,
   type IPortraitEyeSocket,
   createPortraitEyeComponent,
 } from "./eyes";
+import type { IPortraitHairShape } from "./hairProxy";
 import {
   type IPortraitMouthShape,
   type IPortraitMouthSocket,
@@ -37,6 +43,13 @@ import {
   type IPortraitOrbitalSupportShape,
   createPortraitOrbitalSupport,
 } from "./orbitalSupport";
+
+/** Subject-owned continuous hair-cap boundary fit for the reference fringe. */
+export const portraitHairShape: IPortraitHairShape = {
+  // The photograph's heavier fringe falls toward anatomical +X. Keep the
+  // offset within the cap's transition band so both sides remain continuous.
+  fringeBias: 0.18,
+};
 
 /** Subject-specific attachments; component implementations contain no landmark IDs. */
 export const portraitEyeSockets: IPortraitEyeSocket[] = [
@@ -66,7 +79,9 @@ export const portraitEyeSockets: IPortraitEyeSocket[] = [
 export const portraitEyeShape: IPortraitEyeShape = {
   // Compensate the aperture's subdivision shrinkage at the subject level.
   // This fit is relative to its own measured socket, not a population norm.
-  widthScale: 1.04,
+  widthScale: 1.06,
+  // Preserve the measured vertical opening while the lower roll is fitted;
+  // the pretarsal component must never compensate by shrinking the eye.
   openingScale: 1.04,
   outerCornerLift: 0,
   socketLift: 0,
@@ -79,13 +94,31 @@ export const portraitEyeShape: IPortraitEyeShape = {
   // immediately below its margin; a separate infraorbital layer supplies the
   // broader transition into the cheek. These millimetre dimensions are authored
   // image-guided fits, not population averages or clinical measurements.
-  foldWidth: 1.6,
-  foldDepth: 0.22,
+  foldWidth: 1.15,
+  foldDepth: 0.14,
   upperLidVolume: 0.18,
-  // A broad shallow lower roll joins the cheek without a narrow raised band.
-  // These offsets reshape surrounding tissue; the aperture remains its own rim.
-  lowerLidWidth: 4.6,
-  lowerLidVolume: 0.35,
+  // The source shows a roughly six-millimetre pretarsal roll immediately below
+  // the lashes. Keep the crest visible, then let the lower shoulder fall away
+  // before the preseptal field; this is visible fullness, not a bag or muscle
+  // thickness estimate. These offsets reshape surrounding tissue while the
+  // aperture remains its own rim.
+  lowerLidWidth: 0.55,
+  lowerLidVolume: 0,
+  // The visible pretarsal body is owned by the grouped aegyo-sal field below.
+  // Keep the construction envelope as a quiet supporting seam so its repeated
+  // rings do not compete with the single rounded surface roll.
+  aegyoSal: {
+    offset: 1.1,
+    projection: 3,
+    // Reference projection measures a 55–63 px lower-roll span at
+    // 0.4357646 mm/px; 24 mm is the conservative paired-eye envelope.
+    width: 24,
+    height: 2,
+    // The socket's canthus-to-canthus span is approximately 24 mm in the
+    // same projection, so the reach participates in the envelope as well.
+    reach: 24,
+    weights: [0.48, 0.84, 1, 1, 1, 0.84, 0.48],
+  } satisfies IPortraitAegyoSalShape,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
   // have separate positions/projections. These mm values are a render-study
@@ -102,24 +135,28 @@ export const portraitEyeShape: IPortraitEyeShape = {
     // and its preseptal landing are fitted as one section. Positive relief alone
     // does not prevent a trough: the globe-to-skin bridge can lie behind both
     // boundaries. The adopted coupled study narrows the pretarsal/subtarsal
-    // offsets and carries more support into the preseptal landing, which keeps
-    // the rounded body from reading as a broad detached pad after subdivision.
+    // offsets. The crest is intentionally fuller than the lower shoulder, and
+    // the shoulder loses relief before the preseptal landing; this keeps the
+    // rounded body legible without extending a bag into the cheek after
+    // subdivision.
     sections: [
-      { at: 0, fullness: 0.35, width: 0.75 },
-      { at: 0.25, fullness: 0.75, width: 0.95 },
-      { at: 0.55, fullness: 0.8, width: 1 },
-      { at: 0.8, fullness: 0.55, width: 0.85 },
-      { at: 1, fullness: 0.25, width: 0.65 },
+      { at: 0, fullness: 0.2, width: 0.7 },
+      { at: 0.16, fullness: 0.6, width: 0.9 },
+      { at: 0.34, fullness: 0.92, width: 1 },
+      { at: 0.5, fullness: 1, width: 1 },
+      { at: 0.66, fullness: 0.92, width: 1 },
+      { at: 0.84, fullness: 0.6, width: 0.9 },
+      { at: 1, fullness: 0.2, width: 0.7 },
     ].map(({ at, fullness, width }) => ({
       at,
       section: {
-        margin: { offset: 0.22, projection: 0.2 },
-        pretarsalCrest: { offset: 1.35 * width, projection: 1.75 * fullness },
-        pretarsalLower: { offset: 2.25 * width, projection: 0.8 * fullness },
-        subtarsalInner: { offset: 3.1 * width, projection: 0.18 * fullness },
-        subtarsalOuter: { offset: 4.15 * width, projection: 0.02 * fullness },
-        preseptal: { offset: 6.2, projection: 0.0 },
-        attachment: 8.5,
+        margin: { offset: 0.16, projection: 0.12 },
+        pretarsalCrest: { offset: 1.1 * width, projection: 0.08 * fullness },
+        pretarsalLower: { offset: 1.9 * width, projection: 0.03 * fullness },
+        subtarsalInner: { offset: 2.7 * width, projection: 0.01 * fullness },
+        subtarsalOuter: { offset: 3.8 * width, projection: 0.0 },
+        preseptal: { offset: 5.2, projection: 0.0 },
+        attachment: 6.2,
       },
     })),
   },
@@ -139,8 +176,8 @@ export const portraitEyeShape: IPortraitEyeShape = {
   lidContactReach: 3,
   // The observed iris-rim markers give horizontal radii of 6.36–6.47 mm after
   // pose removal. One radius fits this subject's two independently bound eyes.
-  irisRadius: 6.4,
-  pupilRadius: 2.55,
+  irisRadius: 6.1,
+  pupilRadius: 2.35,
   // The source iris reads as dark brown under its captured illumination.
   // These are authored linear albedos, not colors sampled from image pixels.
   irisPigment: {
@@ -166,6 +203,9 @@ export const portraitEyeShape: IPortraitEyeShape = {
 /** An alternate aperture and lid profile for exercising independent replacement. */
 export const alternatePortraitEye: IPortraitEyeShape = {
   ...portraitEyeShape,
+  // Replacement exercises the direct attachment path so its reservation
+  // population is intentionally different from the fitted subject variant.
+  skinAttachment: undefined,
   widthScale: 1.08,
   openingScale: 0.78,
   outerCornerLift: 0.8,
@@ -264,11 +304,14 @@ export const portraitNoseShape: IPortraitNoseShape = {
   // active fit uses the prior basic construction rather than its pinched trial.
   // Zero offsets preserve the control net's inferred tip and alar depths.
   // The nostril frame controls aperture shape and orientation independently.
-  tipProjection: 0,
+  // Give the bridge-to-tip turn a shallow central cushion. The positive
+  // Gaussian is deliberately smaller than the alar relief so the tip joins
+  // the bridge as one soft surface instead of becoming a second lobe.
+  tipProjection: 0.85,
   // A restrained positive alar relief rounds the paired wing beneath each
   // opening while leaving the fitted nostril boundary and its topology intact.
   // Keep this small: the target has a soft ala, not a separate lateral bump.
-  alarProjection: 0.65,
+  alarProjection: 0.45,
   // Aperture width/height are independent from its complete rim and lining's
   // shared eight-degree downward orientation. The current contour is provisional.
   // These are source-guided authored ratios, not measured airway dimensions.
@@ -336,9 +379,9 @@ export const portraitMouthShape: IPortraitMouthShape = {
     ],
     lower: [
       { at: -1, scale: 1 },
-      { at: -0.65, scale: 0.72 },
-      { at: 0, scale: 0.95 },
-      { at: 0.65, scale: 0.72 },
+      { at: -0.65, scale: 0.62 },
+      { at: 0, scale: 0.78 },
+      { at: 0.65, scale: 0.62 },
       { at: 1, scale: 1 },
     ],
   },
@@ -350,8 +393,8 @@ export const portraitMouthShape: IPortraitMouthShape = {
     upperBody: 0.18,
     upperTubercle: 0.14,
     upperTubercleWidth: 0.33,
-    lowerBody: 0.2,
-    lowerPads: 0.04,
+    lowerBody: 0.1,
+    lowerPads: 0.02,
     lowerPadOffset: 0.28,
     lowerPadWidth: 0.26,
   },
@@ -385,20 +428,24 @@ export const portraitMouthShape: IPortraitMouthShape = {
       width: 8.1,
       height: 9.7,
       cervicalWidth: 0.82,
-      edgeRise: 0.45,
+      // The central incisor cutting edge is a shallow curved arc in the
+      // reference smile. Keep crown height and the shared arch unchanged;
+      // increase only the mesial/distal corner lift so the enamel reads as a
+      // rounded incisal edge instead of a rectangular block.
+      edgeRise: 0.9,
       contour: {
-        mesial: { contactHeight: 0.22, incisalRise: 0.16, cervicalWidth: 0.85 },
-        distal: { contactHeight: 0.35, incisalRise: 0.55, cervicalWidth: 0.78 },
+        mesial: { contactHeight: 0.22, incisalRise: 0.32, cervicalWidth: 0.85 },
+        distal: { contactHeight: 0.35, incisalRise: 0.8, cervicalWidth: 0.78 },
       },
     },
     {
       width: 8.1,
       height: 9.8,
       cervicalWidth: 0.82,
-      edgeRise: 0.5,
+      edgeRise: 0.95,
       contour: {
-        mesial: { contactHeight: 0.2, incisalRise: 0.17, cervicalWidth: 0.84 },
-        distal: { contactHeight: 0.36, incisalRise: 0.58, cervicalWidth: 0.77 },
+        mesial: { contactHeight: 0.2, incisalRise: 0.34, cervicalWidth: 0.84 },
+        distal: { contactHeight: 0.36, incisalRise: 0.83, cervicalWidth: 0.77 },
       },
     },
     {
@@ -485,7 +532,11 @@ export const portraitCheekSockets: IPortraitCheekSocket[] = [
  * zero because the host already contains the photographed smile.
  */
 export const portraitCheekShape: IPortraitCheekShape = {
-  malar: { width: 30, height: 35, reach: 40, projection: 3.7, lift: 0 },
+  // The reference carries a broad, high malar cushion rather than a planar
+  // cheek. Increase its shallow anterior turn and lift together so the light
+  // rolls across one soft mass; the neighboring medial field remains a
+  // separate transition control.
+  malar: { width: 32, height: 34, reach: 40, projection: 4.8, lift: 0.7 },
   // This bound vertex lies lateral/inferior to the desired medial prominence.
   // Move the envelope inward/up relative to its live anchor; the cheek builder
   // mirrors the outward axis automatically. Keep lower cheek support smaller
@@ -498,8 +549,8 @@ export const portraitCheekShape: IPortraitCheekShape = {
     // lowering its crest. The wider support is a transition control, not a
     // second cheek mass, so its lower projection stays below the baseline.
     reach: 48,
-    projection: 3.8,
-    lift: 0,
+    projection: 4.5,
+    lift: 0.45,
   },
   // Keep the lower cheek's crest tight around its live support so the buccal
   // mass tapers into the mandibular plane instead of reading as one flat pad.
@@ -587,6 +638,7 @@ export const measuredPortraitAssembly = {
     portraitNasalLayerFor(portraitNasalSupportDetail),
     createPortraitReliefLayer("orbital-support", portraitOrbitalRelief),
     createPortraitReliefLayer("perioral-support", portraitPerioralRelief),
+    createPortraitReliefCurveLayer("philtral-curves", portraitPhiltralCurves),
     // Upper orbital support belongs to skin form, independently of brow hair.
     // Paired small anterior pad sections sit between fixed forehead witnesses
     // and a shallow superior orbital sulcus. Values are fitting hypotheses.

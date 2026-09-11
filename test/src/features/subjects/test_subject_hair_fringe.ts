@@ -22,8 +22,12 @@ export const test_subject_hair_fringe = (): void => {
   const saved = structuredClone(forehead);
   const base = buildPortraitHairProxy()[0].geometry;
   const fitted = buildPortraitHairProxy(undefined, forehead)[0].geometry;
+  const biased = buildPortraitHairProxy(undefined, forehead, [], {
+    fringeBias: 0.18,
+  })[0].geometry;
   if (base.type !== "mesh" || fitted.type !== "mesh")
     throw new Error("Expected hair meshes.");
+  if (biased.type !== "mesh") throw new Error("Expected biased hair mesh.");
   TestValidator.equals(
     "the fringe shares the cap topology",
     fitted.mesh.indices,
@@ -70,6 +74,29 @@ export const test_subject_hair_fringe = (): void => {
     tips.length > 0 && tips[0].z >= 0.0812 - 1e-12,
   );
   TestValidator.equals("forehead ownership", forehead, saved);
+  // A positive subject bias moves the deepest continuous boundary toward +X.
+  // Compare equal angular samples on both sides of the frontal meridian; the
+  // expected ordering comes from the signed parameter contract, independently
+  // of the absolute cap height.
+  const boundaryRow = 24 * (96 + 1),
+    yAt = (positions: readonly number[], column: number) =>
+      positions[(boundaryRow + column) * 3 + 1]!;
+  TestValidator.predicate(
+    "positive fringe bias moves the boundary toward +X",
+    yAt(biased.mesh.positions, 3) < yAt(fitted.mesh.positions, 3) &&
+      yAt(biased.mesh.positions, 93) > yAt(fitted.mesh.positions, 93),
+  );
+  TestValidator.predicate(
+    "invalid fringe bias refuses",
+    throwsError(
+      () => buildPortraitHairProxy(undefined, forehead, [], { fringeBias: NaN }),
+      "fringe bias",
+    ) &&
+      throwsError(
+        () => buildPortraitHairProxy(undefined, forehead, [], { fringeBias: 0.46 }),
+        "fringe bias",
+      ),
+  );
   const nearHead = {
     ...forehead,
     positions: forehead.positions.map((v, i) => (i % 3 === 2 ? 0.04 : v)),

@@ -1,7 +1,9 @@
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  type IPortraitReliefCurve,
   type IPortraitReliefRegion,
+  createPortraitReliefCurveLayer,
   createPortraitReliefLayer,
 } from "../../subjects/portraitRelief";
 import { nclose, throwsError } from "../internal/predicates";
@@ -58,6 +60,84 @@ export const test_subject_anatomical_relief = (): void => {
       { ...region, displacement: [0, 0, 0] },
     ]).fields(host),
     [],
+  );
+  const curve: IPortraitReliefCurve = {
+    name: "crest",
+    points: [
+      {
+        anchor: 0,
+        offset: [10, 0, 0],
+        radius: [2, 3, 4],
+        displacement: [0, 0, 0.3],
+      },
+      {
+        anchor: 1,
+        offset: [0, 10, 0],
+        radius: [4, 5, 6],
+        displacement: [0, 0, 0.6],
+      },
+    ],
+  };
+  const curveLayer = createPortraitReliefCurveLayer("curve", [curve]);
+  curve.points[0].offset[0] = 99;
+  const curveFields = curveLayer.fields({
+    positions: [
+      [100, 200, 300],
+      [200, 400, 600],
+    ],
+    indices: [],
+    normals: [],
+  });
+  TestValidator.equals("curve sample count", curveFields.length, 4);
+  TestValidator.predicate(
+    "curve interpolation oracle",
+    nclose(curveFields[0].center.x, 0.11) &&
+      nclose(curveFields[0].center.y, 0.2) &&
+      nclose(curveFields[1].center.x, 0.14) &&
+      nclose(curveFields[1].center.y, 0.27) &&
+      nclose(curveFields[3].center.x, 0.2) &&
+      nclose(curveFields[3].center.y, 0.41) &&
+      nclose(curveFields[2].displacement.z, 0.0005) &&
+      nclose(curveFields[3].displacement.z, 0.0006),
+  );
+  TestValidator.equals(
+    "curve caller ownership",
+    curve.points[0].offset,
+    [99, 0, 0],
+  );
+  TestValidator.equals(
+    "empty curve layer",
+    createPortraitReliefCurveLayer("empty-curve", []).fields(host),
+    [],
+  );
+  for (const invalid of [
+    { ...curve, name: " " },
+    { ...curve, points: [curve.points[0]] },
+    {
+      ...curve,
+      points: [{ ...curve.points[0], anchor: -1 }, curve.points[1]],
+    },
+    {
+      ...curve,
+      points: [
+        { ...curve.points[0], radius: [0, 1, 1] as [number, number, number] },
+        curve.points[1],
+      ],
+    },
+  ])
+    TestValidator.predicate(
+      "invalid relief curve refuses",
+      throwsError(
+        () => createPortraitReliefCurveLayer("curve", [invalid]),
+        "named controls",
+      ),
+    );
+  TestValidator.predicate(
+    "curve attachment refuses",
+    throwsError(
+      () => curveLayer.fields({ ...host, positions: [[0, 0, 0]] }),
+      "resident finite",
+    ),
   );
   for (const invalid of [
     { ...region, name: " " },

@@ -24,8 +24,25 @@ export function createPortraitMaterials(): IAutoMovieMaterial[] {
     });
     return id;
   };
-  material("skin", [0.68, 0.47, 0.36], 0.58);
-  material("lips", [0.48, 0.125, 0.145], 0.46);
+  // A restrained rosy undertone keeps the continuous skin envelope from
+  // reading as a single grey-beige plastic surface under the directional key.
+  // The values remain authored linear albedo controls: they describe the
+  // material response globally and never encode reference pixels or a mask.
+  material("skin", [0.58, 0.34, 0.3], 0.52);
+  // Keep the active face material conservative: the public material contract
+  // has no dedicated subsurface-scattering channel, so a restrained clear-coat
+  // lobe is the portable way to soften the hard, plastic-looking skin response
+  // in the viewer without declaring transmission on the cropped neck surface.
+  // This value describes an appearance approximation, never tissue thickness.
+  const skin = materials[materials.length - 1]!;
+  skin.clearcoat = 0.09;
+  // The captured mouth reads as a softly desaturated pink under the same key,
+  // while the procedural lip currently catches a narrow, cosmetic-looking
+  // highlight. Raise the green/blue channels slightly to soften the rosy
+  // albedo and raise roughness to spread that lobe across the vermilion.
+  // This is one global material response: it changes no lip coordinates,
+  // section relief, boundary ownership or oral contact relationship.
+  material("lips", [0.48, 0.16, 0.18], 0.6);
   // The sclera has a broad surface response. The transparent eye-owned cornea
   // carries the sharp highlight over the iris; repeating a mirror-like lobe on
   // opaque pigment beneath it would add a second unrelated reflective surface.

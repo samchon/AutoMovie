@@ -41,6 +41,7 @@ export const test_subject_nasal_support_component = (): void => {
     // This component contract isolates common-plane projection. The active
     // subject preset's alar relief is a separate anatomical layer and would
     // move the hand-built support datums before the support assertion runs.
+    tipProjection: 0,
     alarProjection: 0,
     lobules: undefined,
     section: undefined,

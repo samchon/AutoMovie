@@ -11,6 +11,7 @@ import {
   portraitDentalPlacement,
   portraitDentalRow,
   portraitDentalSocket,
+  portraitHairShape,
   portraitEyeSockets,
 } from "./configuration";
 import { referenceControlNet } from "./controlNet";
@@ -100,7 +101,12 @@ export function buildFittedReferencePortrait(
       }),
       "teeth",
     ),
-    ...buildPortraitHairProxy(positions.slice(0, offset)),
+    ...buildPortraitHairProxy(
+      positions.slice(0, offset),
+      undefined,
+      [],
+      portraitHairShape,
+    ),
   );
   model.id = "generated-korean-girl-01";
   model.name = "Anatomical reference reconstruction; likeness under review";

@@ -84,6 +84,26 @@ export interface IPortraitEyeSocket {
 }
 
 /**
+ * Optional one-body pretarsal roll. These values shape visible surface
+ * fullness in the lower-lid construction; they are not a claim about muscle
+ * thickness or a detached tissue mesh.
+ */
+export interface IPortraitAegyoSalShape {
+  /** Distance from the lower-lid margin to the roll crest, in millimetres. */
+  offset: number;
+  /** Positive anterior relief at the crest, in millimetres. */
+  projection: number;
+  /** Full transverse roll width, in millimetres. */
+  width: number;
+  /** Crest-to-shoulder distance, in millimetres. */
+  height: number;
+  /** Positive support reach used to validate the authored section. */
+  reach: number;
+  /** Optional medial-to-lateral weights for the seven lower-lid witnesses. */
+  weights?: readonly number[];
+}
+
+/**
  * Numerical eye shape independent of its host socket. Lengths are millimetres;
  * width/opening multipliers deform the fitted aperture, not an isolated eyeball.
  *
@@ -125,6 +145,13 @@ export interface IPortraitEyeShape {
    * resolves residual penetration after shared refinement and surface layers.
    */
   lowerLidProfile?: IPortraitLowerLidProfile;
+  /**
+   * Optional grouped pretarsal roll relief immediately below the lashes.
+   * Omission preserves the eyelid-only construction; when supplied, the eye
+   * component replaces its lower profile's competing rows with one continuous
+   * rounded crest and a short lower shoulder.
+   */
+  aegyoSal?: IPortraitAegyoSalShape;
   /** Forward projection of the inner lid margin, in mm. */
   lidThickness: number;
   /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
@@ -217,12 +244,88 @@ const lidRows = (
       depth: number,
       role?: Exclude<keyof IPortraitLowerLidSection, "attachment">,
     ): number[] => {
-      if (detail !== undefined && role !== undefined) {
+      if (
+        detail !== undefined &&
+        role !== undefined &&
+        shape.aegyoSal === undefined
+      ) {
         // Replace this section point within the canthal boundary blend. The
         // old lower-roll depth is not added to the new anatomical projection.
         offset = offset * (1 - lowerWeight) + detail[role].offset * lowerWeight;
         depth =
           depth * (1 - lowerWeight) + detail[role].projection * lowerWeight;
+      }
+      // A supplied aegyo-sal owns one visible pretarsal cross-section. The
+      // former detailed profile remains a valid optional fallback, but its
+      // several closely spaced rows can read as parallel carved lines in a
+      // close render. Replace those lower rows with a single crest and one
+      // rapidly fading shoulder, then let the host resume at preseptal skin.
+      if (role !== undefined && shape.aegyoSal !== undefined) {
+        const roll = shape.aegyoSal;
+        const smoothDecay = (at: number): number => {
+          const t = Math.max(0, Math.min(1, at));
+          const smooth = t * t * (3 - 2 * t);
+          return 1 - smooth;
+        };
+        const section = {
+          pretarsalCrest: {
+            offset: roll.offset,
+            projection: roll.projection,
+            decay: 1,
+          },
+          pretarsalLower: {
+            offset: roll.offset + roll.height * 0.35,
+            projection: roll.projection * smoothDecay(0.35),
+            decay: smoothDecay(0.35),
+          },
+          subtarsalInner: {
+            offset: roll.offset + roll.height * 0.65,
+            projection: roll.projection * smoothDecay(0.65),
+            decay: smoothDecay(0.65),
+          },
+          subtarsalOuter: {
+            offset: roll.offset + roll.height * 0.95,
+            projection: roll.projection * smoothDecay(0.95),
+            decay: smoothDecay(0.95),
+          },
+          preseptal: {
+            offset: roll.offset + roll.height * 1.25,
+            projection: 0,
+            decay: 0,
+          },
+          margin: { offset: 0.16, projection: 0.12, decay: 0 },
+        }[role];
+        // The optional longitudinal weights are the roll's medial-to-lateral
+        // fullness witnesses. They modulate one cross-section; they must not
+        // reintroduce the old detailed profile as a second set of ridges.
+        const weights = roll.weights;
+        const position = Math.max(0, Math.min(1, progress)) * 6;
+        const index = Math.min(5, Math.floor(position));
+        const weight =
+          weights === undefined
+            ? 1
+            : weights[index] * (1 - (position - index)) +
+              weights[index + 1] * (position - index);
+        // Width and reach are image-fit controls, not metadata.  Width scales
+        // the visible fullness against the authored lateral reach; reach then
+        // gates the roll toward each canthus so the pad occupies the same
+        // measured fraction of the lower-lid silhouette as the reference.
+        const lateral = Math.abs(progress - 0.5) * 2;
+        const span = Math.max(right - left, 1e-6);
+        const envelope = (range: number): number => {
+          const fraction = Math.max(0, Math.min(1, range / span));
+          if (fraction >= 1 || lateral <= fraction) return 1;
+          const t = (lateral - fraction) / (1 - fraction);
+          return 1 - t * t * (3 - 2 * t);
+        };
+        const rollWeight =
+          lowerWeight * weight * envelope(roll.width) * envelope(roll.reach);
+        // A supplied roll owns its complete section. Blending offsets back to
+        // the basic envelope at the canthi leaves the old shell's attachment
+        // rows visible as a competing shelf. The longitudinal weight only
+        // fades relief; the anatomical offsets stay on one continuous profile.
+        offset = section.offset;
+        depth = roll.projection * section.decay * rollWeight;
       }
       const t = Math.min(1, offset / outerWidth),
         blend = t * t * (3 - 2 * t);
@@ -264,7 +367,10 @@ const lidRows = (
         : basicWidth * (1 - lowerWeight) + detail.attachment * lowerWeight;
     return {
       id,
-      outer: at(outerWidth, -0.4 + 0.2 * weight),
+      outer: at(
+        outerWidth,
+        shape.aegyoSal === undefined ? -0.4 + 0.2 * weight : 0.04 * lowerWeight,
+      ),
       hoodUpper: at(
         1.0 + (shape.foldWidth + 1.1) * weight + 0.9 * lowerWidth,
         shape.lidThickness + 0.45 * depth + 0.1 * lowerVolume,
@@ -317,6 +423,16 @@ export function createPortraitEyeComponent(
     ...inputShape,
     sampling: { ...inputShape.sampling },
     browProfile: { ...(inputShape.browProfile ?? portraitEyebrowProfile) },
+    aegyoSal:
+      inputShape.aegyoSal === undefined
+        ? undefined
+        : {
+            ...inputShape.aegyoSal,
+            weights:
+              inputShape.aegyoSal.weights === undefined
+                ? undefined
+                : [...inputShape.aegyoSal.weights],
+          },
     tissues:
       inputShape.tissues === undefined ? undefined : { ...inputShape.tissues },
   };
@@ -331,6 +447,29 @@ export function createPortraitEyeComponent(
       ? undefined
       : createPortraitLowerLidProfile(inputShape.lowerLidProfile);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (
+    shape.aegyoSal !== undefined &&
+    (![
+      shape.aegyoSal.offset,
+      shape.aegyoSal.projection,
+      shape.aegyoSal.width,
+      shape.aegyoSal.height,
+      shape.aegyoSal.reach,
+    ].every(Number.isFinite) ||
+      shape.aegyoSal.offset <= 0 ||
+      shape.aegyoSal.projection < 0 ||
+      shape.aegyoSal.width <= 0 ||
+      shape.aegyoSal.height <= 0 ||
+      shape.aegyoSal.reach <= 0 ||
+      (shape.aegyoSal.weights !== undefined &&
+        (shape.aegyoSal.weights.length !== 7 ||
+          shape.aegyoSal.weights.some(
+            (weight) => !Number.isFinite(weight) || weight < 0 || weight > 1,
+          ))))
+  )
+    throw new Error(
+      "Aegyo-sal needs finite positive dimensions and seven bounded weights.",
+    );
   if (shape.skinAttachment !== undefined && shape.skinAttachment !== "reserve")
     throw new Error("Eye skin attachment must be reserve or omitted.");
   if (

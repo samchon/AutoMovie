@@ -8,6 +8,12 @@ import {
   portraitPoint,
 } from "../geometry";
 
+/** Subject-owned continuous hair-cap controls. */
+export interface IPortraitHairShape {
+  /** Signed frontal radians; positive moves the deepest fringe toward +X. */
+  fringeBias?: number;
+}
+
 /**
  * Coarse hairstyle mass for judging this face's silhouette. A scalp cap and a
  * continuous side/back curtain suggest the reference's long hair. The anatomical
@@ -23,6 +29,8 @@ export function buildPortraitHairProxy(
   forehead?: IAutoMovieMesh,
   /** Optional side attachments in mm, enlarging lateral clearance without growing the skull cap vertically. */
   sideAttachments: readonly (readonly number[])[] = [],
+  /** Optional subject fit for the continuous frontal boundary. */
+  shape: IPortraitHairShape = {},
 ) {
   // Fit the same coarse ellipsoid to the actual cranial envelope. A fixed cap
   // cannot follow another foundation or fitted head. Uniform expansion retains
@@ -70,6 +78,30 @@ export function buildPortraitHairProxy(
     forehead === undefined
       ? undefined
       : createAutoMovieMeshDepthSampler(forehead, "z");
+  const fringeBias = shape.fringeBias ?? 0;
+  if (!Number.isFinite(fringeBias) || Math.abs(fringeBias) > 0.45)
+    throw new Error(
+      "Hair fringe bias must be a finite angular offset within 0.45 radians.",
+    );
+  // The lower cap edge is a boundary between the frontal hairline and the
+  // temporal/ear clearance. A hard maximum makes that boundary change slope
+  // at the winning branch, which reads as a blunt polygonal notch in the
+  // three-quarter view. This compact smooth maximum stays exactly on either
+  // owner outside the transition band and uses a cubic easing inside it; the
+  // hairline therefore keeps its measured clearance while its tangent turns
+  // continuously through the temple.
+  const smoothMaximum = (a: number, b: number, transition: number): number => {
+    const weight = Math.max(
+      0,
+      Math.min(1, 0.5 + (a - b) / (2 * transition)),
+    );
+    const eased = weight * weight * (3 - 2 * weight);
+    return eased * a + (1 - eased) * b;
+  };
+  const capColumns = 96;
+  const capRows = 24;
+  const curtainStart = 30;
+  const curtainRootCount = 27;
   // The central fringe is the cap's own boundary. A separate overlapping sheet
   // would preserve a second cap beneath it and cast a false attachment ridge.
   // Its compact angular influence retains the temples and exposed left ear.
@@ -79,10 +111,15 @@ export function buildPortraitHairProxy(
       const front = Math.max(0, Math.cos(azimuth));
       const earClearance = 50 - 160 * ((azimuth - Math.PI / 2) / 0.8) ** 2;
       const angle = Math.atan2(Math.sin(azimuth), Math.cos(azimuth));
-      const lateral = Math.min(1, Math.abs(angle) / 0.65);
+      const lateral = Math.min(1, Math.abs(angle - fringeBias) / 0.65);
       const fringe = support === undefined ? 0 : (1 - lateral * lateral) ** 2;
+      const frontalBoundary = -70 + 152 * front ** 2;
       const boundaryY =
-        Math.max(25, -70 + 152 * front ** 2, earClearance) -
+        smoothMaximum(
+          smoothMaximum(25, frontalBoundary, 8),
+          earClearance,
+          8,
+        ) -
         fringe * (19 + 2 * Math.cos(12 * angle));
       const polar = 0.002 + v * (Math.acos((boundaryY - 30) / ry) - 0.002);
       const point = portraitPoint(
@@ -112,19 +149,22 @@ export function buildPortraitHairProxy(
       }
       return point;
     },
-    48,
-    24,
+    capColumns,
+    capRows,
   );
   // The curtain starts at shared cap vertices. One continuous mesh removes
   // coplanar overlaps while the open front edge keeps the visible ear clear.
-  let previous = Array.from({ length: 27 }, (_v, i) => 24 * 49 + 15 + i);
+  let previous = Array.from(
+    { length: curtainRootCount },
+    (_v, i) => capRows * (capColumns + 1) + curtainStart + 2 * i,
+  );
   const roots = previous.map((id) => cap.positions.slice(id * 3, id * 3 + 3));
-  for (let row = 1; row <= 24; row++) {
-    const v = row / 24,
+  for (let row = 1; row <= capRows; row++) {
+    const v = row / capRows,
       ring: number[] = [];
     for (let column = 0; column < roots.length; column++) {
       const root = roots[column],
-        azimuth = ((15 + column) / 48) * 2 * Math.PI;
+        azimuth = ((curtainStart + 2 * column) / capColumns) * 2 * Math.PI;
       const flow = 1.1 * Math.sin(18 * azimuth + v) * Math.sin(Math.PI * v);
       ring.push(cap.positions.length / 3);
       cap.positions.push(
