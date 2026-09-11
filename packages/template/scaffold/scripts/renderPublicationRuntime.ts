@@ -1,4 +1,7 @@
-import { resolveProductionFrameRate } from "@automovie/engine";
+import {
+  resolveProductionFrameRate,
+  sampleProductionRenderFrame,
+} from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
@@ -43,7 +46,6 @@ import {
   readAutoMovieFilmTimeline,
   resolveProductionPngProfile,
   resolveProductionVideoProfile,
-  sampleProductionRenderFrame,
   verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionNonVideoDeliverables,
 } from "@automovie/production";

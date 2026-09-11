@@ -1,6 +1,6 @@
+import type { IAutoMovieProductionRenderLayer } from "@automovie/engine";
 import {
   type IAutoMovieProductionRenderJobPlan,
-  type IAutoMovieProductionRenderLayer,
   compareCodeUnits,
   parseAutoMovieStructuredJson,
 } from "@automovie/production";

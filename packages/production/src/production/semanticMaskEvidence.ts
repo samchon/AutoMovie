@@ -1,5 +1,6 @@
 import {
   autoMovieSemanticMaskVerificationFailure,
+  productionRenderLayersForPass,
   renderAutoMovieSemanticMaskSidecar,
   verifyAutoMovieSemanticMask,
 } from "@automovie/engine";
@@ -13,10 +14,7 @@ import {
 } from "@automovie/interface";
 
 import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
-import {
-  type IAutoMovieProductionRenderJobPlan,
-  productionRenderLayersForPass,
-} from "./productionRenderJob";
+import type { IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
 
 /**
  * Runtime agreement between a semantic palette and the scene actually drawn.

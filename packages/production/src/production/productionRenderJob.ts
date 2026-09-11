@@ -1,9 +1,14 @@
 import {
+  type IAutoMovieProductionRenderFrame,
   canonicalProductionFrameRate,
   equalProductionFrameRates,
+  productionFilmEffectEditFingerprint,
   productionFrameBoundaryToGridTick,
   productionFrameIntervalToGridTicks,
+  productionRenderLayersForPass,
   resolveProductionFrameRate,
+  sampleProductionFilmEffects,
+  sampleProductionRenderFrame,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
@@ -33,10 +38,6 @@ import type {
   IAutoMovieProductionAudioProcessing,
   IAutoMovieProductionWaveSourceFormat,
 } from "./decodeProductionAudioAsset";
-import {
-  productionFilmEffectEditFingerprint,
-  sampleProductionFilmEffects,
-} from "./filmEffectRuntime";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
@@ -122,48 +123,9 @@ export interface IAutoMovieProductionRenderTier {
 }
 
 /**
- * One source image participating in a film-global output frame.
- */
-export interface IAutoMovieProductionRenderLayer {
-  /**
-   * Compiler-owned shot id.
-   */
-  shot: string;
-  /**
-   * Exact shot-local integer source frame.
-   */
-  sourceFrame: number;
-  /**
-   * Linear compositing weight in `[0, 1]`.
-   */
-  weight: number;
-}
-
-/**
- * One exact film-global frame with transitions already resolved.
- * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Binds each output frame number to exactly one global film frame so the mapping has no duplicate, gap or off-by-one.
- */
-export interface IAutoMovieProductionRenderFrame {
-  /**
-   * Exact zero-based output frame in this render tier.
-   */
-  globalFrame: number;
-  /**
-   * Exact frame on the builder-owned full-rate film timeline.
-   */
-  timelineFrame: number;
-  /**
-   * Derived film time, never an accumulated clock.
-   */
-  timeSeconds: number;
-  /**
-   * One hard-cut/fade layer or two dissolve layers, back to front.
-   */
-  layers: IAutoMovieProductionRenderLayer[];
-}
-
-/**
  * One deterministic, independently lockable render/encode range.
+ *
+ * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-multipart-channels Plans beauty and each structural pass as separate chunk products with their own identity, receipt and encoded file, so one pass's failure never hides inside another pass's output.
  */
 export interface IAutoMovieProductionRenderChunk {
   /**
@@ -440,6 +402,12 @@ export type IAutoMovieProductionAudioAssetIdentity =
  * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-timecode-sync Carries the exact rational picture rate and the stream timebases as separate plan fields and never recomputes a duration from a decimal rate.
  * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-sample-boundary-and-arrival Converts each cue's rational film time to integer sample indices once, on the fixed audio clock, and records the ranges in the plan.
  * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-failure-contract Refuses a cue with a missing source, a negative or empty duration or an out-of-range sample instead of planning it as silence.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Maps every output frame number of a tier to exactly one full-rate timeline frame and one exact time, so a proxy numbering has no duplicate, gap or off-by-one.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Slices every chunk from one global frame schedule, so a chunk or a retry carries exactly the frames a full render would.
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Declares the one timeline frame per output frame at which capture resolves every shot layer and film effect.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-cache-identity Folds every current film effect runtime digest and the edit fingerprint into each chunk identity, so a changed stream never reuses a rendered chunk.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Keeps a proxy tier's output frames on the builder's full-rate timeline frame, so a reduced output rate never changes the film clock effects are sampled on.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Generates the ordered frame set from the exact rational clock and slices chunks from it, so subrange and full execution share each global frame's state.
  */
 export const planProductionRenderJob = (props: {
   timeline: IAutoMovieFilmTimeline;
@@ -670,101 +638,6 @@ export const verifyProductionRenderJobPlan = (props: {
     throw new Error(
       "Stored render plan differs from the current builder-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
     );
-};
-
-/**
- * Resolve one global frame, including exact dissolve and fade weights.
- * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Resolves a frame from its global film time so a chunk or retry yields the same frame as a full render.
- */
-export const sampleProductionRenderFrame = (
-  timeline: IAutoMovieFilmTimeline,
-  globalFrame: number,
-): IAutoMovieProductionRenderFrame => {
-  if (
-    Number.isSafeInteger(globalFrame) === false ||
-    globalFrame < 0 ||
-    globalFrame >= timeline.totalFrames
-  )
-    throw new Error(
-      `Film-global frame ${globalFrame} is outside 0..${timeline.totalFrames - 1}.`,
-    );
-  const active = timeline.segments
-    .map((segment, index) => ({ segment, index }))
-    .filter(
-      ({ segment }) =>
-        segment.startFrame <= globalFrame && globalFrame < segment.endFrame,
-    );
-  const current = active.at(-1);
-  if (current === undefined)
-    throw new Error(
-      `Film-global frame ${globalFrame} has no builder-owned video segment.`,
-    );
-  const offset = globalFrame - current.segment.startFrame;
-  const incoming: IAutoMovieProductionRenderLayer = {
-    shot: current.segment.shot,
-    sourceFrame: current.segment.sourceInFrame + offset,
-    weight: 1,
-  };
-  if (
-    current.segment.transitionIn.kind === "dissolve" &&
-    offset < current.segment.transitionIn.durationFrames
-  ) {
-    const previous = timeline.segments[current.index - 1];
-    if (previous === undefined)
-      throw new Error(
-        `Segment "${current.segment.shot}" dissolves without an outgoing segment.`,
-      );
-    const alpha = offset / current.segment.transitionIn.durationFrames;
-    return frame(timeline, globalFrame, [
-      {
-        shot: previous.shot,
-        sourceFrame:
-          previous.sourceOutFrame -
-          current.segment.transitionIn.durationFrames +
-          offset,
-        weight: 1 - alpha,
-      },
-      { ...incoming, weight: alpha },
-    ]);
-  }
-  const fadeIn =
-    current.segment.transitionIn.kind === "fade" &&
-    offset < current.segment.transitionIn.durationFrames
-      ? offset / current.segment.transitionIn.durationFrames
-      : 1;
-  const remaining = current.segment.endFrame - globalFrame;
-  const fadeOut =
-    current.segment.transitionOut.kind === "fade" &&
-    remaining <= current.segment.transitionOut.durationFrames
-      ? remaining / current.segment.transitionOut.durationFrames
-      : 1;
-  return frame(timeline, globalFrame, [
-    { ...incoming, weight: Math.min(fadeIn, fadeOut) },
-  ]);
-};
-
-/**
- * Resolve pass-specific transition inputs.
- *
- * Beauty is alpha composited. Structural guide passes are classifications or
- * geometric fields, so linearly blending their pixels invents invalid values;
- * they select the dominant shot layer instead (incoming wins an exact tie).
- * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-multipart-channels Keeps beauty and structural passes as separate products with their own layer sets instead of hiding one pass's failure in another's file.
- */
-export const productionRenderLayersForPass = (
-  frame: IAutoMovieProductionRenderFrame,
-  pass: AutoMovieGuidePass,
-): IAutoMovieProductionRenderLayer[] => {
-  if (pass === "beauty") return structuredClone(frame.layers);
-  const selected = frame.layers.reduce((selected, candidate) =>
-    candidate.weight >= selected.weight ? candidate : selected,
-  );
-  return [
-    {
-      ...structuredClone(selected),
-      weight: 1,
-    },
-  ];
 };
 
 /**
@@ -1284,20 +1157,6 @@ export function readAutoMovieProductionOwnedFile(props: {
     closeProductionOwnedDescriptor(descriptor, failure, target);
   }
 }
-
-const frame = (
-  timeline: IAutoMovieFilmTimeline,
-  globalFrame: number,
-  layers: IAutoMovieProductionRenderLayer[],
-): IAutoMovieProductionRenderFrame => {
-  const frameRate = resolveProductionFrameRate(timeline);
-  return {
-    globalFrame,
-    timelineFrame: globalFrame,
-    timeSeconds: (globalFrame * frameRate.denominator) / frameRate.numerator,
-    layers,
-  };
-};
 
 const normalizeRenderTier = (
   tier: IAutoMovieProductionRenderTier | undefined,

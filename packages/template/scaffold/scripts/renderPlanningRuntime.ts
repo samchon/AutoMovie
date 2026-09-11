@@ -1,3 +1,4 @@
+import { sampleProductionRenderFrame } from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieCaptureObservation,
@@ -30,7 +31,6 @@ import {
   readAutoMovieFilmEffects,
   readAutoMovieFilmTimeline,
   resolveProductionRenderTierFrameFormat,
-  sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
   verifyProductionRenderJobPlan,
 } from "@automovie/production";
