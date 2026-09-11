@@ -32,6 +32,9 @@ export const test_subject_eye_fold = (): void => {
   for (const foldDepth of [0, 0.8]) {
     const plan = createPortraitEyeComponent(socket, {
       ...portraitEyeShape,
+      // This contract isolates the upper fold from the subject's optional
+      // lower pretarsal roll; the roll is covered by its own focused suite.
+      aegyoSal: undefined,
       foldDepth,
     }).fit(host);
     const source = blendPortraitSkin(

@@ -103,7 +103,7 @@ import type * as OrbitalSupport from "./orbitalSupport";
  * @evidence {@link Configuration.portraitEyeSockets} Binds the active eye aperture, iris and brow boundary identities.
  * @evidenceReview {@link Configuration.portraitEyeSockets} #fc103a2 Read both handed socket loops and their shared canthus/iris/brow anchors beside eye construction. These identities select resident host vertices and do not encode a second eye shape.
  * @evidence {@link Configuration.alternatePortraitEye} Supplies an independently replaceable eye profile for component-assembly scenarios.
- * @evidenceReview {@link Configuration.alternatePortraitEye} #855a356 Read the copied alternate profile beside portraitComponentsFor and the replacement tests. Its replacement path is independent of the active eye and does not mutate the active configuration.
+ * @evidenceReview {@link Configuration.alternatePortraitEye} #fec19f3 Read the copied alternate profile beside portraitComponentsFor and the replacement tests. Its replacement path is independent of the active eye and does not mutate the active configuration.
  * @evidence {@link Configuration.portraitNoseSocket} Binds the active nose's cut, aperture and lining anchors.
  * @evidenceReview {@link Configuration.portraitNoseSocket} #817b474 Read the resident socket IDs and their use by the nose component. These are attachment identities, separate from nasal dimensions and fitted aperture shape.
  * @evidence {@link Configuration.portraitNasalSection} Selects the optional cubic nasal-section evaluator input.

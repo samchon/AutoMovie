@@ -203,6 +203,9 @@ export const portraitEyeShape: IPortraitEyeShape = {
 /** An alternate aperture and lid profile for exercising independent replacement. */
 export const alternatePortraitEye: IPortraitEyeShape = {
   ...portraitEyeShape,
+  // Replacement exercises the direct attachment path so its reservation
+  // population is intentionally different from the fitted subject variant.
+  skinAttachment: undefined,
   widthScale: 1.08,
   openingScale: 0.78,
   outerCornerLift: 0.8,
