@@ -6,6 +6,7 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { seededValue } from "../math/random";
 import { IAutoMovieInstanceSetPlacement } from "./IAutoMovieInstanceSetPlacement";
+import { selectInstancePrototype } from "./selectInstancePrototype";
 
 /**
  * Regenerate one exact member of a compact instance set in constant memory.
@@ -112,7 +113,7 @@ export const instanceSlot = (
     instanceSet.variation.scale3 === undefined &&
     instanceSet.variation.rotationDeg === undefined &&
     instanceSet.variation.visibleProbability === undefined;
-  const selected = selectedInstancePrototype(
+  const selected = selectInstancePrototype(
     instanceSet,
     slot,
     explicit?.prototype,
@@ -169,38 +170,6 @@ export const instanceSlot = (
         seededValue(instanceSet.seed, slot, 0x76697369) <
           instanceSet.variation.visibleProbability),
   };
-};
-
-/**
- * The weighted prototype choice for one slot, or the explicit one it names.
- *
- * Every choice but the last is tested; the last is what remains, which is both
- * the weighted answer and the answer when a float residue leaves the sample a
- * hair above the final weight.
- */
-const selectedInstancePrototype = (
-  instanceSet: IAutoMovieInstanceSetPlacement,
-  slot: number,
-  explicit: string | undefined,
-): { id: string; modelRecipe: string } => {
-  const choices = instanceSet.prototypes ?? [
-    { id: "default", modelRecipe: instanceSet.modelRecipe, weight: 1 },
-  ];
-  if (explicit !== undefined) {
-    const selected = choices.find((choice) => choice.id === explicit);
-    if (selected === undefined)
-      throw new Error(
-        `Instance set "${instanceSet.id}" slot ${slot} references missing prototype "${explicit}".`,
-      );
-    return selected;
-  }
-  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
-  let sample = seededValue(instanceSet.seed, slot, 0x70726f74) * total;
-  for (const choice of choices.slice(0, -1)) {
-    if (sample < choice.weight) return choice;
-    sample -= choice.weight;
-  }
-  return choices.at(-1)!;
 };
 
 /** Seeded XYZ Euler offset applied after the set heading, or identity. */

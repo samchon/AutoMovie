@@ -1,4 +1,5 @@
 import {
+  IAutoMovieCompiledInstancePrototype,
   IAutoMovieCompiledInstanceSet,
   IAutoMovieSubjectArtifact,
   IAutoMovieSubjectChange,
@@ -8,7 +9,7 @@ import {
   IAutoMovieSubjectMemberSummary,
 } from "@automovie/interface";
 
-import { seededValue } from "./math";
+import { selectInstancePrototype } from "./populationRuntime/selectInstancePrototype";
 import { compareAutoMovieRenderIds } from "./render";
 import {
   AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT,
@@ -294,6 +295,17 @@ const selectedRuntimeModel = (
   slot: number,
 ): string | null => selectedPrototype(set, slot).model;
 
+/**
+ * The prototype one compiled slot draws, keyed with the runtime model it draws.
+ *
+ * The draw is the instance member's own weighted selection, so a diff counts a
+ * prototype change exactly where a regenerated member changes prototype. A diff
+ * compares revisions nobody validated for it, so where that selection refuses
+ * an explicit member naming a prototype its table lacks, the member is read as
+ * that missing prototype, which equals only the same missing name in another
+ * revision. Any other failure is not a missing prototype and is not read as
+ * one.
+ */
 const selectedPrototype = (
   set: IAutoMovieCompiledInstanceSet,
   slot: number,
@@ -302,44 +314,29 @@ const selectedPrototype = (
     set.layout.kind === "explicit"
       ? set.layout.transforms[slot]?.prototype
       : undefined;
-  const choices = compiledPrototypeChoices(set);
-  if (explicit !== undefined) {
-    const selected = choices.find((choice) => choice.id === explicit);
-    return selected === undefined
-      ? { key: `missing:${explicit}`, model: null }
-      : selectedPrototypeValue(selected);
+  let selected:
+    | IAutoMovieCompiledInstancePrototype
+    | Pick<
+        IAutoMovieCompiledInstancePrototype,
+        "id" | "modelRecipe" | "weight"
+      >;
+  try {
+    selected = selectInstancePrototype(set, slot, explicit);
+  } catch (error) {
+    if (
+      explicit !== undefined &&
+      error instanceof Error &&
+      error.message.endsWith(`references missing prototype "${explicit}".`)
+    )
+      return { key: `missing:${explicit}`, model: null };
+    throw error;
   }
-  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
-  let sample = seededValue(set.seed, slot, 0x70726f74) * total;
-  for (const choice of choices) {
-    if (sample < choice.weight) return selectedPrototypeValue(choice);
-    sample -= choice.weight;
-  }
-  const selected = choices.at(-1)!;
-  return selectedPrototypeValue(selected);
+  const model = lodModelOf("lod" in selected ? selected.lod : set.lod);
+  return { key: `${selected.id}:${String(model)}`, model };
 };
-
-const compiledPrototypeChoices = (set: IAutoMovieCompiledInstanceSet) =>
-  set.prototypes ?? [
-    {
-      id: "default",
-      modelRecipe: set.modelRecipe,
-      weight: 1,
-      lod: set.lod,
-      projectionRadius: set.projectionRadius,
-    },
-  ];
 
 const lodModelOf = (lod: IAutoMovieCompiledInstanceSet["lod"]): string | null =>
   lod[0]?.model ?? null;
-
-const selectedPrototypeValue = (prototype: {
-  id: string;
-  lod: IAutoMovieCompiledInstanceSet["lod"];
-}): { key: string; model: string | null } => {
-  const model = lodModelOf(prototype.lod);
-  return { key: `${prototype.id}:${String(model)}`, model };
-};
 
 const summarize = (ids: readonly string[]): IAutoMovieSubjectMemberSummary => {
   const sorted = [...ids].sort(compareAutoMovieRenderIds);
