@@ -1,5 +1,6 @@
 import {
   IAutoMovieFormationReform,
+  compiledFormationSlot,
   composeFormationHeroTransform,
   formationCadenceSegments,
   formationSlotPosition,
@@ -7,7 +8,6 @@ import {
   rotateFormationLocalOffset,
   sampleFormationMotion,
   sampleFormationSlotMotion,
-  seededValue,
   selectFormationLod,
   transformFormationPoint,
 } from "@automovie/engine";
@@ -623,22 +623,7 @@ export const buildInstancedFormation = (input: {
 export const regenerateFormationSlot = (
   formation: IAutoMovieCompiledFormation,
   slot: number,
-): IAutoMovieFormationSlot => {
-  const position = formationSlotPosition(formation, slot);
-  const actor =
-    formation.heroes.find((hero) => hero.slot === slot)?.actor ?? null;
-  return {
-    slot,
-    node:
-      actor ??
-      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-    actor,
-    modelRecipe: formation.modelRecipe,
-    position,
-    facingDeg: formation.facingDeg,
-    motionPhase: seededValue(formation.seed, slot, 0x70686173),
-  };
-};
+): IAutoMovieFormationSlot => compiledFormationSlot(formation, slot);
 
 /**
  * Flatten one runtime model for a chunked instancing consumer.
