@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Fly through the medieval baron manor: a procedural timber-framed house authored as AutoMovie source and rendered in your browser."
+    />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <title>Medieval Baron Manor · AutoMovie</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e9e4d8;
+        --muted: #a9a294;
+        --panel: rgba(24, 22, 20, 0.86);
+        --line: rgba(233, 228, 216, 0.18);
+        --accent: #d9a441;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #1c1a18;
+        color: var(--ink);
+        font:
+          14px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      a {
+        color: inherit;
+      }
+      #view {
+        display: block;
+        width: 100%;
+        height: 100%;
+        outline: none;
+      }
+      /* The authored scene paints its own light background, so the chrome sits
+         on dark chips rather than relying on a text shadow. */
+      #brand {
+        position: fixed;
+        left: 16px;
+        top: 14px;
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      #brand h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      #brand a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+      }
+      #brand a:hover {
+        color: var(--ink);
+      }
+      #status {
+        position: fixed;
+        left: 16px;
+        bottom: 14px;
+        max-width: calc(100vw - 32px);
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--muted);
+        font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+        white-space: pre-wrap;
+        pointer-events: none;
+      }
+      #panel {
+        position: fixed;
+        top: 14px;
+        right: 16px;
+        z-index: 2;
+        box-sizing: border-box;
+        width: 320px;
+        max-width: calc(100vw - 32px);
+        max-height: calc(100dvh - 28px);
+        overflow: auto;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+      }
+      #panel h2 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      #panel-toggle {
+        display: none;
+        padding: 2px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--ink);
+        font: inherit;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: none;
+        cursor: pointer;
+      }
+      #panel.collapsed > :not(h2) {
+        display: none;
+      }
+      #panel.collapsed h2 {
+        margin-bottom: 0;
+      }
+      #featured {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      #featured button,
+      #preview-navigation button,
+      #preview-navigation input,
+      #preview-navigation select {
+        min-height: 32px;
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+      }
+      #featured button:hover,
+      #preview-navigation button:hover {
+        border-color: var(--accent);
+      }
+      #featured button[aria-current="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      #preview-navigation {
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+      .preview-navigation-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .preview-navigation-heading strong {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      #preview-navigation label {
+        display: block;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #preview-navigation input,
+      #preview-navigation select {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        margin-top: 4px;
+        cursor: text;
+      }
+      #preview-navigation select {
+        cursor: pointer;
+      }
+      #preview-navigation button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #preview-navigation-content > button,
+      .preview-navigation-count {
+        margin-top: 10px;
+      }
+      .preview-navigation-count {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #keys {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #keys kbd {
+        display: inline-block;
+        min-width: 1.4em;
+        padding: 0 4px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font: 11px ui-monospace, "Cascadia Mono", Consolas, monospace;
+        text-align: center;
+        color: var(--ink);
+      }
+      #scene {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        display: grid;
+        place-items: center;
+        background: #1c1a18;
+        text-align: center;
+        transition: opacity 0.4s;
+      }
+      #loading[hidden] {
+        display: none;
+      }
+      #loading .card {
+        max-width: 28em;
+        padding: 0 24px;
+      }
+      #loading h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      #loading p {
+        margin: 0;
+        color: var(--muted);
+      }
+      #loading .phase {
+        margin-top: 18px;
+        color: var(--ink);
+        font: 13px ui-monospace, "Cascadia Mono", Consolas, monospace;
+      }
+      #loading .bar {
+        width: 240px;
+        height: 3px;
+        margin: 12px auto 0;
+        overflow: hidden;
+        border-radius: 2px;
+        background: var(--line);
+      }
+      #loading .bar::after {
+        content: "";
+        display: block;
+        width: 40%;
+        height: 100%;
+        background: var(--accent);
+        animation: slide 1.2s ease-in-out infinite alternate;
+      }
+      #loading.failed .bar {
+        display: none;
+      }
+      #loading.failed .phase {
+        color: #e07b6a;
+        white-space: pre-wrap;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
+        }
+      }
+      @media (max-width: 720px) {
+        #panel {
+          top: auto;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          width: auto;
+          max-width: none;
+          max-height: 46dvh;
+          border-radius: 12px 12px 0 0;
+        }
+        #panel-toggle {
+          display: inline-block;
+        }
+        #status {
+          display: none;
+        }
+        #keys {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view" tabindex="0"></canvas>
+    <header id="brand">
+      <h1>Medieval Baron Manor</h1>
+      <a href="../">AutoMovie</a>
+      <a href="https://github.com/samchon/AutoMovie">GitHub</a>
+    </header>
+    <aside id="panel" aria-label="Manor viewer controls">
+      <h2>
+        Views
+        <button id="panel-toggle" type="button" aria-expanded="true">
+          Hide
+        </button>
+      </h2>
+      <div id="featured"></div>
+      <div id="keys">
+        <kbd>Click</kbd> mouse look · <kbd>Esc</kbd> release<br />
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly · <kbd>Space</kbd>
+        / <kbd>C</kbd> rise / descend<br />
+        <kbd>Shift</kbd> fast · <kbd>Q</kbd> / <kbd>E</kbd> slower / faster ·
+        <kbd>Wheel</kbd> field of view
+      </div>
+      <div id="scene"></div>
+    </aside>
+    <div id="status"></div>
+    <div id="loading">
+      <div class="card">
+        <h1>Medieval Baron Manor</h1>
+        <p>
+          A procedural timber-framed manor generated in your browser from its
+          AutoMovie source. Every beam, tile, and casement is built on load.
+        </p>
+        <div class="phase" id="phase">Loading the manor source</div>
+        <div class="bar"></div>
+      </div>
+    </div>
+    <script type="module" src="../src/manor.ts"></script>
+  </body>
+</html>

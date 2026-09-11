@@ -6,6 +6,8 @@ AutoMovie lets a user scaffold a production repository and direct a coding agent
 
 The result is a cheap, controllable, and reproducible alternative to asking a diffusion model to invent an entire video. A fixed asset is performed by agent-authored code and rendered by a deterministic engine, so the same inputs produce the same motion, staging, timing, camera, and media.
 
+See it at [samchon.github.io/automovie](https://samchon.github.io/automovie): the [medieval baron manor](https://samchon.github.io/automovie/manor/), a finished production kept in this repository under [`experimental/medieval-baron-manor`](./experimental/medieval-baron-manor), is generated from its authored source in your browser.
+
 ## The contract
 
 AutoMovie is built around one evidence chain:
@@ -92,6 +94,14 @@ Run the playground with:
 ```bash
 pnpm --filter @automovie/playground dev
 ```
+
+Run the website with:
+
+```bash
+pnpm --filter @automovie/website dev
+```
+
+`website/` is the static site published to GitHub Pages by `.github/workflows/website.yml` on every push to `master`; `pnpm --filter @automovie/website deploy` publishes a build from the current checkout by hand.
 
 ## License
 

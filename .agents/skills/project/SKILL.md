@@ -52,6 +52,8 @@ A logic example belongs in a pure unit test; a shipped archetype belongs in `pac
 - `packages/mcp` (`@automovie/mcp`): four read-only authored Markdown reference operations over the same providers as the local JSON command. It reads indices and annotation-free source projections; it does not edit, compile, render, run commands, or validate evidence. This narrowly scoped stdio reference service does not restore the retired production tool server.
 - `packages/production` (`@automovie/production`): the deterministic production library a generated project runs on: the builder, the tracked project store, capture, inspection, and the render job. It answers a project's own scripts, not a network surface. The repository hosts no internal LLM or production-action tool server; authoring doctrine remains in the shipped skills, separately from optional Markdown reference navigation.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`. Every scenario is a pure logic unit test that finishes in under 500 ms.
+- `experimental/medieval-baron-manor` (`medieval-baron-manor`): the finished manor production, kept as a workspace member so the website bundles its authored source and textures. It is the one committed directory under `experimental/`; a disposable sandbox created beside it is never committed (see the experiment skill).
+- `website/` (`@automovie/website`): the Vite static site published to GitHub Pages at `https://samchon.github.io/automovie` by `.github/workflows/website.yml`: a landing page and the manor viewer, which builds the manor from source in the browser and bakes each entry into one mesh per material for drawing.
 - `build/`: repository entry points for immutable package generations (`tgz.ts`), disposable experiments (`experimental.ts`), and prose lint (`proseVoice-cli.ts`), plus their inventory/logic helpers and TypeScript/lint configuration. Product tests belong in `test/`, not here.
 - `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json` and shared lint policy.
 - `docs/` (`@automovie/docs`): product requirements and package-independent system specifications, checked as an evidence graph during the workspace build.
@@ -67,6 +69,7 @@ pnpm run build:tgz                        # pack the working tree for generated 
 pnpm run experimental <name> --language korean # create and install a Korean-language sandbox
 pnpm run format                           # prettier write
 pnpm --filter @automovie/test start       # run the test suite (ttsx, no separate compile step)
+pnpm --filter @automovie/website build    # type-check and bundle the public site into website/dist
 ```
 
-Node 22 LTS, pnpm 10. CI: `.github/workflows/{build,test}.yml`.
+Node 22 LTS, pnpm 10. CI: `.github/workflows/{build,test,website}.yml`; `website.yml` also deploys `website/dist` to the `gh-pages` branch on a `master` push.
