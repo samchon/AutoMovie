@@ -1,4 +1,4 @@
-import { exportModelToGLB } from "@automovie/render";
+import { exportModelToGLB } from "@automovie/render/node";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -7,7 +7,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "../src/stickman";
 /**
  * Generate `stickman.glb` from the stick-figure AST.
  *
- * The canonical demonstration of `@automovie/render`'s `exportModelToGLB`
+ * The canonical demonstration of `@automovie/render/node`'s `exportModelToGLB`
  * round-trip: the same `IAutoMovieModel` the viewer renders is serialized to a
  * standalone binary glTF (rest / T-pose) any glTF tool, or automovie's own
  * ingest, can load. Re-run (`pnpm build:stickman`) after changing the figure's
