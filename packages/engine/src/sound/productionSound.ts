@@ -300,9 +300,7 @@ export const renderProductionSound = (props: {
   // Every cue is placed on the sample clock before any sample is mixed, so a
   // cue that contradicts its own source is refused before the work it would
   // have wasted, and each placement is computed once for the mix that follows.
-  const ranges = props.plan.cues.map((cue) =>
-    cueSampleRanges(props.plan, cue),
-  );
+  const ranges = props.plan.cues.map((cue) => cueSampleRanges(props.plan, cue));
   for (const asset of new Set(props.plan.cues.map((cue) => cue.asset))) {
     const source = props.assets?.get(asset);
     if (source !== undefined)
@@ -819,7 +817,7 @@ interface ICueSampleRanges {
  * Place one cue on the sample clock, or refuse it by name.
  *
  * `sourceDurationFrames` is the complete asset on the frame clock: the ceiling
- * the trim must fit inside and nothing else. The compiler refuses the same
+ * the trim must fit inside and nothing else. The builder refuses the same
  * contradictions when it lowers the edit, and the mix refuses them again here
  * because the plan is a public input and a cue that reads outside its source or
  * its film has no sample to mix.

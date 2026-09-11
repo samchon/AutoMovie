@@ -112,7 +112,7 @@ const blankAs = (value: string, fallback: string): string =>
  * @author Samchon
  */
 export const autoMovieRenderTargetSettingsOfShot = (props: {
-  /** Fully compiler-owned shot artifact. */
+  /** Fully builder-owned shot artifact. */
   compiled: IAutoMovieCompiledShotSource;
   /** Drawing-buffer width in pixels. */
   width: number;
@@ -260,7 +260,7 @@ export interface IAutoMovieRenderBudgetAssessment {
  * @author Samchon
  */
 export const assessAutoMovieRenderBudget = (props: {
-  /** Fully compiler-owned shot artifact. */
+  /** Fully builder-owned shot artifact. */
   compiled: IAutoMovieCompiledShotSource;
   /** Shot id the artifact belongs to. */
   shot: string;

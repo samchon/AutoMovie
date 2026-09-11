@@ -126,7 +126,7 @@ const contract = (): IAutoMovieShotContract => ({
 
 /**
  * Grade the contract for one staged model under one solved camera, and report
- * what the compiler found at each of the three contract samples.
+ * what the builder found at each of the three contract samples.
  */
 const grade = (
   model: IAutoMovieModel | null,

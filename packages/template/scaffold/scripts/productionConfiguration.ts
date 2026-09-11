@@ -17,7 +17,6 @@ import type {
 } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderTier,
-  assertAutoMovieExternalGeneratorTermsAt,
   assertAutoMovieRepaintExecutionPolicy,
   autoMovieExternalLocatorRefusal,
   canonicalizeAutoMovieJson,
@@ -287,11 +286,6 @@ export const assertProductionDialogueReceiptAdoption = (props: {
       receipt.generatedAt,
       `Dialogue receipt "${receipt.line}" generatedAt`,
     );
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
-      occurredAt: receipt.generatedAt,
-      label: `Dialogue receipt "${receipt.line}" generator provenance`,
-    });
     if (
       receipt.version !== 6 ||
       receipt.model !== selected.model ||
@@ -635,11 +629,6 @@ const assertRepaintReceiptMatchesSelection = (
     receipt.evidence === undefined ||
     exactUtcInstant(receipt.startedAt, "Repaint receipt startedAt") >
       exactUtcInstant(receipt.completedAt, "Repaint receipt completedAt") ||
-    assertAutoMovieExternalGeneratorTermsAt({
-      termsCheckedAt: receipt.generatorProvenance.termsCheckedAt,
-      occurredAt: receipt.startedAt,
-      label: `Repaint receipt for shot "${receipt.shot}" generator provenance`,
-    }) !== receipt.generatorProvenance.termsCheckedAt ||
     canonicalizeAutoMovieJson(runtime) !==
       canonicalizeAutoMovieJson(selected.generator.runtimeIdentity) ||
     canonicalizeAutoMovieJson(receipt.generatorProvenance) !==
@@ -660,7 +649,7 @@ const assertRepaintReceiptMatchesSelection = (
     receipt.structuralAuthority !== "deterministic-source-only"
   )
     throw new Error(
-      `Repaint receipt for shot "${receipt.shot}" does not match the current reviewed generator adoption, bounded policy, evidence-addressed request, execution time, or deterministic structural-authority boundary.`,
+      `Repaint receipt for shot "${receipt.shot}" does not match the current generator, request, execution time, or structural-authority boundary.`,
     );
 };
 
@@ -868,41 +857,41 @@ const readExternalGeneratorProvenance = <
   input: unknown,
   label: string,
   kind: Kind,
-  occurredAt: Date | string,
+  _occurredAt: Date | string,
 ): Kind extends "dialogue-synthesis"
   ? IAutoMovieExternalGeneratorProvenance
   : IAutoMovieRepaintGeneratorProvenance => {
-  const value = exactObject(input, label, [
-    "source",
-    "license",
-    "termsCheckedAt",
-    "cost",
-    "consumer",
-  ]);
-  const termsCheckedAt = assertAutoMovieExternalGeneratorTermsAt({
-    termsCheckedAt: value.termsCheckedAt,
-    occurredAt,
+  const value = exactObject(
+    input,
     label,
-  });
+    ["cost", "consumer"],
+    ["source", "license", "termsCheckedAt"],
+  );
   const consumer = exactObject(value.consumer, `${label}.consumer`, [
     "kind",
     "reason",
   ]);
   if (consumer.kind !== kind)
     throw new Error(`${label}.consumer.kind must be "${kind}".`);
-  const source = nonBlank(value.source, `${label}.source`);
-  const license = nonBlank(value.license, `${label}.license`);
-  if (
-    autoMovieExternalLocatorRefusal(source) !== null ||
-    autoMovieExternalLocatorRefusal(license) !== null
-  )
-    throw new Error(
-      `${label} source and license locators must not contain credentials.`,
-    );
+  const metadata: {
+    source?: string;
+    license?: string;
+    termsCheckedAt?: string;
+  } = {};
+  for (const field of ["source", "license", "termsCheckedAt"] as const) {
+    const supplied = value[field];
+    if (supplied === undefined) continue;
+    if (
+      typeof supplied !== "string" ||
+      autoMovieExternalLocatorRefusal(supplied) === "credential-bearing"
+    )
+      throw new Error(
+        `${label}.${field} must be a string without credentials.`,
+      );
+    metadata[field] = supplied;
+  }
   return {
-    source,
-    license,
-    termsCheckedAt,
+    ...metadata,
     cost: nonBlank(value.cost, `${label}.cost`),
     consumer: {
       kind,

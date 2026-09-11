@@ -346,7 +346,7 @@ export const parseScreenplayProse = (
  *
  * Every other screenplay check reads the index alone, and an index that agrees
  * with itself can still promise a scene nobody wrote. This is the only place
- * the compiler opens authored prose, so it is the only place that can tell a
+ * the builder opens authored prose, so it is the only place that can tell a
  * ledger entry from a scene.
  *
  * Documents are addressed per unit when the layout is split and by the
@@ -483,7 +483,7 @@ export const screenplayProseDiagnostics = (props: {
     if (entry.authorityErrors.length !== 0)
       refuse(
         "screenplay-scene-authority-invalid",
-        `Scene "${scene.id}" has an invalid ${AUTHORITY_START} carrier in "${documentPath}": ${entry.authorityErrors.join("; ")}. Correct the bounded carrier rather than asking the compiler to infer action prose, then compile again.`,
+        `Scene "${scene.id}" has an invalid ${AUTHORITY_START} carrier in "${documentPath}": ${entry.authorityErrors.join("; ")}. Correct the bounded carrier rather than asking the builder to infer action prose, then compile again.`,
         documentPath,
       );
     if (scene.status === "OMITTED") {

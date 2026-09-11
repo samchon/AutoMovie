@@ -28,17 +28,17 @@ Sources: [buildingSMART on adjacent spaces sharing boundary relations](https://s
 
 ## Access, circulation, and clearance {#space-access-circulation}
 
-The population allocates intended entrances, routes, reachable zones, clear widths/heights, obstacles, and intentionally inaccessible regions for every required actor, camera, or operator.
+The population identifies the represented entrances, connected destinations, routes, and closed boundaries required by the delivery. Their visible openings and connections agree with the authored spatial graph. For an explicitly authored movement or operation task, it also allocates the route, clear widths and heights, obstacles, and reachable regions against that task's actor, camera rig, or equipment profile.
 
-Review question: which required traversal or view lacks one continuous, dimensioned, unobstructed route?
+Review question: which promised entrance or connection disagrees with the represented space, and which authored movement or operation task lacks a route that fits its declared profile?
 
-This obligation owns the spatial allocation against already authored profiles. `obligations/core/settings.md#design-dependent-subject-conditions` owns the applicable user, equipment, load, assistance, and uncertainty profiles; this item owns entrances, routes, widths, heights, obstacles, reachable zones, and intentionally inaccessible regions against those profiles.
+This obligation owns spatial access and route allocation. `obligations/core/settings.md#design-dependent-subject-conditions` owns the user and equipment conditions consumed by an authored movement or operation task.
 
 Sources: [NASA on verification methods and requirement-level responsibility](https://www.nasa.gov/reference/system-engineering-handbook-appendix/)
 
 ## Space review set {#space-review-set}
 
-The population defines plan, section, elevation, perspective, and traversal observations sufficient to falsify topology, scale, envelope alignment, and access independently of dramatic shot composition.
+The population selects a finite set of plan, section, elevation, and perspective observations that can falsify its promised topology, scale, envelope alignment, and represented access. An authored traversal or operation task additionally selects observations of that task against its declared conditions. The observation set follows the delivered spatial claims.
 
 Review question: which finite views expose every critical boundary and route?
 

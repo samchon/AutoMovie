@@ -17,14 +17,14 @@ import { blendPoses } from "./blendPoses";
 import { bodyRegionBones } from "./bodyRegionBones";
 
 /**
- * The **content seam** of the action compiler. Given one action call (and the
+ * The **content seam** of the action builder. Given one action call (and the
  * actor performing it), synthesise the _base_ clip for **one cycle** of that
  * action: local time starting at 0, the clip's own natural duration. Return
  * `null` to skip (the action produces no motion for this actor).
  *
  * This is where rig-specific content enters: a "strike" clip, a "walk" gait, an
  * IK reach are all authored against a particular skeleton, so the host supplies
- * them. The compiler stays generic: it owns the **timeline assembly** (which
+ * them. The builder stays generic: it owns the **timeline assembly** (which
  * actor, when, repeated how often, held across gaps, layered by region), never
  * the keyframes. This is "thin verb in, dense motion out" made concrete: a
  * coding agent authors {@link IAutoMovieActionCall}s, this seam fattens each
@@ -59,7 +59,7 @@ const BOUNDARY_EPSILON = 1e-6;
  * report it (#1349). The mask is correct and deliberate, but it used to be
  * SILENT: a quadruped gait driving the front legs (the arm chains) under an
  * explicitly lower-body quadruped gait can lose its front-leg arm chains and
- * still come back successful with zero violations. The compiler holds both
+ * still come back successful with zero violations. The builder holds both
  * facts (what the synthesizer authored, what the region admits) at the moment
  * it drops one, so it is the only place that can state the difference.
  *
@@ -348,7 +348,7 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * Compile a shot's flat {@link IAutoMovieActionCall} list into **one performance
  * clip per actor**, keyed by node id.
  *
- * The compiler does the orchestration the PERFORMANCE stage needs and the
+ * The builder does the orchestration the PERFORMANCE stage needs and the
  * engine primitives do not: it **splits unison actions** (`actor: string[]`)
  * onto each actor's timeline; **expands `repeat`** by concatenating the
  * synthesised cycle ({@link sequenceMotion}); and groups each actor's actions by
@@ -361,7 +361,7 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * truncated. The per-action keyframes come entirely from `synthesize`. A `null`
  * synthesis is skipped.
  *
- * The compiler also **states what it did not apply**: every clip the region
+ * The builder also **states what it did not apply**: every clip the region
  * mask trimmed rides back on `masked` (#1349), so the caller that owns the
  * success envelope can refuse or report it instead of returning a clip that
  * silently omits half of what the author asked for.

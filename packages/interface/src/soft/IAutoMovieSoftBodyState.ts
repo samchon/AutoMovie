@@ -182,7 +182,7 @@ export interface IAutoMovieSoftBounds {
 }
 
 /**
- * The bounded cost a soft-body domain adds to a shot, for the compiler report.
+ * The bounded cost a soft-body domain adds to a shot, for the builder report.
  *
  * Every field is derived from the domain record alone, so a production can be
  * refused for an unaffordable panel before a single step is integrated.

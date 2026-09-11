@@ -69,7 +69,7 @@ A derived population selects the carriers to which the configured rules apply. S
 
 ## Every public package participates
 
-`@automovie/production` and `@automovie/playground` carry the same repository `evidence/graph`, `evidence/documented`, and `evidence/todo` obligations as the other public packages. Production owns the compiler, project store, capture, inspection, and render-job contracts it implements. Playground owns the durable prototype-view surface it exports. Neither a removed transport boundary nor an application's smaller surface excuses its public exports from requirement and specification traceability.
+`@automovie/production` and `@automovie/playground` carry the same repository `evidence/graph`, `evidence/documented`, and `evidence/todo` obligations as the other public packages. Production owns the builder, project store, capture, inspection, and render-job contracts it implements. Playground owns the durable prototype-view surface it exports. Neither a removed transport boundary nor an application's smaller surface excuses its public exports from requirement and specification traceability.
 
 ## Split independently payable units
 
@@ -148,6 +148,8 @@ The scaffold production ladder is a separate graph with its own populations and 
 Run the configured `ttsc --noEmit` or package build for every affected claim project. When the repository docs workspace exists, run its declared lint script; when package source citations change, run the owning package build.
 
 For a graph-configuration change, inspect the actual roots, globs, exclusions, symbol selectors, and relationship options beside the selected contracts and exports. Confirm the claim includes the intended README roles and every affected carrier. Record the observation's revision, selected population, and native diagnostic separately from the semantic review result.
+
+When reviewing a generated graph adapter, compare its emitted native configuration and authored declaration under the [native input projection contract](../../../docs/specifications/production-evidence/native-input.md#spec-authoring-production-evidence-native-boundary). Use the installed native types and evaluator behavior to judge this boundary.
 
 When execution is authorized, observe a changed carrier selector through the owning project's configured native lint. Add one disposable carrier the selector is meant to admit, give it a dangling citation, and confirm that its diagnostic names that carrier. Exclude only that carrier from the changed selector and confirm the diagnostic disappears. Restore the selector and remove the disposable carrier before rerunning the normal check. This observation checks the changed repository wiring; it does not become a permanent source-text assertion or a dependency correctness suite.
 

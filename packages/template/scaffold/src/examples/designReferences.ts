@@ -46,7 +46,7 @@ export const OBSERVED_PAVILION_PLAN: IAutoMovieDesignReference = {
   id: "pavilion-plan",
   asset: "public/design-references/pavilion-plan.png",
   // The SHA-256 of the registered bytes at the moment they were read. A change
-  // here is what makes the compiler call an old observation stale.
+  // here is what makes the builder call an old observation stale.
   digest:
     "sha256:1111111111111111111111111111111111111111111111111111111111111111",
   media: "image/png",

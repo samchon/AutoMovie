@@ -42,7 +42,7 @@ const authoringEvidence = currentAuthoringEvidence();
  * The model is not shipped and never will be. `scripts/repaintAdapter.ts` is
  * the seam this project fills, and everything else already holds: the runtime
  * verifies the deterministic source the rendition derives from, parses the
- * returned MP4, and commits a receipt binding compiler, source-render, control,
+ * returned MP4, and commits a receipt binding builder, source-render, control,
  * reference, adapter, parameter, and output identities.
  *
  * The CLI exposes four explicit operations. A reroll creates a new request

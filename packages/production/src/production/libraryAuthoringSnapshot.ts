@@ -41,7 +41,7 @@ export interface IAutoMovieLibraryAuthoringSnapshot {
   version: 1;
   /** Protocol that gives the snapshot identity its meaning. */
   protocol: typeof AUTOMOVIE_LIBRARY_AUTHORING_SNAPSHOT_PROTOCOL;
-  /** Absolute normalized compiler project root. */
+  /** Absolute normalized builder project root. */
   root: string;
   /** Package identity observed with the authoring graph. */
   packageName: string;
@@ -101,7 +101,7 @@ export interface IAutoMovieLibrarySourceExecutionPlan {
  * Acquire one complete library authoring closure from a fresh graph snapshot.
  *
  * The caller supplies source reads from the same project handle that will run
- * the compiler. Missing selected members remain in the identity as `null`, so
+ * the builder. Missing selected members remain in the identity as `null`, so
  * deletion is a stale transition rather than an exception that skips the
  * publication guard.
  *
@@ -119,7 +119,7 @@ export const captureAutoMovieLibraryAuthoringSnapshot = (props: {
   const root = path.resolve(props.root);
   if (path.resolve(props.evidence.root) !== root)
     throw new Error(
-      `Library authoring evidence belongs to "${path.resolve(props.evidence.root)}", not compiler root "${root}". Reopen evidence from the selected project before compiling.`,
+      `Library authoring evidence belongs to "${path.resolve(props.evidence.root)}", not builder root "${root}". Reopen evidence from the selected project before compiling.`,
     );
   if (props.evidence.manifest.kind !== "library")
     throw new Error(

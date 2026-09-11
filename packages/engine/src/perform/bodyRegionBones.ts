@@ -84,7 +84,7 @@ type RegionedBone =
  * added to {@link AutoMovieHumanoidBone} and to no region satisfied every one of
  * those assertions while every mask, `fullBody` included, silently stripped it
  * (#1400). The product contract makes that an expected change, since every
- * future rig axis is additive, so the claim is kept by the compiler instead:
+ * future rig axis is additive, so the claim is kept by the builder instead:
  * this alias resolves to `never` only while the partition is complete, and the
  * declaration under it fails the build naming the bone that escaped.
  */
@@ -101,7 +101,7 @@ const RIG_IS_PARTITIONED: UnregionedBone extends never ? true : UnregionedBone =
  * an unread private constant is a build error, and the proof has to be read by
  * something. Declared plainly `true` rather than carrying the conditional, so
  * the emitted declaration does not republish the three region tuples and the
- * aliases over them: a downstream compiler would otherwise re-evaluate the
+ * aliases over them: a downstream builder would otherwise re-evaluate the
  * proof against whichever `@automovie/interface` it resolves, and read 55 bone
  * literals to learn the type of a constant that is `true`.
  *
@@ -113,10 +113,10 @@ export const AUTOMOVIE_RIG_IS_PARTITIONED: true = RIG_IS_PARTITIONED;
 /**
  * The humanoid bones a {@link AutoMovieBodyRegion} owns. The regions partition
  * the skeleton **disjointly and completely** (`lowerBody ∪ upperBody ∪ head` =
- * every bone the union declares, checked by the compiler through
+ * every bone the union declares, checked by the builder through
  * {@link AUTOMOVIE_RIG_IS_PARTITIONED}; `face` owns no bones, being
  * expression/morph channels; `fullBody` owns every bone). This is what lets the
- * performance compiler mask clips predictably. Layering then compares the
+ * performance builder mask clips predictably. Layering then compares the
  * content that survives these masks: clips may run concurrently whenever no
  * root, bone, or expression channel is claimed twice, even when one uses the
  * broad `fullBody` mask.

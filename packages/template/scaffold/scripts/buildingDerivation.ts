@@ -17,12 +17,12 @@ export type IAutoMovieBuildingAction =
  * Collect one record per id from every compiled shot, refusing a divergence.
  *
  * Two shots staging one building carry one record each, and they are the same
- * record: the compiler copies the source's own declaration into every artifact
+ * record: the builder copies the source's own declaration into every artifact
  * that stages it. So the id is the identity, and deriving both copies would put
  * one sheet on the page twice and make the take-off double the concrete.
  *
  * Two _different_ records wearing one id is a different fact, and this refuses
- * rather than picking. The compiler publishes building ids across shots but
+ * rather than picking. The builder publishes building ids across shots but
  * does not compare the records behind them, so a divergence reaches here
  * intact; a document silently derived from whichever shot happened to be read
  * first is exactly the kind of evidence nobody can act on.

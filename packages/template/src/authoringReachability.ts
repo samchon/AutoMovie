@@ -21,7 +21,7 @@ type AutoMovieCameraAction = Extract<
  * Closed literal vocabularies, each pinned to the interface union it publishes.
  *
  * `satisfies Record<Union, true>` fails to compile when the interface gains or
- * loses a literal, so the route matrix cannot advertise a choice the compiler
+ * loses a literal, so the route matrix cannot advertise a choice the builder
  * does not accept or hide one it does.
  */
 const CAMERA_ACTION_REGISTRY = {
@@ -53,10 +53,10 @@ const RENDER_TIER_REGISTRY = {
 >;
 
 /**
- * Closed camera-action vocabulary consumed by the shot compiler.
+ * Closed camera-action vocabulary consumed by the shot builder.
  *
  * @evidence requirements/product/authorability.md#product-discoverable-control Publishes the exact executable camera literals as the queryable choice set instead of broader film terminology.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Makes the compiler-supported camera choices discoverable through the authoring route.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Makes the builder-supported camera choices discoverable through the authoring route.
  */
 export const AUTO_MOVIE_CAMERA_ACTIONS: readonly AutoMovieCameraAction[] =
   Object.freeze(Object.keys(CAMERA_ACTION_REGISTRY) as AutoMovieCameraAction[]);
@@ -138,7 +138,7 @@ export interface IAutoMovieAuthoringReachabilityRow {
   capability: AutoMovieAuthoringCapability;
   /** Closed executable choices when the capability has a literal vocabulary. */
   choices: readonly string[] | null;
-  /** Runtime or compiler symbol that consumes the authored value. */
+  /** Runtime or builder symbol that consumes the authored value. */
   consumer: string | null;
   /** Production-design field, only for a field-level row. */
   field: AutoMovieProductionDesignField | null;
@@ -202,7 +202,7 @@ const KINDS = AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS;
  * The production design record is authored in the reviewed `src/production.ts`
  * source that `productionSources` binds, published through the generated
  * `scripts/emitDesign.ts`, and read back only by the timed compile.
- * `AutoMovieProductionCompiler.run` dispatches a library to `runLibrary`
+ * `AutoMovieProductionBuilder.run` dispatches a library to `runLibrary`
  * before the record is opened, so every field row below is applicable to film
  * and brief alike and inapplicable to a library.
  */
@@ -222,7 +222,7 @@ const field = (
 
 const PRODUCTION_DESIGN_FIELD_ROUTES = {
   id: field(
-    "AutoMovieProductionProject.setProductionDesign production address gate and AutoMovieProductionCompiler film identity",
+    "AutoMovieProductionProject.setProductionDesign production address gate and AutoMovieProductionBuilder film identity",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   title: field(
@@ -234,20 +234,20 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/production-lifecycle/settings.md",
   ),
   targetRuntimeSeconds: field(
-    "AutoMovieProductionCompiler film runtime and caption verification",
+    "AutoMovieProductionBuilder film runtime and caption verification",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   visualDelivery: field(
-    "AutoMovieProductionCompiler delivery-lane planner and scripts/renderPublicationRuntime.ts",
+    "AutoMovieProductionBuilder delivery-lane planner and scripts/renderPublicationRuntime.ts",
     ".agents/skills/production-lifecycle/configuration.md",
     VISUAL_DELIVERIES,
   ),
   visualDeliveryLanes: field(
-    "AutoMovieProductionCompiler occurrence-lane planner",
+    "AutoMovieProductionBuilder occurrence-lane planner",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   mixedVisualDeliveryPolicy: field(
-    "AutoMovieProductionCompiler lane-crossing verifier",
+    "AutoMovieProductionBuilder lane-crossing verifier",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   storyClock: field(
@@ -255,7 +255,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/production-lifecycle/settings.md",
   ),
   lighting: field(
-    "AutoMovieProductionCompiler shot build context and @automovie/engine production lighting sampler",
+    "AutoMovieProductionBuilder shot build context and @automovie/engine production lighting sampler",
     ".agents/skills/source-authoring/cinematography.md",
   ),
   renderBudgets: field(
@@ -263,7 +263,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/source-authoring/composition.md",
   ),
   externalMotions: field(
-    "AutoMovieProductionCompiler external motion admission",
+    "AutoMovieProductionBuilder external motion admission",
     ".agents/skills/source-authoring/models-and-motions.md",
     EXTERNAL_MOTION_MODES,
   ),
@@ -272,7 +272,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/source-authoring/sound.md",
   ),
   sound: field(
-    "AutoMovieProductionCompiler sound planning and scripts/renderSoundRuntime.ts",
+    "AutoMovieProductionBuilder sound planning and scripts/renderSoundRuntime.ts",
     ".agents/skills/source-authoring/sound.md",
   ),
   renderTiers: field(
@@ -289,11 +289,11 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/source-authoring/design-branches.md",
   ),
   environmentContext: field(
-    "AutoMovieProductionCompiler environment analyses",
+    "AutoMovieProductionBuilder environment analyses",
     ".agents/skills/source-authoring/spatial-design.md",
   ),
   frameFormat: field(
-    "AutoMovieProductionCompiler frame clock, productionRenderJob, and scripts/renderPlanningRuntime.ts",
+    "AutoMovieProductionBuilder frame clock, productionRenderJob, and scripts/renderPlanningRuntime.ts",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   artDirection: field(
@@ -301,7 +301,7 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
     ".agents/skills/production-lifecycle/settings.md",
   ),
   deliverables: field(
-    "AutoMovieProductionCompiler deliverable contracts and productionRenderJob",
+    "AutoMovieProductionBuilder deliverable contracts and productionRenderJob",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
 } satisfies Record<
@@ -321,13 +321,13 @@ const BASE_ROUTE_DEFINITIONS = {
       "docs/{maps,models,spaces,materials,instances,motions,systems} -> src/<branch>",
     serializer:
       "scripts/emitDesign.ts records and reviewed source-owner exports",
-    consumer: "AutoMovieProductionCompiler source scope",
+    consumer: "AutoMovieProductionBuilder source scope",
     route: ".agents/skills/source-authoring/design-branches.md",
   },
   "production-sources": {
     owner: "src/production.ts",
     serializer: "lint.config.ts productionSources source-owner bindings",
-    consumer: "AutoMovieProductionCompiler",
+    consumer: "AutoMovieProductionBuilder",
     route: ".agents/skills/source-authoring/compilation.md",
   },
   "external-model-inspection": {
@@ -421,7 +421,7 @@ const timedRows = (
   applicable(kind, "film-sources", {
     owner: kind === "film" ? "docs/screenplays" : "docs/briefs",
     serializer: "src/shots/**/*.ts and src/film.ts",
-    consumer: "AutoMovieProductionCompiler edit assembly",
+    consumer: "AutoMovieProductionBuilder edit assembly",
     route:
       kind === "film"
         ? ".agents/skills/production-lifecycle/screenplays.md"
@@ -431,7 +431,7 @@ const timedRows = (
     owner: "acceptance scenario exports beside src/shots/**/*.ts",
     serializer:
       "scripts/emitDesign.ts -> AutoMovieProductionProject.setAcceptanceScenario",
-    consumer: "AutoMovieProductionCompiler review and final scopes",
+    consumer: "AutoMovieProductionBuilder review and final scopes",
     route: ".agents/skills/source-authoring/compilation.md",
   }),
   applicable(kind, "camera-actions", {
@@ -452,7 +452,7 @@ const LIBRARY_ROWS: IAutoMovieAuthoringReachabilityRow[] = [
   inapplicable(
     "library",
     "acceptance",
-    "A library has no shot or film to target; npm run library:review records its observation receipts.",
+    "A library has no shot or film to target.",
   ),
   inapplicable(
     "library",
