@@ -1,4 +1,6 @@
 import {
+  materializeCompiledFormationInventory,
+  materializeCompiledInstanceSetInventory,
   realizeShotContract,
   validateAutoMovieEnvironmentContext,
   validateBuiltEnvironment,
@@ -61,8 +63,6 @@ import {
   IAutoMovieExternalModelRuntimeBinding,
   IAutoMovieMaterializedLibraryResult,
   materializeAutoMovieLibraryFiles,
-  materializeCompiledFormationInventory,
-  materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
@@ -106,6 +106,7 @@ import {
   buildFilmEdit,
   filmDiagnostic,
 } from "./productionFilmAssembly";
+import { productionProjectionRadii } from "./productionProjectionRadii";
 import { type IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
 import {
   screenplayCoverageDiagnostics,
@@ -355,25 +356,29 @@ export class AutoMovieProductionBuilder {
     let instanceSetRuntime: ReturnType<
       typeof materializeCompiledInstanceSetInventory
     > = {};
+    let projectionRadii: ReadonlyMap<string, number> = new Map();
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(
         materializeProductionModels(graph.models, externalModels, archetypes),
       );
-      formationRuntime = materializeCompiledFormationInventory(
-        graph.formations,
-        graph.models,
-        externalModels,
-        graph.world!.surfaces,
-        archetypes,
-      );
-      instanceSetRuntime = materializeCompiledInstanceSetInventory(
-        graph.world!,
+      projectionRadii = productionProjectionRadii(
         graph.models,
         externalModels,
         archetypes,
       );
+      formationRuntime = materializeCompiledFormationInventory({
+        formations: graph.formations,
+        recipes: graph.models,
+        projectionRadii,
+        surfaces: graph.world!.surfaces,
+      });
+      instanceSetRuntime = materializeCompiledInstanceSetInventory({
+        world: graph.world!,
+        recipes: graph.models,
+        projectionRadii,
+      });
     }
     const shotSources = new Map<string, Uint8Array>();
     for (const [id, contract] of graph.shots) {
@@ -545,7 +550,7 @@ export class AutoMovieProductionBuilder {
               world: graph.world!,
               fps: graph.production!.frameFormat.fps,
               source: result.value,
-              archetypes,
+              projectionRadii,
             });
             const realized = realizeShotContract({
               contract: entry.contract,

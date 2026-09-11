@@ -3,6 +3,7 @@ import {
   Quaternion,
   Vector3,
   composeFormationHeroTransform,
+  formationSlot,
   intersectsPerspectiveFrustumSphere,
   placeFormationSlot,
   projectToNdc,
@@ -65,7 +66,6 @@ import {
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
-import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { residentPngJs } from "./residentCodecs";
 import {
@@ -296,7 +296,7 @@ export class AutoMovieProductionOracleService {
           // where its cue really put it, which is the same reason.
           const groundViolations = representative.filter((slot) => {
             const placed = placeFormationSlot({
-              position: materializeFormationSlot(formation, slot).position,
+              position: formationSlot(formation, slot).position,
               facingDeg: runtime.facingDeg,
               anchor: runtime.anchor,
               baseFacingDeg: runtime.facingDeg,
