@@ -51,7 +51,7 @@ const PLANE = { width: 6, depth: 8 };
  * asked for.
  *
  * Selection and culling read `projectionRadius` before any geometry exists, and
- * the compiler wraps it in a floor, so an answer that was wrong by a factor of
+ * the builder wraps it in a floor, so an answer that was wrong by a factor of
  * two — or that read a cylinder's formula for a capsule — stayed finite and
  * positive and passed every check anything made of it. The same holds of the
  * builder: nothing downstream read the dimensions back, so a box built with its
@@ -225,7 +225,7 @@ export const test_archetypes_primitive_prop_geometry = (): void => {
     skeleton: "rig",
   });
   TestValidator.equals(
-    "the built runtime is one primitive part on the compiler's own material",
+    "the built runtime is one primitive part on the builder's own material",
     namedFacts([
       ["one", () => built.parts.length === 1],
       ["noSkeleton", () => built.skeleton === null],

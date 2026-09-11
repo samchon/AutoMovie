@@ -4,7 +4,7 @@ The four shared contract directories and the selected `docs/language` module for
 
 `docs/discovery` defines open production-specific searches, `docs/upstream` records what each inheriting unit learned by testing its actual parents, and `docs/principles` defines the no-exclusion checklist every selected authored H2, H3, or H4 answers for itself. `docs/obligations` defines roles fulfilled collectively by relevant authored H2 or source-export owners, with optional aggregate accounts for shared conclusions. [Production-specific contract](work-specific.md) owns additional production rules, and [Evidence staging](staging.md) owns their graph and annotation mechanics.
 
-The production design record is compiler-owned JSON, not an evidence-document host. A reviewed settings, research, or design H2 owns each delivery, repaint, dialogue, or simulation decision, the governed source that `scripts/emitDesign.ts` reads is where that decision is written, and `scripts/productionConfiguration.ts` refuses runtime drift, hidden fields, and inconsistent compiled consumers in the emitted record. Do not move ownership into a JSDoc beside the emitted field or add a design record to a Markdown claim population.
+The production design record is builder-owned JSON, not an evidence-document host. A reviewed settings, research, or design H2 owns each delivery, repaint, dialogue, or simulation decision, the governed source that `scripts/emitDesign.ts` reads is where that decision is written, and `scripts/productionConfiguration.ts` refuses runtime drift, hidden fields, and inconsistent compiled consumers in the emitted record. Do not move ownership into a JSDoc beside the emitted field or add a design record to a Markdown claim population.
 
 ## Shared form
 

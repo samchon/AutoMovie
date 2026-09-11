@@ -82,7 +82,7 @@ export const captureAutoMovieProductionFrame = async (
   if (registered === false)
     return failure(
       "capture-target-missing",
-      `Target "${props.target.kind}:${props.target.id}" is absent from compiler registry ${registry.inputFingerprint}. Correct its registration or compile current source before capture.`,
+      `Target "${props.target.kind}:${props.target.id}" is absent from builder registry ${registry.inputFingerprint}. Correct its registration or compile current source before capture.`,
     );
   const preview = await previewCaptureTarget(services, props);
   if (
@@ -214,7 +214,7 @@ const reopensThroughReceipt = (props: {
 }): boolean => {
   const { services, target, registry, manifest, frame } = props;
   try {
-    const status = services.compileStatus();
+    const status = services.buildStatus();
     const currentRegistry = readAutoMovieProductionRegistry(services.project);
     const relativeFrame = path
       .relative(
@@ -235,7 +235,7 @@ const reopensThroughReceipt = (props: {
     return (
       props.compileFingerprint === registry.inputFingerprint &&
       status.success &&
-      status.compiler.inputFingerprint === registry.inputFingerprint &&
+      status.builder.inputFingerprint === registry.inputFingerprint &&
       canonicalizeAutoMovieJson(currentRegistry) ===
         canonicalizeAutoMovieJson(registry) &&
       manifest.compileFingerprint === registry.inputFingerprint &&

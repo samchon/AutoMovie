@@ -1,4 +1,4 @@
-import { IAutoMovieDiagnostic } from "./IAutoMovieProductionCompiler";
+import { IAutoMovieDiagnostic } from "./IAutoMovieProductionBuild";
 import {
   AutoMovieContentDigest,
   IAutoMovieProductionDesign,
@@ -121,7 +121,7 @@ export interface IAutoMovieLegacyOwnedDirectoryBaseline {
  *
  * Drafts are evidence-backed starting points, not active production truth.
  * Applying the plan persists this document and provenance without inventing
- * source or claiming that the production compiler can already succeed.
+ * source or claiming that the production builder can already succeed.
  *
  * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-resume-compatibility-classification Exposes `IAutoMovieLegacyImportPlan` as the portable data boundary for the operations resume compatibility classification requirement.
  * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-resume-compatibility Types `IAutoMovieLegacyImportPlan` for the execution resume compatibility system contract.

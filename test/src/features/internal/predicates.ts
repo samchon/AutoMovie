@@ -178,7 +178,7 @@ const reportValidation = (
  * buys nothing, and restating one that calls anything runs the call a second
  * time: an erase asserted twice finds nothing to erase, a stale handle refused
  * twice is no longer stale, a one-shot hook fires on the wrong read. Repeat an
- * earlier conjunct only where the compiler needs it to narrow a type, which is
+ * earlier conjunct only where the builder needs it to narrow a type, which is
  * a comparison and cannot move an answer.
  */
 export const namedFacts = (

@@ -12,13 +12,13 @@
  * the triple, `srgbHexToLinearColor` writes the triple from a swatch, and the
  * two round-trip exactly for every eight-bit channel value. Bare `#RRGGBB`
  * fields carry the color rather than label one, so they are sRGB inputs: the
- * compiler and instance viewer share `srgbHexToLinearColor` for recipe and
+ * builder and instance viewer share `srgbHexToLinearColor` for recipe and
  * instance palettes, while the effect viewer applies three.js's equivalent
  * decode to particle colors.
  *
  * A swatch pasted into `r`, `g`, `b` unconverted lands about 2.3x too bright at
  * midtones: `#808080` becomes linear `0.502` where the swatch means `0.216`.
- * The compiler used to make exactly that substitution when it turned a model
+ * The builder used to make exactly that substitution when it turned a model
  * recipe palette into `baseColor`, which is how one production covered a single
  * roof in two colors, its instanced slates decoding their palette correctly
  * while the cut slates beside them carried a material that had not been

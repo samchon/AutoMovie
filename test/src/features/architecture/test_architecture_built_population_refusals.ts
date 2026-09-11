@@ -84,7 +84,7 @@ const refuses = (
  * cannot bound would leave that query choosing between a lie and a silence.
  * So the record checks the subset it owns on its own — the space binding, the
  * identity, and the placement law's own arithmetic — while the production
- * compiler keeps validating the whole set again when the lowered population
+ * builder keeps validating the whole set again when the lowered population
  * reaches the world. Each refusal below is one such fact, stated at its own
  * input path.
  *

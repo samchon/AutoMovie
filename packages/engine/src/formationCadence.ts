@@ -79,7 +79,7 @@ export interface IAutoMovieFormationCadenceSegment {
  * pivot. A consumer that knows a member's radius composes them; one that does
  * not still gets the unit's travel exactly.
  *
- * Cues are ordered by start alone. The compiler refuses overlapping cues inside
+ * Cues are ordered by start alone. The builder refuses overlapping cues inside
  * one unit, so no two starts can tie except in malformed input, where the
  * input's own order is kept.
  *

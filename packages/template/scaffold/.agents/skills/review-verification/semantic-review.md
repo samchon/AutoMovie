@@ -1,6 +1,6 @@
 # Independent semantic review
 
-This procedure owns semantic evidence judgment. The evidence compiler owns structural validation and fingerprint issuance; it never writes a finding. Mechanical tooling may locate rows, report diagnostics and alarms, and append one verified fingerprint to an already-authored structural slot. A generator, codemod, formatter, or bulk rewrite must never create, complete, paraphrase, or normalize the semantic sentence.
+This procedure owns semantic evidence judgment. The evidence builder owns structural validation and fingerprint issuance; it never writes a finding. Mechanical tooling may locate rows, report diagnostics and alarms, and append one verified fingerprint to an already-authored structural slot. A generator, codemod, formatter, or bulk rewrite must never create, complete, paraphrase, or normalize the semantic sentence.
 
 Read the [conformance owner map](../evidence-graph/conformance.md) before repairing a semantic or structural evidence failure.
 
@@ -10,7 +10,7 @@ Process one relationship at a time:
 
 1. Resolve the exact target H2, complete host, necessary lineage, and configured host kind from the immutable revision under review. Record the submitted commit and target and host blob identities in the commit or pull-request chronology.
 2. Leave the fingerprint slot empty. Read the target and host literally, perform the semantic pass below, write the finding, and inspect that prose while no fingerprint is present.
-3. Freeze the accepted semantic row. Ask the compiler or a dedicated token inserter for the current fingerprint, then let that tool append only the token in the structural slot. Reject an operation that changes review prose or any protected authored byte.
+3. Freeze the accepted semantic row. Ask the builder or a dedicated token inserter for the current fingerprint, then let that tool append only the token in the structural slot. Reject an operation that changes review prose or any protected authored byte.
 4. Run evidence lint and verify the resulting row against the same immutable target and host blobs. A moved branch, changed blob, unresolved anchor, different population, or edited semantic row invalidates the transaction and requires a new literal read.
 
 The durable Git commit or pull-request chronology records the fingerprint-empty semantic row, its author, the immutable revision and target and host identities, then the fingerprint insertion and proof that only the token slot changed. Do not create a repository approval, waiver, status, or review ledger. A private session path, `.wiki` note, or remembered context is not transferable provenance.
@@ -86,4 +86,4 @@ Use these cases when reviewing the harness or a production's completed evidence 
 | Honest similarity                                                              | Pass only when both axes establish distinct literal host facts and target-specific falsifiers.                                     |
 | Target, host, population, or semantic-row edit after judgment                  | Invalidate the judgment and restart from a new immutable basis.                                                                    |
 
-Run the complete matrix with current compiler-issued fingerprints where applicable so fingerprint freshness cannot decide the semantic result. A harness passes only when identical immutable inputs produce identical alarm membership and every semantic verdict still comes from literal review.
+Run the complete matrix with current builder-issued fingerprints where applicable so fingerprint freshness cannot decide the semantic result. A harness passes only when identical immutable inputs produce identical alarm membership and every semantic verdict still comes from literal review.

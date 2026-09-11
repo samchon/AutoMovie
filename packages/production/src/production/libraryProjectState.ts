@@ -39,7 +39,7 @@ export interface IAutoMovieLibraryProjectStateProblem {
 }
 
 /**
- * Strict result of reopening one compiler-owned library publication.
+ * Strict result of reopening one builder-owned library publication.
  *
  * @author Samchon
  */
@@ -58,14 +58,14 @@ export interface IAutoMovieLibraryProjectStateInspection {
  * contradictory one, and must never infer production kind from residue.
  *
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Refuses a library publication whose shape, owner lineage, or exact artifact closure cannot be authenticated.
- * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Binds current library state to the graph-selected kind and compiler fingerprint.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Binds current library state to the graph-selected kind and builder fingerprint.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Opens the library discriminant only after strict index and artifact validation.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Verifies the library publication against its current authoring input identity.
  * @author Samchon
  */
 export const inspectAutoMovieLibraryProjectState = (props: {
   production: string;
-  compiler: string;
+  builder: string;
   inputFingerprint: AutoMovieContentDigest;
   authoringEvidence: IAutoMovieProductionEvidence | undefined;
   manifest: IAutoMovieGeneratedManifest;
@@ -129,14 +129,14 @@ export const inspectAutoMovieLibraryProjectState = (props: {
   }
   if (
     index.production !== props.production ||
-    index.compiler !== props.compiler ||
+    index.builder !== props.builder ||
     index.inputFingerprint !== props.inputFingerprint
   )
     problems.push({
       code: "library-index-invalid",
       path: "library/index.json",
       message:
-        "Library index production, compiler, or input fingerprint differs from the selected current compile identity.",
+        "Library index production, builder, or input fingerprint differs from the selected current compile identity.",
     });
 
   const bindings = new Map(
@@ -262,14 +262,14 @@ const parseIndex = (bytes: Uint8Array): IAutoMovieMaterializedLibrary => {
   if (isRecord(value) === false || value.version !== 1)
     throw new Error("Library index is not a supported version-1 object.");
   assertExactKeys(value, [
-    "compiler",
+    "builder",
     "inputFingerprint",
     "owners",
     "production",
     "version",
   ]);
   if (
-    typeof value.compiler !== "string" ||
+    typeof value.builder !== "string" ||
     typeof value.production !== "string" ||
     isDigest(value.inputFingerprint) === false ||
     Array.isArray(value.owners) === false
@@ -291,7 +291,7 @@ const parseIndex = (bytes: Uint8Array): IAutoMovieMaterializedLibrary => {
     throw new Error("Library index owners are not in canonical order.");
   return {
     version: 1,
-    compiler: value.compiler,
+    builder: value.builder,
     production: value.production,
     inputFingerprint: value.inputFingerprint,
     owners,

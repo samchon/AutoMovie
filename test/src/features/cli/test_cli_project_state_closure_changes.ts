@@ -43,34 +43,34 @@ export const test_cli_project_state_closure_changes = (): void => {
       arrange: (fixture) => {
         fixture.input.read.manifest = () => ({
           ...fixture.manifest,
-          compiler: { packageVersion: "2", protocolVersion: "1" },
+          builder: { packageVersion: "2", protocolVersion: "1" },
         });
       },
     },
     {
       name: "first fingerprint",
       arrange: (fixture) => {
-        fixture.first.compiler.inputFingerprint = changed;
+        fixture.first.builder.inputFingerprint = changed;
       },
     },
     {
       name: "second fingerprint",
       arrange: (fixture) => {
-        fixture.second.compiler.inputFingerprint = changed;
+        fixture.second.builder.inputFingerprint = changed;
       },
     },
     {
       name: "both ending fingerprints",
       arrange: (fixture) => {
-        fixture.first.compiler.inputFingerprint = changed;
-        fixture.second.compiler.inputFingerprint = changed;
+        fixture.first.builder.inputFingerprint = changed;
+        fixture.second.builder.inputFingerprint = changed;
       },
     },
     {
       name: "mutated manifest snapshot",
       arrange: (fixture) => {
         fixture.input.read.manifest = () => {
-          fixture.manifest.compiler.packageVersion = "2";
+          fixture.manifest.builder.packageVersion = "2";
           return fixture.manifest;
         };
       },
@@ -94,7 +94,7 @@ export const test_cli_project_state_closure_changes = (): void => {
     TestValidator.equals(
       `${name} latest fingerprint`,
       result.freshness.currentFingerprint,
-      fixture.second.compiler.inputFingerprint,
+      fixture.second.builder.inputFingerprint,
     );
   }
   const fixture = createProjectStateClosureFixture();
@@ -113,6 +113,6 @@ export const test_cli_project_state_closure_changes = (): void => {
   TestValidator.equals(
     "source identity retained",
     result.freshness.currentFingerprint,
-    fixture.initial.compiler.inputFingerprint,
+    fixture.initial.builder.inputFingerprint,
   );
 };

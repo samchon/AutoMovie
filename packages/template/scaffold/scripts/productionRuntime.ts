@@ -221,7 +221,7 @@ export const compileProductionDialogueRuntime = (props: {
 /**
  * Refuse a sound plan that does not cover the exact runtime a render tier plays.
  *
- * The film is scored once, on the compiler's own frame clock, and the very same
+ * The film is scored once, on the builder's own frame clock, and the very same
  * bytes are muxed into every tier: a proxy exists to preview the final cheaply,
  * so giving it a different mix would defeat what it is for. A proxy also
  * shortens no film. Its `frameStep` decimates the clock, turning `frameStep`

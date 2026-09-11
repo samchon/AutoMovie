@@ -44,7 +44,7 @@ import {
  * 3. Every id a space names opens, which is the defect stated from the side a
  *    reviewer meets it.
  * 4. A walk from the index reaches all seven elements, including the two the
- *    compiler draws nothing for.
+ *    builder draws nothing for.
  * 5. The enumeration carries the groups too, so a flat survey is not smaller
  *    than the building.
  */
@@ -140,7 +140,7 @@ export const test_inspection_subject_group_reach = (): void => {
     "the enumeration is not smaller than the building",
     namedFacts([
       [
-        "it carries the groups the compiler drew nothing for",
+        "it carries the groups the builder drew nothing for",
         () => {
           const ids = describeAutoMovieSubjects(artifact).map(
             (description) => description.id,
@@ -164,7 +164,7 @@ export const test_inspection_subject_group_reach = (): void => {
       ],
     ]),
     {
-      "it carries the groups the compiler drew nothing for": true,
+      "it carries the groups the builder drew nothing for": true,
       "and still carries the elements it did draw": true,
       "while an id no element answers for is still refused": true,
     },

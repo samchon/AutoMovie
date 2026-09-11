@@ -70,7 +70,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     invariant:
       "A shot builder must execute successfully inside the deterministic source boundary.",
     correction:
-      "Repair the exact authored builder failure reported by the occurrence without bypassing the compiler boundary.",
+      "Repair the exact authored builder failure reported by the occurrence without bypassing the builder boundary.",
     recheck: "Execute the same source registration and compile scope again.",
   },
   capture: {
@@ -103,7 +103,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     invariant:
       "The registered shot and its realized source must agree with one exact authored contract.",
     correction:
-      "Correct the contract or source relation named by the occurrence; the compiler does not rewrite either side to make them agree.",
+      "Correct the contract or source relation named by the occurrence; the builder does not rewrite either side to make them agree.",
     recheck:
       "Compile the affected shot and re-evaluate all contract realizations.",
   },
@@ -155,7 +155,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     invariant:
       "Compiler-owned generated output must exactly match the current source closure and its manifest.",
     correction:
-      "Repair tracked source or remove only the specifically diagnosed stale generated artifact through the documented compiler workflow.",
+      "Repair tracked source or remove only the specifically diagnosed stale generated artifact through the documented builder workflow.",
     recheck: "Run the owning compile or read-only lint operation again.",
   },
   geometry: {
@@ -268,7 +268,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   source: {
     path: ".agents/skills/source-authoring/ownership.md#source-ownership",
     invariant:
-      "Tracked source must export the registered deterministic contract and stay inside the compiler sandbox and ownership boundary.",
+      "Tracked source must export the registered deterministic contract and stay inside the builder sandbox and ownership boundary.",
     correction:
       "Correct the exact module, export, capability, or registration named by the occurrence without bypassing the sandbox.",
     recheck: "Run source lint and the same compile scope again.",
@@ -316,9 +316,9 @@ const CODE_CONTRACTS: Readonly<
   "review-outcome-artifact-malformed": {
     path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
-      "A current compiler-owned acceptance artifact must remain readable, digest-matched UTF-8 JSON before review can derive an outcome from it.",
+      "A current builder-owned acceptance artifact must remain readable, digest-matched UTF-8 JSON before review can derive an outcome from it.",
     correction:
-      "Remove only the damaged compiler-owned publication named by the occurrence, then compile the same current inputs again; do not edit an acceptance outcome by hand.",
+      "Remove only the damaged builder-owned publication named by the occurrence, then compile the same current inputs again; do not edit an acceptance outcome by hand.",
     recheck:
       "Prepare the same review again and confirm the named artifact reads under its current manifest digest.",
   },
@@ -327,16 +327,16 @@ const CODE_CONTRACTS: Readonly<
     invariant:
       "Every manifest-owned acceptance artifact required by a current compile must be resident before review derives an outcome.",
     correction:
-      "Compile the same current inputs to restore the missing compiler-owned publication named by the occurrence.",
+      "Compile the same current inputs to restore the missing builder-owned publication named by the occurrence.",
     recheck:
       "Prepare the same review again and confirm the named artifact is resident under the current generated manifest.",
   },
   "review-outcome-contract-mismatch": {
     path: ".agents/skills/review-verification/review.md#evidence-review",
     invariant:
-      "The compiler writer and review reader shipped in one revision must agree on the exact schema and identity of every acceptance artifact.",
+      "The builder writer and review reader shipped in one revision must agree on the exact schema and identity of every acceptance artifact.",
     correction:
-      "Report the artifact path and validator paths as an internal compiler-reader contract defect; do not change author-owned source or repeat an unchanged compile as a purported fix.",
+      "Report the artifact path and validator paths as an internal builder-reader contract defect; do not change author-owned source or repeat an unchanged compile as a purported fix.",
     recheck:
       "After the product contract is corrected, compile and prepare the same review again against one unchanged input revision.",
   },

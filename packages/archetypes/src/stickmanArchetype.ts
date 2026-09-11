@@ -18,7 +18,7 @@ import { numberOf, numberParameter } from "./parameterValues";
  * Every proportion is derived from `height`, so one number moves the whole
  * runtime and the compiled result stays reproducible. It is one catalogue's
  * idea of an upright figure, registered like any other archetype rather than
- * known to the compiler.
+ * known to the builder.
  *
  * @evidence requirements/actors/body-scale-and-landmarks.md#actor-proportion-neutral Derives one explicit neutral skeleton and every segment proportion from metric height inputs.
  * @evidence requirements/actors/body-scale-and-landmarks.md#actor-bounds-shot-scale Reports a conservative height-derived radius before the rigged proxy is built.

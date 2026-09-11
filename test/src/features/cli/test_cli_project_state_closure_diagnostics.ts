@@ -14,7 +14,7 @@ import {
  *    tamper error survives a successful final pass.
  * 2. Exact duplicate records collapse despite different object property order;
  *    a changed category, phase, target, path, code, or message remains distinct.
- * 3. Later mutation of compiler-owned records cannot rewrite returned evidence.
+ * 3. Later mutation of builder-owned records cannot rewrite returned evidence.
  */
 export const test_cli_project_state_closure_diagnostics = (): void => {
   const fixture = createProjectStateClosureFixture();

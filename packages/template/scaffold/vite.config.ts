@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
             dialogue: captureRuntime.dialogue,
             deliveryCrop: captureRuntime.deliveryCrop,
             prepare: async () => {
-              // Preparation belongs to a request for admitted compiler output.
+              // Preparation belongs to a request for admitted builder output.
               // Keeping it lazy lets the server stay open through source errors.
               const closure = inspectCurrentCaptureRuntimeClosure({
                 projectRoot: root,

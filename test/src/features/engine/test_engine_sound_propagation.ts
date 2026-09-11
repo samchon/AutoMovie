@@ -556,7 +556,7 @@ export const test_engine_sound_propagation = (): void => {
           ? providerlessPlan.acousticProfile.provider
           : "wrong",
       // A cue with no frames has no sample to mix and no source to read: the
-      // compiler refuses it when lowering the edit, and the mix refuses the
+      // builder refuses it when lowering the edit, and the mix refuses the
       // same contradiction rather than rendering it as silence.
       zeroCueRefused: throwsError(
         () => renderProductionSound({ plan: zeroCuePlan }),

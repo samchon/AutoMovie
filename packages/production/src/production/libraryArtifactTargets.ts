@@ -10,8 +10,6 @@ import { encodeAutoMoviePathSegment } from "./contentIdentity";
  * through the same materialized owner index. An unowned or multiply owned path
  * is an invariant failure rather than an aggregate fallback.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Preserves the exact reviewed library owner on every generated artifact consumed by offline review.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Projects branch, design owner, source, and digest ownership from the materialized index onto each generated family.
  * @author Samchon
  */
 export const autoMovieLibraryArtifactSourceTargets = (

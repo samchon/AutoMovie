@@ -13,9 +13,9 @@ import { ViolationCollector } from "./violation";
 /**
  * Image facts read from an asset's own bytes, never from its file name.
  *
- * A manifest can claim anything; a PNG signature cannot. The compiler hands
+ * A manifest can claim anything; a PNG signature cannot. The builder hands
  * these in so this validator stays a pure function of facts, and so the same
- * closure runs against probed bytes in the compiler and against fixed facts in
+ * closure runs against probed bytes in the builder and against fixed facts in
  * a test.
  *
  * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `IAutoMovieTextureImageFacts` carries the byte-proven format and dimensions used to validate a sampled surface image.
@@ -146,7 +146,7 @@ export interface IAutoMovieTextureClosureInput {
    */
   assets: readonly IAutoMovieAssetProvenance[];
   /**
-   * Image facts for one registered asset path, or `undefined` when the compiler
+   * Image facts for one registered asset path, or `undefined` when the builder
    * could not read the bytes as an image at all.
    *
    * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `facts` resolves one asset path to the media type and dimensions proved by its bytes.
@@ -163,7 +163,7 @@ export interface IAutoMovieTextureClosureInput {
  * alone catches none of them:
  *
  * 1. A material binds an image the ledger never heard of, so nothing verifies its
- *    licence, its origin, or its bytes;
+ *    bytes or consumer bindings;
  * 2. The ledger authorizes an image for a model or shot that no longer binds it,
  *    so a stale entry keeps a file in the distributable forever;
  * 3. The bytes are not the image they are used as: a renamed `.png` that is really
@@ -365,7 +365,7 @@ const checkAsset = (props: {
     props.out.push(
       "type",
       props.path,
-      `texture asset "${props.asset}" is not registered in the project asset manifest; register its source, licence, digest and use before compiling`,
+      `texture asset "${props.asset}" is not registered in the project asset manifest; register its path, current digest and consumer binding before compiling`,
       props.asset,
     );
     return;

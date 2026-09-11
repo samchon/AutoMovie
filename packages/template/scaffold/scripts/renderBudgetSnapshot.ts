@@ -35,7 +35,7 @@ const RENDER_BUDGET_EVIDENCE_MAX_BYTES = 16 * 1024 * 1024;
 /** Directory, under the tier's render-job state, holding the evidence. */
 export const RENDER_BUDGET_EVIDENCE_DIRECTORY = "render-budget";
 
-/** Read one compiled shot artifact from current compiler-owned bytes. */
+/** Read one compiled shot artifact from current builder-owned bytes. */
 export const readCompiledShotSource = (
   project: AutoMovieProductionProject,
   shot: string,

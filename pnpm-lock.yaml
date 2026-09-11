@@ -498,9 +498,6 @@ importers:
       pngjs:
         specifier: catalog:media
         version: 7.0.0
-      typescript-compiler:
-        specifier: npm:typescript@5.9.3
-        version: typescript@5.9.3
       typia:
         specifier: catalog:samchon
         version: 13.2.0(@types/node@22.19.20)(ttsc@0.29.0)

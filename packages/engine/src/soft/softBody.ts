@@ -625,7 +625,7 @@ export const softBodyTravelNumber = (
  * alone.
  *
  * Nothing here integrates a step: a production is refused for an unaffordable
- * panel before the first solve, and the same numbers ride into the compiler's
+ * panel before the first solve, and the same numbers ride into the builder's
  * report so a reviewer sees what the fabric cost.
  *
  * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Prices soft-body work across the declared shot horizon.
