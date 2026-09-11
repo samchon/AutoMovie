@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AutoMovie moves and forms characters and objects through LLM function calling, then validates and renders them deterministically. Fly through its first public showcase, a procedural medieval baron manor."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <title>AutoMovie</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #1c1a18;
+        --bg-raised: #242120;
+        --ink: #e9e4d8;
+        --muted: #a9a294;
+        --line: rgba(233, 228, 216, 0.14);
+        --accent: #d9a441;
+        --accent-ink: #1c1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      a {
+        color: inherit;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 22px 0;
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.02em;
+        text-decoration: none;
+      }
+      nav a {
+        margin-left: 22px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 15px;
+      }
+      nav a:hover {
+        color: var(--ink);
+      }
+      .hero {
+        display: grid;
+        gap: 28px;
+        padding: 36px 0 20px;
+      }
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(30px, 4.6vw, 46px);
+        line-height: 1.12;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        max-width: 20ch;
+      }
+      .hero p.lead {
+        margin: 0;
+        max-width: 58ch;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+      }
+      .button.primary:hover {
+        filter: brightness(1.08);
+      }
+      .button:not(.primary):hover {
+        border-color: var(--ink);
+      }
+      figure.shot {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--bg-raised);
+      }
+      figure.shot a {
+        display: block;
+      }
+      figure.shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+      }
+      figure.shot figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 14px;
+        padding: 26px 0;
+      }
+      .fact {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg-raised);
+      }
+      .fact strong {
+        display: block;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .fact span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      section.about {
+        padding: 10px 0 30px;
+        display: grid;
+        gap: 14px;
+        max-width: 68ch;
+        color: var(--muted);
+      }
+      section.about h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 22px;
+      }
+      section.about p {
+        margin: 0;
+      }
+      section.about code {
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        font: 14px ui-monospace, "Cascadia Mono", Consolas, monospace;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 14px;
+        padding: 0 0 40px;
+      }
+      footer {
+        padding: 26px 0 40px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer a {
+        text-decoration: none;
+      }
+      footer a:hover {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <a class="wordmark" href="./">AutoMovie</a>
+        <nav>
+          <a href="manor/">Manor viewer</a>
+          <a href="https://github.com/samchon/AutoMovie">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <h1>A medieval manor, written as source and built in your browser.</h1>
+          <p class="lead">
+            AutoMovie moves and forms characters and objects through LLM
+            function calling, then validates and renders them with a
+            deterministic engine. Its first public showcase is a baron's
+            timber-framed manor: sixteen rooms, a courtyard garden, and every
+            beam, tile, and casement generated from authored code the moment the
+            page opens.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="manor/">Open the manor viewer →</a>
+            <a
+              class="button"
+              href="https://github.com/samchon/AutoMovie/tree/master/experimental/medieval-baron-manor"
+              >Read the manor source</a
+            >
+          </div>
+          <figure class="shot">
+            <a href="manor/?view=reference-exterior">
+              <img
+                src="shots/reference-exterior.webp"
+                width="1440"
+                height="900"
+                alt="The manor from the south-east: two timber-framed wings under terracotta roofs around a courtyard with a pond."
+              />
+            </a>
+            <figcaption>
+              <span>Exterior from the south-east, as the viewer renders it.</span>
+              <span>Click to fly there</span>
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="facts" aria-label="Manor facts">
+          <div class="fact">
+            <strong>16 rooms</strong>
+            <span>on two floors around a courtyard</span>
+          </div>
+          <div class="fact">
+            <strong>192 entries</strong>
+            <span>authored building, furnishing, and garden pieces</span>
+          </div>
+          <div class="fact">
+            <strong>7 textures</strong>
+            <span>oak, limestone, plaster, terracotta, linen, bark, soil</span>
+          </div>
+          <div class="fact">
+            <strong>144 KB</strong>
+            <span>of source generates the whole house</span>
+          </div>
+        </section>
+
+        <section class="gallery" aria-label="Manor views">
+          <figure class="shot">
+            <a href="manor/?view=reference-courtyard">
+              <img
+                src="shots/reference-courtyard.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="The courtyard garden with its pond, apple tree, and benches between the two wings."
+              />
+            </a>
+            <figcaption><span>Courtyard</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="manor/?view=hall--corner-b">
+              <img
+                src="shots/hall.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="The great hall interior with its hearth, long table, and exposed ceiling joists."
+              />
+            </a>
+            <figcaption><span>Great hall</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="manor/?view=ground-plan">
+              <img
+                src="shots/ground-plan.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="The ground floor cut open from above, showing every room and its furnishings in plan."
+              />
+            </a>
+            <figcaption><span>Ground plan</span></figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="manor/?view=frame-axonometric">
+              <img
+                src="shots/frame-axonometric.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="The manor with its roof envelope removed, exposing the rafters and the timber frame."
+              />
+            </a>
+            <figcaption><span>Timber frame</span></figcaption>
+          </figure>
+        </section>
+
+        <section class="about">
+          <h2>What you are looking at</h2>
+          <p>
+            The manor is a finished AutoMovie production. A coding agent
+            authored it as ordinary source files under
+            <code>experimental/medieval-baron-manor</code>: procedural models
+            for the frame, roof, joinery, furnishings, and garden; a material
+            file binding seven albedo textures by physical metres; and an
+            instance definition that finds every repeated member and places it
+            once as a shared prototype. Nothing is sculpted or scanned.
+          </p>
+          <p>
+            The viewer runs that source directly. It decodes the textures,
+            derives the shared prototypes, builds the scene, and then lets you
+            fly through it or jump between the observation views the author
+            framed while reviewing the house. What you see is the blocking
+            pass AutoMovie is for: staging, proportion, and placement that are
+            correct and reproducible, not a photoreal render.
+          </p>
+        </section>
+      </main>
+
+      <footer>
+        <a href="https://github.com/samchon/AutoMovie">samchon/AutoMovie</a>
+        · MIT License
+      </footer>
+    </div>
+  </body>
+</html>

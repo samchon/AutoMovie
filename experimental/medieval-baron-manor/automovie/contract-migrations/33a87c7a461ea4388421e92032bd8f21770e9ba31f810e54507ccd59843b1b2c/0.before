@@ -1,0 +1,751 @@
+{
+  "files": [
+    {
+      "anchors": [
+        "shared-local-boundary",
+        "canonical-realization"
+      ],
+      "path": "docs/discovery/core/common.md",
+      "sha256": "sha256:69d727d1b0a97ae8dc10d99e729d9b3292a9c685c80c53831f2feacfdc6ce0c5"
+    },
+    {
+      "anchors": [
+        "directive-promise-subject-requirements",
+        "planned-delivery-backcast"
+      ],
+      "path": "docs/discovery/core/settings.md",
+      "sha256": "sha256:e2cd9b8d7dc068544f18c0c2b2e8f13d51b6bad41a974fadb31f529cb642c39e"
+    },
+    {
+      "anchors": [
+        "work-specific-brief-requirements"
+      ],
+      "path": "docs/discovery/delivery/briefs.md",
+      "sha256": "sha256:b906d5fa682b87efc7184b8171ee61a4d2b2efa4616de86a5560a5edb4da0783"
+    },
+    {
+      "anchors": [
+        "work-specific-design-requirements"
+      ],
+      "path": "docs/discovery/design/designs.md",
+      "sha256": "sha256:81288894af1b5b51c53770892b631168dfa2e128755bb014e8f272bc228a72ab"
+    },
+    {
+      "anchors": [
+        "work-specific-instance-requirements"
+      ],
+      "path": "docs/discovery/design/instances.md",
+      "sha256": "sha256:1f540ff016ec4191f8a703f6fe149023b15ee1f39e7019d57ec38479385bab1c"
+    },
+    {
+      "anchors": [
+        "work-specific-map-requirements"
+      ],
+      "path": "docs/discovery/design/maps.md",
+      "sha256": "sha256:d94506f1b5f8789d51afa34049593e5780514cf7ab61cbd66262ffa97901ef92"
+    },
+    {
+      "anchors": [
+        "work-specific-material-requirements"
+      ],
+      "path": "docs/discovery/design/materials.md",
+      "sha256": "sha256:e7af3e045af539a58fdcaa53cef26b230a6f319246c2fe6c2e39e861590208ac"
+    },
+    {
+      "anchors": [
+        "work-specific-model-requirements"
+      ],
+      "path": "docs/discovery/design/models.md",
+      "sha256": "sha256:c1f0553084f7c659183813b06967170a4792c1efc3691cd97d3226d2a8e7bee6"
+    },
+    {
+      "anchors": [
+        "work-specific-motion-requirements"
+      ],
+      "path": "docs/discovery/design/motions.md",
+      "sha256": "sha256:d77a5730347949fa772edbaa54bde0779b084d7680e7892e7085a41dd3542de1"
+    },
+    {
+      "anchors": [
+        "work-specific-space-requirements"
+      ],
+      "path": "docs/discovery/design/spaces.md",
+      "sha256": "sha256:5f31fe4116d728caf3a77cbd72fbf6e14078552cd340b7435dccbd9588ce5d5c"
+    },
+    {
+      "anchors": [
+        "work-specific-system-requirements"
+      ],
+      "path": "docs/discovery/design/systems.md",
+      "sha256": "sha256:3cb93f23d528f0d20973298e871c669bffafcd97389b3605c0983c156bb25cff"
+    },
+    {
+      "anchors": [
+        "work-specific-film-requirements"
+      ],
+      "path": "docs/discovery/story/films.md",
+      "sha256": "sha256:b21aa83a1d6605f6b82f6a10336c1089261349bbb1522bc1a5b3bbb1bd8fc6fa"
+    },
+    {
+      "anchors": [
+        "work-specific-screenplay-requirements"
+      ],
+      "path": "docs/discovery/story/screenplays.md",
+      "sha256": "sha256:b0b87bb981c7de9e878ad3905d1f37b06a34409669bb25ce490ba49bb9064ab9"
+    },
+    {
+      "anchors": [
+        "work-specific-script-requirements"
+      ],
+      "path": "docs/discovery/story/scripts.md",
+      "sha256": "sha256:e4f4aa2aa66b293578d6899ed5009124f7df25f1c89c6aa1c30b3fcade4c5419"
+    },
+    {
+      "anchors": [
+        "work-specific-treatment-requirements"
+      ],
+      "path": "docs/discovery/story/treatments.md",
+      "sha256": "sha256:88a35b2c05e83f2f06b65724edeabaefba6faf6760c1b46fd800f39032cc30ad"
+    },
+    {
+      "anchors": [
+        "korean-work-specific-conditions"
+      ],
+      "path": "docs/language/discovery/signals.md",
+      "sha256": "sha256:98d4406baf4d84e076c332ba5d639b492ed1f2178a3dc3f0e5d5e3fc139d8e01"
+    },
+    {
+      "anchors": [
+        "korean-population-interference-account",
+        "korean-audience-language-access"
+      ],
+      "path": "docs/language/obligations/common.md",
+      "sha256": "sha256:adba7d76dd35d060d7a72d3cc56889e44857cdb33a94590a65fa164907907651"
+    },
+    {
+      "anchors": [
+        "korean-contextual-relation",
+        "korean-register-ownership"
+      ],
+      "path": "docs/language/principles/common.md",
+      "sha256": "sha256:33db7162274c617121e6efda0e2d2c374520d4c39f6d3705adbe57fc6f9be18c"
+    },
+    {
+      "anchors": [
+        "purpose-fit",
+        "layer-boundary",
+        "production-language",
+        "proportionate-development"
+      ],
+      "path": "docs/obligations/core/common.md",
+      "sha256": "sha256:698d18725b52584d450f5d48e5042f1bf62d68865ce8ea8f4a42509690023302"
+    },
+    {
+      "anchors": [
+        "recurrent-frame-distribution",
+        "surface-cadence-distribution"
+      ],
+      "path": "docs/obligations/core/defaults.md",
+      "sha256": "sha256:94a7698aa48743013d3b250a843d7e1608e170c9c60f066b9935ebba804471d0"
+    },
+    {
+      "anchors": [
+        "addressable-canon",
+        "delivery-scope",
+        "governing-aim",
+        "production-visual-grammar",
+        "production-fidelity-tier",
+        "subject-breakdown-production-scope",
+        "audience-operator-access",
+        "accessibility-deliverable-states",
+        "coordinate-unit-convention",
+        "delivery-review-condition",
+        "settings-coverage-map",
+        "operative-subject-inventory",
+        "design-dependent-subject-conditions",
+        "minimal-departure",
+        "internal-coherence"
+      ],
+      "path": "docs/obligations/core/settings.md",
+      "sha256": "sha256:b7f0697016f915564ecda200893839dd7b902a812a4281a6cefe71a1ee837ad4"
+    },
+    {
+      "anchors": [
+        "single-scope-eligibility",
+        "brief-unit-addressability",
+        "observable-progression"
+      ],
+      "path": "docs/obligations/delivery/briefs.md",
+      "sha256": "sha256:ef75ad26bfcba8ea57185511ffa0aae187e9845109f2170ffd3901ab742acc13"
+    },
+    {
+      "anchors": [
+        "editorial-only-assembly",
+        "authored-auxiliary-tracks",
+        "deterministic-timeline"
+      ],
+      "path": "docs/obligations/delivery/film-sources.md",
+      "sha256": "sha256:66f958d22d803bb919aa2240484523bdce55d29a74fbc012cd2d0cef8ad6b4f6"
+    },
+    {
+      "anchors": [
+        "settings-only-serialization",
+        "delivery-identity",
+        "shared-visual-grammar"
+      ],
+      "path": "docs/obligations/delivery/production-sources.md",
+      "sha256": "sha256:843a85bd2dd5714957c90d8dacd8d2a919f16f1522a4044e49b33c5cfdb83196"
+    },
+    {
+      "anchors": [
+        "contract-only-composition",
+        "explicit-inputs-and-time",
+        "acceptance-travels-with-delivery"
+      ],
+      "path": "docs/obligations/delivery/shots.md",
+      "sha256": "sha256:de4f0ccac3c6a0a745ccf4f55ba073d21ec0aa212b395b5ba3279c8da524e5cf"
+    },
+    {
+      "anchors": [
+        "instance-source-design-ownership",
+        "instance-source-stable-membership",
+        "instance-source-invalid-placement"
+      ],
+      "path": "docs/obligations/design/instance-sources.md",
+      "sha256": "sha256:f16584c3d597047e30daf173b46a7ae83e6d2043dde56639a2369142917ac590"
+    },
+    {
+      "anchors": [
+        "addressable-instance-decisions",
+        "instance-prototype-membership",
+        "instance-identity-transform",
+        "instance-variation-tiers",
+        "instance-placement-review"
+      ],
+      "path": "docs/obligations/design/instances.md",
+      "sha256": "sha256:02b3ee8696ce4bc9f6121593f13cfb028446668076b72c6d3f7b0d19778607ae"
+    },
+    {
+      "anchors": [
+        "map-source-design-ownership",
+        "map-source-deterministic-world",
+        "map-source-preserved-lineage",
+        "map-source-invalid-world"
+      ],
+      "path": "docs/obligations/design/map-sources.md",
+      "sha256": "sha256:33f38a45cf5cbbf525554c2186a70297d170e6831bd7865b3ae6aafff9349b11"
+    },
+    {
+      "anchors": [
+        "addressable-map-decisions",
+        "map-world-site-interface",
+        "map-world-content-relations",
+        "map-world-temporal-state",
+        "map-world-scale-partition",
+        "map-world-source-resolution",
+        "map-review-set"
+      ],
+      "path": "docs/obligations/design/maps.md",
+      "sha256": "sha256:e02b3dce5319e9774cd3cd0132a3df462aea15f0ba3d0f89e7d595890539c2c4"
+    },
+    {
+      "anchors": [
+        "material-source-design-ownership",
+        "material-source-renderer-mapping",
+        "material-source-invalid-state"
+      ],
+      "path": "docs/obligations/design/material-sources.md",
+      "sha256": "sha256:b635398dc9da871375c12e6f9ad9776730f732d8904f6a220eac9d5626848b5a"
+    },
+    {
+      "anchors": [
+        "addressable-material-decisions",
+        "material-identity-assembly",
+        "material-surface-assignment",
+        "material-response",
+        "material-review-set"
+      ],
+      "path": "docs/obligations/design/materials.md",
+      "sha256": "sha256:8bcb7d7f36bac8da4702a4c45e2f0706f204328e5cfdc95c6956e24f16085a9f"
+    },
+    {
+      "anchors": [
+        "design-owned-construction",
+        "deterministic-build",
+        "unsupported-fidelity-is-explicit"
+      ],
+      "path": "docs/obligations/design/model-sources.md",
+      "sha256": "sha256:ff3c1bb354262e02e4a972088151a0cc12a399408abeafe9be4461d269c6a42a"
+    },
+    {
+      "anchors": [
+        "addressable-model-decisions",
+        "representation-ceiling",
+        "reference-scale",
+        "articulation-ownership",
+        "model-review-set",
+        "model-representation-completion"
+      ],
+      "path": "docs/obligations/design/models.md",
+      "sha256": "sha256:7a2d100d1b671f597fdb71c9cae1a66806df585119ebc7b5b07363a40a6b60a8"
+    },
+    {
+      "anchors": [
+        "design-owned-transition",
+        "pure-time-mapping",
+        "invalid-input-is-visible"
+      ],
+      "path": "docs/obligations/design/motion-sources.md",
+      "sha256": "sha256:0231b53d63302475cb8994d19ac7d6ef406b366f9285146a0687fab9f54853f0"
+    },
+    {
+      "anchors": [
+        "addressable-motion-decisions",
+        "time-base",
+        "contact-policy",
+        "composition-interruption",
+        "motion-review-set"
+      ],
+      "path": "docs/obligations/design/motions.md",
+      "sha256": "sha256:6ab0e1111ce2c9ff083617e5d1387371e168fcc1bd70a9b376b68bd04640b70c"
+    },
+    {
+      "anchors": [
+        "space-source-design-ownership",
+        "space-source-stable-identities",
+        "space-source-invalid-topology"
+      ],
+      "path": "docs/obligations/design/space-sources.md",
+      "sha256": "sha256:447a350611a2f5e817c1b034b8b13b26065a5aa726c58ca444f5d4a5d5e7ea5b"
+    },
+    {
+      "anchors": [
+        "addressable-spatial-decisions",
+        "space-reference-topology",
+        "space-envelope-interface",
+        "space-access-circulation",
+        "space-review-set"
+      ],
+      "path": "docs/obligations/design/spaces.md",
+      "sha256": "sha256:3fb7a643937ffcbc6525d762df446bea15b5cef2d7481f3a76bad799ee39e569"
+    },
+    {
+      "anchors": [
+        "system-source-design-ownership",
+        "system-source-explicit-evaluation",
+        "system-source-failure-budget"
+      ],
+      "path": "docs/obligations/design/system-sources.md",
+      "sha256": "sha256:3fb7e7d88b4982070a80c5749e2c114e1acabba0182680f5bb3388e86bff3891"
+    },
+    {
+      "anchors": [
+        "addressable-system-decisions",
+        "system-ownership-interfaces",
+        "system-state-clock",
+        "system-budget-degradation",
+        "system-review-set"
+      ],
+      "path": "docs/obligations/design/systems.md",
+      "sha256": "sha256:5213f858a343109f88f67ed44e11e1f4007040eb4684c000f011cbf6b859a289"
+    },
+    {
+      "anchors": [
+        "unit-addressability",
+        "unit-contribution-distribution",
+        "sequence-connection",
+        "state-continuity-distribution",
+        "character-continuity-distribution",
+        "temporal-gear-distribution",
+        "speech-distribution",
+        "voice-frame-distribution",
+        "pacing-arrangement"
+      ],
+      "path": "docs/obligations/story/narratives.md",
+      "sha256": "sha256:7b8fd470137160aa0dfc9ef2cc3b776ce24c7c7d097137663d0bb2aa5a5711c1"
+    },
+    {
+      "anchors": [
+        "realization-ready-contract",
+        "screenplay-format-scene-completeness",
+        "screenplay-revision-realization-handoff"
+      ],
+      "path": "docs/obligations/story/screenplays.md",
+      "sha256": "sha256:0d371415a513d75f8f757705ec0626a50e065b6c921792245ae0e253265845f7"
+    },
+    {
+      "anchors": [
+        "release-partition",
+        "script-boundary"
+      ],
+      "path": "docs/obligations/story/scripts.md",
+      "sha256": "sha256:fc64704a0b5d96f2038acad5a939827f4708612471fa7b7814515f31a3c5c66c"
+    },
+    {
+      "anchors": [
+        "situated-conditions",
+        "drives-and-pressures",
+        "knowledge-and-perception",
+        "expression-and-behavior",
+        "bidirectional-relationships",
+        "change-boundaries"
+      ],
+      "path": "docs/obligations/story/subjects.md",
+      "sha256": "sha256:15bd63917fefdd9bcef6ac9e51e129e88b63dffd39f40e2ddefd7ff4678daa17"
+    },
+    {
+      "anchors": [
+        "opening-condition",
+        "terminal-condition",
+        "audience-route",
+        "resolution-aftermath",
+        "thematic-development",
+        "treatment-boundary",
+        "sustained-middle"
+      ],
+      "path": "docs/obligations/story/treatments.md",
+      "sha256": "sha256:8f02e76ef005fd3a4d1936b381b55d09e37ad0c51dbdfe300621448985a77841"
+    },
+    {
+      "anchors": [
+        "scope-preservation",
+        "substantive-completion",
+        "declared-basis"
+      ],
+      "path": "docs/principles/core/common.md",
+      "sha256": "sha256:4c0377a236e82a0fb44e6c5ae7d5cac22a34617d9ca8d22ca7dfbe7733795568"
+    },
+    {
+      "anchors": [
+        "purposeful-enumeration",
+        "earned-significance",
+        "responsive-qualification",
+        "functional-formatting",
+        "contrastive-definition"
+      ],
+      "path": "docs/principles/core/defaults.md",
+      "sha256": "sha256:8f5687575529f6ae8701d26b064c6de527c60512257f552b7c83501593862770"
+    },
+    {
+      "anchors": [
+        "derived-parent-differentiation"
+      ],
+      "path": "docs/principles/core/inherited-units.md",
+      "sha256": "sha256:a0811d8a2e00619a56112e3d7763703b6d37416e197c5b70102fd6b259b76cfc"
+    },
+    {
+      "anchors": [
+        "source-identity",
+        "production-consequence",
+        "uncertainty-boundary"
+      ],
+      "path": "docs/principles/core/research.md",
+      "sha256": "sha256:880c3ed131834b2cd4ed6353f40c23ffc96d9334bd25f29cfd7c33976f12cf73"
+    },
+    {
+      "anchors": [
+        "fact-status",
+        "source-support",
+        "capability-boundary",
+        "constraint-sufficiency",
+        "observable-identity"
+      ],
+      "path": "docs/principles/core/settings.md",
+      "sha256": "sha256:5b6542a7291cf6e2dfd1cd451b520a08515ffef3c99d2a8a64c8e2a21fd22076"
+    },
+    {
+      "anchors": [
+        "source-scope-preservation",
+        "source-substantive-completion"
+      ],
+      "path": "docs/principles/core/source-units.md",
+      "sha256": "sha256:f257165132c5f5430b8dc75606ffc9d9049f3a884f6e0af26883a7e5abfe6705"
+    },
+    {
+      "anchors": [
+        "brief-information-structure",
+        "no-narrative-smuggling"
+      ],
+      "path": "docs/principles/delivery/briefs.md",
+      "sha256": "sha256:e5019a44c7b6922eaff4753c8152d925a7ff59f2904140f9fae55e64c964962c"
+    },
+    {
+      "anchors": [
+        "instance-prototype-boundary",
+        "instance-derivation-authority",
+        "instance-verification-address"
+      ],
+      "path": "docs/principles/design/instances.md",
+      "sha256": "sha256:e5b2ef52e055c873b01c31dbecb1f41445b28f28d19bca34635f48d7948dca5d"
+    },
+    {
+      "anchors": [
+        "map-addressable-world-identity",
+        "map-coordinate-extent-scale",
+        "map-verification-address"
+      ],
+      "path": "docs/principles/design/maps.md",
+      "sha256": "sha256:800c8d42796db8d6230cf8e645b9306fa5eeeaabfd91215b07c705a803e425e2"
+    },
+    {
+      "anchors": [
+        "material-construction-appearance",
+        "material-binding-interface",
+        "material-verification-address"
+      ],
+      "path": "docs/principles/design/materials.md",
+      "sha256": "sha256:f29e68762846d57f9a3a359f387ce6a495779397071d60b014bfc58c8acdaaef"
+    },
+    {
+      "anchors": [
+        "representation-contract",
+        "spatial-convention",
+        "reviewable-structure",
+        "model-observable-style-basis",
+        "model-scale-layer-completion"
+      ],
+      "path": "docs/principles/design/models.md",
+      "sha256": "sha256:96f01716482a7b0d5e426617c69edfe38ad387ac0a9c17d9db749e3cfb9a152e"
+    },
+    {
+      "anchors": [
+        "state-endpoints",
+        "temporal-phases",
+        "spatial-relation",
+        "parameter-domain"
+      ],
+      "path": "docs/principles/design/motions.md",
+      "sha256": "sha256:d3a5734339b71c65a38b2ceabffd469cb98eb2d84987dbc27ada48635477ab3c"
+    },
+    {
+      "anchors": [
+        "space-topology",
+        "space-boundary-authority",
+        "space-verification-address"
+      ],
+      "path": "docs/principles/design/spaces.md",
+      "sha256": "sha256:30ef2f3f6d552f54290f8e5cddd2755f4bcc33bb9c1a3c12c74cad1f70c8aac3"
+    },
+    {
+      "anchors": [
+        "system-authority-confinement",
+        "system-dependency-basis",
+        "system-verification-address"
+      ],
+      "path": "docs/principles/design/systems.md",
+      "sha256": "sha256:0142418c19a06dbf7431897d802ab10c70e8d83522da194dbb2277e0cc2bb35e"
+    },
+    {
+      "anchors": [
+        "unit-function",
+        "unit-connection",
+        "horizontal-state-continuity",
+        "narrated-time",
+        "audience-investment",
+        "character-continuity",
+        "information-entry",
+        "specificity",
+        "closing-line-contribution",
+        "parent-differentiation",
+        "drive-to-turn",
+        "unit-identity",
+        "state-continuity",
+        "observable-inheritance"
+      ],
+      "path": "docs/principles/story/narratives.md",
+      "sha256": "sha256:f9027b65467d350023e250012e70e17bc52c1a439a594c4b0a3080f690a2d440"
+    },
+    {
+      "anchors": [
+        "screenplay-blocks",
+        "filmable-expression",
+        "audiovisual-voice",
+        "block-continuity",
+        "audience-access",
+        "pacing-rhythm",
+        "audience-orientation",
+        "dialogue-sound-voice",
+        "emotional-grounding",
+        "audiovisual-selection",
+        "timing-allocation",
+        "master-scene-shooting-boundary",
+        "screenplay-scene-completion",
+        "screenplay-heading-identity"
+      ],
+      "path": "docs/principles/story/screenplays.md",
+      "sha256": "sha256:2b656a95d4fd908d43d91b8f5fe261df028d602606bba957cb890eb9649ff312"
+    },
+    {
+      "anchors": [
+        "staging-blocks",
+        "scene-entry-state",
+        "scene-exit-state",
+        "executable-progression",
+        "dialogue-action",
+        "knowledge-state"
+      ],
+      "path": "docs/principles/story/scripts.md",
+      "sha256": "sha256:c43de2d3e1b81fa5088f5fefa59f6bb8a74d1d8b88ac85333b23f3473d654faa"
+    },
+    {
+      "anchors": [
+        "treatment-paragraphs",
+        "causal-turn",
+        "audience-change",
+        "information-design"
+      ],
+      "path": "docs/principles/story/treatments.md",
+      "sha256": "sha256:03c25f538a25111c74f8836a0625f0aa81fa0c88c0739ad1417f6d0e4fecf75b"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-brief-work"
+      ],
+      "path": "docs/upstream/delivery/briefs.md",
+      "sha256": "sha256:2c3648199893d7c278780901913261645fc371e42bebc549e5d91f725db6a61f"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-film-source-work"
+      ],
+      "path": "docs/upstream/delivery/film-sources.md",
+      "sha256": "sha256:b7834c64e38c76a2a1c85f932fd3efa7420a6fc009742445d257941e1e9d9477"
+    },
+    {
+      "anchors": [
+        "settings-revision-from-production-source-work"
+      ],
+      "path": "docs/upstream/delivery/production-sources.md",
+      "sha256": "sha256:a9ba72c7a492d123ee3fd59817cf4cd38f3132e1b6cfb40fc814c04153e9f764"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-shot-work"
+      ],
+      "path": "docs/upstream/delivery/shots.md",
+      "sha256": "sha256:90db83661cced3ae8fa372073d0007700d0b418e52b034f950304ddff5ad8c87"
+    },
+    {
+      "anchors": [
+        "design-revision-from-instance-source-work"
+      ],
+      "path": "docs/upstream/design/instance-sources.md",
+      "sha256": "sha256:486ab49ffe850aa81608bb1fb3f6e939f501d4ccb2714020826789a1adf8930f"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-instance-work"
+      ],
+      "path": "docs/upstream/design/instances.md",
+      "sha256": "sha256:72913efe94b513d6998cef9a2f7a63e7a7b9859c4621e6fadccad4b2aa8d5a96"
+    },
+    {
+      "anchors": [
+        "design-revision-from-map-source-work"
+      ],
+      "path": "docs/upstream/design/map-sources.md",
+      "sha256": "sha256:002519c5bf74cd99f72174387c9703768edb5995e5147af5044671762b40706b"
+    },
+    {
+      "anchors": [
+        "settings-revision-from-map-work"
+      ],
+      "path": "docs/upstream/design/maps.md",
+      "sha256": "sha256:923a2c4994d76ab360e317b02676ed7f6df42d5ae17c6c565d1a81ced7508cc5"
+    },
+    {
+      "anchors": [
+        "design-revision-from-material-source-work"
+      ],
+      "path": "docs/upstream/design/material-sources.md",
+      "sha256": "sha256:f78529f511decd2469443d3fb66c9619b02b19859079d8b95f82de17135d80da"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-material-work"
+      ],
+      "path": "docs/upstream/design/materials.md",
+      "sha256": "sha256:f00f11a4ed6f27e3073cbaee50bde6a48f776986262600d7db6923f1795bdcfb"
+    },
+    {
+      "anchors": [
+        "design-revision-from-model-source-work"
+      ],
+      "path": "docs/upstream/design/model-sources.md",
+      "sha256": "sha256:f1bb8c9434fc73ab8e40c39a501a9a6c0804cc30feafc47d3758cbfa71013b93"
+    },
+    {
+      "anchors": [
+        "settings-and-space-revision-from-model-work"
+      ],
+      "path": "docs/upstream/design/models.md",
+      "sha256": "sha256:a3e89b71d5586d830183cb2d62ef69756309934cd606ee620df95ee3dfc8a553"
+    },
+    {
+      "anchors": [
+        "design-revision-from-motion-source-work"
+      ],
+      "path": "docs/upstream/design/motion-sources.md",
+      "sha256": "sha256:ffd39607c1a6cc398dac05d038dc6fa187af6ed5bc5abc3222f1677972d25286"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-motion-work"
+      ],
+      "path": "docs/upstream/design/motions.md",
+      "sha256": "sha256:5eac9aa7aecc70ecb4701d092be410fcd4badd9623807271e6d5e8414f3efc3f"
+    },
+    {
+      "anchors": [
+        "design-revision-from-space-source-work"
+      ],
+      "path": "docs/upstream/design/space-sources.md",
+      "sha256": "sha256:dc14a670cba1e7320efa05ce3f06682984c2cab2cc4e75f4b7d592bffbd5b60a"
+    },
+    {
+      "anchors": [
+        "settings-and-map-revision-from-space-work"
+      ],
+      "path": "docs/upstream/design/spaces.md",
+      "sha256": "sha256:70fef420b0af2088f737f29af42fef6a41cdfd852134a5e4aa1b4b60d2b41117"
+    },
+    {
+      "anchors": [
+        "design-revision-from-system-source-work"
+      ],
+      "path": "docs/upstream/design/system-sources.md",
+      "sha256": "sha256:1f9cfbc2ebadc1c0250320afde1c436dc3066bd8197fe0299956fe50a3b95137"
+    },
+    {
+      "anchors": [
+        "parent-revision-from-system-work"
+      ],
+      "path": "docs/upstream/design/systems.md",
+      "sha256": "sha256:28fba3d2d5f66ffd5807ab690e809e38df9ed65a7e571fa68541c3d918e9348c"
+    },
+    {
+      "anchors": [
+        "script-and-canon-revision-from-screenplay-work"
+      ],
+      "path": "docs/upstream/story/screenplays.md",
+      "sha256": "sha256:16f0b65c0c7fdaf5a006069ffd55b8671970d6682ba8a3ef4bfe296436a96cd8"
+    },
+    {
+      "anchors": [
+        "treatment-and-settings-revision-from-script-work"
+      ],
+      "path": "docs/upstream/story/scripts.md",
+      "sha256": "sha256:a86b9d5cdd31601cad29d2af1843eff8b0abdd16870c8968b327c2adfe58a4c5"
+    },
+    {
+      "anchors": [
+        "settings-revision-from-treatment-work"
+      ],
+      "path": "docs/upstream/story/treatments.md",
+      "sha256": "sha256:5656451462fd8f8d79802c7b2ebae04fba98543c3ab68f6f66fa34feab17b876"
+    }
+  ],
+  "language": "korean",
+  "protocol": "automovie.contract-baseline.v1",
+  "version": "0.1.2"
+}
