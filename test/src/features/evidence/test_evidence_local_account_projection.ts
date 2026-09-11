@@ -73,8 +73,12 @@ export const test_evidence_local_account_projection = (): void => {
     stage: "review",
     enforced: true,
     populationScope: blank.populationScope,
-    relationship: "population-account",
-    host: { root: "docs", files: [props.account], symbols: ["h2"] },
+    relationship: "distributed-coverage",
+    host: {
+      root: "docs",
+      files: [props.account, "models/**/*.md"],
+      symbols: ["h2"],
+    },
     targets: [{ root: "docs", files: [props.document], symbols: ["h2"] }],
     population: { root: "docs", files: ["models/**/*.md"], symbols: ["h2"] },
   });
@@ -82,6 +86,13 @@ export const test_evidence_local_account_projection = (): void => {
     "principle host symbols preserved",
     projected.localBindings[1]!.host.symbols,
     ["h2", "h3", "h4"],
+  );
+  TestValidator.equals(
+    "aggregate projection preserves native defaults",
+    projectAutoMovieLocalContractClaims([
+      { ...account, root: undefined, symbol: undefined },
+    ]).localBindings[0]!.population,
+    { root: ".", files: ["models/**/*.md"], symbols: [] },
   );
   TestValidator.equals(
     "principle has no compared population",
@@ -189,24 +200,20 @@ export const test_evidence_local_account_projection = (): void => {
     },
     { ...account, reference: [] },
     { ...account, reference: { type: "typescript", files: ["src/a.ts"] } },
-    { ...account, reference: [{ ...references[0], files: [] }, references[1]] },
+    { ...account, reference: [{ ...references[0], files: [] }] },
     {
       ...account,
       reference: [
         { ...references[0], files: [props.document, "contracts/second.md"] },
-        references[1],
       ],
     },
     {
       ...account,
-      reference: [{ ...references[0], uniqueEvidence: false }, references[1]],
+      reference: [{ ...references[0], checklist: true }],
     },
     {
       ...account,
-      reference: [
-        references[0],
-        { ...references[1], files: ["models/one.md"] },
-      ],
+      files: [props.account, "models/one.md"],
     },
     { ...account, files: ["accounts/models/other.md"] },
     { ...account, symbol: "h3" },

@@ -4,7 +4,7 @@ Settings are required by film, brief, and library shapes. Keep production canon 
 
 The first ordered file owns delivery scope, governing aim, audience or operator access, coordinate and unit convention, delivery review condition, the current settings coverage map, and the operative-subject inventory before facts that depend on them.
 
-Across the work-specific topology, assign explicit H2 owners for the production visual grammar, delivery fidelity, subject breakdown and feasible build-or-adopt scope, accessibility deliverable states, operative agency or a passive boundary, and every subject condition on which a design actually depends. These are population roles, not mandatory filenames or a license to combine independently changeable decisions in the first file.
+Across the work-specific topology, assign the selected [settings obligations](../../../docs/obligations/core/settings.md) to their applicable H2 owners. Use the production's actual consumers and independent change paths to choose their placement.
 
 Visual grammar, delivery fidelity, and subject breakdown remain settings-population roles rather than a separate production-design layer. They constrain every film, brief, object library, and building library before specialist design begins, while the broader production-design requirement family describes product capabilities that a production invokes selectively rather than ninety-nine decisions every author must restate. Promote a genuinely independent authored population only when one production needs owners, ordering, and a review lifecycle that settings H2s cannot represent without overlap.
 
@@ -28,9 +28,7 @@ Before drafting a file, inventory candidate owners and apply `docs/obligations/c
 
 For each resulting owner, settle the applicable boundary, status, operating conditions, authority or access, resources, dependencies, costs, limits, exceptions, present state, and downstream consequences. Those are completion questions rather than mandatory field labels.
 
-Begin each H2 body with `**Status:**` and one or more of `externally supported`, `production invention`, `inherited default`, `derived`, or `unresolved`, plus a qualifier when the label alone hides scope. In `evidence` or `review`, evidence comments sit between the heading and this status line. End an H2 containing externally checkable claims with a `Sources:` line. A pure production decision needs no invented authority.
-
-Apply the settings information-structure principle, then reverse-outline paragraphs by function. Split independently reviewable conditions, evidence, exceptions, and consequences; merge fragments and remove orientation that merely repeats the detailed body.
+State each fact's supported, invented, inherited, derived, or unresolved basis at its owning H2. Cite the direct sources for externally checkable claims there, with the scope and uncertainty needed by the consumer.
 
 ## Subject canon
 
@@ -38,7 +36,7 @@ Apply the settings information-structure principle, then reverse-outline paragra
 
 Depth follows consequence. A central subject settles every role in usable detail, a one-shot subject settles the roles its single appearance actually exercises, and neither is allowed to be absent from the inventory.
 
-Every shape applies `obligations/core/settings.md#agency-and-limits` to central or recurring people, populations, institutions, machines, environments, operators, or forces whose choice, control, refusal, access, or response can change delivery. A passive object library records that it has no operative agency instead of inventing one. Every shape also applies `#design-dependent-subject-conditions`: a route, handle, view, clearance, control, or acceptance threshold that relies on a user or equipment profile must name and bound that profile before the design branch consumes it. These cross-shape roles do not import film-only motive, knowledge, expression, relationship, or character change.
+When an explicitly requested function depends on a user or equipment profile, follow `obligations/core/settings.md#design-dependent-subject-conditions` and author that profile before its design consumer.
 
 After every downstream draft or revision, backcast its literal cast against that inventory. A new participant, or a group member who becomes an individual actor, is a settings defect: complete its canon here before the downstream work continues.
 
@@ -54,6 +52,4 @@ Settings are authoritative, not frozen. When later work exposes a contradiction,
 
 ## Gate
 
-Start an applicable settings layer at `settings: "draft"`. Before `evidence`, require a complete first version, stable H2 owners, no placeholders, a literal work-specific-rule audit, common and settings discovery searches, a work-specific settings-requirement omission audit, and complete operative-subject accounting. Read every common and settings principle against each H2 in turn, then confirm that the H2 population supplies every common, settings, and applicable subject-obligation owner the targets call for.
-
-Run [Author process Self-Review](../review-verification/self-review.md) to its clean round before every stage transition and again after any repair. Follow [Evidence staging](../evidence-graph/staging.md) for evidence and review passes.
+For a settings stage transition, follow [Evidence staging](../evidence-graph/staging.md) for the transition conditions and evidence passes, and [Author process Self-Review](../review-verification/self-review.md) for the required review.

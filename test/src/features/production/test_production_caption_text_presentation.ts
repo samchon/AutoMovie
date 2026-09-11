@@ -86,7 +86,7 @@ export const test_production_caption_text_presentation = (): void => {
 
   const timeline: IAutoMovieFilmTimeline = {
     version: 1,
-    compiler: "caption-text-fixture",
+    builder: "caption-text-fixture",
     inputFingerprint: "sha256:caption-text",
     sourceDigest: "sha256:caption-source",
     id: "film<&>",

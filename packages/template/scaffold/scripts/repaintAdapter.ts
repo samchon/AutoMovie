@@ -16,7 +16,7 @@ import type { AutoMovieProductionShotRepaint } from "@automovie/interface";
  * runtime
  * resolves that request, verifies the deterministic source the rendition
  * derives from, refuses an adapter identity that differs from the selection,
- * parses the returned MP4, and commits a receipt binding compiler,
+ * parses the returned MP4, and commits a receipt binding builder,
  * source-render, control, reference, generator adoption, parameter, authority,
  * and output identities. This adapter owns nothing but "take these reviewed
  * controls and references, return those bytes".

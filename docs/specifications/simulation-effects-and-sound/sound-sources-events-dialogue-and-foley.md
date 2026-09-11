@@ -6,7 +6,6 @@
 
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-sources-external-assets 이 절은 project가 실제로 채택한 audio bytes를 source authority로 삼는다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption 이 절은 source 변경을 새 revision으로 만든다. -->
-<!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance 이 절은 origin, license와 receipt를 source에 결합한다. -->
 
 Source 입력은 stable asset identity, immutable bytes, byte digest, media facts, semantic use, origin, license, adoption receipt다. 출력은 source revision과 decode request이며 파일명, URL, provider job, 임시 cache는 identity가 아니다. Bytes 또는 해석 metadata가 바뀌면 새 source revision이고 기존 dialogue timing, cue analysis와 mix cache는 stale이다.
 

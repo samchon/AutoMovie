@@ -2,16 +2,6 @@
 
 Model documents specify the deterministic blocking representation that source code must construct. They neither redefine the subject's in-world identity nor prescribe changes over time.
 
-## Model information structure {#model-information-structure}
-
-Every H2 first identifies the represented part or observation, its central representation decision, applicable settings basis, and downstream consequence, then develops geometry, hierarchy, dimensions, surfaces, interfaces, limits, derivations, and review conditions in paragraphs with distinct functions. Tables and lists clarify mappings rather than replacing those decisions.
-
-Review question: can a reverse outline give every paragraph one design function without finding a second hidden owner or repeated orientation?
-
-This item owns information order inside a model H2. The model addressability obligation owns the boundary between H2 units.
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
-
 ## Representation contract {#representation-contract}
 
 Every model H2 names the geometry strategy, hierarchy, reusable parts, and proxy status used for the represented owner in that unit. It applies the population's representation ceiling by naming the observations the proxy can and cannot support. When adjoining visible sides need different downstream responses, it gives them separate stable surface owners; the materials layer chooses their construction and appearance.

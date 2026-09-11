@@ -120,7 +120,7 @@ const pinnedContract = (
 
 /**
  * The two fields a source builder reads to light itself, assembled exactly as
- * the production compiler assembles them: the shot's own contract, and the
+ * the production builder assembles them: the shot's own contract, and the
  * production's lighting when it declares any.
  */
 const buildContext = (
@@ -222,7 +222,7 @@ const compileWith = (
       synthesize: validSynthesizer,
       skeleton: () => createSkeleton(),
       frameFormat: { width: 1920, height: 1080 },
-      // Exactly the handoff the production compiler makes: the program's own
+      // Exactly the handoff the production builder makes: the program's own
       // statement about light, or nothing at all.
       lightMotions: program.lightMotions,
     },

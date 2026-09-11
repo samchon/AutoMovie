@@ -62,7 +62,7 @@ const executable = (line: string): boolean => {
  * a machine can decide is not a review criterion, and this is the machine.
  *
  * It covers globals and nothing else, because imports already have a better
- * owner: the compiler walks the module's TypeScript AST and refuses an
+ * owner: the builder walks the module's TypeScript AST and refuses an
  * unsupported or dynamic import as `source-import-unsupported`. Measured — a
  * shot module opening with `import fs from "node:fs"` never reaches this scan,
  * because that refusal fires first. A regex beside a parser is a second, worse

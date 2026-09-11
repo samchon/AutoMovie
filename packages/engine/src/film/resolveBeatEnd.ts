@@ -165,7 +165,7 @@ export const resolveBeatEnd = (
  *
  * Same shape as the end snapshot, so `gaitPhase`/`rootVelocity`/`footPlants`
  * are the resumable-state fields at the opening instant. The direct shot
- * compiler seeds all of them, together with transform, facing, pose, and mount,
+ * builder seeds all of them, together with transform, facing, pose, and mount,
  * when a verified previous snapshot is supplied.
  *
  * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity Samples every actor's opening placement, facing, coupling, and pose for comparison with the previous beat's closing state.

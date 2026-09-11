@@ -3,7 +3,7 @@
  * engine's validator tiers.
  *
  * The kind is not cosmetic: it routes a failure to the right corrector and
- * orders cheap checks before expensive ones (principle 6, "compiler tiers"). A
+ * orders cheap checks before expensive ones (principle 6, "builder tiers"). A
  * `type` failure is caught in microseconds before any `physics` check runs, and
  * a `rom` failure is fed back with anatomical context a generic type error
  * could not carry.

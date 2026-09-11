@@ -40,7 +40,7 @@ const synth: IAutoMovieActionSynthesizer = (
 const times = (m: IAutoMovieMotion): number[] => m.keyframes.map((k) => k.time);
 
 /**
- * `compilePerformance`: the action compiler's timeline assembly (the content
+ * `compilePerformance`: the action builder's timeline assembly (the content
  * seam is faked here; rig-specific clips are exercised elsewhere).
  *
  * Scenarios:

@@ -12,7 +12,7 @@ import {
 import {
   AutoMovieFilmTime,
   IAutoMovieDiagnostic,
-} from "./IAutoMovieProductionCompiler";
+} from "./IAutoMovieProductionBuild";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /**

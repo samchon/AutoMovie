@@ -9,7 +9,7 @@ The [contract-target procedure](../.agents/skills/evidence-graph/contract-target
 | `discovery`, `upstream`, `principles`, `obligations` | Scaffold-supplied reusable contract targets. |
 | `language` | The one creation-selected language contract module. |
 | `contracts` | Flat production-specific targets and the optional no-result index. |
-| `accounts` | Dedicated H2 comparisons of shared, selected-language, and declared production-local obligations against one authored layer's complete H2 population. |
+| `accounts` | Optional aggregate H2 owners for shared and production-local obligations. |
 | `settings` | Production facts, identities, capabilities, limits, and delivery conditions. |
 | `research` | Optional external-source records and their production consequences. |
 | `maps` | Broad world organization, site boundary, scale, temporal state, and external access. |

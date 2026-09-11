@@ -1,8 +1,16 @@
 # Offline measurements
 
-Use these measurements after a current compile when a design question is exact in generated geometry or bindings and a frame would answer it only indirectly. They read compiler-owned state rather than source, and they do not become compiler output, delivery evidence, or a review verdict. Open every emitted artifact, read every finding and census, and state the resulting observation in the design review that asked the question.
+Use these measurements after a current compile when a design question is exact in generated geometry or bindings and a frame would answer it only indirectly. They read builder-owned state rather than source, and they do not become builder output, delivery evidence, or a review verdict. Open every emitted artifact, read every finding and census, and state the resulting observation in the design review that asked the question.
 
-Both commands refuse missing or stale generated state. Compile again before measuring rather than treating old output as evidence about changed source.
+These commands refuse missing or stale generated state. Compile again before measuring rather than treating old output as evidence about changed source.
+
+## Placement and storage
+
+Run `npm run building:inspect` to write `reports/<environment>/inspection.json` for each compiled building. Declare reference ground height and contact tolerance in metres per environment in `scripts/productionPlacementStudies.ts`. Without that declaration the support result says `not-run`; overlap candidates and storage counts are still measured.
+
+Read the support report's measured, grounded, borne, floating and unresolved populations together. The overlap report lists bounds candidates and comparisons, not proven triangle collisions. Population bounds cover each compressed set as a whole; they do not certify every member. Contact is not a load-bearing, stability or gravity simulation result. Resolve the candidate families against the actual geometry and intended connections before claiming the spatial requirement is satisfied.
+
+The census separates owned models, external references, parts, population sets and represented members. Storage measures compact UTF-8 JSON and byte-identical serialized geometry repeats. Use those observations to share prototypes and retain instancing where the authored content permits it. A repeated geometry count alone does not prove whole models, materials or placements interchangeable. Reports retain the compile fingerprint and never assign a review verdict.
 
 ## Building reports
 
@@ -24,4 +32,4 @@ A contradictory normalized binding is an error and makes the command fail. A sur
 
 ## Gate use
 
-Run only the measurements the active design branches and delivery actually call for. Inspect render receipt v3's raw integer timebase and exact rational frame identity, and reject any epsilon comparison, decimal reconstruction, or runtime substitution. The commands contribute falsifying observations to a space, material, model, instance, or system review set; their existence and exit code satisfy no principle, obligation, discovery duty, or evidence citation by themselves. After a source, design, binding, study input, or compile fingerprint changes, regenerate the current state and repeat every affected measurement before renewing that review.
+Run only the measurements the active design branches and delivery actually call for. The commands contribute falsifying observations to a space, material, model, instance, or system review set; their existence and exit code satisfy no principle, obligation, discovery duty, or evidence citation by themselves. After a source, design, binding, study input, or compile fingerprint changes, regenerate the current state and repeat every affected measurement before renewing that review. [Capture](capture.md) owns rendered artifact and frame identity checks.

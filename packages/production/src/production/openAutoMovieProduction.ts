@@ -1,11 +1,11 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionFrameCapture,
+  IAutoMovieBuildProjectInput,
+  IAutoMovieBuildProjectOutput,
   IAutoMovieCaptionGraphemeSegmentationIdentity,
   IAutoMovieCaptionReadabilityProfile,
   IAutoMovieCaptionReadabilityReport,
-  IAutoMovieCompileProjectInput,
-  IAutoMovieCompileProjectOutput,
   IAutoMovieDiagnostic,
   IAutoMovieFilmTimeline,
   IAutoMovieProductionInspection,
@@ -15,7 +15,7 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
-import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
+import { AutoMovieProductionBuilder } from "./AutoMovieProductionBuilder";
 import type { IAutoMovieProductionServices } from "./AutoMovieProductionContext";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
@@ -106,10 +106,8 @@ export const findAutoMovieProjectRoot = (
 };
 
 /**
- * Open the compiler, oracle, and project runtime.
+ * Open the builder, oracle, and project runtime.
  *
- * @evidence requirements/review/subject-inspection.md#review-library-delivery-coverage Carries the one graph-derived authoring snapshot into every compiler service opened for a library.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-library-delivery-coverage Preserves one authoring truth across status, review, final, and publication consumers.
  * @author Samchon
  */
 export const openAutoMovieProduction = (props: {
@@ -137,22 +135,22 @@ export const openAutoMovieProduction = (props: {
     props.productionId,
     props.archetypes,
   );
-  const statusCompiler = new AutoMovieProductionCompiler(
+  const statusBuilder = new AutoMovieProductionBuilder(
     project,
     props.authoringEvidence,
     props.currentAuthoringEvidence,
   );
-  const compiler = new AutoMovieProductionCompiler(
+  const builder = new AutoMovieProductionBuilder(
     project,
     props.authoringEvidence,
     props.currentAuthoringEvidence,
   );
   return {
     project,
-    compiler,
-    compileStatus: () => statusCompiler.lint({ scope: "source" }),
+    builder,
+    buildStatus: () => statusBuilder.lint({ scope: "source" }),
     oracle: new AutoMovieProductionOracleService(project, props.capture, () =>
-      statusCompiler.lint({ scope: "source" }),
+      statusBuilder.lint({ scope: "source" }),
     ),
   };
 };
@@ -163,19 +161,19 @@ export const openAutoMovieProduction = (props: {
  * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Takes the requested compile scope as an explicit input and applies atomicity to that target rather than to the whole production.
  * @evidence specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md#validation-diagnostic-failure-channel Returns diagnostics through the typed result channel even when no artifact could be published, never through the artifact path.
  */
-export const compileAutoMovieProduction = (props: {
+export const buildAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
   projectRoot?: string;
   /** Exact production namespace. */
   productionId?: string;
-  /** Highest atomic compiler gate. */
-  scope: IAutoMovieCompileProjectInput["scope"];
+  /** Highest atomic builder gate. */
+  scope: IAutoMovieBuildProjectInput["scope"];
   /** Archetype catalogue this production registers. */
   archetypes?: AutoMovieModelArchetypeRegistry;
   /**
    * Exact graph-derived authoring identity, required to compile a library.
    *
-   * The compiler chooses its shape from this declaration, so a library
+   * The builder chooses its shape from this declaration, so a library
    * compiled without it takes the film path and is refused for a design tree
    * it was never going to have. A film or brief may omit it, which is why it
    * stays optional rather than becoming a required argument on the one entry
@@ -184,8 +182,8 @@ export const compileAutoMovieProduction = (props: {
   authoringEvidence?: IAutoMovieProductionEvidence;
   /** Fresh graph reader used by every atomic currentness confirmation. */
   currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
-}): IAutoMovieCompileProjectOutput =>
-  openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
+}): IAutoMovieBuildProjectOutput =>
+  openAutoMovieProduction(props).builder.build({ scope: props.scope });
 
 /**
  * Project status projection for CLI and lint consumers.
@@ -215,7 +213,7 @@ export const inspectAutoMovieProduction = (
       normalizeSlash(path.relative(services.project.generatedRoot(), file)),
     )
     .filter((file) => owned.has(file) === false);
-  const compilation = services.compileStatus();
+  const compilation = services.buildStatus();
   const diagnostics = compilation.diagnostics;
   const sequenceIds = new Set(
     (services.project.screenplayIndex()?.treatment.sequences ?? []).map(
@@ -230,8 +228,7 @@ export const inspectAutoMovieProduction = (
         current:
           compilation.success &&
           generated !== null &&
-          generated.inputFingerprint ===
-            compilation.compiler.inputFingerprint &&
+          generated.inputFingerprint === compilation.builder.inputFingerprint &&
           manifest !== null &&
           manifest.targetFingerprint ===
             productionRenderTargetFingerprint(
@@ -253,11 +250,11 @@ export const inspectAutoMovieProduction = (
     compilation.success &&
     graph.production !== null &&
     generated !== null &&
-    generated.inputFingerprint === compilation.compiler.inputFingerprint
+    generated.inputFingerprint === compilation.builder.inputFingerprint
       ? inspectAutoMovieCaptionReadability(
           readAutoMovieFilmTimeline(
             services.project,
-            compilation.compiler.inputFingerprint,
+            compilation.builder.inputFingerprint,
           ),
           graph.production.captionReadabilityProfiles ?? [],
         )

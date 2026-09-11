@@ -2919,7 +2919,7 @@ const descendantSpaces = (
 /**
  * Check exactly what a building owns about a population it stages.
  *
- * The whole instance-set design is the production compiler's to validate, and
+ * The whole instance-set design is the production builder's to validate, and
  * it validates it again when the lowered set reaches the world. What is checked
  * here is the subset this record answers for on its own: the slot count and the
  * placement law {@link builtInstanceSetPlacementBounds} has to be total over,

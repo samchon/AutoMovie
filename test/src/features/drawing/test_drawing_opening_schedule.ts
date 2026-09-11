@@ -610,7 +610,7 @@ const withoutDoorProfile = (
   ),
 });
 
-/** The same design with the leaf's geometry owned by the compiler. */
+/** The same design with the leaf's geometry owned by the builder. */
 const externalLeaf = (
   environment: IAutoMovieBuiltEnvironment,
 ): IAutoMovieBuiltEnvironment => ({

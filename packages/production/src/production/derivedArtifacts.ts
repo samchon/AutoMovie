@@ -125,6 +125,12 @@ const WINDOWS_DEVICE =
  * still the one the attempt read. This function runs in an ordinary Node
  * script, never inside the compile sandbox.
  *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Records the normalized generator and exact declared input digests as the generation basis.
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Publishes only matching outputs from two explicit generation invocations.
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Uses physical path admission and atomic publication for portable project-owned output.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-basis Computes and rechecks the complete generator/input identity before publication.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Compares independent callback outputs and publishes only against the captured live basis.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Rejects unsafe paths and uses physical-directory identity checks during atomic publication.
  * @author Samchon
  */
 export const generateAutoMovieDerivedArtifact = (
@@ -249,6 +255,8 @@ export const generateAutoMovieDerivedArtifact = (
  * retain present, absent, stale, and malformed bytes so guarded compilation can
  * detect a race over the same closure.
  *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Reports missing, stale and malformed inputs without invoking a generator.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Supplies only current artifact bytes and retains failure inputs in the fingerprint closure.
  * @author Samchon
  * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Admits a derived artifact only when its record keeps external-asset separation, so deterministic bytes never borrow an acquired asset's provenance or freshness.
  */
@@ -485,6 +493,59 @@ export const inspectAutoMovieDerivedArtifacts = (props: {
       });
   }
   return { manifest: parsed.manifest, artifacts, problems, fingerprintFields };
+};
+
+/**
+ * Remove one obsolete artifact from the active ledger, preserving its bytes.
+ *
+ * Explicit retirement uses the generation lock and atomic manifest writer.
+ * A source that still requests the retired path receives no context entry;
+ * neither its old output nor other records are rewritten to appear current.
+ * Calling this again for an absent record does not publish a new manifest.
+ *
+ * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Retires an obsolete declaration without presenting stale bytes as current inputs.
+ * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Preserves historical output while atomically changing the active derived inventory.
+ * @author Samchon
+ */
+export const retireAutoMovieDerivedArtifact = (props: {
+  root: string;
+  output: string;
+}): { changed: boolean; manifest: IAutoMovieDerivedArtifactManifest } => {
+  const root = physicalProjectRoot(props.root, "path-unsafe");
+  assertGenerationPath(props.output, "output");
+  if (!props.output.startsWith(DERIVED_ROOT))
+    generationFailure(
+      "path-unsafe",
+      `Derived output must live below "${DERIVED_ROOT}".`,
+    );
+  const lockFile = resolveCanonical(root, LOCK_PATH);
+  let token: string | null = null;
+  try {
+    ensurePhysicalDirectory(root, path.join(root, "automovie"));
+    token = acquireCommitLock(lockFile);
+    const manifest = readGenerationManifest(root);
+    const artifacts = manifest.artifacts.filter(
+      (entry) => entry.path !== props.output,
+    );
+    if (artifacts.length === manifest.artifacts.length)
+      return { changed: false, manifest };
+    const next: IAutoMovieDerivedArtifactManifest = { version: 1, artifacts };
+    writePhysicalFileAtomic(
+      root,
+      resolveCanonical(root, AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH),
+      Buffer.from(`${JSON.stringify(next, null, 2)}\n`),
+    );
+    return { changed: true, manifest: next };
+  } catch (error) {
+    if (error instanceof AutoMovieDerivedArtifactGenerationError) throw error;
+    throw new AutoMovieDerivedArtifactGenerationError(
+      "publication-failed",
+      `Derived artifact retirement failed: ${errorMessage(error)}`,
+      { cause: error },
+    );
+  } finally {
+    if (token !== null) releaseCommitLock(lockFile, token);
+  }
 };
 
 const invokeGenerator = (

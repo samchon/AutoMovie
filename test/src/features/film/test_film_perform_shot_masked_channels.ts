@@ -118,7 +118,7 @@ const bonesOf = (motion: IAutoMovieMotion): Set<AutoMovieHumanoidBone> =>
  * and still return `success: true` with zero violations: a benchmark run
  * shipped a walking quadruped whose two front legs never moved, because a
  * retargeted quadruped's fore legs ride the humanoid ARM chains and an author
- * can explicitly narrow `locomote` to `lowerBody`. The compiler holds both
+ * can explicitly narrow `locomote` to `lowerBody`. The builder holds both
  * facts at the moment it drops one, so it now states what it masked and the
  * shot gate refuses, pointing at the `region` field the author owns rather than
  * at the compiled clip they would have to diff.

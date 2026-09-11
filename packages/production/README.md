@@ -1,6 +1,6 @@
 # `@automovie/production`
 
-The deterministic production runtime a generated AutoMovie project runs on: the compiler, the tracked project store, frame capture, subject inspection, and the render job. A project's own npm scripts call it. Nothing here listens on a socket, serves a document, or answers a model.
+The deterministic production runtime a generated AutoMovie project runs on: the builder, the tracked project store, frame capture, subject inspection, and the render job. A project's own npm scripts call it. Nothing here listens on a socket, serves a document, or answers a model.
 
 That is a deliberate boundary rather than an omission. What an authoring agent knows comes from the skill the project ships and from what this package refuses; a refusal names the invariant it enforces and the correction that owns it, and the agent reads the project to find the rest. A capability an agent cannot reach by reading the project and running its scripts does not exist.
 
@@ -8,12 +8,12 @@ That is a deliberate boundary rather than an omission. What an authoring agent k
 
 ```ts
 import {
-  compileAutoMovieProduction,
+  buildAutoMovieProduction,
   inspectAutoMovieProduction,
   openAutoMovieProduction,
 } from "@automovie/production";
 
-const output = compileAutoMovieProduction({
+const output = buildAutoMovieProduction({
   projectRoot: process.cwd(),
   productionId: "my-film",
   scope: "source",
@@ -31,9 +31,9 @@ const status = inspectAutoMovieProduction(
 
 ## Evidence provenance
 
-Frame capture resolves only ids present in the current compiler-owned `manifests/compile.json`, delegates the actual pixels to an `AutoMovieProductionFrameCapture` the project supplies, decodes the PNG, verifies dimensions and visible variance, and atomically commits a content-addressed render bundle and receipt. A turntable runs that same path once per view of the set an asset owes and answers with a per-view ledger, so the views a contract requires and the views that exist cannot drift apart.
+Frame capture resolves only ids present in the current builder-owned `manifests/compile.json`, delegates the actual pixels to an `AutoMovieProductionFrameCapture` the project supplies, decodes the PNG, verifies dimensions and visible variance, and atomically commits a content-addressed render bundle and receipt. A turntable runs that same path once per view of the set an asset owes and answers with a per-view ledger, so the views a contract requires and the views that exist cannot drift apart.
 
-Repaint is unavailable unless the caller passes an `AutoMovieProductionShotRepaint`. Accepted MP4 output is parsed and committed with a receipt binding compiler, source-render, control, reference, adapter and model, parameter, and output identities. Rerolling replaces the active pointer only; unchanged deterministic truth keeps its own receipts.
+Repaint is unavailable unless the caller passes an `AutoMovieProductionShotRepaint`. Accepted MP4 output is parsed and committed with a receipt binding builder, source-render, control, reference, adapter and model, parameter, and output identities. Rerolling replaces the active pointer only; unchanged deterministic truth keeps its own receipts.
 
 Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew.
 The scaffold ships one at `scripts/inspectSubject.ts`.
@@ -42,9 +42,13 @@ Readers reopen those records through duplicate-aware strict UTF-8 JSON admission
 
 ## Film effects
 
-A film's effect track has two owners that must never overlap on one world zone: a shot-local cue realized inside that shot, and a film-global cue on the compiler-owned timeline. `materializeProductionFilmEffects` joins the normalized film cues to the current world recipes and zones and refuses a film cue that overlaps a shot cue, or another film cue, on the same zone, naming both cue ids and the overlapping frames. `projectProductionShotEffectFilmIntervals` supplies the shot-owner intervals for that check by the exact rational frame boundary rather than a rounded `seconds * fps` product. `sampleProductionFilmEffects` reconstructs any film-global `timelineFrame` from the persisted runtime alone, so a proxy tier's output index is never mistaken for the film clock and repeated or reordered seeks return the same sample. `readAutoMovieFilmEffects` reopens the persisted runtime beside the timeline it was compiled with and `verifyProductionFilmEffectPopulation` refuses a population that drops, adds, retimes, re-zones, or re-weights any accepted cue. `productionFilmFrameForShotTime` gives a shot page the one film frame that owns a shot-local second, or null when the edit realizes that second never or more than once.
+A film's effect track has two owners that must never overlap on one world zone: a shot-local cue realized inside that shot, and a film-global cue on the builder-owned timeline. `materializeProductionFilmEffects` joins the normalized film cues to the current world recipes and zones and refuses a film cue that overlaps a shot cue, or another film cue, on the same zone, naming both cue ids and the overlapping frames. `projectProductionShotEffectFilmIntervals` supplies the shot-owner intervals for that check by the exact rational frame boundary rather than a rounded `seconds * fps` product. `sampleProductionFilmEffects` reconstructs any film-global `timelineFrame` from the persisted runtime alone, so a proxy tier's output index is never mistaken for the film clock and repeated or reordered seeks return the same sample. `readAutoMovieFilmEffects` reopens the persisted runtime beside the timeline it was compiled with and `verifyProductionFilmEffectPopulation` refuses a population that drops, adds, retimes, re-zones, or re-weights any accepted cue. `productionFilmFrameForShotTime` gives a shot page the one film frame that owns a shot-local second, or null when the edit realizes that second never or more than once.
 
-A generated library passes its single graph-derived authoring snapshot into the compiler at `review` and `final`. `readAutoMovieLibraryReviewRequirements` exposes the exact active branch, H2 owner, source, compile, and finite-plan identities to its offline observation commands. The compiler derives the same population again, reopens artifact bytes or canonical structured facts, and refuses stale or inconclusive receipts. Film and brief keep their compiled-consumer population, so an unused recipe is still not charged merely because it exists.
+Library builders receive verified precomputed inputs through `IAutoMovieLibraryBuildContext.derivedArtifacts`, keyed by output path. The builder checks the declared ledger, basis, output and external-asset collisions before source execution and includes those bytes in its publication freshness check. Generation remains an explicit authoring command; library compilation does not run generators.
+
+For a complete precomputed contribution, export an `IAutoMovieLibraryDerivedSourceOwner` with `design` and `derivedArtifact` instead of `build`. The path selects a current UTF-8 ledger output containing an `IAutoMovieLibraryContribution`. The builder decodes that data outside authored execution and applies the same DTO, branch and spatial validation. Declaring both forms is refused; module evaluation and ordinary builders retain their one-second execution limit.
+
+Call `retireAutoMovieDerivedArtifact({ root, output })` from an explicit project script when an obsolete output is no longer an active input. It removes only that ledger entry under the generation lock and preserves the resident output bytes. Source owners must adopt the replacement explicitly; retirement does not mark an old result current.
 
 ## Reviewed public utility callables
 

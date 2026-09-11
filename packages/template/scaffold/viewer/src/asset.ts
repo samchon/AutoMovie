@@ -21,7 +21,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled model "${assetId}" is unavailable (${response.status}). Run npm run compile.`,
+    `Compiled model "${assetId}" is unavailable (${response.status}). Run npm run build.`,
   );
 const model = (await response.json()) as IAutoMovieModel;
 // This page shows one model for as long as it is open, so its cache is the
