@@ -28,6 +28,8 @@ Terrain, geographic raster와 vector, survey, CAD-like drawing, point cloud, map
 
 Script, subtitle, transcript, prompt record, tabular data, structured document와 sidecar metadata는 encoding, language, schema 또는 vocabulary, version, identity field, ordering과 reference target을 검증할 수 있어야 한다. Text 안의 markup, URL, command-like content와 embedded instruction은 명시적 채택 범위 밖에서 실행되거나 에이전트 지시로 승격되지 않아야 한다.
 
+Encoding이 올바르다는 사실만으로 text를 구조화된 record로 채택하지 않아야 한다. 한 object 안에서 같은 member를 두 번 선언한 structured document나 metadata처럼 해석이 모호한 record는 어느 값을 사용할지 추측하지 않고 거부하며, 그 거부는 record를 사용하려던 대상, 입력 record와 입력 안의 위치를 밝혀야 한다.
+
 ### 새로운 Format과 Family {#external-media-extensible-families}
 
 현재 목록에 없는 format이나 media family도 사용자가 지원되는 중간 결과로 변환하거나 해석 계약을 제공하면 같은 provenance, closure, validation, receipt와 degradation 규칙 아래 채택할 수 있어야 한다. 새 provider나 filename suffix가 생길 때마다 제품 계약을 한 업체의 catalogue로 확장하지 않아야 한다.

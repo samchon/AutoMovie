@@ -31,8 +31,11 @@ Generator는 declared input bytes만 전달받아 동기적으로 결과 bytes�
 ### Compile freshness matrix {#spec-authoring-precomputed-freshness}
 
 <!-- @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Compile이 current 이외의 파생 상태를 구체적으로 거부하게 한다. -->
+<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link 선택된 derived contribution의 거부를 그 source export와 artifact bytes 안의 정확한 위치까지 추적하게 한다. -->
 
-Compile은 파생 원장을 읽고 각 record를 live filesystem에 대조한다. Manifest 부재 또는 schema·ordering·digest self-inconsistency는 manifest failure, unsafe path나 symlink·junction은 ownership failure, generator나 input 부재·digest 변화는 missing 또는 stale basis, output 부재·digest 변화·declared encoding 위반은 missing, stale 또는 malformed output이다. 모든 record가 current일 때만 exact output을 UTF-8 text 또는 base64 content와 digest로 source context에 넣는다. 한 record라도 실패하면 compile은 current artifact를 게시하지 않으며 generator를 자동 실행하지 않고 명시적 generation command를 지시한다.
+Compile은 파생 원장을 읽고 각 record를 live filesystem에 대조한다. Manifest 부재 또는 schema·ordering·digest self-inconsistency는 manifest failure, unsafe path나 symlink·junction은 ownership failure, generator나 input 부재·digest 변화는 missing 또는 stale basis, output 부재·digest 변화·declared encoding 위반은 missing, stale 또는 malformed output이다. 모든 record가 current일 때만 exact output bytes의 digest와 함께 그 bytes를 UTF-8로 decode한 text 또는 base64 content를 source context에 넣는다. UTF-8 text는 decode 과정에서 선행 byte order mark 하나가 제거된 형태이고 digest는 제거 전 resident bytes를 식별한다. 한 record라도 실패하면 compile은 current artifact를 게시하지 않으며 generator를 자동 실행하지 않고 명시적 generation command를 지시한다.
+
+Declared encoding 확인은 output이 UTF-8 text로 decode된다는 사실만 확정하고, 그 text가 JSON이거나 member 해석이 모호하지 않다는 사실은 확정하지 않는다. 일반 UTF-8 artifact는 임의의 text로 source context에 전달되며 compile이 JSON으로 해석하지 않는다. Library owner가 build 대신 derived artifact를 선택한 경우에만 그 artifact를 library contribution JSON으로 해석한다. 이때 builder는 context text와 그 앞에 byte order mark를 붙인 bytes 중 verified digest를 재현하는 resident bytes만 해석하고, 어느 쪽도 digest를 재현하지 못하면 current artifact 선택으로 인정하지 않는다. 그 bytes는 [Text와 Metadata Inspection](../interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection)의 JSON record 순서를 통과한 뒤에만 build 결과와 같은 contribution schema와 branch 검증을 받는다. JSON 거부 진단은 선택한 source path와 export 이름, artifact path, 실패 stage, byte offset과 JSON Pointer를 담고, 해당 compile은 generated artifact를 게시하지 않는다.
 
 ### Portable path and write invariant {#spec-authoring-precomputed-portability}
 
