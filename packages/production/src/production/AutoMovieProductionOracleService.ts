@@ -27,7 +27,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
   AutoMovieProductionFrameCapture,
-  IAutoMovieCompileProjectOutput,
+  IAutoMovieBuildProjectOutput,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieGeneratedManifest,
@@ -74,10 +74,9 @@ import {
 } from "./semanticMaskEvidence";
 
 /**
- * Read-only current compiler status used to refuse stale oracle answers.
+ * Read-only current builder status used to refuse stale oracle answers.
  */
-export type AutoMovieCompileStatusProvider =
-  () => IAutoMovieCompileProjectOutput;
+export type AutoMovieBuildStatusProvider = () => IAutoMovieBuildProjectOutput;
 
 /**
  * Compact geometry and actual-frame oracle over current compiled artifacts.
@@ -92,7 +91,7 @@ export class AutoMovieProductionOracleService {
   public constructor(
     private readonly project: AutoMovieProductionProject,
     private readonly capture?: AutoMovieProductionFrameCapture,
-    private readonly compileStatus?: AutoMovieCompileStatusProvider,
+    private readonly buildStatus?: AutoMovieBuildStatusProvider,
   ) {}
 
   /**
@@ -247,7 +246,7 @@ export class AutoMovieProductionOracleService {
             )
           )
             throw new Error(
-              `Formation "${request.formation}" is not fully materialized in every current participating shot. Recompile its source and compiler-owned slots.`,
+              `Formation "${request.formation}" is not fully materialized in every current participating shot. Recompile its source and builder-owned slots.`,
             );
           const runtime = runtimes[0]!;
           if (
@@ -946,7 +945,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-target-missing",
-        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before capturing.`,
+        `Target "${input.target.kind}:${input.target.id}" is absent from current builder-owned output. Correct the target or compile its source before capturing.`,
       );
     if (requestedTime > duration)
       return previewFailure(
@@ -1251,16 +1250,16 @@ export class AutoMovieProductionOracleService {
         this.project.trackedStatePath("generated-manifest.json"),
       ),
     );
-    if (this.compileStatus === undefined) return null;
-    const status = this.compileStatus();
-    if (status.compiler.inputFingerprint !== generated.inputFingerprint)
+    if (this.buildStatus === undefined) return null;
+    const status = this.buildStatus();
+    if (status.builder.inputFingerprint !== generated.inputFingerprint)
       return {
         code: "generated-stale",
         category: "error",
         phase: "compile",
         target: "generated-manifest",
         path: generatedManifestPath,
-        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run the scaffold compile command before requesting oracle evidence.`,
+        message: `Generated input ${generated.inputFingerprint} differs from current ${status.builder.inputFingerprint}. Run the scaffold compile command before requesting oracle evidence.`,
       };
     const error = status.diagnostics.find(
       (diagnostic) => diagnostic.category === "error",
@@ -1272,7 +1271,7 @@ export class AutoMovieProductionOracleService {
         phase: "compile",
         target: "generated-manifest",
         path: generatedManifestPath,
-        message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run the scaffold compile command before requesting oracle evidence.`,
+        message: `Current source does not pass the read-only builder gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run the scaffold compile command before requesting oracle evidence.`,
       };
     return null;
   }
@@ -1292,7 +1291,7 @@ const readCompiledShots = (
     const bytes = project.readGeneratedFile(entry.path);
     if (digestAutoMovieBytes(bytes) !== entry.digest)
       throw new Error(
-        `Generated shot "${entry.path}" changed after compiler freshness validation. Run the scaffold compile command before requesting oracle evidence.`,
+        `Generated shot "${entry.path}" changed after builder freshness validation. Run the scaffold compile command before requesting oracle evidence.`,
       );
     const raw = parseAutoMovieStructuredJson({
       record: "compiled-shot",

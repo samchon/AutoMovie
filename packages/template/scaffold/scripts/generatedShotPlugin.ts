@@ -32,7 +32,7 @@ const NO_DIALOGUE_RUNTIME: IGeneratedShotRuntimeProvider = {
 };
 
 /**
- * The compiler-owned output root and the asset provenance ledger this project
+ * The builder-owned output root and the asset provenance ledger this project
  * carries.
  *
  * Both are the harness ownership layout every AutoMovie project shares rather
@@ -45,9 +45,9 @@ const COMPILER_OWNED_ROOT = "generated";
 const ASSET_MANIFEST_PATH = "automovie/assets.json";
 
 /**
- * Serve bounded compiler-owned viewer JSON and registered model bytes.
+ * Serve bounded builder-owned viewer JSON and registered model bytes.
  *
- * This middleware gives compiler-owned output an explicit no-cache route and
+ * This middleware gives builder-owned output an explicit no-cache route and
  * exposes only shots, models, the film timeline, and digest-matching physical
  * assets present in a current compiled model closure without opening arbitrary
  * project files.
@@ -73,7 +73,7 @@ export const generatedShotPlugin = (
             const manifest = project.generatedManifest();
             if (manifest === null)
               throw new Error(
-                "Production runtime requires current compiler-owned artifacts.",
+                "Production runtime requires current builder-owned artifacts.",
               );
             const production = project.graph().production;
             if (production === null)
@@ -343,7 +343,7 @@ const readAssetAuthorization = (
   const compiledDigest = compiled.closure.get(assetPath);
   if (compiledDigest === undefined || compiledDigest !== record.digest)
     throw new Error(
-      "asset is not in the current compiler-sealed viewer closure",
+      "asset is not in the current builder-sealed viewer closure",
     );
   const files = [ledgerFile, ...compiled.files];
   const fingerprint = createHash("sha256")

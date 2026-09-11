@@ -51,7 +51,7 @@ export interface IAutoMovieSubjectContribution {
    * Source-authored models this subject makes available to the shot.
    *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the exact model records the project chose for this subject instead of substituting an engine catalogue.
-   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes source-authored models an explicit subject output available to the shot compiler.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes source-authored models an explicit subject output available to the shot builder.
    */
   models?: readonly IAutoMovieModel[];
   /**
@@ -72,13 +72,13 @@ export interface IAutoMovieSubjectContribution {
    * Structured buildings retained for spatial queries and evidence.
    *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains the project's structured building identities and authored facts beside their visible representation.
-   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes built-environment records explicit compiler input for spatial queries and evidence checks.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes built-environment records explicit builder input for spatial queries and evidence checks.
    */
   builtEnvironments?: readonly IAutoMovieBuiltEnvironment[];
   /**
    * Observation documents the building source read, carried as provenance.
    *
-   * A reading is not a design. These travel beside the building so the compiler
+   * A reading is not a design. These travel beside the building so the builder
    * can hold each one against the bytes it claims to have observed, and they
    * never become geometry on their own.
    *
@@ -160,7 +160,7 @@ export interface IAutoMovieSubjectContribution {
    * Source-owned semantic props retained beside their staged placements.
    *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains source-owned prop semantics beside the project's visible prop placements.
-   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes semantic prop records explicit compiler input rather than inferring meaning from a mesh.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes semantic prop records explicit builder input rather than inferring meaning from a mesh.
    */
   props?: readonly IAutoMoviePropSpec[];
   /**
@@ -277,12 +277,12 @@ const CONTRIBUTION_KEYS = [
  *
  * Order is the order given, so a group that lists its members in a stable order
  * merges to the same bytes every run. Nothing is deduplicated: two subjects
- * claiming the same id is a defect for the compiler's own uniqueness checks to
+ * claiming the same id is a defect for the builder's own uniqueness checks to
  * report, and silently collapsing it here would hide the collision from the
  * gate that owns it.
  *
  * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves every project-owned subject artifact in authored order without deduplicating identities or choosing replacement content.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Combines only explicitly present contribution arrays and leaves collision decisions visible to the compiler that owns validation.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Combines only explicitly present contribution arrays and leaves collision decisions visible to the builder that owns validation.
  */
 export const mergeAutoMovieSubjectContributions = (
   contributions: readonly IAutoMovieSubjectContribution[],
@@ -312,7 +312,7 @@ export const mergeAutoMovieSubjectContributions = (
  * caller has to locate; and its `render` states what it puts into a shot.
  *
  * `design` is the wire. A class is an authoring surface and never reaches the
- * compile sandbox, so everything the compiler stores and validates leaves
+ * compile sandbox, so everything the builder stores and validates leaves
  * through this one method as the plain record it already understands. Two
  * constructions with the same inputs must produce byte-identical records, which
  * is what keeps the same design compiling to the same frames.
@@ -335,7 +335,7 @@ export abstract class AutoMovieSubject<TDesign> {
   public abstract readonly id: string;
 
   /**
-   * The tracked record the compiler reads, derived rather than transcribed.
+   * The tracked record the builder reads, derived rather than transcribed.
    *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Converts the project's subject construction into the plain tracked record that preserves its authored choices.
    * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Defines the portable design output that crosses from authoring classes into validation and compilation.
@@ -345,11 +345,11 @@ export abstract class AutoMovieSubject<TDesign> {
   /**
    * What this subject puts into a shot.
    *
-   * The context carries the compiler-owned runtime facts a source cannot infer,
+   * The context carries the builder-owned runtime facts a source cannot infer,
    * so a subject reads its model, skeleton, or formation runtime from there
    * rather than restating them.
    *
-   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Returns only the project-owned artifacts this subject adds to a shot, using compiler context for runtime facts it cannot author.
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Returns only the project-owned artifacts this subject adds to a shot, using builder context for runtime facts it cannot author.
    * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Defines the explicit contribution output through which source-authored content enters shot assembly.
    */
   public abstract render(

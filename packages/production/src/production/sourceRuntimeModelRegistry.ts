@@ -4,9 +4,9 @@ import type { IAutoMovieModel } from "@automovie/interface";
  * Build the exact own-key registry used while deterministic source adds models.
  *
  * The portable build context remains a record, but membership never consults
- * `Object.prototype`: compiler keys and accepted source ids are defined as own
+ * `Object.prototype`: builder keys and accepted source ids are defined as own
  * enumerable data properties, and every lookup, key, and value projection reads
- * only that population. A compiler key may differ from the contained model id,
+ * only that population. A builder key may differ from the contained model id,
  * so `resolve` preserves both identities without admitting inherited names.
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-evidence Preserves every accepted current source model under the exact id its reviewed result declared.
@@ -41,7 +41,7 @@ export const createAutoMovieSourceRuntimeModelRegistry = (
     keys: (): string[] => Object.keys(records),
     /** Preserve deterministic own-value insertion order. */
     values,
-    /** Resolve either a compiler registry key or the model's own public id. */
+    /** Resolve either a builder registry key or the model's own public id. */
     resolve: (identity: string): IAutoMovieModel | undefined =>
       Object.hasOwn(records, identity)
         ? records[identity]

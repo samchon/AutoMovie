@@ -5,14 +5,14 @@ import type { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /**
- * License identity shipped with one distributable project asset.
+ * Optional descriptive license metadata attached to an asset.
  *
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-replacement Exposes `IAutoMovieAssetLicense` as the portable data boundary for the asset external replacement requirement.
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility Types `IAutoMovieAssetLicense` for the asset spec identity failure compatibility system contract.
  */
 export interface IAutoMovieAssetLicense {
   /**
-   * Non-blank SPDX expression or stable license identifier.
+   * Descriptive license identifier.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-replacement Exposes `identifier` as the portable data boundary for the asset external replacement requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility Types `identifier` for the asset spec identity failure compatibility system contract.
@@ -26,7 +26,7 @@ export interface IAutoMovieAssetLicense {
    */
   url: string;
   /**
-   * Required attribution or distribution notice, when applicable.
+   * Descriptive notice supplied with the asset.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-replacement Exposes `notice` as the portable data boundary for the asset external replacement requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility Types `notice` for the asset spec identity failure compatibility system contract.
@@ -572,7 +572,7 @@ export interface IAutoMovieAssetUse {
 }
 
 /**
- * Closed compiler-owned collision proxy parameters.
+ * Closed builder-owned collision proxy parameters.
  *
  * @evidence requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md#third-party-generated-source Exposes `IAutoMovieGeneratedCollisionProxy` as the portable data boundary for the third party generated source requirement.
  * @evidence specifications/evidence-and-provenance/third-party-sources-rights-and-attribution.md#evp-generated-provider-provenance Types `IAutoMovieGeneratedCollisionProxy` for the evp generated provider provenance system contract.
@@ -592,7 +592,7 @@ export type IAutoMovieGeneratedCollisionProxy =
     };
 
 /**
- * Closed compiler-owned measurement proxy parameters.
+ * Closed builder-owned measurement proxy parameters.
  *
  * @evidence requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md#third-party-generated-source Exposes `IAutoMovieGeneratedMeasurementProxy` as the portable data boundary for the third party generated source requirement.
  * @evidence specifications/evidence-and-provenance/third-party-sources-rights-and-attribution.md#evp-generated-provider-provenance Types `IAutoMovieGeneratedMeasurementProxy` for the evp generated provider provenance system contract.
@@ -731,7 +731,7 @@ export interface IAutoMovieExternalModelProvenance {
 }
 
 /**
- * Byte-exact provenance record for one project-owned distributable asset.
+ * Byte identity and consumer bindings for one project asset.
  *
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `IAutoMovieAssetProvenance` as the portable data boundary for the asset external provenance digest requirement.
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `IAutoMovieAssetProvenance` for the asset spec adoption output system contract.
@@ -752,48 +752,38 @@ export interface IAutoMovieAssetProvenance {
    */
   digest: AutoMovieContentDigest;
   /**
-   * Acquisition identity before any local processing, for bytes some source
-   * served.
-   *
-   * Exactly one of {@link original} and {@link generated} is present. Every
-   * manifest written before generated assets existed carries this one, so
-   * making it optional reads those ledgers unchanged.
+   * Optional descriptive record of an earlier source revision.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `original` as the portable data boundary for the asset external provenance digest requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `original` for the asset spec adoption output system contract.
    */
   original?: {
-    /** Current source URL verified when the asset was acquired. */
+    /** Descriptive source location. */
     url: string;
     /** SHA-256 of the acquired original bytes. */
     digest: AutoMovieContentDigest;
   };
   /**
-   * Generation identity, for bytes nothing ever served.
-   *
-   * An image-generation result has no acquisition URL. Recording the provider,
-   * model, request, instruction and returned digest states what actually
-   * happened; inventing a URL or a replay seed to satisfy {@link original} would
-   * not.
+   * Optional descriptive generation record.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `generated` as the portable data boundary for the asset external provenance digest requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `generated` for the asset spec adoption output system contract.
    */
   generated?: IAutoMovieGeneratedAcquisition;
   /**
-   * Distribution terms that apply to the current bytes.
+   * Optional descriptive license metadata.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `license` as the portable data boundary for the asset external provenance digest requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `license` for the asset spec adoption output system contract.
    */
-  license: IAutoMovieAssetLicense;
+  license?: IAutoMovieAssetLicense;
   /**
-   * Ordered transformation chain; empty only when current equals original.
+   * Optional ordered transformations associated with the current bytes.
    *
    * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `processing` as the portable data boundary for the asset external provenance digest requirement.
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `processing` for the asset spec adoption output system contract.
    */
-  processing: IAutoMovieAssetProcessingStep[];
+  processing?: IAutoMovieAssetProcessingStep[];
   /**
    * Non-empty production usage ledger.
    *
@@ -824,7 +814,7 @@ export interface IAutoMovieAssetProvenance {
 }
 
 /**
- * Project-global asset provenance and license ledger.
+ * Project asset byte identities and consumer bindings.
  *
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Exposes `IAutoMovieAssetManifest` as the portable data boundary for the asset external provenance digest requirement.
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Types `IAutoMovieAssetManifest` for the asset spec adoption output system contract.

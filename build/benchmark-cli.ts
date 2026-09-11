@@ -12,6 +12,7 @@ import {
   assertBenchmarkTurnPlan,
   benchmarkCheckProgress,
   benchmarkLiveness,
+  runBenchmarkVerification,
 } from "./benchmarkObservation";
 
 /** Run one turn under a timer; the coordinator owns continuation and judgment. */
@@ -70,6 +71,7 @@ const main = async (): Promise<void> => {
     stallMs: plan.stallMs,
   });
   process.stdout.write(`Benchmark receipts: ${root}\n`);
+  let interrupted = false;
 
   const run = async (
     command: IBenchmarkCommand,
@@ -112,6 +114,7 @@ const main = async (): Promise<void> => {
       }
     };
     const interrupt = (): void => {
+      interrupted = true;
       errorCode = "observer-interrupted";
       observe({
         kind: "interruption",
@@ -265,25 +268,23 @@ const main = async (): Promise<void> => {
     /* Missing basis cannot authorize verification against this run. */
   }
   record({ kind: "basis-rechecked", current: basisCurrent });
-  const checks = plan.checks.map((check) => ({
-    id: check.id,
-    status: "not-run" as "not-run" | "passed" | "failed",
-  }));
-  if (authorSucceeded && basisCurrent)
-    for (const [index, check] of plan.checks.entries()) {
-      checks[index]!.status = (await run(check.command, `check-${index}`))
-        ? "passed"
-        : "failed";
+  const checks = await runBenchmarkVerification({
+    checks: plan.checks,
+    enabled: authorSucceeded && basisCurrent,
+    isInterrupted: () => interrupted,
+    run: (command, index) => run(command, `check-${index}`),
+    observe: (checks) =>
       record({
         kind: "check-progress",
         checks,
         progress: benchmarkCheckProgress(checks),
-      });
-    }
+      }),
+  });
   record({
     kind: "turn-terminal",
     authorSucceeded,
     basisCurrent,
+    interrupted,
     checks,
     progress: benchmarkCheckProgress(checks),
     nextAction:

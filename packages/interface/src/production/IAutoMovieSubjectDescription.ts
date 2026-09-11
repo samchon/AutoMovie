@@ -1,6 +1,6 @@
 import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
-import { IAutoMovieCompiledShotSource } from "./IAutoMovieProductionCompiler";
+import { IAutoMovieCompiledShotSource } from "./IAutoMovieProductionBuild";
 
 /**
  * Kinds of stable subjects available from one compiled shot artifact.
@@ -76,7 +76,7 @@ export interface IAutoMovieSubjectBox {
  */
 export interface IAutoMovieSubjectBounds {
   /**
-   * Authored or compiler-declared extent, or null when none exists.
+   * Authored or builder-declared extent, or null when none exists.
    *
    * @evidence requirements/review/subject-description-and-structural-change.md#review-subject-compiled-truth Preserves absence instead of fabricating a declared extent.
    * @evidence specifications/review-and-acceptance/subject-description-and-structural-diff.md#review-system-subject-description-bounds Carries the independently derived logical-space or compact-set declaration.

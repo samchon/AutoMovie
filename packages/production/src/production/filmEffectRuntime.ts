@@ -23,7 +23,7 @@ import { materializeCompiledEffects } from "./materializeProduction";
 /**
  * One shot-owned effect interval projected onto the film clock.
  *
- * The compiler supplies these intervals only to prove that one world zone has
+ * The builder supplies these intervals only to prove that one world zone has
  * one effect owner at every realized film frame. They are not substituted for
  * film-owned runtime effects.
  *
@@ -60,7 +60,7 @@ export interface IAutoMovieFilmEffectCurrentIdentity {
   production: string;
   /** Current film identity. */
   film: string;
-  /** Current aggregate compiler input. */
+  /** Current aggregate builder input. */
   compileFingerprint: AutoMovieContentDigest;
   /** Current normalized edit identity. */
   editFingerprint: AutoMovieContentDigest;
@@ -82,7 +82,7 @@ export interface IAutoMovieProductionFilmEffectSample {
 }
 
 /**
- * The compiler-owned film clock every film-effect projection reads.
+ * The builder-owned film clock every film-effect projection reads.
  *
  * Segments map realized film frames back to shot-local source frames, and the
  * exact rational rate turns a shot-local second into the frame the engine
@@ -100,7 +100,7 @@ export type IAutoMovieFilmEffectClock = Pick<
 /**
  * A named refusal at the film-effect owner and identity boundary.
  *
- * Every refusal carries a closed code so a compiler diagnostic, a render plan,
+ * Every refusal carries a closed code so a builder diagnostic, a render plan,
  * and a viewer classify the same failure without parsing its message.
  *
  * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-scope-refusal Names the missing zone, recipe, owner, or bound instead of running an unbounded or silently empty effect.
@@ -127,7 +127,7 @@ export class AutoMovieFilmEffectRuntimeError extends Error {
  * Identify the normalized edit state shared by planning and film effects.
  *
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Binds persisted film effects to the exact current normalized edit.
- * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Gives compiler materialization and render planning one edit-identity algorithm.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Gives builder materialization and render planning one edit-identity algorithm.
  * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-sound-story-lifecycle-identity Folds the production, film and edit revision into each effect runtime's identity so an effect is addressed by its production lifecycle.
  */
 export const productionFilmEffectEditFingerprint = (
@@ -155,7 +155,7 @@ export const productionFilmEffectEditFingerprint = (
  * the projection is decided by the rational frame boundary rather than by a
  * rounded `seconds * fps` product. Each film occurrence of the shot is trimmed
  * to its segment, and a shot the compiled set does not contain contributes no
- * interval because the compiler's shot-availability diagnostics own that
+ * interval because the builder's shot-availability diagnostics own that
  * refusal.
  *
  * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Projects every shot-authored cue onto the film clock so film and shot owners can be compared.
@@ -416,7 +416,7 @@ export const materializeProductionFilmEffects = (props: {
 };
 
 /**
- * Sample film-owned effects at one compiler-owned full-rate timeline frame.
+ * Sample film-owned effects at one builder-owned full-rate timeline frame.
  *
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-arbitrary-seek Samples without retaining a cursor or depending on call order.
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Uses the timeline frame even when a proxy output frame has a different index.

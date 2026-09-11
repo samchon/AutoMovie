@@ -1,6 +1,6 @@
 # Debugging Handbook
 
-Debug from the first authoritative disagreement, not from the final unattractive frame. AutoMovie has distinct owners and gates; a symptom at review can originate in prose, design, source, compiler, engine, capture host, repaint adapter, renderer, media, or stale evidence.
+Debug from the first authoritative disagreement, not from the final unattractive frame. AutoMovie has distinct owners and gates; a symptom at review can originate in prose, design, source, builder, engine, capture host, repaint adapter, renderer, media, or stale evidence.
 
 ## Triage order
 
@@ -15,7 +15,7 @@ Do not begin by deleting generated state, widening tolerances, adding casts, rer
 
 ## Ownership failures
 
-If a generated digest, registry path, id, or fingerprint disagrees, stop consuming the output. Never edit compiler-owned files. Correct tracked design or source and run atomic compilation. If the project-state reader reports `project-state-changed`, wait only long enough to stop concurrent writers, then retry the read; do not treat either snapshot as current.
+If a generated digest, registry path, id, or fingerprint disagrees, stop consuming the output. Never edit builder-owned files. Correct tracked design or source and run atomic compilation. If the project-state reader reports `project-state-changed`, wait only long enough to stop concurrent writers, then retry the read; do not treat either snapshot as current.
 
 If a target is missing from the evidence registry, verify source binding, named export, design id, compile success, and production namespace. A plausible id in prose does not register an artifact.
 
@@ -73,7 +73,7 @@ First confirm that deterministic source and full beauty/control grid are correct
 
 Resolve every error diagnostic before writing a word of review prose. A review composed against a refused compile describes a production that does not exist.
 
-`review-outcome-artifact-missing` and `review-outcome-artifact-malformed` are compiler-publication failures. Compile the same current inputs, having first removed only the damaged publication the occurrence names, and prepare again. `review-outcome-contract-mismatch` reads like their sibling and is not one; it belongs under Escalation record below.
+`review-outcome-artifact-missing` and `review-outcome-artifact-malformed` are builder-publication failures. Compile the same current inputs, having first removed only the damaged publication the occurrence names, and prepare again. `review-outcome-contract-mismatch` reads like their sibling and is not one; it belongs under Escalation record below.
 
 A subject review is not a shot review, and their evidence does not convert. A capture that happens to contain the subject cannot discharge subject coverage, and a subject verdict cannot discharge a frame, range, sequence, film, or delivery obligation. [Inspection](inspection.md) owns what subject coverage currently reports; read it before treating a thin coverage record as something you failed to do, and write the honest incomplete state into the citation rather than retrying until it looks complete.
 
@@ -85,4 +85,4 @@ Once a plan exists, stop looking for a warning and read the coverage record, bec
 
 When the root cause is a product boundary rather than authored content, record minimal input, exact current commit, production and target ids, expected and observed values, diagnostic, ownership trace, and why existing correction paths cannot resolve it. That evidence is suitable for a new issue; a screenshot and intuition are not.
 
-A refusal can declare that boundary itself. `review-outcome-contract-mismatch` says the compiler that wrote an acceptance artifact and the reader that consumed it disagree inside one shipped revision, which no author-owned edit reaches. Record the artifact path and the validator paths it names, and stop. Retrying an unchanged compile is not a fix, and rewriting source that was already correct to make a product defect go quiet is worse than the defect.
+A refusal can declare that boundary itself. `review-outcome-contract-mismatch` says the builder that wrote an acceptance artifact and the reader that consumed it disagree inside one shipped revision, which no author-owned edit reaches. Record the artifact path and the validator paths it names, and stop. Retrying an unchanged compile is not a fix, and rewriting source that was already correct to make a product defect go quiet is worse than the defect.

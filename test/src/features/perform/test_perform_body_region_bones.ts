@@ -21,7 +21,7 @@ const disjoint = (
  * rather than proof. This scenario used to claim the three regions "cover the
  * full 55-bone VRM rig exactly" while comparing them only with each other, so a
  * bone added to the union and to no region kept every assertion green while
- * every mask stripped it (#1400). The claim now belongs to the compiler:
+ * every mask stripped it (#1400). The claim now belongs to the builder:
  * `AUTOMOVIE_RIG_IS_PARTITIONED` types as `true` only while the partition
  * covers `AutoMovieHumanoidBone`, and an escaped bone fails the build by name.
  * What is left for run time is what a type cannot see: disjointness, the empty

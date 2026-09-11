@@ -40,7 +40,7 @@ for (const record of records) {
   const report = inspectAutoMovieBuilding({
     environment: record.environment,
     inputFingerprint: state.generated.manifest.inputFingerprint,
-    study: productionPlacementStudies[record.environment.id],
+    study: productionPlacementStudies.get(record.environment.id),
   });
   const file = path.join(
     state.root,

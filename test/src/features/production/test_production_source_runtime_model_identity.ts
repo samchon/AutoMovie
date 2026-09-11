@@ -13,15 +13,15 @@ import { namedFacts } from "../internal/predicates";
  *    enumeration preserves insertion order.
  * 2. A source model named `__proto__` is registered, looked up, enumerated, and
  *    serialized exactly once as an own data property.
- * 3. A compiler-owned `__proto__` key is seeded with the same own-data
+ * 3. A builder-owned `__proto__` key is seeded with the same own-data
  *    semantics, while prototype member names absent from a registry remain
  *    unavailable.
  */
 export const test_production_source_runtime_model_identity = (): void => {
   const compilerModel = drawingBoxModel({
-    id: "compiler-model-id",
+    id: "builder-model-id",
     shape: { type: "box", width: 1, height: 1, depth: 1 },
-    material: "compiler-material",
+    material: "builder-material",
   });
   const authoredModel = drawingBoxModel({
     id: "__proto__",
@@ -29,7 +29,7 @@ export const test_production_source_runtime_model_identity = (): void => {
     material: "authored-material",
   });
   const registry = createAutoMovieSourceRuntimeModelRegistry(
-    Object.fromEntries([["compiler-key", compilerModel]]),
+    Object.fromEntries([["builder-key", compilerModel]]),
   );
   registry.define(authoredModel.id, authoredModel);
   const compilerPrototypeRegistry = createAutoMovieSourceRuntimeModelRegistry(
@@ -41,11 +41,11 @@ export const test_production_source_runtime_model_identity = (): void => {
     namedFacts([
       [
         "compilerKeyResolves",
-        () => registry.get("compiler-key") === compilerModel,
+        () => registry.get("builder-key") === compilerModel,
       ],
       [
         "containedModelIdResolves",
-        () => registry.resolve("compiler-model-id") === compilerModel,
+        () => registry.resolve("builder-model-id") === compilerModel,
       ],
       [
         "prototypeIdIsOwn",
@@ -57,9 +57,9 @@ export const test_production_source_runtime_model_identity = (): void => {
       [
         "populationIsExactAndOrdered",
         () =>
-          JSON.stringify(registry.keys()) === '["compiler-key","__proto__"]' &&
+          JSON.stringify(registry.keys()) === '["builder-key","__proto__"]' &&
           JSON.stringify(registry.values().map((model) => model.id)) ===
-            '["compiler-model-id","__proto__"]',
+            '["builder-model-id","__proto__"]',
       ],
       [
         "serializationContainsOnlyOwnModels",
@@ -67,7 +67,7 @@ export const test_production_source_runtime_model_identity = (): void => {
           JSON.stringify(registry.record) ===
           JSON.stringify(
             Object.fromEntries([
-              ["compiler-key", compilerModel],
+              ["builder-key", compilerModel],
               ["__proto__", authoredModel],
             ]),
           ),

@@ -1,6 +1,6 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
-  AutoMovieProductionCompiler,
+  AutoMovieProductionBuilder,
   AutoMovieProductionProject,
   encodeAutoMoviePathSegment,
 } from "@automovie/production";
@@ -38,14 +38,14 @@ const finalRenderPlanSnapshot = fs.existsSync(finalStateRoot)
       path.join(finalStateRoot, "plan.json"),
     )
   : null;
-const output = new AutoMovieProductionCompiler(
+const output = new AutoMovieProductionBuilder(
   project,
   authoringEvidence,
   currentAuthoringEvidence,
   finalRenderPlanSnapshot?.plan,
 ).lint({ scope: "final" });
 // The verdict above was judged against the final plan generation captured
-// before the compiler ran. If that generation moved while it ran, the verdict
+// before the builder ran. If that generation moved while it ran, the verdict
 // describes a plan that no longer exists and must not be printed as current.
 if (finalRenderPlanSnapshot !== null)
   try {

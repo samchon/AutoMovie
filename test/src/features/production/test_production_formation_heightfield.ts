@@ -2,15 +2,13 @@ import {
   IAutoMovieFormationPlacement,
   worldHeightfield,
 } from "@automovie/engine";
+import { validateAutoMovieFormationGround } from "@automovie/engine";
 import type {
   IAutoMovieFormationDesign,
   IAutoMovieSpace,
   IAutoMovieWorldSurface,
 } from "@automovie/interface";
-import {
-  materializeCompiledFormation,
-  validateAutoMovieFormationGround,
-} from "@automovie/production";
+import { materializeCompiledFormation } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -119,12 +117,12 @@ const codes = (ground?: readonly IAutoMovieWorldSurface[]): string[] =>
   ).map((diagnostic) => diagnostic.code);
 
 /**
- * A sampled relief reaches the compiler: the runtime a shot carries is placed
+ * A sampled relief reaches the builder: the runtime a shot carries is placed
  * on it, and the gate that refuses a unit standing off its ground reads it.
  *
  * `constant` and `plane` are a level and a tilt, so a hill, a terrace or a bank
  * can only be stated as a lattice — and until this, no lattice ever reached the
- * compiler at all. It appeared in the engine's own tests and in one hand-built
+ * builder at all. It appeared in the engine's own tests and in one hand-built
  * validation record, so every claim about relief was a claim about the height
  * function rather than about a production standing on one.
  *

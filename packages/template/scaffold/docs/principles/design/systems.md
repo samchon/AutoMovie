@@ -2,14 +2,6 @@
 
 System documents govern coupled processes such as lighting, environment, effects, simulation, sound, and building services. They do not absorb the identity or construction of the owners whose state they read or affect.
 
-## System information structure {#system-information-structure}
-
-Every H2 first identifies its process owner, central behavior, authority boundary, and downstream consequence, then develops interfaces, state basis, dependencies, limits, failures, and verification in paragraphs with distinct functions. State tables clarify transitions rather than replacing the rule that governs them.
-
-Review question: can a reverse outline assign every paragraph and state table one non-repeated system purpose?
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [NASA on interface and verification-ready system definitions](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
 ## Authority confinement {#system-authority-confinement}
 
 Every system H2 writes only the state channels its process owns and cites the map, model, space, material, instance, or motion owners it consumes. It does not redefine their identity, construction, capability, or transition merely because the process reads or affects them. Audience meaning remains in narrative or brief prose and is realized by shots rather than becoming a system input.

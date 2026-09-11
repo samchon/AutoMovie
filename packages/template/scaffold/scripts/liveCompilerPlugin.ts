@@ -19,7 +19,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
     message: "Compiling current production source...",
   };
   return {
-    name: "automovie-live-compiler",
+    name: "automovie-live-builder",
     transformIndexHtml: {
       order: "pre",
       handler: () => [
@@ -55,7 +55,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
           output = (output + text).slice(-16000);
         };
         // No shell or module cache survives this invocation. The same entry,
-        // flags, checks and publication owner as `npm run compile` run here.
+        // flags, checks and publication owner as `npm run build` run here.
         const code = await new Promise<number>((resolve) => {
           const child = spawn(
             process.execPath,
@@ -65,7 +65,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
               "node_modules/.cache/ttsc",
               "-P",
               "tsconfig.json",
-              "scripts/compile.ts",
+              "scripts/build.ts",
             ],
             { cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
           );
@@ -81,7 +81,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
         if (closed) return;
         if (started !== generation) {
           // A save during compilation cannot authorize the intermediate bytes.
-          // The compiler owns publication; this server withholds those bytes
+          // The builder owns publication; this server withholds those bytes
           // until the queued generation has completed its own admission.
           schedule();
           return;
@@ -118,12 +118,12 @@ export const liveCompilerPlugin = (root: string): Plugin => {
         server.watcher.off("add", changed);
         server.watcher.off("change", changed);
         server.watcher.off("unlink", changed);
-        // Let a compiler already holding its project lease finish normally.
+        // Let a builder already holding its project lease finish normally.
         // Terminating only ttsx would orphan its synchronous runtime child.
       });
       server.middlewares.use((request, response, next) => {
         const route = request.url?.split("?", 1)[0];
-        if (route === "/__automovie/live-compiler.json") {
+        if (route === "/__automovie/live-builder.json") {
           response.setHeader("Content-Type", "application/json; charset=utf-8");
           response.setHeader("Cache-Control", "no-store");
           response.end(JSON.stringify(state));
@@ -143,7 +143,7 @@ export const liveCompilerPlugin = (root: string): Plugin => {
   };
 };
 
-/** Authored inputs only; compiler state and observation writes cannot loop. */
+/** Authored inputs only; builder state and observation writes cannot loop. */
 const isLiveCompilerInput = (root: string, file: string): boolean => {
   if (isViewerWatchOutput(root, file)) return false;
   const relative = path.relative(root, file).split(path.sep).join("/");

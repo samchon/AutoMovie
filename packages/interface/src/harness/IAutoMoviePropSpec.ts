@@ -118,7 +118,7 @@ export interface IAutoMoviePropSpec {
   placement?: IAutoMoviePropPlacement;
 
   /**
-   * The compiler-owned model registration whose imported bytes draw this prop,
+   * The builder-owned model registration whose imported bytes draw this prop,
    * or absent / `null` for a prop drawn from its own generated parts.
    *
    * This is the escape hatch to an external asset, and it deliberately buys the
@@ -130,7 +130,7 @@ export interface IAutoMoviePropSpec {
    * (occupancy, bearing on a support, clearance, containment, passage
    * intrusion), its `body` and `affordances` stay the contact semantics, and
    * {@link articulation} and {@link placement} stay the prop's own. That is the
-   * same split the compiler already makes when it materializes a registered
+   * same split the builder already makes when it materializes a registered
    * external appearance: the visible primitives become one registered collision
    * proxy and the imported bytes are kept for the viewer.
    *
@@ -150,7 +150,7 @@ export interface IAutoMoviePropSpec {
    * the meaning a prop is classified by is already the affordances, body, and
    * relations it declares.
    *
-   * The value names a registration the compiler owns, a model recipe id or the
+   * The value names a registration the builder owns, a model recipe id or the
    * runtime model id it materializes, exactly as a built environment's
    * `modelReferences` entries do. It is not the spelling a cast member's
    * `modelRef` uses. There, a reference means "do not forge me", because an
@@ -160,12 +160,12 @@ export interface IAutoMoviePropSpec {
    *
    * Stating it is what opens `forgeProp`'s origin gate, and it opens it exactly
    * as far as the record can be checked: `origin` must be `"imported"`, `asset`
-   * must name the bytes, and the compiler-sealed `imported` closure must be a
+   * must name the bytes, and the builder-sealed `imported` closure must be a
    * rigid `gltf-static-v1` appearance whose hero LOD binds those bytes under a
    * well-formed digest its own ledger covers. A humanoid appearance is a
    * performer and goes through `forgeCast`. Whether those digests match bytes
    * on disk, and whether the reference resolves to a registration at all, are
-   * the compiler's own gates, where the registry and the files are.
+   * the builder's own gates, where the registry and the files are.
    *
    * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `modelRef` as the portable data boundary for the motion object authored vocabulary requirement.
    * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `modelRef` for the performance interaction attachment object handoff system contract.

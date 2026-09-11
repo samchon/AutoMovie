@@ -212,6 +212,16 @@ export interface IAutoMovieMeshTopology {
    */
   degenerate: number;
   /**
+   * Zero-based triangle ordinals skipped by the same positional-weld rule.
+   * A count cannot establish whether a later conversion lost a different face
+   * while recovering an earlier redundant one; these identities preserve that
+   * correspondence without reconstructing the weld calculation in a consumer.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Identifies each face already redundant under positional welding so downstream conversion can distinguish it from newly lost geometry.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Reports exact degenerate source-face identities for validation of the corresponding final output faces.
+   */
+  degenerateTriangles: number[];
+  /**
    * Position, normal, or uv components that are not finite numbers.
    *
    * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Measures numeric failures in mesh buffers.
@@ -1421,11 +1431,11 @@ export const inspectAutoMovieMeshTopology = (
       .map((axis) => Math.round(mesh.positions[at * 3 + axis]! * WELD_SCALE))
       .join(",");
   const edges = new Map<string, number>();
-  let degenerate = 0;
+  const degenerateTriangles: number[] = [];
   for (let index = 0; index < indices.length; index += 3) {
     const corners = [0, 1, 2].map((corner) => key(indices[index + corner]!));
     if (new Set(corners).size < 3) {
-      degenerate += 1;
+      degenerateTriangles.push(index / 3);
       continue;
     }
     for (let edge = 0; edge < 3; ++edge) {
@@ -1455,7 +1465,8 @@ export const inspectAutoMovieMeshTopology = (
   }
   return {
     triangles: indices.length / 3,
-    degenerate,
+    degenerate: degenerateTriangles.length,
+    degenerateTriangles,
     nonFinite,
     boundaryEdges,
     nonManifoldEdges,

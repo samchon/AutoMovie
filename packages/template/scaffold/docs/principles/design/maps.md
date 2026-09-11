@@ -12,14 +12,6 @@ This item owns one current unit's identity and authority. The map addressability
 
 Sources: [OGC CityGML 3.0 on identifiable semantic objects and spatial representations](https://docs.ogc.org/is/21-006r2/21-006r2.html); [W3C PROV-O on identity, derivation, and responsibility](https://www.w3.org/TR/prov-o/)
 
-## Map information structure {#map-information-structure}
-
-Every map H2 first identifies its world owner, central decision, applicable settings and source basis, extent or state, and downstream consequence, then develops features, relations, limits, uncertainty, and verification in paragraphs with distinct functions. A layer list, drawing, table, or imported dataset clarifies those decisions rather than replacing them.
-
-Review question: can a reverse outline assign every paragraph, map, drawing, and table one non-repeated world-design purpose?
-
-Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [NASA on verification-ready requirement structure](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
 ## Coordinate, extent, and scale convention {#map-coordinate-extent-scale}
 
 Every map H2 states the horizontal, vertical, and temporal reference it uses, its units and declared extent, and the scale or detail at which its claims remain valid. A local frame names its transform to the canonical map frame. A simplified, tiled, instanced, or proxy representation preserves the identities, boundaries, routes, quantities, and states the unit authorizes and does not silently turn missing or low-confidence source data into exact world fact.
