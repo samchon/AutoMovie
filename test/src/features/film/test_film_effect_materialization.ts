@@ -38,7 +38,8 @@ import {
  *    rate, frame interval, exact second bounds, fixed step and constant
  *    intensity of their cue, a seed from the film seed protocol, and digests
  *    that `node:crypto` reproduces; the result verifies as the timeline's
- *    population, and an adjacent cue on the same zone is not a conflict.
+ *    population, and an adjacent cue on the same zone is not a conflict; two
+ *    cues starting on one frame are ordered by code unit, so `B` precedes `a`.
  * 2. A rational 30000/1001 clock yields exact rational second bounds and step.
  * 3. A malformed identity or frame rate is refused as input.
  * 4. A blank or duplicated recipe or zone id is refused as input.
