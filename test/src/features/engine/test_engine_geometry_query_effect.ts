@@ -145,6 +145,7 @@ const PRODUCTION: Pick<IAutoMovieProductionDesign, "frameFormat"> = {
 const measure = (
   request: Partial<Extract<AutoMovieGeometryQuery, { query: "effect" }>>,
   shot: IAutoMovieCompiledShotSource = storm(),
+  production: typeof PRODUCTION | null = PRODUCTION,
 ): Record<string, number | string | boolean> => {
   const result = measureAutoMovieGeometry({
     request: {
@@ -155,7 +156,7 @@ const measure = (
       ...request,
     },
     design: {
-      production: PRODUCTION,
+      production,
       world: null,
       formations: new Map(),
       shots: new Map(),
@@ -191,8 +192,8 @@ const measure = (
  *    beside the cube looking parallel to one of its faces, and zero for a camera
  *    looking away from it.
  * 4. A zone with no stream, a time between two streams of one zone, an invalid
- *    or late time, an absent shot, an absent camera, and a subject list too long
- *    or repeated each refuse.
+ *    or late time, an absent shot, an absent camera, a missing production frame
+ *    format, and a subject list too long or repeated each refuse.
  */
 export const test_engine_geometry_query_effect = (): void => {
   const reference = sampleCompiledEffect(effect("gust", 1, 3), 2, 10);
@@ -367,6 +368,14 @@ export const test_engine_geometry_query_effect = (): void => {
           ),
       ],
       [
+        "noProduction",
+        () =>
+          throwsError(
+            () => measure({}, storm(), null),
+            "Effect measurement requires current production frame format. Restore production design and compile.",
+          ),
+      ],
+      [
         "tooManySubjects",
         () =>
           throwsError(
@@ -397,6 +406,7 @@ export const test_engine_geometry_query_effect = (): void => {
       lateTime: true,
       absentShot: true,
       absentCamera: true,
+      noProduction: true,
       tooManySubjects: true,
       repeatedSubjects: true,
     },

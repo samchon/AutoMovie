@@ -206,7 +206,11 @@ const measure = (props: {
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
   contracts?: ReadonlyMap<string, IContract>;
   design?: IAutoMovieFormationDesign;
-  world?: Pick<IAutoMovieWorldDesign, "landmarks" | "surfaces" | "routes">;
+  world?: Pick<
+    IAutoMovieWorldDesign,
+    "landmarks" | "surfaces" | "routes"
+  > | null;
+  production?: typeof PRODUCTION | null;
   formation?: string;
   shot?: string;
   time?: number;
@@ -219,8 +223,9 @@ const measure = (props: {
       ...(props.time === undefined ? {} : { time: props.time }),
     },
     design: {
-      production: PRODUCTION,
-      world: props.world ?? WORLD,
+      production:
+        props.production === undefined ? PRODUCTION : props.production,
+      world: props.world === undefined ? WORLD : props.world,
       formations: new Map([["unit", props.design ?? unit()]]),
       shots:
         props.contracts ??
@@ -273,11 +278,14 @@ const removeSlotFive: IAutoMovieFormationSlotMotion = {
  *    clearance and digest are reported; from in front its five anonymous members
  *    are drawn near and its banner is visible, and from behind all five are
  *    culled and the banner is not.
- * 4. A world without routes reports no clearance, a shot without the banner's
- *    node counts no visible hero, and a second participating shot whose banner
- *    performs a root offset is selectable by name at an asked time.
+ * 4. A world without routes reports no clearance, a missing world reports no
+ *    clearance and all three representative members over no ground, a shot
+ *    without the banner's node counts no visible hero, and a second
+ *    participating shot whose banner performs a root offset is selectable by
+ *    name at an asked time.
  * 5. A missing formation, a unit no current shot fully materializes, a shot the
- *    unit is not in, a time outside the shot, and a missing camera each refuse.
+ *    unit is not in, a time outside the shot, a missing camera, and a missing
+ *    production frame format each refuse.
  */
 export const test_engine_geometry_query_formation = (): void => {
   const grounded = materializeCompiledFormation({
@@ -491,6 +499,15 @@ export const test_engine_geometry_query_formation = (): void => {
             .routeClearance === 0,
       ],
       [
+        "noWorld",
+        () => {
+          const measured = measure({ compiled: march, world: null });
+          return (
+            measured.routeClearance === 0 && measured.groundViolations === 3
+          );
+        },
+      ],
+      [
         "noBannerNode",
         () =>
           measure({
@@ -514,6 +531,7 @@ export const test_engine_geometry_query_formation = (): void => {
     ]),
     {
       noRoutes: true,
+      noWorld: true,
       noBannerNode: true,
       twoParticipating: true,
       performedBanner: true,
@@ -656,6 +674,14 @@ export const test_engine_geometry_query_formation = (): void => {
             'Shot "march" has no current compiled camera "gone"',
           ),
       ],
+      [
+        "noProduction",
+        () =>
+          throwsError(
+            () => measure({ compiled: march, production: null }),
+            "Formation measurement requires current production frame format. Restore production design and compile.",
+          ),
+      ],
     ]),
     {
       missing: true,
@@ -669,6 +695,7 @@ export const test_engine_geometry_query_formation = (): void => {
       late: true,
       early: true,
       noCamera: true,
+      noProduction: true,
     },
   );
 };

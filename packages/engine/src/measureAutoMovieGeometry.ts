@@ -303,7 +303,8 @@ export const measureAutoMovieGeometry = (props: {
       const centroid = transformPoint(runtime.centroid);
       const width = bounds.max.x - bounds.min.x;
       const depth = bounds.max.z - bounds.min.z;
-      const routes = props.design.world!.routes;
+      // No world design is no route to clear, as it is no ground to stand on.
+      const routes = props.design.world?.routes ?? [];
       const routeClearance =
         routes.length === 0
           ? 0
@@ -324,7 +325,11 @@ export const measureAutoMovieGeometry = (props: {
         request.time ?? 0,
       );
       const halfY = Math.tan((camera.fovY * Math.PI) / 360);
-      const production = props.design.production!;
+      const production = props.design.production;
+      if (production === null)
+        throw new Error(
+          "Formation measurement requires current production frame format. Restore production design and compile.",
+        );
       const aspect =
         production.frameFormat.width / production.frameFormat.height;
       const crop = resolveAutoMovieDeliveryCrop(production.frameFormat.crop);
@@ -524,6 +529,10 @@ export const measureAutoMovieGeometry = (props: {
         throw new Error(
           `Shot "${request.shot}" has no current compiled camera "${compiled.shot.camera}".`,
         );
+      if (props.design.production === null)
+        throw new Error(
+          "Effect measurement requires current production frame format. Restore production design and compile.",
+        );
       const cameraTransform = resolveCameraAt(
         camera.transform,
         compiled.shot.cameraMotion,
@@ -587,7 +596,7 @@ export const measureAutoMovieGeometry = (props: {
           subjectsInside: insideSubjects,
           visibilityRisk,
           representativeFrame: Math.round(
-            sample.time * props.design.production!.frameFormat.fps,
+            sample.time * props.design.production.frameFormat.fps,
           ),
           effectDigest: effect.digest,
         },
