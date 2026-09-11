@@ -100,7 +100,7 @@ const shotOf = (motionId: string, duration: number): IAutoMovieShot => ({
  * Scenarios:
  *
  * 1. A real locomote performance (walk to the door, 5 m at 1 m/s on a 1 s gait)
- *    compiled by the REAL synthesizer + compiler carries the cycle, and
+ *    compiled by the REAL synthesizer + builder carries the cycle, and
  *    resolveBeatEnd at shot end 3.5 s returns phase 0.5: non-null through the
  *    actual ladder.
  * 2. The mid-stride resume invariant holds on the real path: the composite sampled

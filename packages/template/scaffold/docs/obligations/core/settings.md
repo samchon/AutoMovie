@@ -1,6 +1,6 @@
 # Settings obligations
 
-These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has an addressable canon, delivery boundary, governing aim, production-wide visual and fidelity contract, build-or-adopt scope, audience or operator access contract, accessibility-deliverable classification, coordinate and unit convention, reproducible delivery review condition, coverage map, accounting for independently consequential subjects, their operative agency, and any conditions the design serves, explicit inherited-default boundary, and coherent production system.
+These required roles must be covered across the settings H2 population. They permit no exclusion: every production shape has an addressable canon, delivery boundary, governing aim, production-wide visual and fidelity contract, build-or-adopt scope, audience or operator access contract, accessibility-deliverable classification, coordinate and unit convention, reproducible delivery review condition, coverage map, accounting for independently consequential subjects and any conditions the design serves, explicit inherited-default boundary, and coherent production system.
 
 ## Addressable canon {#addressable-canon}
 
@@ -117,18 +117,6 @@ An unresolved operative subject needed by a planned downstream consumer blocks t
 Review question: which independently consequential actor, controller, resource owner, environmental force, subsystem, or affected population can change the delivery without a settings owner or explicit classification?
 
 Sources: [Marie-Laure Ryan on storyworld entities, events, and changing states](https://marilaur.info/degrees.pdf); [Mark J. P. Wolf on world populations, institutions, and infrastructure](https://www.oreilly.com/library/view/building-imaginary-worlds/9781136220807/xhtml/12_Chapter03.xhtml); [NASA systems engineering handbook on stakeholders, system elements, and interfaces](https://www.nasa.gov/reference/systems-engineering-handbook/)
-
-## Agency and limits {#agency-and-limits}
-
-Across the settings population, identify every central or recurring operative subject whose choice, control, refusal, access, or response can change the delivered result. A subject may be a person, population, institution, machine, environment, operator, or other force. For each applicable subject, define what it controls, accesses, and can do together with costs, prohibitions, vulnerabilities, genuine alternatives, refusal capacity, and thresholds that change a decision. Downstream work must not invent convenient power or helplessness.
-
-A delivery containing only a passive asset with no operative choice, control, refusal, or response states that boundary without inventing agency; the asset's capabilities and hard limits remain owned by `principles/core/settings.md#capability-boundary`.
-
-Review question: which operative subject can change the delivered result without defined control, access, cost, prohibition, vulnerability, genuine alternative, refusal capacity, or decision-changing threshold, and if none exists, where does settings establish the passive boundary?
-
-This obligation owns the population-wide allocation of operative agency. `principles/core/settings.md#capability-boundary` owns the semantic state and hard limits of each capability stated by one settings H2. Film-only `obligations/story/subjects.md` owns dramatic motive, knowledge, expression, relationship, and character change; a threshold here changes a choice, while `obligations/story/subjects.md#change-boundaries` changes the subject.
-
-Sources: [Purdue OWL on goals, obstacles, and consequential action](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/writing_compelling_characters.html); [Ryan on possible action within storyworld states](https://marilaur.info/degrees.pdf); [NASA systems engineering handbook on functions, interfaces, constraints, and control](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Design-dependent subject conditions {#design-dependent-subject-conditions}
 

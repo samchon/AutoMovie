@@ -67,6 +67,8 @@ export const test_cli_benchmark_observation = (): void => {
     { command: { executable: "", args: [] } },
     { command: { executable: "author", args: null } },
     { command: { executable: "author", args: [0] } },
+    { command: { executable: "author\0", args: [] } },
+    { command: { executable: "author", args: ["exec\0"] } },
   ])
     TestValidator.equals(
       "invalid plan is refused before launch",

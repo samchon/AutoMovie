@@ -198,7 +198,7 @@ export const test_cli_authoring_reachability = (): void => {
           const mixed: IRow = {
             capability: "film-sources",
             choices: null,
-            consumer: "compiler",
+            consumer: "builder",
             field: null,
             inapplicableReason: "library has no film",
             kind: "library",

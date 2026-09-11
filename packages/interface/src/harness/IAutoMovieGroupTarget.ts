@@ -5,7 +5,7 @@
  * A group is the only target that can name a mass. A formation is stored as one
  * compact record, never as thousands of scene nodes, so listing its members by
  * id is not merely tedious, it is impossible: the ids do not exist until the
- * compiler materializes a slot. Naming the formation itself is what makes the
+ * builder materializes a slot. Naming the formation itself is what makes the
  * mass addressable, and the camera then frames the unit's real transformed
  * bounds rather than a point at its centroid.
  *

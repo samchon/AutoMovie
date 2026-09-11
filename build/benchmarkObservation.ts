@@ -72,11 +72,12 @@ export const assertBenchmarkTurnPlan = (plan: IBenchmarkTurnPlan): void => {
     if (
       typeof command.executable !== "string" ||
       command.executable.trim() === "" ||
+      command.executable.includes("\0") ||
       !Array.isArray(command.args) ||
-      command.args.some((arg) => typeof arg !== "string")
+      command.args.some((arg) => typeof arg !== "string" || arg.includes("\0"))
     )
       throw new Error(
-        "Benchmark commands require an executable and a string argument array.",
+        "Benchmark commands require an executable and a string argument array without NUL characters.",
       );
 };
 
@@ -107,4 +108,31 @@ export const benchmarkCheckProgress = (
     scope:
       "declared verification commands only; final benchmark judgment remains with the coordinator",
   };
+};
+
+/**
+ * Execute declared checks in order and preserve every unstarted result.
+ * Interruption ends dispatch; an ordinary failed check still permits its peers.
+ */
+export const runBenchmarkVerification = async (props: {
+  checks: IBenchmarkTurnPlan["checks"];
+  enabled: boolean;
+  isInterrupted: () => boolean;
+  run: (command: IBenchmarkCommand, index: number) => Promise<boolean>;
+  observe: (
+    checks: readonly { id: string; status: "not-run" | "passed" | "failed" }[],
+  ) => void;
+}) => {
+  const checks = props.checks.map((check) => ({
+    id: check.id,
+    status: "not-run" as "not-run" | "passed" | "failed",
+  }));
+  for (const [index, check] of props.checks.entries()) {
+    if (!props.enabled || props.isInterrupted()) break;
+    checks[index]!.status = (await props.run(check.command, index))
+      ? "passed"
+      : "failed";
+    props.observe(checks);
+  }
+  return checks;
 };

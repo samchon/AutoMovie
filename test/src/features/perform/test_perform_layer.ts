@@ -116,7 +116,7 @@ const frameAt = (motion: IAutoMovieMotion, time: number) =>
  *    actor's performance layers them: at t=1 the merged pose drives both the
  *    leg and the arm, and the face's expression rides along. The fake
  *    synthesizer deliberately leaks cross-region joints and a gesture root; the
- *    compiler strips those before layering.
+ *    builder strips those before layering.
  * 2. The layering envelope (#1003): a lookAt starting at 3s claims no head bone
  *    before it starts, and past the locomotion's last keyframe only its ROOT
  *    persists (the walk's destination) while its joints release.
@@ -133,7 +133,7 @@ const frameAt = (motion: IAutoMovieMotion, time: number) =>
  * 6. An inserted boundary time where no clip contributes (two rootless clips with
  *    a gap between their spans) compiles and samples as honest rest.
  * 7. Two content-disjoint actions may overlap inside the same broad region; the
- *    compiler places them on separate lanes and preserves both bones.
+ *    builder places them on separate lanes and preserves both bones.
  */
 export const test_perform_layer = (): void => {
   const locomote: IAutoMovieActionCall = {

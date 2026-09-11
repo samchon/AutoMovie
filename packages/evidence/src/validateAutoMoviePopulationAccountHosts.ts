@@ -1,14 +1,13 @@
 import type { AutoMovieEvidenceStage } from "./createAutoMovieEvidenceConfig";
 
 /**
- * Validates account admission and physical H2 cardinality from an injected read.
+ * Validates declared optional account paths and active obligation targets.
  *
- * The reader returns the existing Markdown identity validator's H2 count or
- * undefined for a missing file. Native evidence still owns citation identity,
- * exact target ownership, checklist coverage, and review fingerprints.
+ * The reader returns a contract's H2 count or undefined for a missing target.
+ * Authored H2s and aggregate accounts share ordinary coverage in native lint.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Admits only declared account paths and refuses absent or ambiguous physical owners.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Checks shared and local account files with one deterministic allowlist and current H2 counts before native lint.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Admits declared account paths and refuses ambiguous ownership or absent active contract targets.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Checks shared and local account declarations through one allowlist and validates their current contract targets before native lint.
  */
 export function validateAutoMoviePopulationAccountHosts(props: {
   accounts: readonly {
@@ -51,19 +50,14 @@ export function validateAutoMoviePopulationAccountHosts(props: {
   }
   for (const entry of props.accounts) {
     if (!entry.enabled) continue;
-    const owners = props.readH2Count(`docs/${entry.account}`);
-    if (owners === undefined)
-      throw new Error(
-        `${entry.account}: ${entry.layer} cannot enter ${entry.stage} without its population account.`,
-      );
     const obligations = props.readH2Count(entry.target);
     if (obligations === undefined)
       throw new Error(
         `${entry.account}: population obligation target ${entry.target} is missing.`,
       );
-    if (obligations === 0 || owners !== obligations)
+    if (obligations === 0)
       throw new Error(
-        `${entry.account}: population account has ${owners} H2 owners for ${obligations} ${entry.target} obligations.`,
+        `${entry.account}: population obligation target ${entry.target} has no H2 obligations.`,
       );
   }
 }

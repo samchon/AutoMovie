@@ -1,6 +1,6 @@
 /**
  * A coarse body-region **mask**: which part of the rig a motion drives. The
- * compiler composes motions that own **disjoint** regions _concurrently_
+ * builder composes motions that own **disjoint** regions _concurrently_
  * (locomote the legs while the arms gesture and the head tracks a target)
  * instead of forcing them to take turns; motions that **share** a region must
  * sequence. This is the layered-blend-per-bone discipline: a base layer plus

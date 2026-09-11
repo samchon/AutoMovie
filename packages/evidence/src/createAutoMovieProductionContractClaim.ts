@@ -43,7 +43,7 @@ export type AutoMovieProductionContractClaim = MarkdownClaim & {
     stage: AutoMovieEvidenceStage;
     /** Positive binding or explicit pilot-only negative audit entry. */
     disposition: "binding" | "inapplicable";
-    /** Exact account file for an authored obligation, relative to docs. */
+    /** Reserved aggregate host for an authored obligation, relative to docs. */
     account?: string;
   };
 };
@@ -109,14 +109,13 @@ export interface IAutoMovieProductionContractClaimProps {
 }
 
 /**
- * One local obligation document and the account file that compares its layer.
+ * One local obligation document and its reserved aggregate host address.
  *
- * The complete authored H2 denominator is derived from layer and scope. Each
- * H2 in the document receives exactly one H2 in this account file, so callers
- * cannot narrow the comparison with an arbitrary authored-host selector.
+ * The eligible authored H2 population is derived from layer and scope. Relevant
+ * authored units or an aggregate account collectively fulfill the obligation.
  *
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Declares the local account, target, layer, stage, and scope together.
- * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Replaces authored files and symbol selectors with one exact account file and one flat contract document.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Selects eligible authored hosts from layer and scope and reserves one aggregate address for the flat contract document.
  * @author Samchon
  */
 export interface IAutoMovieProductionObligationClaimProps extends Omit<
@@ -125,7 +124,7 @@ export interface IAutoMovieProductionObligationClaimProps extends Omit<
 > {
   /** One flat contract document, resolved against documentRoot. */
   document: string;
-  /** One normalized accounts/<layer>/<name>.md path relative to docs. */
+  /** Reserved accounts/<layer>/<name>.md address for an aggregate owner. */
   account: string;
 }
 
@@ -152,15 +151,13 @@ export function createAutoMovieProductionPrincipleClaim(
 /**
  * Creates one production-local obligation claim.
  *
- * Each account H2 owns exactly one contract H2 and compares every authored H2
- * selected by the owning layer and current population scope. The account file
- * is retained in the typed binding so the graph admits only declared owners.
- * Former callers migrate their authored files/symbol inputs to one account
- * path and reread the obligation against the complete layer.
+ * The owning layer's H2s and a reserved aggregate account collectively cover
+ * the contract's H2 targets. Each cited target keeps its current review duty.
+ * The binding retains the full eligible population and aggregate host address.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Preserves the required no-exclusion population coverage meaning of an obligation.
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Appends this local obligation as population-level H2 coverage without mutating the reusable claims.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reuses the common account builder's exact target ownership and complete authored H2 checklist.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Reuses ordinary coverage over relevant authored and aggregate H2 owners.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Registers the exact local account through the generated claims array without replacing shared claims.
  */
 export function createAutoMovieProductionObligationClaim(
@@ -178,7 +175,7 @@ export function createAutoMovieProductionObligationClaim(
     )
   )
     throw new Error(
-      `A production-local obligation requires one normalized accounts/${props.layer}/<name>.md account path; migrate authored files and symbol inputs to account.`,
+      `A production-local obligation requires one normalized accounts/${props.layer}/<name>.md aggregate host address.`,
     );
   const populationFiles = createAutoMovieAuthoredPopulationFiles(
     props.layer,

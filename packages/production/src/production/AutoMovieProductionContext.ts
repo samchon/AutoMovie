@@ -1,10 +1,10 @@
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionFrameCapture,
-  IAutoMovieCompileProjectOutput,
+  IAutoMovieBuildProjectOutput,
 } from "@automovie/interface";
 
-import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
+import { AutoMovieProductionBuilder } from "./AutoMovieProductionBuilder";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import {
@@ -22,9 +22,9 @@ export interface IAutoMovieProductionServices {
    */
   project: AutoMovieProductionProject;
   /**
-   * Deterministic compiler.
+   * Deterministic builder.
    */
-  compiler: AutoMovieProductionCompiler;
+  builder: AutoMovieProductionBuilder;
   /**
    * Geometry and actual-frame oracle.
    */
@@ -32,7 +32,7 @@ export interface IAutoMovieProductionServices {
   /**
    * Read-only source-gate status.
    */
-  compileStatus: () => IAutoMovieCompileProjectOutput;
+  buildStatus: () => IAutoMovieBuildProjectOutput;
 }
 
 /**

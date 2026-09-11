@@ -110,7 +110,7 @@ export const FIXTURE_BONE = "leftLowerArm" as const;
  * Locomotion stays joint-empty here: the film harness scenarios exercise
  * assembly rather than gait craft, while the shipped-gait scenarios separately
  * prove the real humanoid arm swing. Other actions must still author only
- * content their region owns, because #1349 reports anything the compiler
+ * content their region owns, because #1349 reports anything the builder
  * masks.
  */
 export const fixtureRegionDrivesBone = (

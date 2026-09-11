@@ -8,15 +8,7 @@ Read this document when the experiment is driven by a Claude Code or Codex sessi
 
 ## Timed turn observer
 
-Use `pnpm benchmark:turn <plan.json> <private-receipt-directory>` to launch one native authoring turn with persistent observation. The executable and argument array run directly without a shell. Choose the actual executable or a Node CLI entry, including on Windows, and put the prompt in a UTF-8 file; the observer forwards those bytes to stdin without a PowerShell text pipeline. The plan's `cwd`, `basisFile` and `promptFile` resolve relative to the plan file; artifact paths resolve relative to `cwd`.
-
-The JSON plan contains `runId`, positive integer `generation`, `cwd`, `basisFile`, `promptFile`, `requestedModel`, `command: { executable, args }`, `artifacts: string[]`, `checks: [{ id, command }]`, `pollMs` and `stallMs`. Use the frozen run's declared cadence, for example `pollMs: 300000` for five minutes. `basisFile` is the existing frozen run record, not a replacement for it. `requestedModel` records intent; actual model provenance remains unknown until independently observed.
-
-Each invocation creates a UUID directory containing private stdout/stderr logs and ordered `observations.jsonl` receipts. The timer records the owned process handle's PID and spawn observation, output growth, artifact size and modification signals, last progress and next observation deadline. Native Codex JSON `thread.started` events record the observed session id. Plain output and unknown messages remain in the raw logs; a message alone does not establish a failure cause or a permitted recovery.
-
-After a successful author process exit, the observer rechecks the frozen basis bytes and runs only the plan's explicit verification commands. Their exit results produce a separate declared-check fraction; file existence, log growth and author self-report never count as completed checks. A successful process with no checks has no completion fraction. These receipts establish a turn boundary, not the run's final judgment: the coordinator reads the results and applies the state machine in `records.md` before continuing, replacing or closing the run. The observer does not retry, resume, launch subagents or mutate machine-global agent configuration. Keep raw logs under the run's privacy and retention disposition.
-
-Interrupting the observer or losing its log/receipt writer stops the directly owned child through its existing process handle and prevents successful completion. It does not search for or terminate other processes. Transfer or clean up any independently detached descendants through the run's existing ownership procedure.
+For an authorized native authoring turn, use the [benchmark turn observer](../../../build/README.md#benchmark-turn-observer) with the frozen run's declared command, cadence, private record directory and verification checks. The tool reference owns its plan schema, output and process behavior. Read the resulting observations before applying the [run state machine](records.md#operate-one-frozen-run-as-a-state-machine); the observer does not make the coordinator's judgment.
 
 ## A Turn Is The Unit Of Work
 

@@ -7,7 +7,7 @@ import type {
   IAutoMovieRenderSpec,
 } from "@automovie/interface";
 import {
-  AutoMovieProductionCompiler,
+  AutoMovieProductionBuilder,
   AutoMovieProductionContext,
   AutoMovieProductionProject,
   type IAutoMovieProductionEncoderIdentity,
@@ -179,7 +179,7 @@ export const createProductionRenderPlanningRuntime = (props: {
   const output = props.output;
 
   const sourceFingerprint = (): AutoMovieContentDigest => {
-    const checked = new AutoMovieProductionCompiler(
+    const checked = new AutoMovieProductionBuilder(
       AutoMovieProductionProject.openReadOnly(root, productionId),
       props.currentAuthoringEvidence(),
       props.currentAuthoringEvidence,
@@ -190,7 +190,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           checked.diagnostics,
         )}`,
       );
-    return checked.compiler.inputFingerprint;
+    return checked.builder.inputFingerprint;
   };
 
   const uncheckedDeliveryTone = uncheckedProductionDeliveryTone;
@@ -200,7 +200,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     deliveryTone: IProductionDeliveryToneCheck;
   }> => {
     const context = productionCaptureContext();
-    const compiled = productionServices().compiler.compile({ scope: "source" });
+    const compiled = productionServices().builder.build({ scope: "source" });
     if (compiled.success === false)
       throw new Error(
         `Source compilation failed before review capture: ${JSON.stringify(
@@ -213,7 +213,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       throw new Error("Review capture requires a production design.");
     const timeline = readAutoMovieFilmTimeline(
       project,
-      compiled.compiler.inputFingerprint,
+      compiled.builder.inputFingerprint,
     );
     const frames: IAutoMovieCaptureFrame[] = [];
     for (const segment of timeline.segments) {
@@ -262,7 +262,7 @@ export const createProductionRenderPlanningRuntime = (props: {
    *
    * The check belongs here and nowhere earlier. A budget verdict is a claim about
    * a specific renderer drawing specific bytes at a specific raster, and only the
-   * render job knows all three: the compiler never sees a GPU, and the plan's own
+   * render job knows all three: the builder never sees a GPU, and the plan's own
    * capture preflight is the first moment WebGL has answered.
    *
    * Only `over` refuses. `incomplete` and `not-run` are published exactly as they
@@ -349,7 +349,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       ].join("/"),
     );
     const predecessor = captureExistingRenderPlan(stateRoot, planPath);
-    const compiled = productionServices().compiler.compile({ scope: "source" });
+    const compiled = productionServices().builder.build({ scope: "source" });
     if (compiled.success === false)
       throw new Error(
         `Source compilation failed before render planning: ${JSON.stringify(
@@ -369,7 +369,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       );
     const timeline = readAutoMovieFilmTimeline(
       project,
-      compiled.compiler.inputFingerprint,
+      compiled.builder.inputFingerprint,
     );
     const frameFormat = resolveProductionRenderTierFrameFormat(
       graph.production.frameFormat,
@@ -378,7 +378,7 @@ export const createProductionRenderPlanningRuntime = (props: {
     const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
     const runtimeIdentity = await renderRuntimeIdentity({
       project,
-      compileFingerprint: compiled.compiler.inputFingerprint,
+      compileFingerprint: compiled.builder.inputFingerprint,
       timeline,
       first,
       width: frameFormat.width,
@@ -389,7 +389,7 @@ export const createProductionRenderPlanningRuntime = (props: {
       timeline,
       effects: readAutoMovieFilmEffects(
         project,
-        compiled.compiler.inputFingerprint,
+        compiled.builder.inputFingerprint,
       ),
       production: graph.production,
       audioAssets: soundRuntime.audioAssets(project, timeline),
@@ -430,7 +430,7 @@ export const createProductionRenderPlanningRuntime = (props: {
           );
           if (generated === undefined)
             throw new Error(
-              `Render planning cannot find compiler-owned source bytes for shot "${shot}".`,
+              `Render planning cannot find builder-owned source bytes for shot "${shot}".`,
             );
           return [shot, generated.digest];
         }),

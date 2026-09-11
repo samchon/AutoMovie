@@ -174,8 +174,8 @@ export interface IAutoMovieExternalMotionRetargetDecision {
 }
 
 /**
- * Inspection-to-compiler handoff for a requested native node-track conversion.
- * The compiler still decides whether interpolation and channel completeness can
+ * Inspection-to-builder handoff for a requested native node-track conversion.
+ * The builder still decides whether interpolation and channel completeness can
  * be represented as clinical motion.
  *
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The handoff contains only validated explicit compatibility inputs.
@@ -207,7 +207,7 @@ export interface IAutoMovieExternalMotionNativeHandoff {
 }
 
 /**
- * Inspection-to-compiler handoff for a requested engine-owned retarget
+ * Inspection-to-builder handoff for a requested engine-owned retarget
  * operation. Source conversion and source-target compatibility remain explicit
  * downstream validation boundaries.
  *
@@ -246,7 +246,7 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
    */
   translationScale: number;
   /**
-   * Target identity selected by the author and resolved by the compiler.
+   * Target identity selected by the author and resolved by the builder.
    *
    * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-mapping-selection The selected target is never replaced by an inferred rig.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure The downstream retargeter receives the exact target identity for diagnostics.
@@ -418,7 +418,7 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-native-reinterpretation Native mode deterministically rewrites selected source facts into project node tracks.
  * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-group-composition This handoff does not create group membership or placement relations.
  * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-selection-overrides The caller names one take, mode, mapping, source rig, target, and scale explicitly.
- * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-intent-persistence Persistence and relink replay belong to the compiler-owned adoption record store.
+ * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-intent-persistence Persistence and relink replay belong to the builder-owned adoption record store.
  * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times Preserves the inspector-validated ordered key times.
  * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Preserves the declared glTF interpolation mode for every track.
  * @evidenceExclude requirements/motion/clips-keyframes-and-interpolation.md#motion-sparse-channel-default Sparse-channel playback defaults are an engine sampling concern.
@@ -435,7 +435,7 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-interior-sample-validation Interior pose evaluation occurs after the clip is retargeted and sampled.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-numeric-stability Local input checks do not implement the downstream sampler's long-duration numeric-stability contract.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-visual-review This pure ingest handoff neither renders nor issues a visual-review verdict.
- * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-validation-status Structured pipeline validation status is emitted by compiler and engine layers.
+ * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-validation-status Structured pipeline validation status is emitted by builder and engine layers.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-variant-inheritance A selected motion take defines no asset variant inheritance.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance No prototype or instance graph is created by motion adoption.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-instance-override-resolution Motion mapping is not an instance transform or material override.
@@ -443,16 +443,16 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-deterministic-instance-generation This function performs no population or instance generation.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Native and retarget remain explicit alternatives with distinct receipts.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-selection-output The result states the selected take, mode, and retarget inputs.
- * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-failure-compatibility Locally invalid mappings and channel kinds fail here; compiler and engine retain conversion-compatibility authority.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-failure-compatibility Locally invalid mappings and channel kinds fail here; builder and engine retain conversion-compatibility authority.
  * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-direct-placement-boundary Native node-track conversion is not immutable direct scene placement.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-native-reinterpretation-boundary The selected take becomes a project-native clip while retaining source identity.
  * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-group-composition-boundary This function owns no group relation graph.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-selection-override-resolution Selection resolves exact take and mapping identities without inference.
- * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-intent-replay Relink and refresh replay are compiler persistence concerns.
+ * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-intent-replay Relink and refresh replay are builder persistence concerns.
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis The result retains digest, take, mode, mapping, rig, target, and scale inputs.
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Canonical node-to-bone entries preserve the source-element correspondence.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger This validation-only stage applies no lossy conversion requiring a loss ledger.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Result digest sealing belongs to the compiler after retarget execution.
+ * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Result digest sealing belongs to the builder after retarget execution.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary No generator, seed, platform-dependent codec, or network operation is invoked.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-freshness-diff Staleness comparison belongs to the production revision store.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection No raster or video input is accepted by this API.
