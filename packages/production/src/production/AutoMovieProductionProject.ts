@@ -53,6 +53,7 @@ import {
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
+import { planAutoMovieProductionRegistration } from "./planAutoMovieProductionRegistration";
 import {
   probeProductionMedia,
   probeProductionVideoMp4,
@@ -507,7 +508,6 @@ export class AutoMovieProductionProject {
             version: 1 as const,
             layoutVersion: 0,
             productions: [] as string[],
-            incarnations: {} as Record<string, string>,
           }
         : validateProductionRegistry(stored, this.registryPath);
     const legacyId = legacyProductionId(this.rootReal, this.automovieRoot);
@@ -552,30 +552,50 @@ export class AutoMovieProductionProject {
         `Production id "${productionId}" collides with registered production "${collision}" on a case-insensitive filesystem. Choose one portable spelling.`,
       );
     this.preflightProductionNamespace(productionId);
-    if (registry.productions.includes(productionId) === false) {
-      registry.productions.push(productionId);
-      setProductionIncarnation(
-        registry.incarnations,
-        productionId,
-        randomUUID(),
-      );
-    } else if (
-      productionIncarnationOf(registry.incarnations, productionId) === undefined
-    )
-      setProductionIncarnation(
-        registry.incarnations,
-        productionId,
-        randomUUID(),
-      );
-    registry.productions.sort(compareCodeUnits);
-    const legacy = registry.layoutVersion !== 1;
-    this.writeOwnedJsonAtomic(this.registryPath, registry);
+    // The preflight above fenced this production's state root, so the
+    // incarnation record inside it is observed without following a link.
+    const incarnationPath = productionIncarnationPathOf(
+      this.automovieRoot,
+      productionId,
+    );
+    const plan = planAutoMovieProductionRegistration({
+      registry:
+        stored === undefined
+          ? null
+          : {
+              productions: registry.productions,
+              layoutVersion: registry.layoutVersion,
+              retiredLineage:
+                (stored as { incarnations?: unknown }).incarnations !==
+                undefined,
+            },
+      productionId,
+      incarnationPresent: lstatOrNull(incarnationPath) !== null,
+      mutable: true,
+    });
+    if (plan.discard) {
+      this.assertProjectRootIdentity();
+      assertOwnedRegularFile(this.rootReal, incarnationPath);
+      removeContendedAtomic(incarnationPath);
+    }
+    if (plan.publish !== null)
+      this.writeOwnedJsonAtomic(this.registryPath, plan.publish);
+    const incarnation = plan.issue
+      ? randomUUID()
+      : validateIncarnation(
+          readOwnedJson(this.rootReal, incarnationPath),
+          incarnationPath,
+        );
+    if (plan.issue) {
+      this.mkdirOwned(path.dirname(incarnationPath));
+      this.writeOwnedJsonAtomic(incarnationPath, {
+        version: 1,
+        id: incarnation,
+      });
+    }
     return {
-      incarnation: productionIncarnationOf(
-        registry.incarnations,
-        productionId,
-      )!,
-      legacy,
+      incarnation,
+      legacy: registry.layoutVersion !== 1,
       productionId,
     };
   }
@@ -585,10 +605,8 @@ export class AutoMovieProductionProject {
     legacy: false;
     productionId: string;
   } {
-    const registry = validateProductionRegistry(
-      readOwnedJson(this.rootReal, this.registryPath),
-      this.registryPath,
-    );
+    const stored = readOwnedJson(this.rootReal, this.registryPath);
+    const registry = validateProductionRegistry(stored, this.registryPath);
     if (registry.layoutVersion !== 1)
       throw new Error(
         `Read-only verification cannot migrate legacy production layout "${this.registryPath}". Run npm run build once before verifying.`,
@@ -606,19 +624,27 @@ export class AutoMovieProductionProject {
       throw new Error(
         'Production id "shared" is reserved for project-level design assets.',
       );
-    if (registry.productions.includes(productionId) === false)
-      throw new Error(
-        `Read-only verification cannot register missing production "${productionId}". Run npm run build once to initialize it.`,
-      );
-    const incarnation = productionIncarnationOf(
-      registry.incarnations,
+    const incarnationPath = productionIncarnationPathOf(
+      this.automovieRoot,
       productionId,
     );
-    if (incarnation === undefined)
-      throw new Error(
-        `Read-only verification requires an existing incarnation for production "${productionId}". Run npm run build once to initialize it.`,
-      );
-    return { incarnation, legacy: false, productionId };
+    const incarnation = readOwnedJson(this.rootReal, incarnationPath);
+    planAutoMovieProductionRegistration({
+      registry: {
+        productions: registry.productions,
+        layoutVersion: registry.layoutVersion,
+        retiredLineage:
+          (stored as { incarnations?: unknown }).incarnations !== undefined,
+      },
+      productionId,
+      incarnationPresent: incarnation !== undefined,
+      mutable: false,
+    });
+    return {
+      incarnation: validateIncarnation(incarnation, incarnationPath),
+      legacy: false,
+      productionId,
+    };
   }
 
   private preflightProductionNamespace(productionId: string): void {
@@ -1599,11 +1625,6 @@ export class AutoMovieProductionProject {
           serializeJson({
             ...registry,
             productions: remaining,
-            incarnations: Object.fromEntries(
-              Object.entries(registry.incarnations).filter(
-                ([production]) => production !== this.productionId,
-              ),
-            ),
           }),
           "utf8",
         ),
@@ -4516,6 +4537,18 @@ export class AutoMovieProductionProject {
       );
   }
 
+  /**
+   * Refuse a handle whose state root or production namespace ended after it
+   * opened.
+   *
+   * Both incarnations are checkout-local lineage, never identity: this
+   * checkout issued them, version control holds neither, and a clone of the
+   * same history issues its own. The registry answers whether the production
+   * is still registered, and the production's own incarnation answers whether
+   * the namespace this handle opened is the one registered now, so a delete
+   * followed by registration under the same id is refused even when the
+   * tracked registry reads exactly as it did.
+   */
   private assertIncarnation(): void {
     this.assertProjectRootIdentity();
     this.assertStateRootIdentity();
@@ -4532,9 +4565,18 @@ export class AutoMovieProductionProject {
       readOwnedJson(this.rootReal, this.registryPath),
       this.registryPath,
     );
+    const productionIncarnationPath = productionIncarnationPathOf(
+      this.automovieRoot,
+      this.productionId,
+    );
+    const productionIncarnation = registry.productions.includes(
+      this.productionId,
+    )
+      ? readOwnedJson(this.rootReal, productionIncarnationPath)
+      : undefined;
     if (
-      registry.productions.includes(this.productionId) === false ||
-      productionIncarnationOf(registry.incarnations, this.productionId) !==
+      productionIncarnation === undefined ||
+      validateIncarnation(productionIncarnation, productionIncarnationPath) !==
         this.productionIncarnation_
     )
       throw new AutoMovieProductionInputRaceError(
@@ -4831,11 +4873,19 @@ interface IAutoMovieRenderBundleReceipt {
   manifestDigest: `sha256:${string}`;
 }
 
+/**
+ * The tracked production registry, `automovie/productions.json`.
+ *
+ * It is portable identity only: the registered production ids and the design
+ * layout they use, identical in every checkout of the same history. A resident
+ * record written before this split may still carry an inline `incarnations`
+ * member. Validation still refuses a malformed one, but no open reads it as a
+ * generation, and the next registry publication drops it.
+ */
 interface IAutoMovieProductionRegistry {
   version: 1;
   layoutVersion: number;
   productions: string[];
-  incarnations: Record<string, string>;
 }
 
 /**
@@ -4986,7 +5036,9 @@ const validateProductionRegistry = (
   value: unknown,
   file: string,
 ): IAutoMovieProductionRegistry => {
-  const record = value as Partial<IAutoMovieProductionRegistry> | null;
+  const record = value as
+    | (Partial<IAutoMovieProductionRegistry> & { incarnations?: unknown })
+    | null;
   if (
     record === null ||
     record === undefined ||
@@ -5033,30 +5085,27 @@ const validateProductionRegistry = (
     version: 1,
     layoutVersion: record.layoutVersion,
     productions: [...record.productions].sort(compareCodeUnits),
-    incarnations: Object.fromEntries(Object.entries(incarnationRecord)),
   };
 };
 
-const productionIncarnationOf = (
-  incarnations: Record<string, string>,
+/**
+ * Where this checkout keeps one production's incarnation.
+ *
+ * The record sits inside the production's own ignored state root, so it is
+ * issued with that local namespace and leaves with it when the namespace is
+ * erased, and version control can neither share it with a clone nor restore an
+ * earlier one.
+ */
+const productionIncarnationPathOf = (
+  automovieRoot: string,
   productionId: string,
-): string | undefined =>
-  Object.hasOwn(incarnations, productionId)
-    ? incarnations[productionId]
-    : undefined;
-
-const setProductionIncarnation = (
-  incarnations: Record<string, string>,
-  productionId: string,
-  incarnation: string,
-): void => {
-  Object.defineProperty(incarnations, productionId, {
-    configurable: true,
-    enumerable: true,
-    value: incarnation,
-    writable: true,
-  });
-};
+): string =>
+  path.join(
+    automovieRoot,
+    "productions",
+    encodeId(productionId),
+    "incarnation.json",
+  );
 
 const legacyProductionId = (
   rootReal: string,

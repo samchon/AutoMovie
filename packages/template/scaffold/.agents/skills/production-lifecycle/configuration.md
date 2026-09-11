@@ -16,6 +16,8 @@ Do not move a production choice out to that boundary, and do not bring a host fa
 
 The namespace is identity rather than delivery. The package name seeds it only until the production registry exists, so a later package rename does not move it. Every compile identity binds it, so the same source compiled under another namespace is a different result. The project's location on disk is a host fact that no compile identity records.
 
+`automovie/productions.json` is that registry. It names each registered production and the design layout they use, and it is tracked beside `automovie/design`, so commit it whenever a production is registered or erased; a new checkout then opens the same production from tracked files alone. Incarnations are not identity. `automovie/incarnation.json` and each `automovie/productions/<production>/incarnation.json` are issued by one checkout, ignored, and never restored from version control, so a new clone issues its own on its first build. Never rebuild the registry from design directory names or delete tracked design to make a package-name seed succeed; a refusal before anything opens names the recovery that applies.
+
 | Design field | Owner and consequence |
 | --- | --- |
 | `renderTiers.proxy`, `renderTiers.final` | [Settings](settings.md) owns the delivery and `obligations/core/settings.md#delivery-review-condition` owns the reproducible condition. The record carries the corresponding raster scale and temporal decimation. A later visual-delivery or fidelity owner refines that same decision; do not create a second owner. A production that declares neither tier renders at the host's shipped review and delivery pair, which is a fallback rather than a declaration. |

@@ -19,6 +19,8 @@ If a generated digest, registry path, id, or fingerprint disagrees, stop consumi
 
 If a target is missing from the evidence registry, verify source binding, named export, design id, compile success, and production namespace. A plausible id in prose does not register an artifact.
 
+Generated commands refuse to choose a production namespace when production state exists without `automovie/productions.json`, when that registry is invalid or empty, or when it registers several productions. Each refusal names its recovery: restore the tracked registry from version control, or register the production explicitly as the message states. Do not rename the package, delete design records, or rebuild the registry from design directory names to make a seed succeed. A package-name seed never adopts existing state, and a guessed registry assigns authored work to a production nobody registered.
+
 ## Derived-artifact failures
 
 A `derived-artifact-*` refusal is not cleared by compiling. The ledger records a generator, its declared inputs, and the exact output bytes; compilation verifies that record and never runs a generator or repairs a stale result. Correct what the occurrence names, the generator, a declared input, an unsafe path, or a colliding asset registration, then rerun the explicit generation command before compiling again. Compiling first is the loop that has no exit.

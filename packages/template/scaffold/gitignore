@@ -10,6 +10,7 @@ automovie/*
 !automovie/derived-artifacts.json
 !automovie/design/
 !automovie/design/**
+!automovie/productions.json
 automovie/capture/
 .automovie-liveness-*
 .automovie-chunk-*

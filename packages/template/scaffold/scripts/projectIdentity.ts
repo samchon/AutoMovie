@@ -18,30 +18,73 @@ export type IAutoMovieProjectProductionSelection =
   | { kind: "registered"; productionId: string };
 
 /**
+ * What the generated host found at `automovie/productions.json` before it
+ * chose a namespace.
+ *
+ * @author Samchon
+ */
+export type IAutoMovieProjectRegistryObservation =
+  | {
+      /** No registry resides in this checkout. */
+      kind: "absent";
+      /** Whether production-owned state exists that a seed would strand. */
+      hasOwnedState: boolean;
+    }
+  | {
+      /** A registry resides but the project store refused it. */
+      kind: "invalid";
+      /** The store's refusal, which names what is wrong with the record. */
+      reason: string;
+    }
+  | {
+      /** The project store validated the registry. */
+      kind: "valid";
+      /** Exactly the registered production ids. */
+      productions: readonly string[];
+    };
+
+/**
  * Select package name only before a project has registered production state.
  *
- * @param packageName Current package display/distribution identity.
- * @param registered Exact registered production ids, or null when no registry exists.
- * @param hasOwnedState Whether production-owned state exists without a registry.
+ * `automovie/productions.json` is tracked beside the design records it names,
+ * so a new clone reads the registration its origin checkout wrote and selects
+ * the same production. From then on the registration is authoritative: an
+ * ordinary package rename keeps selecting the one registered production, and a
+ * project with several registered productions is refused by name rather than
+ * resolved through whichever id happens to equal the package name.
+ *
+ * A missing registry beside production-owned state, an invalid registry, and
+ * an empty one are refused rather than seeded, because a seed would register a
+ * second, empty production over state some checkout already registered. Each
+ * refusal names only a recovery that can be performed: the tracked file, the
+ * ignore exception an older project still lacks, or an explicit registration
+ * through the project API.
+ *
+ * @param props.packageName Current package display/distribution identity.
+ * @param props.registry What the host found at the registry path.
  */
 export const selectAutoMovieProjectProductionId = (props: {
   packageName: string;
-  registered: readonly string[] | null;
-  hasOwnedState: boolean;
+  registry: IAutoMovieProjectRegistryObservation;
 }): IAutoMovieProjectProductionSelection => {
-  if (props.registered === null) {
-    if (props.hasOwnedState)
+  const registry = props.registry;
+  if (registry.kind === "absent") {
+    if (registry.hasOwnedState)
       throw new Error(
-        "AutoMovie production state exists without a valid registry. Restore automovie/productions.json from version control, or remove the orphaned production state, before a package-name seed may register a production.",
+        "AutoMovie production state exists but automovie/productions.json, the tracked registry naming the production that owns it, is absent. Restore it from version control. A project whose .gitignore still ignores that file must add !automovie/productions.json after automovie/* and commit the registry from the checkout that registered the production. If no checkout holds it, register the owning production explicitly with AutoMovieProductionProject.open(root, productionId); a package-name seed never adopts existing state.",
       );
     return { kind: "fresh-seed", productionId: props.packageName };
   }
-  if (props.registered.length === 1)
-    return { kind: "registered", productionId: props.registered[0]! };
+  if (registry.kind === "invalid")
+    throw new Error(
+      `The AutoMovie production registry automovie/productions.json is unreadable or invalid (${registry.reason}). Restore it from version control or correct it as stated before opening the project.`,
+    );
+  if (registry.productions.length === 1)
+    return { kind: "registered", productionId: registry.productions[0]! };
   throw new Error(
-    props.registered.length === 0
-      ? "The AutoMovie production registry is empty. Restore automovie/productions.json from version control before opening the project."
-      : `This project contains ${props.registered.length} registered productions (${props.registered.join(", ")}). Generated commands require an explicit production selection.`,
+    registry.productions.length === 0
+      ? "The AutoMovie production registry automovie/productions.json registers no production. Restore the registration from version control, or register a production explicitly with AutoMovieProductionProject.open(root, productionId)."
+      : `This project registers ${registry.productions.length} productions (${registry.productions.join(", ")}). Generated commands take no production selection and open only a single-production project, so open the intended production explicitly with AutoMovieProductionProject.open(root, productionId).`,
   );
 };
 
@@ -52,7 +95,8 @@ export const selectAutoMovieProjectProductionId = (props: {
  * registry is authoritative, so an ordinary package rename cannot register a
  * second empty production or strand the authored namespace. A project with
  * several registered productions requires an explicit host selection rather
- * than using whichever id happens to equal the package name.
+ * than using whichever id happens to equal the package name. The registry is
+ * tracked, so a new checkout of the same history answers with the same id.
  *
  * The read is strict on purpose. A missing, unparsable, or nameless
  * `package.json` is not a project this harness can open, and guessing a
@@ -86,21 +130,20 @@ export const readAutoMovieProjectProductionId = (root: string): string => {
     throw new Error(
       `Project manifest "${file}" declares no trimmed non-empty "name". The production namespace is that name.`,
     );
-  const registryPath = path.join(root, "automovie", "productions.json");
-  let registered: readonly string[] | null = null;
-  if (fs.existsSync(registryPath))
+  let registry: IAutoMovieProjectRegistryObservation;
+  if (fs.existsSync(path.join(root, "automovie", "productions.json")) === false)
+    registry = { kind: "absent", hasOwnedState: hasProductionOwnedState(root) };
+  else
     try {
-      registered = AutoMovieProductionProject.registeredProductionIds(root);
+      registry = {
+        kind: "valid",
+        productions: AutoMovieProductionProject.registeredProductionIds(root),
+      };
     } catch (error) {
-      throw new Error(
-        `Production registry "${registryPath}" is unreadable or invalid (${errorMessage(error)}). Recover it before opening the project.`,
-      );
+      registry = { kind: "invalid", reason: errorMessage(error) };
     }
-  return selectAutoMovieProjectProductionId({
-    packageName: name,
-    registered,
-    hasOwnedState: registered === null && hasProductionOwnedState(root),
-  }).productionId;
+  return selectAutoMovieProjectProductionId({ packageName: name, registry })
+    .productionId;
 };
 
 /**
@@ -128,7 +171,9 @@ export const openAutoMovieProjectProduction = (
  *
  * The same strict read runs first, and the store's read-only registration
  * then requires exactly one initialized production, so a fresh or ambiguous
- * project is refused by name rather than initialized by a check.
+ * project is refused by name rather than initialized by a check. A new clone
+ * reads the tracked registration but holds no incarnation of its own yet, so
+ * its first read-only command asks for one build instead of issuing one.
  */
 export const openAutoMovieProjectProductionReadOnly = (
   root: string,
@@ -154,7 +199,10 @@ export const currentAutoMovieProductionId = (): string =>
  * the layout on the next mutable open, and it refuses any other requested id
  * by name. A lone `incarnation.json` is not either, because the store writes
  * it before the registry on a first open and completes that open without
- * stranding anything on the next attempt.
+ * stranding anything on the next attempt. A production's own incarnation under
+ * `automovie/productions` is written only after the registry names that
+ * production, so finding one without a registry is orphaned state like any
+ * other entry there.
  */
 const hasProductionOwnedState = (root: string): boolean => {
   const automovie = path.join(root, "automovie");
