@@ -32,6 +32,7 @@ import {
   canonicalAutoMovieJsonBytes,
   conformProductionVisualDeliveryVideoMp4,
   createAutoMovieProductionSemanticMaskReceipt,
+  createAutoMovieProductionSourceStatus,
   digestAutoMovieBytes,
   digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
@@ -1022,9 +1023,24 @@ export const createProductionRenderFinalizationRuntime = (props: {
       return published;
     }
     renderProgress("publication.final.start");
+    // Each fingerprint below asks the read-only source gate again; one retained
+    // status answers the unchanged ones from a fresh read of the gate inputs.
+    const sourceStatus = createAutoMovieProductionSourceStatus({
+      project,
+      builder: {
+        lintSource: () =>
+          new AutoMovieProductionBuilder(
+            project,
+            props.currentAuthoringEvidence(),
+            props.currentAuthoringEvidence,
+          ).lintSource(),
+      },
+      currentAuthoringEvidence: props.currentAuthoringEvidence,
+    });
     const snapshot = productionPublicationInputFingerprint(
       project,
       props.currentAuthoringEvidence,
+      sourceStatus,
     );
     const revision = project.commitProductionPublication({
       files: publication,
@@ -1038,6 +1054,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         productionPublicationInputFingerprint(
           AutoMovieProductionProject.openReadOnly(root, productionId),
           props.currentAuthoringEvidence,
+          sourceStatus,
         ) === snapshot,
       publicationCurrent: () => {
         const staged = new AutoMovieProductionBuilder(

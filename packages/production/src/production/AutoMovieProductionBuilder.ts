@@ -15,7 +15,6 @@ import {
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledShotSource,
   IAutoMovieConstraintViolation,
-  IAutoMovieDerivedArtifactSource,
   IAutoMovieDesignEvidence,
   IAutoMovieDesignLineage,
   IAutoMovieDesignReference,
@@ -37,6 +36,7 @@ import {
   AutoMovieProductionProject,
   IAutoMovieProductionContentInput,
 } from "./AutoMovieProductionProject";
+import type { IAutoMovieProductionSourceGateTrace } from "./IAutoMovieProductionSourceGateTrace";
 import {
   IAutoMovieFingerprintField,
   canonicalAutoMovieJsonBytes,
@@ -56,6 +56,7 @@ import {
   sameAutoMovieLibraryAuthoringSnapshot,
 } from "./libraryAuthoringSnapshot";
 import { libraryBuildInputFingerprint } from "./libraryBuildInputFingerprint";
+import { listAutoMovieProjectModules } from "./listAutoMovieProjectModules";
 import {
   IAutoMovieExternalModelRuntimeBinding,
   IAutoMovieMaterializedLibraryResult,
@@ -124,6 +125,9 @@ import {
   buildLibrarySource,
 } from "./productionSourceBuild";
 import { productionTextureClosureDiagnostics } from "./productionTextureClosure";
+import { readAutoMovieLibraryDerivedInputs } from "./readAutoMovieLibraryDerivedInputs";
+import { recordAutoMovieProductionClearanceRevision } from "./recordAutoMovieProductionClearanceRevision";
+import { recordAutoMovieProductionDocumentRead } from "./recordAutoMovieProductionDocumentRead";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import {
   assetReviewEvidenceDiagnostics,
@@ -207,21 +211,36 @@ export class AutoMovieProductionBuilder {
     return this.run(input, false);
   }
 
+  /**
+   * Run the read-only gate at source scope and report what its answer read.
+   *
+   * Every author-owned document the validation reads is reported with the text
+   * it saw, and `revisionBound` says whether a camera clearance evaluation read
+   * the project revision into the answer. A retained source status needs both
+   * to decide from a fresh read alone whether this answer still stands.
+   */
+  public lintSource(): IAutoMovieProductionSourceGateTrace & {
+    output: IAutoMovieBuildProjectOutput;
+  } {
+    const trace: IAutoMovieProductionSourceGateTrace = {
+      documents: [],
+      revisionBound: false,
+    };
+    const output = this.run({ scope: "source" }, false, trace);
+    return { ...trace, output };
+  }
+
   private run(
     input: IAutoMovieBuildProjectInput,
     materialize: boolean,
+    trace?: IAutoMovieProductionSourceGateTrace,
   ): IAutoMovieBuildProjectOutput {
     const require = createRequire(path.join(this.project.root, "package.json"));
-    for (const id of Object.keys(require.cache)) {
-      const relative = path.relative(this.project.root, id);
-      if (
-        relative !== "" &&
-        !relative.startsWith("..") &&
-        !path.isAbsolute(relative) &&
-        !relative.split(path.sep).includes("node_modules")
-      )
-        delete require.cache[id];
-    }
+    for (const id of listAutoMovieProjectModules({
+      root: this.project.root,
+      loaded: Object.keys(require.cache),
+    }))
+      delete require.cache[id];
 
     if (this.authoringEvidence?.manifest.kind === "library")
       return this.runLibrary(input, materialize, this.authoringEvidence);
@@ -233,6 +252,10 @@ export class AutoMovieProductionBuilder {
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
     const archetypes = this.project.archetypes;
+    const readDocument = recordAutoMovieProductionDocumentRead({
+      trace,
+      read: (documentPath) => this.project.readProseDocument(documentPath),
+    });
     const diagnostics: IAutoMovieDiagnostic[] = [
       ...missingDesignDiagnostics(this.project, graph),
       ...validateAutoMovieProductionGraph(
@@ -501,11 +524,14 @@ export class AutoMovieProductionBuilder {
               frameFormat: graph.production!.frameFormat,
             },
             previous,
-            cameraClearance: {
-              revision: String(inputRevision),
-              currentRevision: String(this.project.revision()),
-              sampleRate: graph.production!.frameFormat.fps,
-            },
+            cameraClearance: recordAutoMovieProductionClearanceRevision({
+              trace,
+              runtime: {
+                revision: String(inputRevision),
+                currentRevision: String(this.project.revision()),
+                sampleRate: graph.production!.frameFormat.fps,
+              },
+            }),
           });
           diagnostics.push(...result.diagnostics);
           if (result.value !== null) {
@@ -727,11 +753,11 @@ export class AutoMovieProductionBuilder {
         }),
         ...screenplayProseDiagnostics({
           screenplay,
-          read: (relative) => this.project.readProseDocument(relative),
+          read: readDocument,
         }),
         ...screenplayTimingDiagnostics({
           contracts: graph.shots,
-          read: (relative) => this.project.readProseDocument(relative),
+          read: readDocument,
           scope: input.scope,
           screenplay,
         }),
@@ -739,7 +765,7 @@ export class AutoMovieProductionBuilder {
     diagnostics.push(
       ...shotDeterminismDiagnostics({
         contracts: graph.shots,
-        read: (relative) => this.project.readProseDocument(relative),
+        read: readDocument,
       }),
     );
     if (input.scope !== "design" && timedAuthoring.screenplayRequired)
@@ -1423,74 +1449,13 @@ export class AutoMovieProductionBuilder {
   }
 
   /** Read the same verified content closure for execution and publication. */
-  private libraryDerivedInputs(enabled: boolean): {
-    artifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
-    fields: IAutoMovieFingerprintField[];
-    diagnostics: IAutoMovieDiagnostic[];
-    assets: IAutoMovieAssetProvenance[];
-    content: IAutoMovieProductionContentInput[];
-  } {
-    const fields: IAutoMovieFingerprintField[] = [];
-    const diagnostics: IAutoMovieDiagnostic[] = [];
-    let assets: IAutoMovieAssetProvenance[] = [];
-    let content: IAutoMovieProductionContentInput[] = [];
-    if (!enabled)
-      return { artifacts: {}, fields, diagnostics, assets, content };
-    const manifest = this.project.manifest();
-    let externalAssetPaths: string[] = [];
-    try {
-      content = this.project.contentInputs();
-      fields.push(...contentFingerprintFields(content));
-      const inventory = productionAssetInventory(
-        manifest.assetManifest,
-        content,
-        this.project.productionId,
-        this.project.graph(),
-        this.project.archetypes,
-      );
-      assets = inventory.records;
-      externalAssetPaths = assets.map((asset) => asset.path);
-      diagnostics.push(...inventory.diagnostics);
-    } catch (error) {
-      fields.push({
-        role: "content:inventory",
-        kind: "unsafe",
-        payload: new Uint8Array(),
-      });
-      diagnostics.push({
-        code: "content-input-unsafe",
-        category: "error",
-        phase: "source",
-        target: "declared-content",
-        path: null,
-        message: errorMessage(error),
-      });
-    }
-    const inspection = inspectAutoMovieDerivedArtifacts({
-      root: this.project.root,
-      manifestPath: manifest.derivedArtifactManifest,
-      externalAssetPaths,
+  private libraryDerivedInputs(
+    enabled: boolean,
+  ): ReturnType<typeof readAutoMovieLibraryDerivedInputs> {
+    return readAutoMovieLibraryDerivedInputs({
+      project: this.project,
+      enabled,
     });
-    fields.push(...inspection.fingerprintFields);
-    diagnostics.push(
-      ...inspection.problems.map(
-        (problem): IAutoMovieDiagnostic => ({
-          code: problem.code,
-          category: "error",
-          phase: "project",
-          target: problem.target,
-          path: problem.path,
-          message: problem.message,
-        }),
-      ),
-    );
-    return {
-      artifacts: inspection.artifacts,
-      fields,
-      diagnostics,
-      assets,
-      content,
-    };
   }
 
   /** Admit settings serialization only as a zero-payload lineage result. */

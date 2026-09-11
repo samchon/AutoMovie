@@ -40,3 +40,5 @@ Use the narrowest scope that answers the current question. Exploration should no
 Compilation proves that the records agree with each other. It proves nothing about what the production looks like, and every defect that survived a full production survived a clean compile first.
 
 A clean source compile is the precondition for evidence, not a substitute for it: `npm run turntable` and `npm run preview` refuse against a stale compile, and the builder reports evidence as missing until the frames exist. Compile, then look, then record the verdict.
+
+Capture, receipt checks and publication ask the read-only source gate more than once per operation. Each check reads the inputs again and reuses the last successful answer only when all of them are unchanged; any edit, including one that makes the gate fail, runs the gate again. A write that changes no input, such as the render bundle a capture commits, does not rerun it.

@@ -62,6 +62,7 @@ export * from "./production/sourceContentDiagnostics";
 export * from "./production/sourceOwnerBinding";
 export * from "./production/sourceRuntimeModelRegistry";
 export * from "./production/storySyncDiagnostics";
+export * from "./production/createAutoMovieProductionSourceStatus";
 export * from "./production/openAutoMovieProduction";
 export * from "./production/validateProductionDesign";
 export * from "./production/verifyProductionNonVideoDeliverables";

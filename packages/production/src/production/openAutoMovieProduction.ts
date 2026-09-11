@@ -21,6 +21,7 @@ import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleSer
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { inspectAutoMovieCaptionReadabilityWithRuntime } from "./captionReadability";
 import { compareCodeUnits } from "./contentIdentity";
+import { createAutoMovieProductionSourceStatus } from "./createAutoMovieProductionSourceStatus";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
@@ -145,12 +146,20 @@ export const openAutoMovieProduction = (props: {
     props.authoringEvidence,
     props.currentAuthoringEvidence,
   );
+  const buildStatus = createAutoMovieProductionSourceStatus({
+    project,
+    builder: statusBuilder,
+    authoringEvidence: props.authoringEvidence,
+    currentAuthoringEvidence: props.currentAuthoringEvidence,
+  });
   return {
     project,
     builder,
-    buildStatus: () => statusBuilder.lint({ scope: "source" }),
-    oracle: new AutoMovieProductionOracleService(project, props.capture, () =>
-      statusBuilder.lint({ scope: "source" }),
+    buildStatus,
+    oracle: new AutoMovieProductionOracleService(
+      project,
+      props.capture,
+      buildStatus,
     ),
   };
 };
