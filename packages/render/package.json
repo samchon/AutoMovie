@@ -44,9 +44,12 @@
   "dependencies": {
     "@automovie/engine": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "@gltf-transform/core": "catalog:gltf"
+    "@gltf-transform/core": "catalog:gltf",
+    "mp4box": "catalog:media",
+    "pngjs": "catalog:media"
   },
   "devDependencies": {
+    "@types/pngjs": "catalog:media",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",

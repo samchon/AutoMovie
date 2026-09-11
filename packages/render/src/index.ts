@@ -3,6 +3,8 @@ export * from "./captionSidecar";
 export * from "./captionSlice";
 export * from "./caption";
 export * from "./chunkSequenceRender";
+export * from "./delivery";
+export * from "./film";
 export * from "./guidePasses";
 export * from "./headlessCapture";
 export * from "./plan";

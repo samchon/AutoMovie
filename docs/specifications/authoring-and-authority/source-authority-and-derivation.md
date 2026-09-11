@@ -32,6 +32,10 @@ Checkout의 물리 root와 configuration에 적힌 절대 위치는 한 attempt�
 
 Production namespace 등록도 추적되는 입력이다. 등록 record는 project가 등록한 production id 목록과 design layout version만 담고, 그 목록이 가리키는 design record와 함께 추적된다. 따라서 새 checkout은 추적된 파일만으로 원래 checkout과 같은 namespace를 열고, 등록을 마친 project에서 host가 초기 seed로 쓰던 이름이 바뀌어도 등록은 바뀌지 않는다. 등록 record 없이 production 소유 상태가 있으면 host는 namespace를 이름이나 directory에서 추측하지 않고, 추적 record 복원이나 명시 등록을 요구하며 거부한다.
 
+등록 record의 design layout version은 project가 어느 layout에 맞춰 쓰였는지를 말하며, 옮길 record가 남아 있다는 사실은 아니다. Layout migration의 대상은 registration의 version이 아니라 project에 resident한 legacy record이고, 대상이 하나도 없으면 그 open은 아무것도 staging하지 않고 현재 version만 채택한다.
+
+추적되는 project 문서는 migration 대상이 아니다. 출력 root를 통째로 옮기면 그 안의 추적 문서까지 무시되는 namespace로 들어가므로, 출력 root는 entry 단위로 옮기고 추적 문서는 version control이 두는 자리에 남는다. 출력 root가 production namespace와 같은 이름의 entry를 가지고 있으면 legacy 출력과 그 출력이 publish될 목적지를 한 root가 동시에 갖는 상태이므로, 어느 쪽이 정본인지 추측하지 않고 거부한다.
+
 Incarnation은 identity가 아니라 checkout-local lineage다. Project state의 incarnation과 production마다의 incarnation은 checkout마다 따로 발급되고 추적하지 않으며, 결과 identity와 등록 record 어디에도 들어가지 않는다. Production incarnation은 한 checkout 안에서 그 production local namespace의 세대를 나타내므로, 같은 이력을 clone한 두 checkout은 서로 다른 incarnation과 같은 결과 identity를 갖는다.
 
 Identity 계산 규칙이 바뀌면 이전 규칙으로 기록된 결과는 현재 identity와 일치하지 않으므로 다시 파생할 때까지 `stale`이다. 새 규칙은 이전 결과를 current로 승계하지 않는다.

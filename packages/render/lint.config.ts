@@ -5,6 +5,17 @@ import {
 } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+const documentReferences = (
+  files: readonly string[],
+): ITtscEvidenceGraphReference[] => [
+  {
+    type: "markdown",
+    root: "../../docs",
+    files: [...files],
+    symbol: ["h3"],
+  },
+];
+
 const topicReferences = (
   folders: readonly string[],
 ): ITtscEvidenceGraphReference[] => [
@@ -40,6 +51,27 @@ const captionSources = [
   "src/captionPlan.ts",
   "src/captionSidecar.ts",
   "src/captionSlice.ts",
+];
+
+/**
+ * The media domain: output profiles, the occurrence key and the Node entry.
+ *
+ * These sources answer for the delivery contracts of the bytes they write and
+ * read, which are named document by document in their claim rather than by
+ * topic folder: selecting a folder would make this package answer for every
+ * unit in it, including the mixing, provider and human-judgment units it does
+ * not implement. The barrels re-export declarations that answer at their
+ * definition, and the model exporter answers under the two model-serialization
+ * claims instead, so all three are subtracted.
+ */
+const mediaSources = [
+  "src/delivery/**/*.ts",
+  "!src/delivery/index.ts",
+  "src/film/**/*.ts",
+  "!src/film/index.ts",
+  "src/node/**/*.ts",
+  "!src/node/index.ts",
+  "!src/node/exportModelToGLB.ts",
 ];
 
 /**
@@ -101,6 +133,20 @@ const graph: ITtscEvidenceGraphConfig = {
       files: ["src/screenplay.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences(["specifications/narrative-and-intent"]),
+    },
+    {
+      name: "delivery and media declarations implement their delivery contracts",
+      type: "typescript",
+      files: mediaSources,
+      symbol: ["type", "function", "property"],
+      reference: documentReferences([
+        "requirements/delivery-and-accessibility/audio-streams-and-channels.md",
+        "requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md",
+        "requirements/delivery-and-accessibility/picture-color-and-image-sequences.md",
+        "requirements/sound/validation-and-delivery.md",
+        "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+        "specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md",
+      ]),
     },
     {
       name: "render declarations implement rendering requirements",
