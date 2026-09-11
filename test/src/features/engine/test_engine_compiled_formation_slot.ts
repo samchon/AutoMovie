@@ -58,7 +58,7 @@ const bank = worldRamp({
  *    record exactly as the design regenerates it with the same terrain, down to
  *    node, actor, recipe, position, heading and motion phase.
  * 2. A hero slot is named by its actor and an anonymous slot by the formation id
- *    and six-digit slot.
+ *    and six-digit slot, from the compiled record and from the design alike.
  * 3. The design without its terrain places a member up the bank at the anchor's
  *    own height, which is the flat answer a compiled record does not give.
  * 4. A slot outside the formation refuses.
@@ -115,6 +115,18 @@ export const test_engine_compiled_formation_slot = (): void => {
           ),
       ],
       [
+        "designHero",
+        () =>
+          formationSlot(design, 7).node === "captain" &&
+          formationSlot(design, 7).actor === "captain",
+      ],
+      [
+        "designAnonymous",
+        () =>
+          formationSlot(design, 3).node === "formation:levy:slot:000003" &&
+          formationSlot(design, 3).actor === null,
+      ],
+      [
         "outside",
         () =>
           throwsError(
@@ -128,6 +140,8 @@ export const test_engine_compiled_formation_slot = (): void => {
       anonymous: true,
       onTheBank: true,
       flatWithoutTerrain: true,
+      designHero: true,
+      designAnonymous: true,
       outside: true,
     },
   );

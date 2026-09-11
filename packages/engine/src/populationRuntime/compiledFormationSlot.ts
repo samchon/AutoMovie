@@ -4,7 +4,7 @@ import {
 } from "@automovie/interface";
 
 import { formationSlotPosition } from "../formation";
-import { seededValue } from "../math/random";
+import { formationSlotRecord } from "../formationSlotRecord";
 
 /**
  * Regenerate one exact member of a compiled formation in constant memory.
@@ -17,10 +17,12 @@ import { seededValue } from "../math/random";
  * it. The only thing the record spells differently from a design is a hero,
  * which is a promoted slot rather than an override.
  *
- * The identity law is the one {@link formationSlot} applies to a grounded
- * design: the hero actor or the slot-derived node, the base recipe, the designed
- * heading and the seeded motion phase. A test pins the two answers equal for
- * every slot of a compiled formation, so they cannot drift apart silently.
+ * The identity law is not restated here. This and {@link formationSlot} for a
+ * grounded design both hand the slot's actor and position to
+ * {@link formationSlotRecord}, which names the hero actor or the slot-derived
+ * node and carries the base recipe, the designed heading and the seeded motion
+ * phase. A test pins the two answers equal for every slot of a compiled
+ * formation.
  *
  * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Returns the same member identity, grounded transform and motion phase for a slot whichever consumer regenerates it from the compiled record.
  * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Makes a one-member regeneration return exactly the transform and state the full compiled runtime holds for that slot.
@@ -30,18 +32,8 @@ import { seededValue } from "../math/random";
 export const compiledFormationSlot = (
   formation: IAutoMovieCompiledFormation,
   slot: number,
-): IAutoMovieFormationSlot => {
-  const actor =
-    formation.heroes.find((hero) => hero.slot === slot)?.actor ?? null;
-  return {
-    slot,
-    node:
-      actor ??
-      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-    actor,
-    modelRecipe: formation.modelRecipe,
+): IAutoMovieFormationSlot =>
+  formationSlotRecord(formation, slot, {
+    actor: formation.heroes.find((hero) => hero.slot === slot)?.actor ?? null,
     position: formationSlotPosition(formation, slot),
-    facingDeg: formation.facingDeg,
-    motionPhase: seededValue(formation.seed, slot, 0x70686173),
-  };
-};
+  });
