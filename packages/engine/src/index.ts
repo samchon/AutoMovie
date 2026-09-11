@@ -28,6 +28,7 @@ export * from "./soft";
 export * from "./service";
 export * from "./worldKit";
 export * from "./createAutoMovieSourceOracle";
+export * from "./measureAutoMovieGeometry";
 export * from "./scene";
 export * from "./space";
 export * from "./validation";
