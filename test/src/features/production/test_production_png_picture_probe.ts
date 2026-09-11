@@ -1,8 +1,8 @@
 import {
   assertProductionPngPicture,
-  probeProductionPngPicture,
   resolveProductionPngProfile,
-} from "@automovie/production";
+} from "@automovie/render";
+import { probeProductionPngPicture } from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 import zlib from "node:zlib";
 import { PNG } from "pngjs";

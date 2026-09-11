@@ -1,7 +1,7 @@
 import {
   normalizeProductionH264Mp4,
   trimProductionAudioPresentation,
-} from "@automovie/production";
+} from "@automovie/render/node";
 import * as HME from "h264-mp4-encoder";
 import {
   type Box,

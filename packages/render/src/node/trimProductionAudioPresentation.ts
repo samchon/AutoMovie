@@ -1,6 +1,6 @@
 import type { createFile } from "mp4box";
 
-import { residentMp4Box } from "./residentCodecs";
+import { residentMp4Box } from "./residentMp4Box";
 
 /**
  * Add one ISO edit that removes Opus encoder priming and tail padding while

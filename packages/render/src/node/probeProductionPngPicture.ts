@@ -3,82 +3,7 @@ import type {
   IAutoMovieProductionPngPicture,
 } from "@automovie/interface";
 
-import { residentPngJs } from "./residentCodecs";
-
-/** Stable role that gives a renderer-owned PNG its planned picture profile. */
-export type AutoMovieProductionPngRole =
-  | "preview"
-  | "guide-frame"
-  | "waveform"
-  | "spectrogram";
-
-/** Exact role profile that the current deterministic PNG writers support. */
-export interface IAutoMovieProductionPngProfile {
-  /** Profile schema version. */
-  version: 1;
-  /** Renderer-owned role the PNG is written for. */
-  role: AutoMovieProductionPngRole;
-  /** Stored pixel width. */
-  width: number;
-  /** Stored pixel height. */
-  height: number;
-  /** Bits per channel every writer emits. */
-  bitDepth: 8;
-  /** Channel layout every writer emits. */
-  color: "rgba";
-  /** Alpha convention of the stored pixels. */
-  alpha: "straight";
-  /** Interlace method; the writers never interlace. */
-  interlace: "none";
-  /** Color space the pixels are display-referred in. */
-  colorSpace: "srgb";
-  /** Pixel aspect; the writers emit square pixels only. */
-  pixelAspect: "square";
-  /** Stored orientation; the writers never rotate. */
-  orientation: "upright";
-}
-
-/**
- * Resolve one output role to the exact PNG profile its writer must emit.
- *
- * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-alpha-channels Keeps channel population and alpha relation explicit for every delivered PNG role.
- * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Implements the versioned planned picture profile compared with decoded bytes.
- * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-dimensions-window Declares stored dimensions, pixel aspect and orientation for each PNG role so a reader never has to guess a window.
- */
-export const resolveProductionPngProfile = (props: {
-  role: AutoMovieProductionPngRole;
-  width?: number;
-  height?: number;
-}): IAutoMovieProductionPngProfile => {
-  const fixed =
-    props.role === "waveform"
-      ? { width: 960, height: 240 }
-      : props.role === "spectrogram"
-        ? { width: 512, height: 192 }
-        : { width: props.width, height: props.height };
-  if (
-    Number.isSafeInteger(fixed.width) === false ||
-    fixed.width! <= 0 ||
-    Number.isSafeInteger(fixed.height) === false ||
-    fixed.height! <= 0
-  )
-    throw new Error(
-      `PNG role "${props.role}" requires a positive safe-integer raster.`,
-    );
-  return {
-    version: 1,
-    role: props.role,
-    width: fixed.width!,
-    height: fixed.height!,
-    bitDepth: 8,
-    color: "rgba",
-    alpha: "straight",
-    interlace: "none",
-    colorSpace: "srgb",
-    pixelAspect: "square",
-    orientation: "upright",
-  };
-};
+import { residentPngJs } from "./residentPngJs";
 
 /**
  * Decode one PNG and preserve its IHDR, color, alpha, aspect, and orientation facts.
@@ -146,44 +71,6 @@ export const probeProductionPngPicture = (
     pixelAspect: pngPixelAspect(physical?.data),
     orientation: exif === undefined ? "upright" : "metadata-present",
   };
-};
-
-/**
- * Refuse every difference between a role profile and parser-observed PNG facts.
- *
- * @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-refusal Rejects unknown, contradictory, or role-incompatible picture facts even when the byte digest is current.
- * @evidence specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md#spec-delivery-picture-products Implements the shared fieldwise PNG profile verdict used by publication and reopen paths.
- */
-export const assertProductionPngPicture = (props: {
-  profile: IAutoMovieProductionPngProfile;
-  actual: IAutoMovieProductionPngPicture;
-}): void => {
-  const expected = props.profile;
-  const actual = props.actual;
-  const entries: Array<[string, unknown, unknown]> = [
-    ["width", expected.width, actual.width],
-    ["height", expected.height, actual.height],
-    ["bitDepth", expected.bitDepth, actual.bitDepth],
-    ["color", expected.color, actual.color],
-    ["alpha", expected.alpha, actual.alpha],
-    ["interlace", expected.interlace, actual.interlace],
-    ["colorSpace", expected.colorSpace, actual.colorSpace],
-    ["orientation", expected.orientation, actual.orientation],
-  ];
-  if (
-    actual.pixelAspect.kind === "explicit" &&
-    actual.pixelAspect.x !== actual.pixelAspect.y
-  )
-    entries.push([
-      "pixelAspect",
-      expected.pixelAspect,
-      `${actual.pixelAspect.x}:${actual.pixelAspect.y}`,
-    ]);
-  const mismatch = entries.find(([, wanted, observed]) => wanted !== observed);
-  if (mismatch !== undefined)
-    throw new Error(
-      `PNG ${expected.role} profile mismatch at ${mismatch[0]}: expected ${String(mismatch[1])}, observed ${String(mismatch[2])}.`,
-    );
 };
 
 interface IPngChunk {
