@@ -57,6 +57,8 @@ For an existing production, reread the obligation at its actual contributors and
 | `createAutoMoviePopulationAccountClaims` | Build shared ordinary coverage with the same builder as local obligations. |
 | `createAutoMovieContractBindingManifest` | Project shared relationships, local bindings and audits, and topology from validated claims. |
 | `readAutoMovieProductionEvidence` | Read the manifest, authored owners, local contract rules, source bindings, and review alarms for production consumers. |
+| `readAutoMovieProductionPackageIdentity` | Read the project identity manifest from its fixed path through an injected host boundary. |
+| `isAutoMovieEvidenceIdentityFile` | Admit that manifest as one regular, non-symlink file, separately from the enumerated-population judgment. |
 | `inspectAutoMovieEvidenceTopology` | Inspect the provider, consumer, status, and reason matrix. |
 | `inspectAutoMovieEvidenceReviewAlarms` | Report repeated review frames and pasted target questions for substantive rereading. |
 | `evidence` | Re-export the native lint plugin for the project's typed configuration. |
