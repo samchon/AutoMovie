@@ -59,6 +59,10 @@ The executable command keys live in `package.json`; this table accounts for ever
 
 The table names entry points, not completion evidence. Read the linked procedure for accepted arguments, applicability, refusals, and the observation required before treating an execution as evidence.
 
+## Source preview navigation
+
+The source preview accepts optional `navigation` from `viewer/preview.ts`: `items` contain unique nonempty `id`, `label`, optional `group`, and optional `keywords`; `apply(id)` synchronously updates the shared camera and optional target. The common viewer owns search, grouped selection, result counts, and panel collapse. Searching does not change the view. Selecting an item applies it; **Go to view** applies the selected item again after free flight. The producer supplies data and view changes without constructing menu DOM. See [Live viewing](.agents/skills/review-verification/live-viewing.md) for the preview lifecycle and evidence boundary.
+
 ## Ownership
 
 - `src`, `docs`, `test`, `public`, `lint.config.ts`, `scripts/emitDesign.ts`, and the screenplay index are project-owned inputs.
