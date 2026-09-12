@@ -5,6 +5,7 @@ import { AUTOMOVIE_PRODUCTION_OPUS_PROFILE } from "./AUTOMOVIE_PRODUCTION_OPUS_P
 /**
  * Refuse every difference from the current deterministic Opus profile.
  *
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Verifies the delivered sample boundary against the encoded bytes: the coded priming equals the declared pre-skip, the edit list starts at that pre-skip, the presentation sample count divides exactly on the movie and media clocks, and the coded duration covers priming plus presentation.
  * @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe Reopens final encoded bytes and compares the complete sample-entry profile.
  * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-delivery-stream-and-inventory Enforces exact channel, clock, gain, mapping, and presentation identity.
  */

@@ -31,7 +31,7 @@ import { validDigest } from "./validDigest";
 
 /**
  * Build content-addressed chunks from the builder-owned film edit.
- * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Plans every cue as exact source and presentation sample counts on the rational film clock, so the first and last audible samples are verifiable facts rather than rounded seconds.
+ * @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-sample-boundary Converts each cue declared source duration onto the asset own sample clock and refuses an asset whose sample count or duration disagrees, so a planned cue source boundary is an exact sample count rather than a rounded second. The delivered priming, tail and presentation boundary is verified by the Opus profile assertion against the encoded bytes.
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Partitions the exact frame schedule into non-overlapping content-addressed chunks whose identity does not depend on chunk size or worker count.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Reads the compiled edit's start-inclusive, end-exclusive frame ranges with exact integer arithmetic rather than rounding a duration by frame rate.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-refusal Refuses an invalid rate, an empty range or an unrepresentable frame count before any chunk is scheduled.
