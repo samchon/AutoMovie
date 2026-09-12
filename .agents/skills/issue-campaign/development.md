@@ -88,7 +88,7 @@ Every owner:
 1. Implements its issue across every layer the issue's **Scope** section names, tracing the full consequence surface rather than the reported witness. A layer that lands in an integration file is handed over, not edited.
 2. Leaves every executable position it wrote at 100% statements, branches, functions, and lines, by testing rather than by hiding code. The obligation is per change; the repository total carries inherited gaps in files nobody touched, and an owner neither inherits those nor reports the total as its own result.
 3. Runs a complete solo Self-Review over its own surface under the [review skill's law](../review/SKILL.md#non-negotiable-review-law), repeating full rounds until one finds nothing.
-4. Runs `pnpm run format`, commits its own paths, and pushes.
+4. Confirms formatting without writing outside its own paths, commits its own paths, and pushes. The root `format` script writes across the whole repository, so in a shared checkout it rewrites other owners' uncommitted files, which is the cross-owner edit this topology forbids. Run `pnpm run format:check`; on exit 0 the write variant would have been a no-op, and when it reports a file, format only the owned paths.
 5. Reports what is closed, what is not, its commit SHAs, the integration wiring it needs, its changed-branch unit-test evidence under the [development skill](../development/SKILL.md#coverage-is-100-on-what-you-write), and every verification it could not run.
 
 ### Committing From A Shared Checkout
@@ -148,7 +148,7 @@ When either gate finds a defect:
 
 1. Diagnose the real cause from the CI log or review evidence.
 2. Correct the source and complete the corresponding regression coverage, or hand it back to the owner whose surface it is when that owner is still active.
-3. Run `pnpm run format`.
+3. Format the correction. `pnpm run format` is safe only when no owner is active; while any owner holds uncommitted work, use `pnpm run format:check` and format just the corrected paths, because the root script writes every matching file in the tree.
 4. Commit and push the correction.
 5. Let the new CI run to completion and restart the integration Self-Review as a fresh complete round over the new head.
 
