@@ -1,8 +1,8 @@
 // Actual authored production derivation, not a test or a hand-written output.
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {generateAutoMovieDerivedArtifact,materializeCompiledInstanceSet} from '@automovie/production';
-import {productionRuntimeModelId} from '@automovie/engine';
+import {generateAutoMovieDerivedArtifact,productionProjectionRadii} from '@automovie/production';
+import {materializeCompiledInstanceSet,productionRuntimeModelId} from '@automovie/engine';
 import {createManorScene} from '../src/models/manor.js';
 import {manorInstanceDefinitions} from '../src/instances/manor.js';
 import {Vector3,Quaternion} from 'three';
@@ -25,7 +25,8 @@ for(const p of inventory.prototypes){
  const b=p.bounds;external.set(p.id,{measurement:{recipe:'box-v1',parameters:{width:2*Math.max(Math.abs(b.min.x),Math.abs(b.max.x)),height:2*Math.max(Math.abs(b.min.y),Math.abs(b.max.y)),depth:2*Math.max(Math.abs(b.min.z),Math.abs(b.max.z))}}});
  p.model.id=productionRuntimeModelId(p.id);
 }
-inventory.sets=inventory.sets.map(s=>({...s,compiled:materializeCompiledInstanceSet(s.definition,{routes:[]},recipes,external)}));
+const projectionRadii=productionProjectionRadii(recipes,external);
+inventory.sets=inventory.sets.map(s=>({...s,compiled:materializeCompiledInstanceSet({instanceSet:s.definition,world:{routes:[]},recipes,projectionRadii})}));
 inventory.inputs=Object.fromEntries(files.map(f=>[f,createHash('sha256').update(initial[f]).digest('hex')]));
 return {...inventory,transforms};
 }
