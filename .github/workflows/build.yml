@@ -88,10 +88,16 @@ jobs:
       # resolves to workspace source here, where a generated project installs the
       # published packages and reads their emitted `.d.ts` under `stripInternal`
       # (`config/tsconfig.json`), so a member marked `@internal` is visible here
-      # and absent there. Its reach is also exactly the manor's own `include`,
-      # which is TypeScript only: the 16 tracked `.mjs` derivation and
-      # measurement scripts under `scripts/` have no `allowJs` and so stay
-      # outside every compiler in the repository, and `viewer/preview.ts` and
+      # and absent there.
+      #
+      # Its reach is also exactly the manor's own `include`, which compiles
+      # TypeScript and nothing else: 116 of the project's 144 TypeScript and
+      # JavaScript files. No `allowJs` reaches the other 28, so they sit outside
+      # every compiler in this repository -- 16 `.mjs` derivation and measurement
+      # scripts under `scripts/`, the 8 authored `.js` scene modules under `src/`
+      # that `website/` itself bundles through a hand-written `.d.ts` shim,
+      # `viewer/src/sourcePreviewClient.js`, and
+      # `test/manorDoorConnections.test.mjs` -- while `viewer/preview.ts` and
       # `viewer/src/preview.ts` stay out through the project's own `exclude`.
       - name: Check the manor production
         run: pnpm --filter medieval-baron-manor run lint:source
