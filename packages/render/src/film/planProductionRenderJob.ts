@@ -166,6 +166,15 @@ export const planProductionRenderJob = (props: {
               ? legacyGuidePasses
               : [deliverable.pass],
           );
+    // The same arithmetic as `planChunkedSequenceRender`, deliberately not
+    // shared with it. Both walk `k * chunkFrames` to
+    // `min(start + chunkFrames, total)` and agree on every count and size tried,
+    // but `index` means different things. There it is the ordinal the concat
+    // reassembly walks, so the count is needed up front to fix a label width;
+    // here it restarts for each deliverable and pass because it is one field of
+    // a content-addressed slot. The admission rules differ as well: that planner
+    // accepts any positive integer, this one only a positive safe integer. A
+    // shared primitive would have to carry both contracts to save three lines.
     for (const pass of passes)
       for (
         let frameStart = 0, index = 0;
