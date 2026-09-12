@@ -134,15 +134,25 @@ export const test_reference_client_executable_change = (): void => {
     }),
     "CONFIGURATION_CONFLICT",
   );
+  const unmarked = before.codex.content
+    .split("\n")
+    .filter((line) => !line.startsWith("# automovie-reference managed "))
+    .join("\n");
   TestValidator.equals(
-    "an unmarked Codex entry from another executable refuses, not rewrites",
+    "an unmarked Codex entry from another executable is preserved byte-for-byte",
+    planAutoMovieReferenceClientConfiguration({
+      root,
+      nodeExecutable: current,
+      codex: unmarked,
+    }).codex.content,
+    unmarked,
+  );
+  TestValidator.equals(
+    "an unmarked Codex entry differing beyond the executable still refuses",
     refusal({
       root,
       nodeExecutable: current,
-      codex: before.codex.content
-        .split("\n")
-        .filter((line) => !line.startsWith("# automovie-reference managed "))
-        .join("\n"),
+      codex: unmarked.replace(/^cwd = .+$/mu, "cwd = 'elsewhere'"),
     }),
     "CONFIGURATION_CONFLICT",
   );

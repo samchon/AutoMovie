@@ -104,7 +104,7 @@ export function planAutoMovieReferenceClientConfiguration(
     if (!admitted.success || !owned(admitted.data))
       fail(
         "CONFIGURATION_CONFLICT",
-        "The Claude automovie_reference entry is user-owned or edited.",
+        "The Claude automovie_reference entry is user-owned or edited; remove that entry to let synchronization manage it, then synchronize again.",
       );
   }
   const claudeContent =
@@ -212,10 +212,20 @@ function planCodex(source: string, next: z.infer<typeof codexServer>): string {
   const marked = source.includes(BEGIN) || source.includes(END);
   if (!marked) {
     if (existing !== undefined) {
-      if (!isDeepStrictEqual(existing, next))
+      // No marker means nothing proves this toolchain wrote the span, so these
+      // bytes are preserved rather than rewritten. Identity is still judged by
+      // the one ownership criterion: everything except the recorded executable,
+      // which is a machine fact. Comparing that too would refuse the whole run
+      // over a Node path, which is the same permanent failure this criterion
+      // exists to remove, and the user could not act on it from here.
+      const candidate = codexServer.safeParse(existing);
+      if (
+        !candidate.success ||
+        !isDeepStrictEqual({ ...candidate.data, command: next.command }, next)
+      )
         fail(
           "CONFIGURATION_CONFLICT",
-          "An unmarked Codex automovie_reference entry conflicts with the installed production.",
+          "An unmarked Codex automovie_reference entry conflicts with the installed production; remove that entry to let synchronization manage it, then synchronize again.",
         );
       return source;
     }
