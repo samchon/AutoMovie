@@ -135,7 +135,7 @@ export const test_reference_client_executable_change = (): void => {
     "CONFIGURATION_CONFLICT",
   );
   TestValidator.equals(
-    "an unmarked Codex entry from another executable is preserved",
+    "an unmarked Codex entry from another executable refuses, not rewrites",
     refusal({
       root,
       nodeExecutable: current,

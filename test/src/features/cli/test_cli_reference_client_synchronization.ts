@@ -209,9 +209,18 @@ const verifyExecutableChange = (input: Record<string, string>): void => {
     upgraded.harness.read(".codex/config.toml")!.source,
     published.codex.content,
   );
+  // Taken from the contract rather than from the planner's own output: the
+  // entry records the executable this run would launch the installed bin with.
+  TestValidator.equals(
+    "the republished Claude entry records the running executable",
+    JSON.parse(upgraded.harness.read(".mcp.json")!.source).mcpServers
+      .automovie_reference.command,
+    upgraded.io.nodeExecutable,
+  );
   TestValidator.predicate(
-    "the republished Claude entry no longer names the foreign executable",
-    !upgraded.harness.read(".mcp.json")!.source.includes(foreign),
+    "neither republished file still names the foreign executable",
+    !upgraded.harness.read(".mcp.json")!.source.includes(foreign) &&
+      !upgraded.harness.read(".codex/config.toml")!.source.includes(foreign),
   );
 };
 
