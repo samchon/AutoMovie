@@ -32,7 +32,7 @@ const codexServer = z.object({ ...command, cwd: z.string() }).strict();
 export interface IAutoMovieReferenceClientConfigurationRequest {
   /** Normalized absolute production root that the installed reference binary will bind. */
   root: string;
-  /** Normalized absolute current Node executable; no PATH lookup or installer is used. */
+  /** Normalized absolute Node executable recorded as the launch command, not an ownership key. */
   nodeExecutable: string;
   /** Existing .mcp.json bytes decoded as text, or undefined when absent. */
   claude?: string;
@@ -66,10 +66,14 @@ export interface IAutoMovieReferenceClientConfigurationPlan {
 /**
  * Plan scoped Claude and Codex registration without writing files or installing tools.
  *
- * Claude ownership is the exact generated schema, current Node executable and
- * installed-bin/root relationship. Codex updates only an intact checksum-delimited
- * managed block; a matching unmarked registration is preserved byte-for-byte.
- * Other JSON values and all unrelated TOML bytes remain the user's configuration.
+ * Claude ownership is the exact generated schema and the installed-bin/root
+ * relationship. The recorded Node executable is a fact about the machine that
+ * last published the entry, so a changed one is updated rather than treated as
+ * a foreign edit. Codex updates only an intact checksum-delimited managed
+ * block, whose digest is that client's authorship proof; a matching unmarked
+ * registration is preserved byte-for-byte because nothing there proves this
+ * toolchain wrote it. Other JSON values and all unrelated TOML bytes remain the
+ * user's configuration.
  *
  * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Makes both clients discover the installed reference binary while preserving unrelated settings and refusing ownership conflicts.
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Produces deterministic project-local registration candidates whose command, args and cwd bind one production.
@@ -97,7 +101,7 @@ export function planAutoMovieReferenceClientConfiguration(
   const existing = servers[OWNER];
   if (existing !== undefined) {
     const admitted = claudeServer.safeParse(existing);
-    if (!admitted.success || !owned(admitted.data, request.nodeExecutable))
+    if (!admitted.success || !owned(admitted.data))
       fail(
         "CONFIGURATION_CONFLICT",
         "The Claude automovie_reference entry is user-owned or edited.",
@@ -111,7 +115,7 @@ export function planAutoMovieReferenceClientConfiguration(
     claude: { path: ".mcp.json", content: claudeContent },
     codex: {
       path: ".codex/config.toml",
-      content: planCodex(request.codex ?? "", codex, request.nodeExecutable),
+      content: planCodex(request.codex ?? "", codex),
     },
   };
 }
@@ -173,24 +177,24 @@ function toml(
   }
 }
 
-function owned(
-  value: { command: string; args: [string, "--root", string] },
-  executable: string,
-): boolean {
+// Ownership is what binds a registration to this production: the generated
+// argument structure and an absolute normalized root whose installed bin the
+// entry launches. The recorded command is deliberately absent from the
+// parameter type, because the Node executable that wrote the entry is a
+// property of that machine rather than of the registration's owner. Requiring
+// it to equal the running executable made the toolchain refuse its own file
+// whenever a project was created by one Node install and synchronized by
+// another.
+function owned(value: { args: [string, "--root", string] }): boolean {
   const root = value.args[2];
   return (
-    value.command === executable &&
     path.isAbsolute(root) &&
     path.resolve(root) === root &&
     value.args[0] === bin(root)
   );
 }
 
-function planCodex(
-  source: string,
-  next: z.infer<typeof codexServer>,
-  executable: string,
-): string {
+function planCodex(source: string, next: z.infer<typeof codexServer>): string {
   const document = toml(source);
   const servers: Record<string, unknown> =
     document.mcp_servers === undefined ? {} : record(document.mcp_servers);
@@ -253,7 +257,7 @@ function planCodex(
   const { [OWNER]: _owner, ...otherServers } = previousServers;
   if (
     !admitted.success ||
-    !owned(admitted.data, executable) ||
+    !owned(admitted.data) ||
     admitted.data.cwd !== admitted.data.args[2] ||
     !isDeepStrictEqual(existing, admitted.data) ||
     Object.keys(otherOptions).length !== 0 ||
