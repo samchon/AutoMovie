@@ -18,8 +18,6 @@ import {
   AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   AutoMovieProductionBuilder,
   AutoMovieProductionProject,
-  type IAutoMovieProductionRenderChunk,
-  type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionSemanticMaskReceipt,
   type IAutoMovieVisualDeliveryLane,
   assertProductionRenderDialogueRuntimeIdentity,
@@ -42,6 +40,8 @@ import {
   verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
 import {
+  type IAutoMovieProductionRenderChunk,
+  type IAutoMovieProductionRenderJobPlan,
   assertProductionOpusProfile,
   assertProductionPngPicture,
   assertProductionVideoProfile,

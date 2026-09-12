@@ -1,6 +1,6 @@
 import type { IAutoMovieProductionRenderFrame } from "@automovie/engine";
 import type { AutoMovieGuidePass } from "@automovie/interface";
-import type { IAutoMovieProductionRenderJobPlan } from "@automovie/production";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 
 import type { IProductionRenderHost } from "./renderHost";
 

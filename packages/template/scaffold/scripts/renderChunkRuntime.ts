@@ -12,9 +12,7 @@ import type {
 import {
   type AutoMovieLocalProcessOwnerObservation,
   type IAutoMovieLocalProcessOwner,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
-  type IAutoMovieProductionRenderJobPlan,
   assertProductionRenderDialogueRuntimeIdentity,
   canonicalAutoMovieCaptureRuntimeIdentity,
   classifyAutoMovieProductionSemanticMaskEvidence,
@@ -26,6 +24,8 @@ import {
   productionRenderMaterializationDecision,
 } from "@automovie/production";
 import {
+  type IAutoMovieProductionRenderChunk,
+  type IAutoMovieProductionRenderJobPlan,
   assertProductionVideoProfile,
   resolveProductionVideoProfile,
 } from "@automovie/render";

@@ -2,18 +2,20 @@ import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
   type IAutoMovieLocalProcessOwner,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderGcPlan,
-  type IAutoMovieProductionRenderJobPlan,
-  type IAutoMovieProductionRenderTier,
   isAutoMovieLocalProcessOwner,
   parseAutoMovieStructuredJson,
   planProductionRenderGc,
   readAutoMovieFilmTimeline,
   verifyProductionRenderChunkReceipt,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionRenderChunk,
+  IAutoMovieProductionRenderJobPlan,
+  IAutoMovieProductionRenderTier,
+} from "@automovie/render";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 

@@ -14,13 +14,15 @@ import type {
 } from "@automovie/interface";
 import {
   type AutoMovieProductionProject,
-  type IAutoMovieProductionAudioAssetIdentity,
-  type IAutoMovieProductionRenderJobPlan,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   parseAutoMovieStructuredJson,
   readAutoMovieFilmTimeline,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionAudioAssetIdentity,
+  IAutoMovieProductionRenderJobPlan,
+} from "@automovie/render";
 import {
   normalizeProductionH264Mp4,
   trimProductionAudioPresentation,

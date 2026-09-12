@@ -7,7 +7,6 @@ import type {
 import {
   type AutoMovieLocalProcessOwnerObservation,
   type IAutoMovieLocalProcessOwner,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderCleanupObservation,
   type IAutoMovieProductionRenderGcCandidate,
@@ -17,6 +16,7 @@ import {
   verifyAutoMovieProductionSemanticMaskReceipt,
 } from "@automovie/production";
 import {
+  type IAutoMovieProductionRenderChunk,
   assertProductionVideoProfile,
   resolveProductionVideoProfile,
 } from "@automovie/render";
