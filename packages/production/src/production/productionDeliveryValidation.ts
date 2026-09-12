@@ -16,9 +16,11 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
+  type IAutoMovieProductionRenderJobPlan,
   assertProductionOpusProfile,
   assertProductionPngPicture,
   assertProductionVideoProfile,
+  canonicalProductionWebVtt,
   productionVisualDeliveryOccurrence,
   resolveProductionPngProfile,
   resolveProductionVideoProfile,
@@ -37,10 +39,6 @@ import {
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { errorMessage, normalizeSlash } from "./productionBuildDiagnostics";
-import {
-  type IAutoMovieProductionRenderJobPlan,
-  canonicalProductionWebVtt,
-} from "./productionRenderJob";
 import {
   AutoMovieProductionRenderLedgerSchemaError,
   parseProductionRenderManifestBytes,

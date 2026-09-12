@@ -12,9 +12,9 @@ import {
   IAutoMovieSemanticMaskEvidence,
   IAutoMovieSemanticMaskReceipt,
 } from "@automovie/interface";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 
 import { compareCodeUnits, digestAutoMovieBytes } from "./contentIdentity";
-import type { IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
 
 /**
  * Runtime agreement between a semantic palette and the scene actually drawn.

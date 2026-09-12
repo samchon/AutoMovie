@@ -1,6 +1,6 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
-import { canonicalProductionWebVtt } from "@automovie/production";
 import {
+  canonicalProductionWebVtt,
   canonicalizeAutoMovieCaptionText,
   serializeAutoMovieWebVttCueText,
   serializeAutoMovieWebVttIdentifier,

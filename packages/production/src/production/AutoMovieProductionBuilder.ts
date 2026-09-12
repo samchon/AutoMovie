@@ -29,6 +29,7 @@ import {
   IAutoMovieModel,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
+import { type IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 import { createRequire } from "node:module";
 import path from "node:path";
 import typia from "typia";
@@ -108,7 +109,6 @@ import {
   filmDiagnostic,
 } from "./productionFilmAssembly";
 import { productionProjectionRadii } from "./productionProjectionRadii";
-import { type IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
 import {
   screenplayCoverageDiagnostics,
   screenplayResidencyDiagnostics,
