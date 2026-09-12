@@ -1,5 +1,6 @@
 import {
   IAutoMovieFormationPlacement,
+  materializeCompiledFormation,
   validateAutoMovieFormationGround,
   worldRamp,
   worldTerrain,
@@ -9,7 +10,6 @@ import {
   IAutoMovieSpace,
   IAutoMovieWorldSurface,
 } from "@automovie/interface";
-import { materializeCompiledFormation } from "@automovie/production";
 import { regenerateFormationSlot } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 
@@ -198,12 +198,10 @@ const refusals = (
  */
 export const test_production_formation_relief = (): void => {
   const terrain = [bank(), elsewhere()];
-  const compiled = materializeCompiledFormation(
-    unit(),
-    new Map(),
-    undefined,
-    terrain,
-  );
+  const compiled = materializeCompiledFormation({
+    formation: unit(),
+    surfaces: terrain,
+  });
   TestValidator.equals(
     "a compiled unit carries the terrain reaching it and no more",
     compiled.ground.map((surface) => surface.id),
@@ -253,7 +251,7 @@ export const test_production_formation_relief = (): void => {
     nclose(compiled.heroes[0]!.transform.translation.y, 4.5, 1e-9),
   );
 
-  const bare = materializeCompiledFormation(unit());
+  const bare = materializeCompiledFormation({ formation: unit() });
   TestValidator.equals(
     "a unit with no terrain declared compiles exactly as it did before",
     namedFacts([
@@ -271,19 +269,17 @@ export const test_production_formation_relief = (): void => {
     { empty: true, flatLow: true, flatHigh: true, everyMember: true },
   );
 
-  const relabelled = materializeCompiledFormation(
-    unit(),
-    new Map(),
-    undefined,
-    [wideBank()],
-  );
+  const relabelled = materializeCompiledFormation({
+    formation: unit(),
+    surfaces: [wideBank()],
+  });
   TestValidator.equals(
     "terrain is part of what a compiled unit is",
     namedFacts([
       [
         "reproduces",
         () =>
-          materializeCompiledFormation(unit(), new Map(), undefined, terrain)
+          materializeCompiledFormation({ formation: unit(), surfaces: terrain })
             .digest === compiled.digest,
       ],
       // The two units stand in exactly the same places, so nothing but the

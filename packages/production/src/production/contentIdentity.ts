@@ -1,7 +1,23 @@
+import {
+  AutoMovieCanonicalJsonError,
+  canonicalizeAutoMovieJson,
+  compareCodeUnits,
+} from "@automovie/engine";
 import { AutoMovieContentDigest } from "@automovie/interface";
 import { createHash } from "node:crypto";
 
 import { decodeAutoMovieUtf8 } from "./strictUtf8";
+
+// The canonical JSON v2 implementation and its code-unit order are the
+// engine's, so a browser consumer computes the identity without this Node
+// module and both packages sort with one comparator. These names stay
+// reachable here because Node project services import them from this module.
+export {
+  AutoMovieCanonicalJsonError,
+  type AutoMovieCanonicalJsonErrorCategory,
+  canonicalizeAutoMovieJson,
+  compareCodeUnits,
+} from "@automovie/engine";
 
 /**
  * Why an external locator cannot cross the credential boundary.
@@ -60,29 +76,6 @@ export const AUTOMOVIE_CANONICAL_JSON_DOMAIN = Object.freeze({
   keyOrder: "utf16-code-unit",
   encoding: "utf-8",
 } as const);
-
-/** Stable reasons a value cannot enter canonical JSON identity. */
-export type AutoMovieCanonicalJsonErrorCategory =
-  | "unsupported-value"
-  | "invalid-unicode"
-  | "cyclic-value"
-  | "non-plain-container"
-  | "accessor-property";
-
-/** A typed refusal that never emits partial canonical text or identity. */
-export class AutoMovieCanonicalJsonError extends TypeError {
-  /** Stable machine-readable diagnostic code. */
-  public readonly code = "automovie-canonical-json-invalid" as const;
-
-  public constructor(
-    /** Stable refusal category independent of engine error wording. */
-    public readonly category: AutoMovieCanonicalJsonErrorCategory,
-    detail: string,
-  ) {
-    super(`AutoMovie canonical JSON refused ${category}: ${detail}`);
-    this.name = "AutoMovieCanonicalJsonError";
-  }
-}
 
 /** Versioned source identity keeps exact bytes apart from permitted equivalence. */
 export interface IAutoMovieSourceIdentity {
@@ -288,100 +281,6 @@ export const decodeAutoMoviePathSegment = (value: string): string =>
     : decodeURIComponent(value);
 
 /**
- * Canonicalize a JSON-compatible value with lexicographically sorted keys.
- * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-locale-time-determinism Serializes identities without locale, timezone or clock participation so the same input yields the same bytes on every host.
- */
-export const canonicalizeAutoMovieJson = (value: unknown): string => {
-  const active = new Set<object>();
-  const encode = (current: unknown, arrayItem: boolean): string | undefined => {
-    if (
-      current === undefined ||
-      typeof current === "function" ||
-      typeof current === "symbol"
-    )
-      return arrayItem ? "null" : undefined;
-    if (current === null || typeof current === "boolean")
-      return JSON.stringify(current);
-    if (typeof current === "string") {
-      assertScalarString(current, "value");
-      return JSON.stringify(current);
-    }
-    if (typeof current === "number") {
-      if (Number.isFinite(current) === false)
-        throw new AutoMovieCanonicalJsonError(
-          "unsupported-value",
-          "numbers must be finite",
-        );
-      return JSON.stringify(current);
-    }
-    if (typeof current === "bigint")
-      throw new AutoMovieCanonicalJsonError(
-        "unsupported-value",
-        "bigint has no JSON representation",
-      );
-    if (Array.isArray(current)) {
-      enterCanonicalContainer(active, current);
-      try {
-        const items: string[] = [];
-        for (let index = 0; index < current.length; ++index) {
-          if (!Object.prototype.hasOwnProperty.call(current, index)) {
-            items.push("null");
-            continue;
-          }
-          const descriptor = Object.getOwnPropertyDescriptor(current, index)!;
-          if ("value" in descriptor === false)
-            throw new AutoMovieCanonicalJsonError(
-              "accessor-property",
-              "array slots must be data properties",
-            );
-          items.push(encode(descriptor.value, true)!);
-        }
-        return `[${items.join(",")}]`;
-      } finally {
-        active.delete(current);
-      }
-    }
-    if (typeof current === "object") {
-      const prototype = Object.getPrototypeOf(current);
-      if (prototype !== Object.prototype && prototype !== null)
-        throw new AutoMovieCanonicalJsonError(
-          "non-plain-container",
-          "only plain objects and arrays are admitted",
-        );
-      enterCanonicalContainer(active, current);
-      const record = current as Record<string, unknown>;
-      try {
-        const entries = Object.keys(record)
-          .sort(compareCodeUnits)
-          .flatMap((key): string[] => {
-            assertScalarString(key, "member name");
-            const descriptor = Object.getOwnPropertyDescriptor(record, key)!;
-            if ("value" in descriptor === false)
-              throw new AutoMovieCanonicalJsonError(
-                "accessor-property",
-                "object members must be data properties",
-              );
-            const encoded = encode(descriptor.value, false);
-            return encoded === undefined
-              ? []
-              : [`${JSON.stringify(key)}:${encoded}`];
-          });
-        return `{${entries.join(",")}}`;
-      } finally {
-        active.delete(current);
-      }
-    }
-  };
-  const encoded = encode(value, false);
-  if (encoded === undefined)
-    throw new AutoMovieCanonicalJsonError(
-      "unsupported-value",
-      "the root must have a JSON representation",
-    );
-  return encoded;
-};
-
-/**
  * Create the current versioned canonical JSON identity.
  *
  */
@@ -467,6 +366,12 @@ export const verifyAutoMovieCanonicalJsonIdentity = (props: {
 
 /**
  * Canonical JSON bytes for a fingerprint field.
+ *
+ * The bytes are the UTF-8 encoding of the engine's canonical text. That text
+ * never contains a lone surrogate, so these bytes equal the engine's pure UTF-8
+ * encoding of the same text and every runtime digests one byte sequence.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-locale-time-determinism Encodes identity text as UTF-8 without locale, timezone or clock participation so the same input yields the same bytes on every host.
  */
 export const canonicalAutoMovieJsonBytes = (value: unknown): Uint8Array =>
   Buffer.from(canonicalizeAutoMovieJson(value), "utf8");
@@ -490,47 +395,6 @@ export const fingerprintAutoMovieFields = (
       hash.update(value);
     }
   return `sha256:${hash.digest("hex")}`;
-};
-
-/**
- * Compare UTF-16 code units for deterministic filesystem and JSON ordering.
- */
-export const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
-
-/** Refuse cycles while permitting repeated, non-recursive references. */
-const enterCanonicalContainer = (active: Set<object>, value: object): void => {
-  if (active.has(value))
-    throw new AutoMovieCanonicalJsonError(
-      "cyclic-value",
-      "a container refers to itself through its active ancestry",
-    );
-  active.add(value);
-};
-
-/** JSON escape syntax can encode lone surrogates, but this protocol cannot. */
-const assertScalarString = (value: string, role: string): void => {
-  for (let index = 0; index < value.length; ++index) {
-    const unit = value.charCodeAt(index);
-    if (unit >= 0xd800 && unit <= 0xdbff) {
-      if (index + 1 >= value.length)
-        throw new AutoMovieCanonicalJsonError(
-          "invalid-unicode",
-          `${role} ends with a lone high surrogate`,
-        );
-      const trail = value.charCodeAt(index + 1);
-      if (trail < 0xdc00 || trail > 0xdfff)
-        throw new AutoMovieCanonicalJsonError(
-          "invalid-unicode",
-          `a lone surrogate occurs in ${role}`,
-        );
-      index += 1;
-    } else if (unit >= 0xdc00 && unit <= 0xdfff)
-      throw new AutoMovieCanonicalJsonError(
-        "invalid-unicode",
-        `a lone surrogate occurs in ${role}`,
-      );
-  }
 };
 
 /** Exact lossy predecessor used only to verify a declared v1 source digest. */

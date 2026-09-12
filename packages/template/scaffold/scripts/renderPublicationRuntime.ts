@@ -1,4 +1,7 @@
-import { resolveProductionFrameRate } from "@automovie/engine";
+import {
+  resolveProductionFrameRate,
+  sampleProductionRenderFrame,
+} from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
@@ -15,38 +18,42 @@ import {
   AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   AutoMovieProductionBuilder,
   AutoMovieProductionProject,
-  type IAutoMovieProductionRenderChunk,
-  type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionSemanticMaskReceipt,
   type IAutoMovieVisualDeliveryLane,
-  assembleProductionChunkVideoMp4,
-  assertProductionOpusProfile,
-  assertProductionPngPicture,
   assertProductionRenderDialogueRuntimeIdentity,
-  assertProductionVideoProfile,
   autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
-  conformProductionVisualDeliveryVideoMp4,
   createAutoMovieProductionSemanticMaskReceipt,
+  createAutoMovieProductionSourceStatus,
   digestAutoMovieBytes,
   digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
-  muxProductionFeatureMp4,
   normalizeAutoMovieVisualDeliveryLanes,
   planAutoMovieVisualDelivery,
   probeProductionMedia,
   productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
   productionRenderPublicationIdentity,
-  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
-  resolveProductionPngProfile,
-  resolveProductionVideoProfile,
-  sampleProductionRenderFrame,
   verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
+import {
+  type IAutoMovieProductionRenderChunk,
+  type IAutoMovieProductionRenderJobPlan,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionVideoProfile,
+  productionVisualDeliveryOccurrence,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import {
+  assembleProductionChunkVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
+  muxProductionFeatureMp4,
+} from "@automovie/render/node";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
@@ -1020,9 +1027,24 @@ export const createProductionRenderFinalizationRuntime = (props: {
       return published;
     }
     renderProgress("publication.final.start");
+    // Each fingerprint below asks the read-only source gate again; one retained
+    // status answers the unchanged ones from a fresh read of the gate inputs.
+    const sourceStatus = createAutoMovieProductionSourceStatus({
+      project,
+      builder: {
+        lintSource: () =>
+          new AutoMovieProductionBuilder(
+            project,
+            props.currentAuthoringEvidence(),
+            props.currentAuthoringEvidence,
+          ).lintSource(),
+      },
+      currentAuthoringEvidence: props.currentAuthoringEvidence,
+    });
     const snapshot = productionPublicationInputFingerprint(
       project,
       props.currentAuthoringEvidence,
+      sourceStatus,
     );
     const revision = project.commitProductionPublication({
       files: publication,
@@ -1036,6 +1058,7 @@ export const createProductionRenderFinalizationRuntime = (props: {
         productionPublicationInputFingerprint(
           AutoMovieProductionProject.openReadOnly(root, productionId),
           props.currentAuthoringEvidence,
+          sourceStatus,
         ) === snapshot,
       publicationCurrent: () => {
         const staged = new AutoMovieProductionBuilder(

@@ -65,14 +65,6 @@ export const test_reference_client_configuration_refusals = (): void => {
     {
       claude: JSON.stringify({
         mcpServers: {
-          automovie_reference: { ...server, command: "user-tool" },
-        },
-      }),
-      code: "CONFIGURATION_CONFLICT",
-    },
-    {
-      claude: JSON.stringify({
-        mcpServers: {
           automovie_reference: { ...server, args: ["user.js", "--root", root] },
         },
       }),
@@ -134,12 +126,6 @@ export const test_reference_client_configuration_refusals = (): void => {
     { codex: block("mcp_servers = 1\n"), code: "CONFIGURATION_CONFLICT" },
     {
       codex: block(body.replace(/^cwd = .+$/mu, 'cwd = "different-root"')),
-      code: "CONFIGURATION_CONFLICT",
-    },
-    {
-      codex: block(
-        body.replace(/^command = .+$/mu, 'command = "different-node"'),
-      ),
       code: "CONFIGURATION_CONFLICT",
     },
     {

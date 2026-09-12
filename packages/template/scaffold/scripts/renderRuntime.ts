@@ -1,13 +1,13 @@
 import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import {
   AutoMovieProductionProject,
-  type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   parseAutoMovieStructuredJson,
   readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
 } from "@automovie/production";
+import type { IAutoMovieProductionRenderTier } from "@automovie/render";
 import path from "node:path";
 
 import { productionEvidence } from "../lint.config";

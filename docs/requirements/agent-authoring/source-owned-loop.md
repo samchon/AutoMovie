@@ -22,6 +22,8 @@ Compile artifact, render, drawing, 진단과 review receipt는 어떤 source rev
 
 실행되는 top-level export는 evidence graph가 선택하고 검토한 정확한 source path, export 이름, authored target과 동일해야 하며, 결과도 그 target과 source digest를 함께 보존해야 한다. 같은 population 안의 다른 유효한 owner나 helper export로 바꾸는 것은 동일한 source를 사용한 것으로 간주하지 않는다.
 
+결과는 그것을 만든 production namespace도 함께 보존해야 한다. 같은 source와 입력 bytes라도 다른 production namespace에서 만든 결과는 같은 결과로 취급하지 않는다.
+
 ### 변경 영향의 가시성 {#agent-change-impact-visibility}
 
 한 source 변경이 영향을 주는 자산, shot, frame interval, drawing, quantity와 evidence를 식별할 수 있어야 하며 관련 없는 결과를 임의로 다시 생성하지 않아야 한다.

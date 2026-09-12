@@ -1,21 +1,12 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
-import { canonicalProductionWebVtt } from "@automovie/production";
+import {
+  canonicalProductionWebVtt,
+  canonicalizeAutoMovieCaptionText,
+  serializeAutoMovieWebVttCueText,
+  serializeAutoMovieWebVttIdentifier,
+  serializeAutoMovieWebVttSingleLineText,
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
-import path from "node:path";
-
-import { loadSourceModule } from "../internal/loadSourceModule";
-
-const captionText = loadSourceModule<{
-  canonicalizeAutoMovieCaptionText: (value: string) => string;
-  serializeAutoMovieWebVttCueText: (value: string) => string;
-  serializeAutoMovieWebVttIdentifier: (value: string) => string;
-  serializeAutoMovieWebVttSingleLineText: (value: string) => string;
-}>(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/captionText.ts",
-  ),
-);
 
 /**
  * Readability and WebVTT consume one canonical caption presentation.
@@ -36,7 +27,7 @@ const captionText = loadSourceModule<{
  */
 const refusedIdentifier = (value: string): boolean => {
   try {
-    captionText.serializeAutoMovieWebVttIdentifier(value);
+    serializeAutoMovieWebVttIdentifier(value);
     return false;
   } catch (error) {
     return (
@@ -52,32 +43,30 @@ export const test_production_caption_text_presentation = (): void => {
   const canonical = "first\nsecond\nthird\nfourth\t<&> \n\nlast ";
   TestValidator.equals(
     "all authored newline forms share one presentation and legal tab survives",
-    captionText.canonicalizeAutoMovieCaptionText(authored),
+    canonicalizeAutoMovieCaptionText(authored),
     canonical,
   );
   TestValidator.equals(
     "every prohibited caption control is sanitized without touching tab or LF",
-    captionText.canonicalizeAutoMovieCaptionText(
+    canonicalizeAutoMovieCaptionText(
       `${String.fromCharCode(...Array.from({ length: 32 }, (_, index) => index))}\u007f`,
     ),
     `${" ".repeat(9)}\t\n  \n${" ".repeat(19)}`,
   );
   TestValidator.equals(
     "WebVTT payload keeps line boundaries and escapes only text syntax",
-    captionText.serializeAutoMovieWebVttCueText(authored),
+    serializeAutoMovieWebVttCueText(authored),
     "first\nsecond\nthird\nfourth\t&lt;&amp;&gt; \n<c></c>\nlast ",
   );
   TestValidator.equals(
     "single-line fields flatten controls independently from cue payloads",
-    captionText.serializeAutoMovieWebVttSingleLineText(
-      "id\r\n\t<&>\u0001\u007f",
-    ),
+    serializeAutoMovieWebVttSingleLineText("id\r\n\t<&>\u0001\u007f"),
     "id   &lt;&amp;&gt;  ",
   );
   TestValidator.equals(
     "identifiers are preserved verbatim or refused, never escaped",
     {
-      preserved: captionText.serializeAutoMovieWebVttIdentifier("cue <&> one"),
+      preserved: serializeAutoMovieWebVttIdentifier("cue <&> one"),
       lineBreak: refusedIdentifier("cue\none"),
       arrow: refusedIdentifier("cue --> one"),
     },

@@ -53,6 +53,8 @@ Design drawing inspector는 등록된 drawing family를 bytes에서 판별하고
 
 Text와 metadata inspection은 byte encoding, language claim, document 또는 schema identity와 version, record ordering, identity fields, external reference, markup과 active-content inventory를 산출한다. Parse result는 content를 data tree로만 제공하고 embedded command, prompt와 URL을 실행 계획 또는 agent authority로 해석하지 않는다.
 
+JSON record는 strict UTF-8 decoding을 먼저 확인하고, 이어지는 한 번의 parse에서 RFC 8259 syntax와 member 이름의 유일성을 text 순서대로 확인한 뒤에만 schema validation에 전달된다. Member 이름은 JSON escape를 해석한 뒤 자신이 속한 object 안에서만 비교하므로 서로 다른 object의 같은 이름은 유효하고, 한 object에서 반복된 이름은 마지막 값을 고르지 않고 record 전체를 거부한다. 선행 byte order mark는 건너뛰지 않고 syntax 실패로 거부하며 container nesting은 선언된 상한을 넘을 수 없다. 거부는 record identity, 처음 발견한 실패 stage, 그 위치의 UTF-8 byte offset과 포함 value의 JSON Pointer를 가지고, 중복 거부는 decode된 member 이름을 함께 가진다.
+
 ### Extensible Family Profile {#interchange-extensible-media-profile}
 
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families 새로운 format이 동일한 provenance, closure와 validation 계약 아래 추가되게 한다. -->

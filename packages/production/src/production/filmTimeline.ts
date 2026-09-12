@@ -1,3 +1,4 @@
+import { verifyProductionFilmEffectPopulation } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
@@ -12,7 +13,6 @@ import typia from "typia";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { digestAutoMovieBytes } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
-import { verifyProductionFilmEffectPopulation } from "./filmEffectRuntime";
 
 /**
  * Inputs needed to validate one canonical generated film timeline.

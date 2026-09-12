@@ -1,4 +1,4 @@
-import { exportModelToGLB } from "@automovie/render";
+import { exportModelToGLB } from "@automovie/render/node";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 

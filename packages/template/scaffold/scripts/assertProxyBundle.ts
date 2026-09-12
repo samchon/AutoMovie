@@ -4,8 +4,6 @@ import type {
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
 import {
-  type IAutoMovieProductionRenderJobPlan,
-  type IAutoMovieProductionRenderTier,
   assertAutoMovieProductionDeliverableSemanticMask,
   assertProductionRenderManifestRecord,
   assertProductionRenderPublicationCurrent,
@@ -17,6 +15,10 @@ import {
   probeProductionMedia,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionRenderJobPlan,
+  IAutoMovieProductionRenderTier,
+} from "@automovie/render";
 import fs from "node:fs";
 import path from "node:path";
 

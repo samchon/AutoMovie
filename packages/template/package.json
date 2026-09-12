@@ -54,16 +54,27 @@
   "devDependencies": {
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
+    "@automovie/mcp": "workspace:^",
     "@automovie/production": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
+    "@huggingface/transformers": "catalog:media",
     "@ttsc/evidence": "catalog:typescript",
     "@ttsc/lint": "catalog:typescript",
     "@types/node": "catalog:utils",
+    "@types/pngjs": "catalog:media",
+    "@types/three": "catalog:three",
+    "automovie": "workspace:^",
+    "h264-mp4-encoder": "catalog:media",
+    "mp4box": "catalog:media",
+    "playwright": "catalog:media",
+    "pngjs": "catalog:media",
     "rimraf": "catalog:utils",
     "three": "catalog:three",
     "ttsc": "catalog:typescript",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "vite": "catalog:vite"
   }
 }

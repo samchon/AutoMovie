@@ -34,3 +34,7 @@ export * from "./subjectExtent";
 export * from "./storyClock";
 export * from "./productionLighting";
 export * from "./productionTimebase";
+export * from "./IAutoMovieProductionRenderFrame";
+export * from "./IAutoMovieProductionRenderLayer";
+export * from "./productionRenderLayersForPass";
+export * from "./sampleProductionRenderFrame";

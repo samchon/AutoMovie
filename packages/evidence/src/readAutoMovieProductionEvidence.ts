@@ -17,10 +17,8 @@ import {
   type IAutoMovieContractRule,
   readAutoMovieContractRules,
 } from "./readAutoMovieContractRules";
-import {
-  isAutoMovieEvidencePhysicalFile,
-  walkAutoMovieProjectPopulationFiles,
-} from "./walkAutoMovieProjectPopulationFiles";
+import { readAutoMovieProductionPackageIdentity } from "./readAutoMovieProductionPackageIdentity";
+import { walkAutoMovieProjectPopulationFiles } from "./walkAutoMovieProjectPopulationFiles";
 
 /**
  * One exact H2 unit carried by a production-owned contract or design owner.
@@ -247,7 +245,10 @@ export const readAutoMovieProductionEvidence = (props: {
   const manifest = createAutoMovieContractBindingManifest(
     props.productionEvidence,
   );
-  const packageIdentity = readPackageIdentity(root);
+  const packageIdentity = readAutoMovieProductionPackageIdentity(root, {
+    read: (file) => fs.readFileSync(file, "utf8"),
+    stat: fs.lstatSync,
+  });
   const designBranches = new Set(
     manifest.bindings
       .filter(
@@ -640,30 +641,6 @@ const markdownSourceOwnerTargets = (
         fingerprint: composite.digest("hex").slice(0, 7),
       };
     });
-};
-
-/** Read the tracked package identity without inventing a missing description. */
-const readPackageIdentity = (
-  root: string,
-): { packageName: string; description: string } => {
-  const location = path.join(root, "package.json");
-  if (!isAutoMovieEvidencePhysicalFile(fs.lstatSync(location)))
-    throw new Error(
-      `${location}: package identity must be one unlinked regular file.`,
-    );
-  const manifest = JSON.parse(fs.readFileSync(location, "utf8")) as {
-    name?: unknown;
-    description?: unknown;
-  };
-  if (typeof manifest.name !== "string" || manifest.name.trim() === "")
-    throw new Error(`${root}: package.json declares no package name.`);
-  return {
-    packageName: manifest.name,
-    description:
-      typeof manifest.description === "string"
-        ? manifest.description.trim()
-        : "",
-  };
 };
 
 /** Derive one design branch's active source lineage from manifest populations. */

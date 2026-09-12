@@ -12,6 +12,7 @@ import {
   IAutoMovieWorldSurface,
 } from "@automovie/interface";
 
+import { formationSlotRecord } from "./formationSlotRecord";
 import { Quaternion } from "./math/Quaternion";
 import { Vector3 } from "./math/Vector3";
 import { seededValue } from "./math/random";
@@ -164,21 +165,12 @@ export interface IAutoMovieFormationLodSelection {
 export const formationSlot = (
   formation: IAutoMovieFormationDesign & IAutoMovieFormationGrounding,
   slot: number,
-): IAutoMovieFormationSlot => {
-  const actor =
-    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
-  return {
-    slot,
-    node:
-      actor ??
-      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-    actor,
-    modelRecipe: formation.modelRecipe,
+): IAutoMovieFormationSlot =>
+  formationSlotRecord(formation, slot, {
+    actor:
+      formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null,
     position: formationSlotPosition(formation, slot),
-    facingDeg: formation.facingDeg,
-    motionPhase: seededValue(formation.seed, slot, 0x70686173),
-  };
-};
+  });
 
 /**
  * The terrain a formation's members are placed on.

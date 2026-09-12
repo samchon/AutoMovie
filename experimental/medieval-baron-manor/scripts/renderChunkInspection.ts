@@ -2,12 +2,14 @@ import {
   type AutoMovieProductionRenderArtifactStage,
   type AutoMovieProductionRenderArtifactState,
   type AutoMovieProductionRenderCleanupAuthority,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
-  type IAutoMovieProductionRenderJobPlan,
   productionRenderMaterializationDecision,
   verifyProductionRenderChunkReceipt,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionRenderChunk,
+  IAutoMovieProductionRenderJobPlan,
+} from "@automovie/render";
 
 import {
   type ICurrentRenderChunkPublication,

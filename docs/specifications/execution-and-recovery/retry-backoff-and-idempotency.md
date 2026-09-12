@@ -32,6 +32,14 @@ Backoff policy는 base delay, growth rule, maximum delay, optional bounded jitte
 
 Reuse decision은 expected job and output identity, stored artifact identity, byte integrity, validation status, compatibility profile와 freshness를 비교한 정규 receipt를 출력해야 한다. Filename, location, timestamp, previous success state와 cache presence는 reuse evidence가 아니며 mismatch가 하나라도 있으면 affected unit을 다시 수행한다.
 
+### Alias-visible Bytes {#execution-alias-visible-bytes}
+
+<!-- @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes 갱신을 요청하지 않은 경로의 내용이 남아야 한다는 약속을 허용되는 쓰기 방식의 집합으로 정밀화한다. -->
+
+쓰기는 두 방식 중 하나로만 이 약속을 이행한다. 하나는 대상이 정확히 하나의 directory entry를 가질 때 resident inode를 다시 쓰는 것이고, 다른 하나는 대상의 directory entry를 제거한 뒤 같은 이름에 successor를 배타적으로 만드는 것이다. 두 번째 방식에서 다른 경로는 이전 inode를 계속 가리키므로 그 bytes가 남는다. Entry 수는 첫 번째 방식의 admission 조건이며, 관측만 하는 연산과 entry를 교체하는 연산은 그 수를 묻지 않는다.
+
+어느 방식도 generation pin(identity·size·modification), readback, exclusive create, competitor 보존과 partial state 보고를 약화하지 않는다. Entry를 제거한 뒤 successor 생성이 실패하면 predecessor가 이미 사라졌으므로 그 결과를 부재가 아니라 partial로 보고한다. 첫 번째 방식에는 entry 수 관측과 재작성 사이의 창이 남고 두 번째 방식에는 남지 않는다는 사실을 구현이 밝혀야 한다.
+
 ### External Outcome Reconciliation {#execution-external-outcome-reconciliation}
 
 <!-- @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-external-side-effect-outcome 외부 upload, generation, billing, notification과 publication의 unknown outcome을 즉시 반복하지 않는다. -->

@@ -412,7 +412,6 @@ export const isAutoMovieExternalModelIngestProfile = (
  * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Humanoid profiles reject missing roots, dangling joints, malformed weights, and invalid mappings.
  * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Invalid skin and humanoid facts fail before a normalized inspection is returned.
  * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Image URIs are closure dependencies here; raster and video facts are not decoded.
- * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio The glTF-family inspector accepts no audio container.
  * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data It does not decode map, survey, point-cloud, or georeferenced spatial datasets.
  * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata JSON is parsed as glTF structure, not as an instruction-bearing text input.
  * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-archive-bounds Rejects declared ranges outside resident buffer bytes; archive expansion is unsupported.

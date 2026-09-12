@@ -7,18 +7,20 @@ import type {
 import {
   type AutoMovieLocalProcessOwnerObservation,
   type IAutoMovieLocalProcessOwner,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderCleanupObservation,
   type IAutoMovieProductionRenderGcCandidate,
-  assertProductionVideoProfile,
   digestAutoMovieBytes,
   parseAutoMovieStructuredJson,
   probeProductionMedia,
-  probeProductionVideoMp4,
-  resolveProductionVideoProfile,
   verifyAutoMovieProductionSemanticMaskReceipt,
 } from "@automovie/production";
+import {
+  type IAutoMovieProductionRenderChunk,
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import { probeProductionVideoMp4 } from "@automovie/render/node";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

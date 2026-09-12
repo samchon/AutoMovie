@@ -1,4 +1,5 @@
 import {
+  productionRenderLayersForPass,
   renderAutoMovieSemanticMaskSidecar,
   resolveProductionFrameRate,
 } from "@automovie/engine";
@@ -11,11 +12,8 @@ import type {
 import {
   type AutoMovieLocalProcessOwnerObservation,
   type IAutoMovieLocalProcessOwner,
-  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
-  type IAutoMovieProductionRenderJobPlan,
   assertProductionRenderDialogueRuntimeIdentity,
-  assertProductionVideoProfile,
   canonicalAutoMovieCaptureRuntimeIdentity,
   classifyAutoMovieProductionSemanticMaskEvidence,
   createAutoMovieProductionSemanticMaskReceipt,
@@ -23,11 +21,15 @@ import {
   encodeAutoMoviePathSegment,
   isAutoMovieLocalProcessOwner,
   probeProductionMedia,
-  probeProductionVideoMp4,
-  productionRenderLayersForPass,
   productionRenderMaterializationDecision,
-  resolveProductionVideoProfile,
 } from "@automovie/production";
+import {
+  type IAutoMovieProductionRenderChunk,
+  type IAutoMovieProductionRenderJobPlan,
+  assertProductionVideoProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import { probeProductionVideoMp4 } from "@automovie/render/node";
 import path from "node:path";
 import type { PNG } from "pngjs";
 

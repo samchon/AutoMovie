@@ -690,8 +690,6 @@ export const test_film_camera_clearance = (): void => {
         {
           ...acceptedReport,
           camera: "",
-          revision: "old",
-          currentRevision: "current",
           sampleRate: 0,
           intervals: 0.5,
           sampleTimes: [0, 0],
@@ -717,7 +715,6 @@ export const test_film_camera_clearance = (): void => {
       "$metadata.cameraClearance",
       "$metadata.cameraClearance[0]",
       "$metadata.cameraClearance[0].camera",
-      "$metadata.cameraClearance[0].currentRevision",
       "$metadata.cameraClearance[0].sampleRate",
       "$metadata.cameraClearance[0].intervals",
       "$metadata.cameraClearance[0].sampleTimes[1]",

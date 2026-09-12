@@ -42,7 +42,14 @@ export interface IAutoMovieMaintenanceNativeIO {
   openParent(path: string): number;
   /** Physical identity read from the held ordinary directory descriptor. */
   parentIdentity(descriptor: number): string;
-  /** Open and read an ordinary single-link child relative to its held parent. */
+  /**
+   * Open and read an ordinary child relative to its held parent.
+   *
+   * Admission asks for a regular file and refuses a link through the open
+   * itself, but it does not count directory entries: this boundary never
+   * truncates a resident, so a second entry naming the same inode cannot
+   * observe a byte this read or its caller's rename changes.
+   */
   read(parent: number, name: string): IAutoMovieMaintenanceFile | null;
   /** Native atomic exchange when occupied, or atomic no-replace move when absent. */
   rename(
@@ -299,10 +306,8 @@ const nativeIO = (
       check(descriptor, "Maintenance child open");
       return usingDescriptor(descriptor, fileSystem.closeSync, () => {
         const before = fileSystem.fstatSync(descriptor, { bigint: true });
-        if (!before.isFile() || before.nlink !== 1n)
-          throw new Error(
-            "Maintenance child is not one ordinary single-link file.",
-          );
+        if (!before.isFile())
+          throw new Error("Maintenance child is not one ordinary file.");
         const source = new TextDecoder("utf-8", {
           fatal: true,
           ignoreBOM: true,
@@ -310,11 +315,7 @@ const nativeIO = (
         const after = fileSystem.fstatSync(descriptor, { bigint: true });
         const version = (status: fs.BigIntStats): string =>
           `${identity(status)}:${status.size}:${status.mtimeNs}`;
-        if (
-          !after.isFile() ||
-          after.nlink !== 1n ||
-          version(before) !== version(after)
-        )
+        if (!after.isFile() || version(before) !== version(after))
           throw new Error("Maintenance child changed during native read.");
         return { identity: identity(after), source, version: version(after) };
       });

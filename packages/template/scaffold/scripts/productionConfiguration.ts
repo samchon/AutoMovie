@@ -1,4 +1,8 @@
-import type { IAutoMovieDialogueSpeakerBinding } from "@automovie/engine";
+import {
+  type IAutoMovieDialogueSpeakerBinding,
+  productionSoftBodyUsesMovingBoundary,
+  readProductionLiveWearableSoftBodies,
+} from "@automovie/engine";
 import type {
   AutoMovieRepaintReferenceRole,
   IAutoMovieCompiledShotSource,
@@ -13,14 +17,13 @@ import type {
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintReferenceInput,
   IAutoMovieRepaintRequestEvidence,
-  IAutoMovieSoftBodyDomain,
 } from "@automovie/interface";
 import {
-  type IAutoMovieProductionRenderTier,
   assertAutoMovieRepaintExecutionPolicy,
   autoMovieExternalLocatorRefusal,
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
+import type { IAutoMovieProductionRenderTier } from "@automovie/render";
 
 /** Kokoro adapter identity implemented by the shipped render runtime. */
 export const AUTOMOVIE_DIALOGUE_PROVIDER = "kokoro-local-v1" as const;
@@ -679,72 +682,6 @@ export const readProductionSpeakerBindings = (
       );
     speakers.add(speaker);
     return { speaker, actor };
-  });
-};
-
-/** Read the production-wide live-soft budget order exactly as authored. */
-export const readProductionLiveWearableSoftBodies = (
-  selected: unknown,
-): string[] => {
-  if (Array.isArray(selected) === false)
-    throw new Error(
-      "simulation.liveWearableSoftBodies must be an array of domain ids.",
-    );
-  const ids = new Set<string>();
-  return selected.map((entry, index) => {
-    const id = nonBlank(entry, `simulation.liveWearableSoftBodies[${index}]`);
-    if (ids.has(id))
-      throw new Error(
-        `simulation.liveWearableSoftBodies repeats domain id "${id}".`,
-      );
-    ids.add(id);
-    return id;
-  });
-};
-
-/** Whether a domain requires primary-motion boundary samples at every step. */
-export const productionSoftBodyUsesMovingBoundary = (
-  domain: Pick<IAutoMovieSoftBodyDomain, "anchors" | "colliders">,
-): boolean =>
-  domain.anchors.some((anchor) => anchor.binding !== undefined) ||
-  domain.colliders.some((collider) => collider.kind === "body-capsule");
-
-/** Resolve one shot's exact share of the production-wide live-soft selection. */
-export const selectProductionLiveWearableSoftBodies = <
-  Domain extends Pick<IAutoMovieSoftBodyDomain, "id" | "anchors" | "colliders">,
->(
-  domains: readonly Domain[],
-  selected: unknown,
-): Array<{ domain: Domain; subjectIndex: number; maxSubjects: number }> => {
-  const ordered = readProductionLiveWearableSoftBodies(selected);
-  const selectedSet = new Set(ordered);
-  const available = new Map<string, Domain>();
-  for (const domain of domains) {
-    if (
-      domain.id.trim().length === 0 ||
-      domain.id !== domain.id.trim() ||
-      available.has(domain.id)
-    )
-      throw new Error(
-        "Compiled soft-body domain ids must be non-blank, trimmed, and unique.",
-      );
-    available.set(domain.id, domain);
-    if (
-      productionSoftBodyUsesMovingBoundary(domain) &&
-      selectedSet.has(domain.id) === false
-    )
-      throw new Error(
-        `Live wearable soft body "${domain.id}" declares a moving boundary but simulation.liveWearableSoftBodies does not select it.`,
-      );
-  }
-  return ordered.flatMap((id, subjectIndex) => {
-    const domain = available.get(id);
-    if (domain === undefined) return [];
-    if (productionSoftBodyUsesMovingBoundary(domain) === false)
-      throw new Error(
-        `Live wearable soft body "${id}" is selected for a live solve but declares no moving boundary.`,
-      );
-    return [{ domain, subjectIndex, maxSubjects: ordered.length }];
   });
 };
 

@@ -75,7 +75,15 @@ export const writeAutoMovieProductionInstructions = (props: {
     evidence: identity,
     sources,
   });
-  const receipt = publishFiles(root, files, { force: true });
+  // The generated instruction surface is ignored and regenerated from tracked
+  // owners, and the documented script runner gives every root-direct file of a
+  // generated project a second directory entry while a command runs. So this
+  // caller grants entry replacement, which leaves any peer entry's bytes alone,
+  // rather than rewriting a resident inode two pathnames name.
+  const receipt = publishFiles(root, files, {
+    force: true,
+    replaceAliasedEntries: true,
+  });
   if (receipt.status !== "completed")
     throw new ScaffoldPublicationError(receipt);
   removeStaleInstructionEntries(targetSkills, new Set(Object.keys(files)));

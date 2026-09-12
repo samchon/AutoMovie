@@ -1,9 +1,9 @@
+import type { IAutoMovieProductionRenderLayer } from "@automovie/engine";
 import {
-  type IAutoMovieProductionRenderJobPlan,
-  type IAutoMovieProductionRenderLayer,
   compareCodeUnits,
   parseAutoMovieStructuredJson,
 } from "@automovie/production";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

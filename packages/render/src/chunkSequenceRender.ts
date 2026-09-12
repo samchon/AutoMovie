@@ -379,6 +379,22 @@ export interface IAutoMovieRenderChunkPlan {
  * {@link planGuidePassOutputs} convention); an unknown pass name throws before
  * any chunk is built.
  *
+ * **Not shared with the production render plan.** `planProductionRenderJob`
+ * partitions the same way arithmetically, from `k * chunkFrames` to
+ * `min(start + chunkFrames, total)`, and the two agree on every frame count and
+ * chunk size tried: zero frames, exact division, a one-frame remainder, a chunk
+ * larger than the total, a chunk of one, and the safe-integer maximum. They stay
+ * separate on purpose. This planner needs the chunk count before it iterates,
+ * because one label pad width is fixed from it for every chunk, and its `index`
+ * is the ordinal the concat reassembly walks. That planner restarts `index` for
+ * each deliverable and pass, because its index is one field of a
+ * content-addressed slot rather than a position in a sequence. The admission
+ * rules differ too: this one accepts any positive integer, that one only a
+ * positive safe integer, so 9007199254740992 is a chunk size here and a refusal
+ * there. Three lines of shared arithmetic do not pay for a primitive carrying
+ * two partition contracts, nor for the first root-to-subfolder edge in this
+ * package.
+ *
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `planChunkedSequenceRender` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `planChunkedSequenceRender` exposes that responsibility through the package-independent system contract.
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Emits the ordered lossless concat plan that closes all chunk outputs into the requested artifact.

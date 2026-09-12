@@ -29,7 +29,7 @@ export interface IAutoMovieReferenceClientSynchronizationIO {
   transaction: typeof createAutoMovieMaintenanceTransactionIO;
   /** Read the pending registration journal, if any. */
   pending: typeof readAutoMoviePendingMaintenance;
-  /** Absolute executable used by the installed local server. */
+  /** Absolute Node executable recorded as the launch command; a changed one republishes. */
   nodeExecutable: string;
 }
 

@@ -19,6 +19,11 @@ const { hasProductionArtifactEntries } = loadSourceModule<{
  * The scaffold's render README permits first initialization without hiding a
  * render bundle or state from another production namespace.
  *
+ * The rule itself belongs to the project store, which needs the same judgment
+ * when it decides what a legacy layout migration may move. This case pins the
+ * resolver reaching that one owner, so the answer a generated command gives
+ * cannot drift from the answer the migration gives.
+ *
  * Scenarios:
  *
  * 1. Empty artifact roots and the regular render README have no owned state.

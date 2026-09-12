@@ -1,4 +1,7 @@
-import { resolveProductionFrameRate } from "@automovie/engine";
+import {
+  resolveProductionFrameRate,
+  sampleProductionRenderFrame,
+} from "@automovie/engine";
 import type { IAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   AutoMovieContentDigest,
@@ -15,38 +18,41 @@ import {
   AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
   AutoMovieProductionBuilder,
   AutoMovieProductionProject,
-  type IAutoMovieProductionRenderChunk,
-  type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionSemanticMaskReceipt,
   type IAutoMovieVisualDeliveryLane,
-  assembleProductionChunkVideoMp4,
-  assertProductionOpusProfile,
-  assertProductionPngPicture,
   assertProductionRenderDialogueRuntimeIdentity,
-  assertProductionVideoProfile,
   autoMovieRepaintSequenceObservationDiagnostics,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
-  conformProductionVisualDeliveryVideoMp4,
   createAutoMovieProductionSemanticMaskReceipt,
   digestAutoMovieBytes,
   digestAutoMovieRepaintObservationMembers,
   encodeAutoMoviePathSegment,
-  muxProductionFeatureMp4,
   normalizeAutoMovieVisualDeliveryLanes,
   planAutoMovieVisualDelivery,
   probeProductionMedia,
   productionDeterministicVisualSourceDigest,
   productionPublicationInputFingerprint,
   productionRenderPublicationIdentity,
-  productionVisualDeliveryOccurrence,
   readAutoMovieFilmTimeline,
-  resolveProductionPngProfile,
-  resolveProductionVideoProfile,
-  sampleProductionRenderFrame,
   verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionNonVideoDeliverables,
 } from "@automovie/production";
+import {
+  type IAutoMovieProductionRenderChunk,
+  type IAutoMovieProductionRenderJobPlan,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionVideoProfile,
+  productionVisualDeliveryOccurrence,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import {
+  assembleProductionChunkVideoMp4,
+  conformProductionVisualDeliveryVideoMp4,
+  muxProductionFeatureMp4,
+} from "@automovie/render/node";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 

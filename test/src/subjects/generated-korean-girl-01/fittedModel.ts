@@ -11,8 +11,8 @@ import {
   portraitDentalPlacement,
   portraitDentalRow,
   portraitDentalSocket,
-  portraitHairShape,
   portraitEyeSockets,
+  portraitHairShape,
 } from "./configuration";
 import { referenceControlNet } from "./controlNet";
 import { attachPortraitDentalRow, buildPortraitDentalRow } from "./dentalRow";

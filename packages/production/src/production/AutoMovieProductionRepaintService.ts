@@ -13,6 +13,10 @@ import {
   IAutoMovieRepaintRequestEvidence,
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
+import {
+  assertProductionRenditionClipDelivery,
+  probeProductionVideoMp4,
+} from "@automovie/render/node";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -32,8 +36,6 @@ import {
   digestAutoMovieBytes,
 } from "./contentIdentity";
 import { parseAutoMovieStructuredJson } from "./duplicateAwareJson";
-import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
-import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
   canonicalAutoMovieRepaintGeneratorAdoption,

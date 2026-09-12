@@ -15,12 +15,16 @@ import {
 } from "./scaffoldPublication";
 
 /**
- * The two independent filesystem authorities one publication may hold.
+ * The independent filesystem authorities one publication may hold.
  *
  * Admitting a populated root and replacing an exact captured file are separate
  * decisions: a maintenance write into a project that already exists needs the
  * first without the second, so a new path can never overwrite a competitor.
- * `force` remains the compatibility shorthand that grants both at once.
+ * `force` remains the compatibility shorthand that grants those two at once.
+ *
+ * Replacing a target's directory entry is a third decision and `force` does not
+ * grant it, because a caller that means in-place replacement must keep refusing
+ * a target whose inode another pathname also names.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the explicit replacement authority a duplicate final path requires, separately from root admission.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Types exact replacement and populated-root admission as distinct explicit grants.
@@ -28,19 +32,38 @@ import {
 export interface IScaffoldPublicationOptions {
   /** Permit publication below an already populated root. */
   allowExistingRoot?: boolean;
-  /** Compatibility shorthand that enables both authorities. */
+  /** Compatibility shorthand that enables root admission and exact replacement. */
   force?: boolean;
   /** Permit replacement of an exact captured ordinary file. */
   overwriteExistingFiles?: boolean;
+  /**
+   * Permit replacing a target's directory entry when another entry names it.
+   *
+   * This authority is never implied by `force`, because a caller that means
+   * in-place replacement must keep refusing a target whose inode another
+   * pathname also names: rewriting that inode would change what the other
+   * pathname shows. Only a caller whose surface is regenerated rather than
+   * recovered grants it.
+   */
+  replaceAliasedEntries?: boolean;
 }
 
-/** Resolve each authority from its explicit grant, else from `force`. */
+/**
+ * Resolve root admission and exact replacement from their explicit grant, else
+ * from `force`. Entry replacement resolves from its own grant only, so a caller
+ * cannot acquire it by asking for `force`.
+ */
 const resolveScaffoldPublicationAuthority = (
   options: IScaffoldPublicationOptions | undefined,
-): { allowExistingRoot: boolean; overwriteExistingFiles: boolean } => ({
+): {
+  allowExistingRoot: boolean;
+  overwriteExistingFiles: boolean;
+  replaceAliasedEntries: boolean;
+} => ({
   allowExistingRoot: options?.allowExistingRoot ?? options?.force === true,
   overwriteExistingFiles:
     options?.overwriteExistingFiles ?? options?.force === true,
+  replaceAliasedEntries: options?.replaceAliasedEntries === true,
 });
 
 /**
@@ -189,6 +212,7 @@ export const publishFiles = (
           bytes: Uint8Array.from(entry.bytes),
           force: authority.overwriteExistingFiles,
           parent,
+          replaceAliasedEntries: authority.replaceAliasedEntries,
           target: entry.target,
         });
       } catch (error) {

@@ -6,7 +6,7 @@ Frame identity는 production과 compiled revision, selected edit, shot 또는 fi
 
 ### Canonical Fingerprint {#rendering-canonical-fingerprint}
 
-Structured input의 property와 collection order, path normalization, rational number, finite scalar, string과 absent value의 canonical representation을 고정해야 한다. 같은 의미의 input은 같은 fingerprint를, 의미가 다른 input은 다른 fingerprint를 가져야 하며 locale이나 serialization 구현 차이에 의존해서는 안 된다.
+Structured input의 property와 collection order, path normalization, rational number, finite scalar, string과 absent value의 canonical representation을 고정해야 한다. 같은 의미의 input은 같은 fingerprint를, 의미가 다른 input은 다른 fingerprint를 가져야 하며 locale이나 serialization 구현 차이에 의존해서는 안 된다. Fingerprint를 계산하는 곳이 browser viewer인지 Node builder 또는 capture인지에 따라 canonical bytes나 fingerprint가 달라져서는 안 된다.
 
 ### Dependency Closure {#rendering-frame-dependency-closure}
 
@@ -22,7 +22,7 @@ Frame input identity, canonical pixel or channel content identity와 encoded fil
 
 ### Current와 Stale {#rendering-current-stale}
 
-Source, edit, runtime, external asset, camera, pass 또는 setting 변경은 dependency relation에 따라 이전 frame을 stale로 판정해야 한다. 같은 output path가 존재해도 current로 취급하지 말고 expected fingerprint와 verified receipt가 일치해야 한다.
+Source, edit, runtime, external asset, camera, pass 또는 setting 변경은 dependency relation에 따라 이전 frame을 stale로 판정해야 한다. 같은 output path가 존재해도 current로 취급하지 말고 expected fingerprint와 verified receipt가 일치해야 한다. 같은 artifact와 current input에 대해 browser viewer와 Node builder처럼 판정하는 곳이 달라도 current와 stale 판정은 같아야 한다.
 
 ### Collision과 Corruption {#rendering-identity-collision-corruption}
 

@@ -2,14 +2,14 @@ import {
   AutoMovieContentDigest,
   IAutoMovieFilmTimeline,
 } from "@automovie/interface";
+import { productionVisualDeliveryOccurrence } from "@automovie/render";
 import {
   assembleProductionChunkVideoMp4,
   assertProductionFeatureUsesRenditionVideo,
   conformProductionRenditionVideoMp4,
   conformProductionVisualDeliveryVideoMp4,
   probeProductionVideoMp4,
-  productionVisualDeliveryOccurrence,
-} from "@automovie/production";
+} from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, throwsError } from "../internal/predicates";

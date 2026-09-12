@@ -423,6 +423,8 @@ export const ensureScaffoldFileDirectory = (props: {
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Refuses an existing file unless the caller explicitly authorizes exact-target replacement.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Resolves a repeated file write without creating a second logical target.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Rewrites the resident inode only while one entry names it, and otherwise replaces the entry so another pathname keeps the bytes it had.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Chooses between the two admitted methods from the entry count observed on the descriptor it writes through, and reports a post-removal failure as partial.
  */
 export const writeScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -431,6 +433,13 @@ export const writeScaffoldFile = (props: {
   capability?: IScaffoldParentPublicationCapability;
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
+  /**
+   * Permit replacing the target's directory entry when another entry names it.
+   *
+   * Absent, a target with a second entry is refused exactly as before, so a
+   * caller that means in-place replacement keeps its stricter contract.
+   */
+  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   const absolute = path.resolve(props.target);
@@ -465,11 +474,31 @@ export const writeScaffoldFile = (props: {
   });
 };
 
+/**
+ * Replace one existing scaffold file by the method its directory entries permit.
+ *
+ * The entry count is read from the descriptor this operation writes through
+ * rather than from a pathname stat, so the decision and the write cannot be
+ * looking at different files. Rewriting the resident inode is admissible only
+ * while exactly one entry names it, because that write is precisely what every
+ * other pathname naming it would observe. When another entry exists and the
+ * caller holds the aliased-entry authority, the directory entry is replaced
+ * instead, which leaves any peer pointing at the untouched old inode.
+ *
+ * A window remains between this stat and the truncation on the in-place branch:
+ * a link created inside it is not seen, and the rewrite would then reach the new
+ * peer. That window exists today, and this branch neither widens nor narrows it.
+ * The replacement branch has no such window, because it never rewrites the
+ * resident inode, so a link appearing at any instant still leaves the peer's
+ * bytes unchanged.
+ */
 const overwriteScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
   bytes: Uint8Array;
+  capability?: IScaffoldParentPublicationCapability;
   existing: IScaffoldFileSnapshot;
   parent: IScaffoldPhysicalDirectory;
+  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   let descriptor: number;
@@ -489,11 +518,18 @@ const overwriteScaffoldFile = (props: {
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fileSystem.fstatSync(descriptor, { bigint: true });
-    assertOrdinarySingleLinkFile(opened, props.target);
+    if (props.replaceAliasedEntries === true)
+      assertOrdinaryScaffoldFile(opened, props.target);
+    else assertOrdinarySingleLinkFile(opened, props.target);
+    if (opened.nlink !== 1n) {
+      fileSystem.closeSync(descriptor);
+      return replaceScaffoldFileEntry(props);
+    }
     assertScaffoldFileDescriptor(
       props.existing,
       descriptor,
       physicalVersion(opened),
+      assertOrdinarySingleLinkFile,
     );
     assertScaffoldOwnership(props.base, props.parent);
     fileSystem.ftruncateSync(descriptor, 0);
@@ -507,6 +543,7 @@ const overwriteScaffoldFile = (props: {
       captureScaffoldFile(props.target),
       descriptor,
       physicalVersion(completed),
+      assertOrdinarySingleLinkFile,
     );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fileSystem.fstatSync(descriptor, { bigint: true });
@@ -519,6 +556,7 @@ const overwriteScaffoldFile = (props: {
       completedSnapshot,
       descriptor,
       physicalVersion(finalStatus),
+      assertOrdinarySingleLinkFile,
     );
     completedSnapshot = assertOpenedScaffoldFileSnapshot(completedSnapshot);
     assertScaffoldOwnership(props.base, props.parent);
@@ -562,15 +600,109 @@ const overwriteScaffoldFile = (props: {
 };
 
 /**
- * Capture one ordinary single-link file before its bytes authorize an operation.
+ * Replace the target's own directory entry, leaving every peer entry alone.
+ *
+ * Removing one entry does not touch the inode, so a pathname that shares it
+ * keeps the bytes it already had; the successor is then created exclusively at
+ * the same name through the ordinary new-file boundary, which owns the write,
+ * the sync, the readback and the resident verification.
+ *
+ * This surface needs no durable journal. `AGENTS.md`, `CLAUDE.md` and
+ * `.agents/skills` are ignored generated instructions regenerated from tracked
+ * owners (`package.json`, `lint.config.ts`, authored documents, source and
+ * `docs/contracts`), so an interrupted attempt is a rerun rather than a
+ * recovery, and the next run creates the absent name through the same exclusive
+ * path. A contract target would need the journal, because its predecessor bytes
+ * are tracked and cannot be regenerated.
+ *
+ * A publication that refuses after the entry is gone is reported as partial
+ * rather than refused: the predecessor no longer exists, so claiming that
+ * nothing happened would be untrue.
+ *
+ * The predecessor is rechecked without its change time, because the caller has
+ * already opened this pathname to read the entry count and a Windows host moves
+ * change time when any handle opens a path. Comparing it here would refuse the
+ * replacement on the strength of this operation's own open. Physical identity,
+ * size and modification time are still compared, so a substituted or rewritten
+ * predecessor is still refused before its name is detached.
+ */
+const replaceScaffoldFileEntry = (props: {
+  base: IScaffoldPhysicalDirectory;
+  bytes: Uint8Array;
+  capability?: IScaffoldParentPublicationCapability;
+  existing: IScaffoldFileSnapshot;
+  parent: IScaffoldPhysicalDirectory;
+  target: string;
+}): ScaffoldFilePublicationOutcome => {
+  try {
+    assertOpenedScaffoldFileSnapshot(props.existing);
+    assertScaffoldOwnership(props.base, props.parent);
+    fileSystem.unlinkSync(props.target);
+  } catch (error) {
+    return Object.freeze({
+      error,
+      reason: "create-failed" as const,
+      status: "refused" as const,
+    });
+  }
+  const outcome = publishScaffoldFileToCapturedParent({
+    bytes: Array.from(props.bytes),
+    capability: props.capability ?? { publish: publishNativeScaffoldFile },
+    parent: props.parent,
+    target: props.target,
+  });
+  return outcome.status === "refused"
+    ? Object.freeze({
+        bytesWritten: 0,
+        error: outcome.error,
+        parentIdentity: props.parent.identity,
+        status: "partial" as const,
+      })
+    : outcome;
+};
+
+/**
+ * Capture one ordinary file before its bytes authorize an operation.
+ *
+ * Capturing observes a pathname and changes nothing, so it admits a file that
+ * more than one directory entry names. The documented script runner mirrors
+ * every root-direct file of a generated project into its own cache for the
+ * duration of a command, which made a link count here refuse ordinary inputs
+ * such as the project's reference-client configuration. A symbolic link stays
+ * refused, and the writer that truncates in place keeps its stricter admission.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins the predecessor generation before preparing a repeated write.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses links and non-file targets as reusable inputs.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Refuses a symbolic link and a non-file target as reusable inputs.
  */
-export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
+export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot =>
+  captureAdmittedScaffoldFile(file, assertOrdinaryScaffoldFile);
+
+/**
+ * Capture one ordinary file that exactly one directory entry names.
+ *
+ * A caller whose own contract refuses an aliased work target uses this instead
+ * of {@link captureScaffoldFile}. The repository's experiment launcher is that
+ * caller: it promises not to adopt a linked manifest as a work target, and its
+ * only enforcement of that promise is the admission it captures through. The
+ * relaxed capture exists for a generated project, whose root-direct inputs the
+ * documented script runner mirrors while a command runs, and that reason does
+ * not transfer to a launcher choosing what to operate on.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Pins a predecessor generation for reuse only while one directory entry names it, so an aliased target never becomes the approved input.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Narrows reusable-input admission past the ordinary judgment by also refusing a target another pathname names.
+ */
+export const captureSingleLinkScaffoldFile = (
+  file: string,
+): IScaffoldFileSnapshot =>
+  captureAdmittedScaffoldFile(file, assertOrdinarySingleLinkFile);
+
+const captureAdmittedScaffoldFile = (
+  file: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
+): IScaffoldFileSnapshot => {
   const absolute = path.resolve(file);
   const status = fileSystem.lstatSync(absolute, { bigint: true });
-  assertOrdinarySingleLinkFile(status, absolute);
+  admission(status, absolute);
   return {
     identity: physicalIdentity(status),
     path: absolute,
@@ -578,14 +710,22 @@ export const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
   };
 };
 
+/**
+ * Verify a held descriptor against its captured pathname generation.
+ *
+ * The caller supplies the admission because the two callers own different
+ * promises: the in-place writer requires the single entry its truncation
+ * depends on, while a read requires only an ordinary file.
+ */
 const assertScaffoldFileDescriptor = (
   snapshot: IScaffoldFileSnapshot,
   descriptor: number,
   expectedDescriptorVersion: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
 ): void => {
   assertOpenedScaffoldFileSnapshot(snapshot);
   const opened = fileSystem.fstatSync(descriptor, { bigint: true });
-  assertOrdinarySingleLinkFile(opened, snapshot.path);
+  admission(opened, snapshot.path);
   if (
     withoutChangeTime(physicalVersion(opened)) !==
     withoutChangeTime(expectedDescriptorVersion)
@@ -597,7 +737,7 @@ const assertScaffoldFileDescriptor = (
   let failure: IScaffoldDescriptorFailure | undefined;
   try {
     const resident = fileSystem.fstatSync(residentDescriptor, { bigint: true });
-    assertOrdinarySingleLinkFile(resident, snapshot.path);
+    admission(resident, snapshot.path);
     if (writtenVersion(resident) !== writtenVersion(opened))
       throw new Error(
         `scaffold file descriptor changed resident generation: ${snapshot.path}`,
@@ -667,8 +807,39 @@ export const readScaffoldFileSnapshot = (
   bytes: Buffer;
   identity: string;
   version: string;
+} => readAdmittedScaffoldFileSnapshot(file, assertOrdinaryScaffoldFile);
+
+/**
+ * Read one ordinary file that exactly one directory entry names.
+ *
+ * The caller that refuses an aliased work target reads through this instead of
+ * {@link readScaffoldFileSnapshot}, so its manifest is refused at admission
+ * rather than adopted. Admission is where that promise lives: a second entry
+ * appearing after this read leaves the inode identity unchanged, so the
+ * generation checks that follow are not the place to look for it.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Retains bytes and generation for reuse only from a target no second pathname names.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Admits a reusable source under the narrower judgment, refusing an aliased resident before its bytes authorize anything.
+ */
+export const readSingleLinkScaffoldFileSnapshot = (
+  file: string,
+): {
+  snapshot: IScaffoldFileSnapshot;
+  bytes: Buffer;
+  identity: string;
+  version: string;
+} => readAdmittedScaffoldFileSnapshot(file, assertOrdinarySingleLinkFile);
+
+const readAdmittedScaffoldFileSnapshot = (
+  file: string,
+  admission: (status: fs.BigIntStats, file: string) => void,
+): {
+  snapshot: IScaffoldFileSnapshot;
+  bytes: Buffer;
+  identity: string;
+  version: string;
 } => {
-  const snapshot = captureScaffoldFile(file);
+  const snapshot = captureAdmittedScaffoldFile(file, admission);
   const descriptor = fileSystem.openSync(snapshot.path, "r");
   let failure: IScaffoldDescriptorFailure | undefined;
   let result: {
@@ -680,9 +851,9 @@ export const readScaffoldFileSnapshot = (
   try {
     const opened = fileSystem.fstatSync(descriptor, { bigint: true });
     const version = physicalVersion(opened);
-    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
     const bytes = fileSystem.readFileSync(descriptor);
-    assertScaffoldFileDescriptor(snapshot, descriptor, version);
+    assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
     result = { snapshot, bytes, identity: physicalIdentity(opened), version };
   } catch (error) {
     failure = { error };
@@ -696,15 +867,33 @@ export const readScaffoldFileSnapshot = (
   return { ...result, snapshot: completed };
 };
 
+/**
+ * Admission for an operation that only observes: a regular file that is not a
+ * symbolic link. It asks nothing about directory entries, because reading bytes
+ * cannot change what a second entry naming the same inode shows.
+ */
+const assertOrdinaryScaffoldFile = (
+  status: fs.BigIntStats,
+  file: string,
+): void => {
+  if (status.isSymbolicLink() || status.isFile() === false)
+    throw new Error(`scaffold file is not one ordinary file: ${file}`);
+};
+
+/**
+ * Admission for the writer that truncates and rewrites the resident inode.
+ *
+ * Exactly one directory entry is load-bearing here and nowhere else: this write
+ * changes the bytes of the inode itself, so every other pathname naming it would
+ * observe the change. Anything that replaces the directory entry instead keeps
+ * the peer pointed at the old inode and uses the ordinary admission above.
+ */
 const assertOrdinarySingleLinkFile = (
   status: fs.BigIntStats,
   file: string,
 ): void => {
-  if (
-    status.isSymbolicLink() ||
-    status.isFile() === false ||
-    status.nlink !== 1n
-  )
+  assertOrdinaryScaffoldFile(status, file);
+  if (status.nlink !== 1n)
     throw new Error(
       `scaffold file is not one ordinary single-link file: ${file}`,
     );

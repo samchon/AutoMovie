@@ -1,10 +1,10 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderGcCandidate,
-  type IAutoMovieProductionRenderJobPlan,
   planProductionRenderGc,
   productionRenderMaterializationDecision,
 } from "@automovie/production";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, throwsError } from "../internal/predicates";
