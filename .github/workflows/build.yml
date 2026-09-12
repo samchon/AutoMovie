@@ -46,6 +46,13 @@ jobs:
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Check repository tools
         run: pnpm exec ttsc -p build/tsconfig.json --noEmit
+      # The shipped scaffold is the code a generated project runs as its
+      # `npm run build`, `npm run lint` and `npm run sync`. No other lane
+      # compiles it, so without this step a workspace package can move a public
+      # export with every repository gate green while every generated project
+      # fails on its first command.
+      - name: Check the shipped scaffold
+        run: pnpm exec ttsc -p packages/template/tsconfig.scaffold.json --noEmit
       - run: pnpm run build
       - run: pnpm run build:tgz
       - name: Verify validation left the checkout clean
