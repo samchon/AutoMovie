@@ -1,6 +1,7 @@
 import {
   type IAutoMovieDialogueExpressionLayers,
   type IAutoMovieDialogueVisemeTimeline,
+  type IAutoMovieFilmEffectCurrentIdentity,
   type IAutoMovieResolvedBone,
   type IAutoMovieWearableSoftFrame,
   lowerPlantingInstallation,
@@ -9,6 +10,7 @@ import {
   productionFrameBoundaryToSeconds,
   sampleAutoMovieDialogueExpression,
   sampleMotion,
+  sampleProductionFilmEffects,
   simulateAutoMovieWearableSoftBody,
   softBodyStepAt,
   softBodySurfaceGeometry,
@@ -24,10 +26,6 @@ import type {
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
 } from "@automovie/interface";
-import {
-  type IAutoMovieFilmEffectCurrentIdentity,
-  sampleProductionFilmEffects,
-} from "@automovie/production";
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,

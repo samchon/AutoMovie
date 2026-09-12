@@ -16,11 +16,11 @@ import type {
   IAutoMovieSoftBodyDomain,
 } from "@automovie/interface";
 import {
-  type IAutoMovieProductionRenderTier,
   assertAutoMovieRepaintExecutionPolicy,
   autoMovieExternalLocatorRefusal,
   canonicalizeAutoMovieJson,
 } from "@automovie/production";
+import type { IAutoMovieProductionRenderTier } from "@automovie/render";
 
 /** Kokoro adapter identity implemented by the shipped render runtime. */
 export const AUTOMOVIE_DIALOGUE_PROVIDER = "kokoro-local-v1" as const;
