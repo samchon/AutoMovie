@@ -70,10 +70,10 @@ export interface IAutoMovieReferenceClientConfigurationPlan {
  * relationship. The recorded Node executable is a fact about the machine that
  * last published the entry, so a changed one is updated rather than treated as
  * a foreign edit. Codex updates only an intact checksum-delimited managed
- * block, whose digest is that client's authorship proof; a matching unmarked
- * registration is preserved byte-for-byte because nothing there proves this
- * toolchain wrote it. Other JSON values and all unrelated TOML bytes remain the
- * user's configuration.
+ * block, whose digest is that client's authorship proof; an unmarked
+ * registration that agrees apart from that machine fact is preserved
+ * byte-for-byte, because nothing there proves this toolchain wrote it. Other
+ * JSON values and all unrelated TOML bytes remain the user's configuration.
  *
  * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Makes both clients discover the installed reference binary while preserving unrelated settings and refusing ownership conflicts.
  * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Produces deterministic project-local registration candidates whose command, args and cwd bind one production.
@@ -218,10 +218,10 @@ function planCodex(source: string, next: z.infer<typeof codexServer>): string {
       // which is a machine fact. Comparing that too would refuse the whole run
       // over a Node path, which is the same permanent failure this criterion
       // exists to remove, and the user could not act on it from here.
-      const candidate = codexServer.safeParse(existing);
+      const entry = codexServer.safeParse(existing);
       if (
-        !candidate.success ||
-        !isDeepStrictEqual({ ...candidate.data, command: next.command }, next)
+        !entry.success ||
+        !isDeepStrictEqual({ ...entry.data, command: next.command }, next)
       )
         fail(
           "CONFIGURATION_CONFLICT",

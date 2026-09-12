@@ -32,9 +32,10 @@ const refusal = (request: Request): string => {
  * 2. The same change inside an intact managed Codex block updates that block
  *    while every byte outside it survives.
  * 3. Negative twins one property away: an entry whose args no longer launch this
- *    project's installed bin still refuses, and an unmarked Codex entry from
- *    another executable is preserved rather than rewritten, because no digest
- *    there proves this toolchain wrote it.
+ *    project's installed bin still refuses; an unmarked Codex entry from another
+ *    executable is preserved rather than rewritten, because no digest there
+ *    proves this toolchain wrote it; and an unmarked entry whose cwd differs
+ *    beyond that machine fact still refuses.
  */
 export const test_reference_client_executable_change = (): void => {
   const root = path.resolve(
