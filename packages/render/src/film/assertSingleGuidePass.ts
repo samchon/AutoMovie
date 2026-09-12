@@ -1,13 +1,16 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
 
 /**
- * Order and de-duplicate the declared structural passes, or refuse them.
+ * Admit exactly one structural pass for one guide-pass deliverable, or refuse.
  *
- * Beauty is not a guide pass, and a guide-pass deliverable carries exactly one
- * declared pass, so one deliverable's failure can never hide inside another's
- * output.
+ * This is not render's public `normalizeGuidePasses`, which folds any requested
+ * pass list, admits beauty, and exists so the whole-render and chunked sequence
+ * planners cannot drift. A production deliverable is narrower: beauty is not a
+ * guide pass here, and a guide-pass deliverable declares exactly one, so one
+ * deliverable's failure can never hide inside another's output. Two different
+ * admission rules under one name would be worse than two names.
  */
-export const normalizeGuidePasses = (
+export const assertSingleGuidePass = (
   passes: readonly Exclude<AutoMovieGuidePass, "beauty">[],
 ): Exclude<AutoMovieGuidePass, "beauty">[] => {
   const valid = new Set<AutoMovieGuidePass>([

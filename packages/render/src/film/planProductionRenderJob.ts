@@ -23,8 +23,8 @@ import type { IAutoMovieProductionRenderChunk } from "./IAutoMovieProductionRend
 import type { IAutoMovieProductionRenderJobPlan } from "./IAutoMovieProductionRenderJobPlan";
 import type { IAutoMovieProductionRenderRuntimeIdentity } from "./IAutoMovieProductionRenderRuntimeIdentity";
 import type { IAutoMovieProductionRenderTier } from "./IAutoMovieProductionRenderTier";
+import { assertSingleGuidePass } from "./assertSingleGuidePass";
 import { normalizeAudioAssets } from "./normalizeAudioAssets";
-import { normalizeGuidePasses } from "./normalizeGuidePasses";
 import { normalizeRenderTier } from "./normalizeRenderTier";
 import { resolveProductionRenderTierFrameFormat } from "./resolveProductionRenderTierFrameFormat";
 import { validDigest } from "./validDigest";
@@ -124,7 +124,9 @@ export const planProductionRenderJob = (props: {
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
       );
   }
-  const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
+  const legacyGuidePasses = assertSingleGuidePass(
+    props.guidePasses ?? ["pose"],
+  );
   const editFingerprint = productionFilmEffectEditFingerprint(props.timeline);
   sampleProductionFilmEffects({
     identity: {
@@ -159,7 +161,7 @@ export const planProductionRenderJob = (props: {
     const passes: readonly AutoMovieGuidePass[] =
       deliverable.kind === "feature"
         ? ["beauty"]
-        : normalizeGuidePasses(
+        : assertSingleGuidePass(
             deliverable.pass === undefined
               ? legacyGuidePasses
               : [deliverable.pass],
