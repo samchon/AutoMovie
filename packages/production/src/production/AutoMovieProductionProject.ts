@@ -27,6 +27,7 @@ import {
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/render";
 import {
   assertProductionRenditionClipDelivery,
   probeProductionVideoMp4,
@@ -73,10 +74,7 @@ import {
   captureProductionPayloadSnapshot,
   isProductionPayloadSnapshotCurrent,
 } from "./productionPayloadSnapshot";
-import {
-  type IAutoMovieProductionRenderJobPlan,
-  readAutoMovieProductionOwnedFile,
-} from "./productionRenderJob";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   assertProductionRenderPublicationCurrent,
   isPortableProductionPublicationPath,

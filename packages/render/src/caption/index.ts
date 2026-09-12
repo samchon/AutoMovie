@@ -1,4 +1,5 @@
 export * from "./autoMovieCaptionLanguageComparisonKey";
+export * from "./canonicalProductionWebVtt";
 export * from "./canonicalizeAutoMovieCaptionText";
 export * from "./inspectAutoMovieCaptionReadabilityWithRuntime";
 export * from "./isAutoMovieWebVttIdentifier";

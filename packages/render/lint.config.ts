@@ -143,6 +143,7 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/delivery-and-accessibility/audio-streams-and-channels.md",
         "requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md",
         "requirements/delivery-and-accessibility/picture-color-and-image-sequences.md",
+        "requirements/sound/sources-and-external-assets.md",
         "requirements/sound/validation-and-delivery.md",
         "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
         "specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md",
