@@ -16,8 +16,11 @@ import {
  * for is left out, and the kernel falls back to its base recipe's radius and
  * then to half a metre.
  *
- * Package-private: the production root does not export it. The builder hands
- * the table to the engine inventories and to the compiled-shot join.
+ * Public because the builder is no longer its only caller. A derivation script
+ * that compiles an instance set outside the builder needs the same table, and
+ * the alternative was for it to restate how a box measurement becomes a radius
+ * — the drift this package exists to prevent. The builder still hands the table
+ * to the engine inventories and to the compiled-shot join.
  */
 export const productionProjectionRadii = (
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,

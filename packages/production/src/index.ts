@@ -46,6 +46,7 @@ export * from "./production/productionRenderLedgerRecords";
 export * from "./production/productionRenderGc";
 export * from "./production/productionRenderDialogueRuntimeIdentity";
 export * from "./production/productionRegistry";
+export * from "./production/productionProjectionRadii";
 export * from "./production/repaintAttemptClaim";
 export * from "./production/repaintDeliveryLane";
 export * from "./production/repaintRawOutput";
