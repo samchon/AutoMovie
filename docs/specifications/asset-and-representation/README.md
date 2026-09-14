@@ -15,6 +15,7 @@
 - [식별자, 자원과 수명 주기](identity-resources-and-lifecycle.md)
 - [모델, 기하와 표면 사실](model-geometry-and-surface-facts.md)
 - [리그, 변형과 상태](rig-deformation-and-state.md)
+- [얼굴 파라미터와 편집](facial-authoring/README.md)
 - [대안, 인스턴스와 그룹](alternatives-instances-and-groups.md)
 - [경계, 프록시와 상세도](bounds-proxies-and-lod.md)
 - [충실도 경계와 검증](fidelity-and-validation.md)

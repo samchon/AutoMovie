@@ -5,7 +5,7 @@
   "description": "automovie playground, a usable web UI: viewer viewport + humanoid character editor",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm --filter @automovie/human build && vite",
     "build": "ttsc --noEmit && vite build",
     "build:stickman": "ttsx -P tsconfig.json --no-plugins scripts/build-stickman.cts",
     "build:cat": "ttsx -P tsconfig.json --no-plugins scripts/build-cat.cts",
@@ -23,7 +23,7 @@
   "dependencies": {
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
-    "@automovie/face": "workspace:^",
+    "@automovie/human": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",

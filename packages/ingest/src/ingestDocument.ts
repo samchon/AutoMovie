@@ -17,6 +17,17 @@ type AutoMovieNodeTrackPath = "translation" | "rotation" | "scale" | "weights";
  * The automovie-core payload an imported glTF/GLB resolves to.
  *
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Preserves source nodes and animations as stable project-native identities.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/README.md#face-specifications Ingest maps an already-parsed external scene and animations; it does not author or validate the complete face construction, application and review boundary.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-document Ingest maps an already-parsed external scene and animations; it does not author or validate human-face version admission and photo-independent basis interpretation.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Ingest maps an already-parsed external scene and animations; it does not author or validate cranial, cervical, ocular, nasal, oral and auricular surface assembly.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls Ingest maps an already-parsed external scene and animations; it does not author or validate ordered face defaults, trait offsets, array replacement and asymmetric detail.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-attachments Ingest maps an already-parsed external scene and animations; it does not author or validate face-part cut ownership and final-surface attachment correspondence.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression Ingest maps an already-parsed external scene and animations; it does not author or validate the neutral/observed/current face solve and fixed optical identity.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-editor Ingest maps an already-parsed external scene and animations; it does not author or validate request-generation isolation and committed face history.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-editor-view Ingest maps an already-parsed external scene and animations; it does not author or validate DOM face controls, camera/clay state and last-valid downloads.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-export Ingest maps an already-parsed external scene and animations; it does not author or validate face-specific Float32, optical-material and GLTF serialization admission.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-provenance Ingest maps an already-parsed external scene and animations; it does not author or validate nullable portrait provenance that does not execute during face replay.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-review Ingest maps an already-parsed external scene and animations; it does not author or validate input/output review receipts, required portrait views and subjective acceptance.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Implements the native external-scene interpretation result.
  * @author Samchon
  */

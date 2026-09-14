@@ -40,9 +40,9 @@ Downstream fidelity result는 source prototype과 다른 rendition identity, sou
 ### Fidelity 실패와 선택 {#spec-authoring-fidelity-failure-choice}
 
 <!-- @evidence requirements/product/choice-and-external-services.md#product-external-substitution-choice 이 실패가 external lane 문제 뒤 deterministic output, 대체 경로와 defer를 사용자 선택으로 남긴다. -->
-<!-- @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion 이 실패가 현재 직접 완성하지 않는 likeness를 prototype 성공처럼 주장하지 못하게 한다. -->
+<!-- @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion 이 실패가 얼굴 구성 성공과 직접 검토한 likeness를 분리하게 한다. -->
 
-후속 lane이 구조를 보존하지 못하거나 unavailable이면 rendition을 거부하고 deterministic output, 다른 authorized path 또는 defer를 선택지로 반환해야 한다. 현재 제외된 likeness나 표면 fidelity를 prompt 또는 hidden completion으로 만들어 prototype capability라고 주장할 수 없다.
+후속 lane이 구조를 보존하지 못하거나 unavailable이면 rendition을 거부하고 deterministic output, 다른 authorized path 또는 defer를 선택지로 반환해야 한다. 명시적으로 저작한 얼굴 형태도 구성 성공만으로 닮음을 수락하지 않는다. 제외된 표면 fidelity를 prompt 또는 hidden completion으로 만들어 prototype capability라고 주장할 수 없다.
 
 ### 제품 제외와 호환성 {#spec-authoring-prototype-exclusion-compatibility}
 
@@ -50,4 +50,4 @@ Downstream fidelity result는 source prototype과 다른 rendition identity, sou
 <!-- @evidence requirements/product/scope-and-exclusions.md#product-exclusion-reopening 이 호환성이 제외를 authorability, 검증과 source ownership 근거가 생길 때만 다시 검토하게 한다. -->
 <!-- @evidence requirements/product/extensibility-and-compatibility.md#product-omission-compatibility 이 호환성이 새 fidelity 선택을 사용하지 않는 input의 기존 의미를 유지한다. -->
 
-새 fidelity lane은 기존 deterministic identity와 output을 유지하는 additive path여야 한다. Generic scene export와 interactive editor는 호환성 전제가 아니며, 제외 범위는 명시 제어, prototype 검증과 source authority가 충족되는 새 contract version에서만 바뀔 수 있다.
+새 fidelity lane은 기존 deterministic identity와 output을 유지하는 additive path여야 한다. Generic scene export와 interactive editor는 호환성 전제가 아니다. 얼굴 수치 편집과 정적 얼굴 자산 export는 [얼굴 파라미터와 편집 사양](../asset-and-representation/facial-authoring/contract.md)의 문서 버전, 명시 제어, 검증과 source authority를 따른다. 그 밖의 제외 범위는 같은 조건이 충족되는 새 contract version에서만 바뀔 수 있다.

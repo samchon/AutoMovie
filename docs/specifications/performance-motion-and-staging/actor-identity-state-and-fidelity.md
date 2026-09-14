@@ -106,11 +106,11 @@ Pose snapshot은 skeleton identity, root state, sparse articulated channels, gaz
 <!-- @evidence requirements/actors/body-scale-and-landmarks.md#actor-bounds-shot-scale 현재 pose bounds를 shot scale 판단에 사용한다. -->
 <!-- @evidence requirements/actors/body-scale-and-landmarks.md#actor-scale-validation scale과 landmark 모순을 검증한다. -->
 <!-- @evidence requirements/product/prototype-quality.md#product-prototype-geometry 단순 geometry에서도 배치와 contact 의미를 검증 가능하게 유지한다. -->
-<!-- @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion 상세 인물 likeness를 직접 생성 범위에서 제외한다. -->
+<!-- @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion 얼굴의 명시적 저작 범위와 별도 likeness 판정을 보존한다. -->
 
 Representation tier는 한 actor identity를 표현하는 서로 다른 appearance·geometry·deformation 비용 상태다. 각 tier는 실제 단위 scale, 좌우와 front/up frame, neutral bounds와 움직이는 bounds 정책, landmark·socket·humanoid mapping 또는 capability map, supported performance channels, source/proxy lineage를 선언한다. Shot 선택 입력은 예상 화면 기여도, 요구 silhouette·contact·expression evidence, performance capability, cost budget이며, 출력은 선택 tier와 측정 근거, fallback 순서다.
 
-직접 저작의 기본 ceiling은 stickman, primitive 또는 동등한 crude proxy다. 이 제한은 motion·contact·state 의미를 빈약하게 만들지 않으며, 단순 형상 위에서도 skeleton, affordance, bounds, gait, attachment, event를 상세하게 유지한다. 더 높은 appearance fidelity는 사용자가 선택한 외부 asset이나 별도 authorized rendition으로만 추가하며, 고해상도 외형이 rig capability, contact correctness, likeness approval을 자동으로 증명하지 않는다.
+직접 저작의 기본 표현은 stickman, primitive 또는 동등한 proxy다. 단순 형상 위에서도 skeleton, affordance, bounds, gait, attachment와 event를 상세하게 유지한다. 얼굴의 명시적 수치 저작은 [얼굴 파라미터와 편집](../asset-and-representation/facial-authoring/contract.md)의 별도 계약을 따른다. 그 밖의 높은 appearance fidelity는 사용자가 선택한 외부 asset이나 별도 authorized rendition으로 추가하며, 고해상도 외형이 rig capability, contact correctness 또는 likeness approval을 자동으로 증명하지 않는다.
 
 Tier 교체는 actor identity, scale, handedness, root basis, required bone·socket·expression mapping, costume·attachment state, current pose와 event timing을 보존해야 한다. 보존할 수 없는 항목은 loss report와 preview를 요구하고 승인 전에는 교체하지 않는다. 직접 측정하지 않은 likeness, 피부·머리카락·cloth realism 또는 speech performance를 `passed`로 주장하지 않으며 `unsupported`, `not-run`, `needs-review`를 성공과 구분한다.
 

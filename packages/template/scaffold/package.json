@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "An AutoMovie coding-agent production repository.",
+  "engines": { "node": ">=22.23.2" },
   "overrides": {
     "@huggingface/transformers": {
       "sharp": "file:vendor/sharp-disabled"
@@ -42,6 +43,7 @@
     "@automovie/archetypes": "{{version:archetypes}}",
     "automovie": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
+    "@automovie/human": "{{version:human}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/production": "{{version:production}}",
     "@automovie/render": "{{version:render}}",

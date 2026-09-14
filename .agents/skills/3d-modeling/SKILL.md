@@ -7,9 +7,9 @@ description: Defines what automovie models and what it refuses to model, and the
 
 ## What is modelled here
 
-A figure is a crude proxy carrying rich meaning: a stickman whose joints obey real range-of-motion limits, whose feet plant on the actual ground function, and whose gait comes from a declared table. A character that looks like someone is not the product, and that ceiling is a decision rather than a milestone. The project skill's [Out of Scope](../project/SKILL.md#out-of-scope) section states it and the condition that reopens it.
+A figure must carry readable structure: joints obey range-of-motion limits, feet plant on the actual ground function and gait comes from a declared table. The project skill's [Out of Scope](../project/SKILL.md#out-of-scope) section routes the appearance boundary and its explicit facial-authoring exception.
 
-`packages/face` is the dormant remnant of the shelved parametric head effort, kept for compatibility. Do not extend it or build on it.
+Facial work uses the anatomical components and numerical documents in [`packages/human`](../../../packages/human/README.md). Its contract does not replace the engine's independent actor, rig or expression vocabulary.
 
 What this skill governs is everything the product does model: procedural geometry, spaces and boundaries, rigs and skeletons, morph and expression channels, gait and motion tables, ingested assets, and every value derived from them.
 
