@@ -2,7 +2,7 @@ import type { IAutoMovieProductionAudioProbe } from "@automovie/interface";
 import {
   assertProductionOpusProfile,
   productionOpusDescription,
-} from "@automovie/production";
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
 const box = () => ({

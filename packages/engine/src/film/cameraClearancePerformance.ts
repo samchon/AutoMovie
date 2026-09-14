@@ -33,7 +33,7 @@ export interface IAutoMovieCameraClearanceRuntime {
    * Revision from which staged models were materialized.
    *
    * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision Identifies the exact staged geometry snapshot inspected.
-   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Supplies the report's measured revision.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal Names the staged geometry snapshot the evaluation measured, which is the value the gate compares against the one still current.
    */
   revision: string;
   /**

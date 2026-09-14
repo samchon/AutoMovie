@@ -1,4 +1,7 @@
-import type { IAutoMovieDialogueVisemeTimeline } from "@automovie/engine";
+import type {
+  IAutoMovieDialogueVisemeTimeline,
+  IAutoMovieFilmEffectCurrentIdentity,
+} from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
   IAutoMovieCompiledFilmEffect,
@@ -7,7 +10,6 @@ import type {
   IAutoMovieProductionFrameRate,
   IAutoMovieProductionTtsReceipt,
 } from "@automovie/interface";
-import type { IAutoMovieFilmEffectCurrentIdentity } from "@automovie/production";
 import { createHash } from "node:crypto";
 
 /** Final-byte mouth data installed in the capture host before any frame opens. */

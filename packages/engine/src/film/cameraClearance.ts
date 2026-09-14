@@ -232,8 +232,6 @@ export function evaluateCameraClearance(
   if (input.revision !== input.currentRevision)
     return {
       camera: input.camera,
-      revision: input.revision,
-      currentRevision: input.currentRevision,
       sampleRate: input.sampleRate,
       sampleTimes: [],
       intervals: 0,
@@ -320,8 +318,6 @@ export function evaluateCameraClearance(
 
   return {
     camera: input.camera,
-    revision: input.revision,
-    currentRevision: input.currentRevision,
     sampleRate: input.sampleRate,
     sampleTimes: suppliedTimes,
     intervals: Math.max(0, input.samples.length - 1),

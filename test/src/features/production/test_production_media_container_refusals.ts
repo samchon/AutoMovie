@@ -1,10 +1,10 @@
+import { probeProductionMedia } from "@automovie/production";
 import {
   muxProductionFeatureMp4,
   normalizeProductionH264Mp4,
-  probeProductionMedia,
   probeProductionVideoMp4,
   trimProductionAudioPresentation,
-} from "@automovie/production";
+} from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 import { type Box, createFile } from "mp4box";
 

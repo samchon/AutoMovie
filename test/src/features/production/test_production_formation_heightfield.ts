@@ -1,5 +1,6 @@
 import {
   IAutoMovieFormationPlacement,
+  materializeCompiledFormation,
   validateAutoMovieFormationGround,
   worldHeightfield,
 } from "@automovie/engine";
@@ -8,7 +9,6 @@ import type {
   IAutoMovieSpace,
   IAutoMovieWorldSurface,
 } from "@automovie/interface";
-import { materializeCompiledFormation } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -149,13 +149,14 @@ const codes = (ground?: readonly IAutoMovieWorldSurface[]): string[] =>
  *    level, both would pass.
  */
 export const test_production_formation_heightfield = (): void => {
-  const grounded = materializeCompiledFormation(
-    design(),
-    new Map(),
-    new Map(),
-    [rise(), elsewhere()],
-  );
-  const flat = materializeCompiledFormation(design(), new Map(), new Map(), []);
+  const grounded = materializeCompiledFormation({
+    formation: design(),
+    surfaces: [rise(), elsewhere()],
+  });
+  const flat = materializeCompiledFormation({
+    formation: design(),
+    surfaces: [],
+  });
 
   TestValidator.equals(
     "a compiled unit carries exactly the terrain that reaches its own footprint",

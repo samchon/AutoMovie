@@ -1,0 +1,68 @@
+{
+  // Type-check the TypeScript this package ships inside `scaffold`, from this
+  // repository, so a moved or removed workspace export fails here instead of in
+  // a user's generated project on its first command.
+  //
+  // Nothing else compiles this tree. `tsconfig.json` includes `src` only, and
+  // the scaffold is not a `pnpm-workspace.yaml` member, so the tree belonged to
+  // no project at all: a workspace package could move a public export with every
+  // repository gate green while shipped scripts stopped compiling. That is not
+  // hypothetical -- it happened while this project was being written, and a
+  // hand-packed sandbox was the only place it surfaced.
+  //
+  // The file set and every compiler option are inherited from the scaffold's own
+  // `tsconfig.json`, which is the config a generated project runs, so a file the
+  // scaffold starts shipping is gated with it rather than whenever someone
+  // remembers to list it here. Only the three options below are overridden, each
+  // for the reason stated beside it. `viewer`, `repaintSelectionReviews.ts`,
+  // `vite.config.ts` and `lint.config.ts` are therefore all in scope -- a
+  // generated project compiles all four, so the same moved export breaks them --
+  // while `viewer/src/preview.ts` stays out because the scaffold's own `exclude`
+  // already keeps it out.
+  //
+  // What this gate checks differently from a generated project: `@automovie/*`
+  // resolves to workspace source here, where a generated project installs the
+  // published packages and reads their emitted `.d.ts`. Both come from the same
+  // declarations, so an identity that moves, disappears, or changes shape is
+  // caught either way. The one difference emit introduces is `stripInternal`
+  // (`config/tsconfig.json`): a member marked `@internal` is visible to this
+  // gate and absent from the published `.d.ts`, so a scaffold script reaching
+  // for one would pass here and fail there.
+  "extends": "./scaffold/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Lint with the scaffold's own config rather than this package's, because
+    // those are the rules a generated project actually runs: the gate refuses
+    // the comparator-free `.sort()` of #1614 and the duplicated module import of
+    // #2230 by running the rules that own them, instead of one rule-shaped
+    // oracle per defect class. Without this entry `@ttsc/lint` walks upward and
+    // finds `packages/template/lint.config.ts`, whose `evidence/documented` rule
+    // demands an `@evidence` JSDoc carrier on every export -- an obligation that
+    // belongs to this package's `src` rather than to a generated project's
+    // scripts, and one whose hundreds of diagnostics bury every real one.
+    //
+    // That config declares the blank unselected production, whose `claims` list
+    // is empty, so its `evidence/graph` rule has nothing to enforce here. What
+    // this gate contributes is type resolution plus that correctness rule set.
+    "plugins": [
+      { "transform": "@ttsc/lint", "configFile": "./scaffold/lint.config.ts" }
+    ],
+    // The scaffold asks for Vite's ambient client types, which resolve only
+    // where Vite is installed as a project dependency. Dropping them here is
+    // deliberate rather than incidental: an unresolvable `types` entry makes
+    // tsgo report that one failure and abort before it checks a single file, so
+    // inheriting the entry would let this gate pass judgment on nothing while
+    // merely looking red. The cost is zero for this file set -- the only
+    // consumer of those ambients is `viewer/src/preview.ts`, which the
+    // scaffold's own `exclude` removes.
+    "types": ["node"],
+    "paths": {
+      // `scaffold/scripts/sync.ts` imports the package that ships it, and a
+      // package cannot declare a dependency on itself. Every other specifier
+      // resolves through this package's declared dependencies, so an import of
+      // something the scaffold does not depend on stays an error here instead of
+      // silently resolving somewhere else in the monorepo.
+      "@automovie/template": ["./src/index.ts"]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { IAutoMovieModel } from "@automovie/interface";
-import { exportModelToGLB } from "@automovie/render";
+import { exportModelToGLB } from "@automovie/render/node";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 

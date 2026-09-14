@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "newLine": "lf",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "include": [
+    "src",
+    "scripts",
+    "vendor/sharp-disabled/index.ts",
+    "viewer",
+    "repaintSelectionReviews.ts",
+    "vite.config.ts",
+    "lint.config.ts"
+  ],
+  "exclude": [
+    "viewer/preview.ts",
+    "viewer/src/preview.ts"
+  ]
+}

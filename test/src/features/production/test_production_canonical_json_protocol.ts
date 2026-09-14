@@ -136,15 +136,18 @@ export const test_production_canonical_json_protocol = (): void => {
       value: { b: 2, a: "😀" },
     }).digest === identity.digest,
   );
-  TestValidator.predicate(
-    "the runtime guard refuses a falsely typed historical protocol",
-    throws(() =>
+  // The category, not merely a throw: a guard that threw a ReferenceError
+  // would satisfy a bare throw check while refusing nothing by contract.
+  TestValidator.equals(
+    "the runtime guard refuses a falsely typed historical protocol by category",
+    category(() =>
       canonicalizeAutoMovieJsonForProtocol({
         protocol:
           "automovie.canonical-json.v1" as typeof AUTOMOVIE_CANONICAL_JSON_PROTOCOL,
         value: {},
       }),
     ),
+    "unsupported-value",
   );
   try {
     canonicalizeAutoMovieJson("\ud800");

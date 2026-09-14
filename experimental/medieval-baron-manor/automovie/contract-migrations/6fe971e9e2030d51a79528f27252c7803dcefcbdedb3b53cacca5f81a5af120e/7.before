@@ -1,0 +1,7 @@
+<!--
+@evidenceExclude discovery/design/designs.md#work-specific-design-requirements 현재 활성 설계는 저택 spaces 하나다. src의 형상·재질·반복 배치는 같은 공간 carrier의 입력이며, 독립 설계 사이에 새 좌표·정밀도·재사용 규칙을 도입하지 않는다. Y-up 미터와 층 기준면은 settings/001-production.md#coordinate-datum, 표현과 관찰은 같은 파일의 fidelity와 review-condition, 부재·마감·배치의 책임 경계는 settings/002-household.md#make-scope와 settings/003-spatial-basis.md#surface-responsibility로 대조한다. 현재 고정 실 연결이라는 공간별 결과는 manor-spatial-requirements.md가 별도로 보유한다.
+@evidenceExclude language/discovery/signals.md#korean-work-specific-conditions settings/001-production.md#language-access가 전문교육을 전제하지 않는 한국어 독자, 현대 표준 평서체, 회랑·복도·절개의 의미와 코드 식별자의 원문 보존을 정한다. operator-access와 accessibility-products는 치수·연결·이미지 관찰의 한국어 접근을 정한다. 현재 작품에는 인물 대사·시대어·다언어 공연이 없으므로 별도의 한국어 변이 계약을 추가하지 않는다.
+@evidenceExcludeReview discovery/design/designs.md#work-specific-design-requirements #1c8460c lint.config.ts의 활성 설계가 spaces 하나임을 확인하고 coordinate-datum, fidelity, review-condition, make-scope, surface-responsibility를 실제 형상·재질·반복 입력 경로와 비교했다. 이 경로의 공통 단위와 소유 경계는 해당 설정에 이미 있으며, 고정 실 연결은 별도 공간 계약에 남겨 독립적인 교차 설계 규칙으로 중복하지 않았다.
+@evidenceExcludeReview language/discovery/signals.md#korean-work-specific-conditions #7647b65 한국어 설정에서 회랑은 1층 지붕 아래 통로, 복도는 2층 실내 일자 통로로 구별되고 절개는 검사 상태로 설명됨을 읽었다. 원문 식별자 보존과 한국어 치수·관찰 설명이 비전문 운영자의 접근을 맡으며, 대사나 시대어가 없는 현재 납품에는 추가 언어 변이가 필요하지 않다.
+-->
+# 독립 추가 계약 탐색 결과

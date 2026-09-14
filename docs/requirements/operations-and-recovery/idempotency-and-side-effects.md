@@ -12,6 +12,10 @@
 
 검증된 input identity와 output identity가 정확히 일치할 때만 이전 결과를 재사용하고, 파일명, 위치, 수정 시각이나 성공 표지만으로 동일성을 추정하지 않아야 한다.
 
+### 별칭 경로로 보이는 bytes의 불변 {#operations-alias-visible-bytes}
+
+생성 파일을 갱신하는 쓰기는 같은 내용을 가리키는 다른 directory entry로 관찰되는 bytes를 바꾸지 않아야 한다. 갱신을 요청하지 않은 경로의 내용은 그대로 남아야 하고, 그 보존을 보장할 수 없으면 쓰기를 거부해야 한다.
+
 ### 외부 요청의 Outcome {#operations-external-side-effect-outcome}
 
 업로드, 원격 생성, 과금, notification과 publication 같은 외부 side effect는 요청 identity, provider outcome과 receipt를 추적하여 성공 여부가 불명확한 상태에서 곧바로 반복하지 않아야 한다.

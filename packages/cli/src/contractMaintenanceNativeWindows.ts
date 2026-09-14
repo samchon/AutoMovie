@@ -68,10 +68,8 @@ export const createWindowsMaintenanceNativeIO = (
       parent.children.set(name, handle);
     }
     const before = calls.inspect(handle);
-    if ((before.attributes & 0x410) !== 0 || before.links !== 1)
-      throw new Error(
-        "Maintenance Windows source is not one ordinary single-link file.",
-      );
+    if ((before.attributes & 0x410) !== 0)
+      throw new Error("Maintenance Windows source is not one ordinary file.");
     const source = new TextDecoder("utf-8", {
       fatal: true,
       ignoreBOM: true,
@@ -79,11 +77,7 @@ export const createWindowsMaintenanceNativeIO = (
     const after = calls.inspect(handle);
     const version = (info: IWindowsInformation): string =>
       `${info.identity}:${info.size}:${info.modified}`;
-    if (
-      (after.attributes & 0x410) !== 0 ||
-      after.links !== 1 ||
-      version(before) !== version(after)
-    )
+    if ((after.attributes & 0x410) !== 0 || version(before) !== version(after))
       throw new Error(
         "Maintenance Windows source changed during its held read.",
       );

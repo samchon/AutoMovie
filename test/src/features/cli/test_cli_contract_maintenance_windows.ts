@@ -11,7 +11,9 @@ import { contractMaintenanceFailure } from "../internal/contractMaintenanceHarne
  * 1. Parent-relative child reads preserve BOM bytes and reuse one held handle;
  *    activation transfers that handle, flushes it and leaves the source absent.
  * 2. Missing names and paths are absent, while access failure, linked parents,
- *    nonregular children, multiple links and changed read generations refuse.
+ *    nonregular children and changed read generations refuse. A second
+ *    directory entry is admitted instead: this boundary never truncates a
+ *    resident, so its guarantees are the version pin and the exclusive rename.
  * 3. Uninspected sources, exchange requests, invalid UTF-8, missing records and
  *    close failures are explicit; cleanup still visits all retained handles.
  */
@@ -55,8 +57,7 @@ export const test_cli_contract_maintenance_windows = (): void => {
                 ? 0x410
                 : state.attributes
               : state.parentAttributes,
-          links:
-            state.afterFault === "links" && inspected > 1 ? 2 : state.links,
+          links: state.links,
           size: BigInt(source.length),
           modified:
             handle === "child" && state.changed && inspected > 1 ? 2n : 1n,
@@ -159,19 +160,25 @@ export const test_cli_contract_maintenance_windows = (): void => {
     );
     model.io.close(parent);
   }
+  const linked = create();
+  linked.state.links = 2;
+  const linkedParent = linked.io.openParent("from");
+  TestValidator.equals(
+    "a second directory entry is still an admitted maintenance child",
+    linked.io.read(linkedParent, "candidate")!.source,
+    `${String.fromCharCode(0xfeff)}candidate`,
+  );
+  linked.io.close(linkedParent);
   for (const fault of [
     "directory",
     "link",
-    "hardlink",
     "changed",
     "utf8",
     "after-attributes",
-    "after-links",
   ] as const) {
     const model = create();
     model.state.attributes =
       fault === "directory" ? 0x10 : fault === "link" ? 0x400 : 0x80;
-    model.state.links = fault === "hardlink" ? 2 : 1;
     model.state.changed = fault === "changed";
     model.state.invalid = fault === "utf8";
     model.state.afterFault = fault.startsWith("after-") ? fault.slice(6) : "";

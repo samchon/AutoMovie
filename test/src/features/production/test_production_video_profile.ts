@@ -2,7 +2,7 @@ import type { IAutoMovieProductionVideoProbe } from "@automovie/interface";
 import {
   assertProductionVideoProfile,
   resolveProductionVideoProfile,
-} from "@automovie/production";
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
 const video = (): IAutoMovieProductionVideoProbe => ({

@@ -22,7 +22,7 @@ Choose exactly one shape in `lint.config.ts`. [Production kinds](production-kind
 
 Start the coding-agent session from this project root after sync. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
 
-Sync also updates the owned `automovie_reference` entry in project-local `.mcp.json` and `.codex/config.toml`, using this project's installed package and absolute root. It preserves unrelated client settings and refuses an edited or conflicting owned entry. These local files are ignored because machine paths and other client settings are not production facts. Review the client trust prompt yourself: neither sync nor a reference request grants trust or edits global configuration. Moving a project requires sync before restarting its clients. If Node itself changed or an entry conflicts, inspect that exact entry and explicitly reconcile ownership before rerunning; do not discard the rest of the configuration.
+Sync also updates the owned `automovie_reference` entry in project-local `.mcp.json` and `.codex/config.toml`, using this project's installed package and absolute root. It preserves unrelated client settings and refuses an edited or conflicting owned entry. These local files are ignored because machine paths and other client settings are not production facts. Review the client trust prompt yourself: neither sync nor a reference request grants trust or edits global configuration. Moving a project requires sync before restarting its clients. If an entry conflicts, inspect that exact entry and explicitly reconcile ownership before rerunning; do not discard the rest of the configuration. A changed Node path is not a conflict: sync records the current executable and republishes the owned entry.
 
 ### Read-only authored reference
 

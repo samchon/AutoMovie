@@ -7,13 +7,10 @@ import {
 } from "@automovie/interface";
 import { createRequire } from "node:module";
 import path from "node:path";
-import typia, { IValidation } from "typia";
+import type { IValidation } from "typia";
 
-import {
-  canonicalAutoMovieJsonBytes,
-  compareCodeUnits,
-} from "./contentIdentity";
-import { autoMovieLibraryContributionDiagnostics } from "./libraryContributionContract";
+import { collectLibrarySourceRegistrations } from "./collectLibrarySourceRegistrations";
+import { canonicalAutoMovieJsonBytes } from "./contentIdentity";
 import { resolveAutoMovieSourceOwnerBinding } from "./sourceOwnerBinding";
 
 interface ISourceBuildProps<T> {
@@ -213,11 +210,16 @@ export interface ICompiledLibraryOwnerRegistration {
  * differs is only what happens after evaluation: instead of invoking one export
  * the builder already knew the name of, this discovers however many owner
  * registrations the module carries and invokes each against its own address.
+ * Evaluating the module through Node's loader is the one step this function
+ * owns; `collectLibrarySourceRegistrations` owns everything after it.
  *
- * An address the active authoring declaration does not own is refused here
- * rather than silently skipped, because a module that builds a subject no
- * reviewed decision asked for would publish an artifact no review ever charges
- * an observation on.
+ * An address the active authoring declaration does not own is refused rather
+ * than silently skipped, because a module that builds a subject no reviewed
+ * decision asked for would publish an artifact no review ever charges an
+ * observation on.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Evaluates the selected library module with ordinary Node loading from the project's own package root, so an owner is plain project code rather than a hidden editor state.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Evaluates exactly the graph-selected project-relative path whose exports are then admitted as owner edges.
  */
 export const buildLibrarySource = (props: {
   /** Project-relative source path selected by a reviewed source binding. */
@@ -236,182 +238,13 @@ export const buildLibrarySource = (props: {
 }): {
   registrations: ICompiledLibraryOwnerRegistration[];
   diagnostics: IAutoMovieDiagnostic[];
-} => {
-  const target = `library-source:${props.path}`;
-  const diagnostics: IAutoMovieDiagnostic[] = [];
-  const registrations: ICompiledLibraryOwnerRegistration[] = [];
-  let current = "the module";
-  try {
-    const require = createRequire(path.join(props.sourceRoot, "package.json"));
-    const exports = require(
-      path.resolve(props.sourceRoot, props.path),
-    ) as Record<string, unknown>;
-    const discovered = Object.keys(exports)
-      .sort(compareCodeUnits)
-      .flatMap((name) => {
-        const value = exports[name];
-        if (
-          value === null ||
-          typeof value !== "object" ||
-          !("design" in value) ||
-          typeof value.design !== "string"
-        )
-          return [];
-        const build =
-          "build" in value && typeof value.build === "function"
-            ? (value.build as (
-                context: IAutoMovieLibraryBuildContext,
-              ) => unknown)
-            : undefined;
-        if (build === undefined && !("derivedArtifact" in value)) return [];
-        return [
-          {
-            name,
-            design: value.design,
-            derived: "derivedArtifact" in value,
-            artifact:
-              "derivedArtifact" in value &&
-              typeof value.derivedArtifact === "string"
-                ? value.derivedArtifact
-                : null,
-            build,
-          },
-        ];
-      });
-    for (const entry of discovered) {
-      current = `export "${entry.name}"`;
-      const context = props.context(entry.design);
-      if (context === null) {
-        diagnostics.push({
-          code: "source-registration-mismatch",
-          category: "error",
-          phase: "source",
-          target: `${target}:${entry.name}`,
-          path: props.path,
-          message: `Library source export "${entry.name}" registers design owner ${JSON.stringify(entry.design)}, which is not an exact active design document and H2 anchor in this project's authoring declaration. Register one "docs/<branch>/<document>.md#<anchor>" address the graph already selects, or remove the export.`,
-        });
-        continue;
-      }
-      const admission = props.admit(entry.name, entry.design);
-      if (admission.success === false) {
-        diagnostics.push({
-          code: "source-owner-mismatch",
-          category: "error",
-          phase: "source",
-          target: `${target}:${entry.name}`,
-          path: props.path,
-          message: admission.message,
-        });
-        continue;
-      }
-      let value: unknown;
-      if (entry.derived) {
-        const artifact =
-          entry.artifact === null
-            ? undefined
-            : Object.hasOwn(context.derivedArtifacts, entry.artifact)
-              ? context.derivedArtifacts[entry.artifact]
-              : undefined;
-        if (
-          entry.build ||
-          artifact === undefined ||
-          artifact.encoding !== "utf8"
-        ) {
-          diagnostics.push({
-            code: "source-export-invalid",
-            category: "error",
-            phase: "source",
-            target: `${target}:${entry.name}`,
-            path: props.path,
-            message: `Library owner export "${entry.name}" must select exactly one current UTF-8 derived artifact and omit build(). Received ${JSON.stringify(entry.artifact)}. Generate the declared artifact explicitly before compiling.`,
-          });
-          continue;
-        }
-        value = JSON.parse(artifact.content) as unknown;
-      } else {
-        value = entry.build!(structuredClone(context));
-        if (
-          value !== null &&
-          typeof value === "object" &&
-          "then" in value &&
-          typeof value.then === "function"
-        ) {
-          diagnostics.push({
-            code: "source-export-invalid",
-            category: "error",
-            phase: "source",
-            target: `${target}:${entry.name}`,
-            path: props.path,
-            message: `Library owner export "${entry.name}" returned a Promise. Return a synchronous deterministic library contribution from ${props.path}.`,
-          });
-          continue;
-        }
-      }
-      const validation =
-        typia.validateEquals<IAutoMovieLibraryContribution>(value);
-      if (validation.success === false) {
-        for (const error of validation.errors)
-          diagnostics.push({
-            code: "source-export-invalid",
-            category: "error",
-            phase: "source",
-            target: `${target}:${entry.name}`,
-            path: props.path,
-            message: `${error.path} expects ${error.expected}. Fix the returned library contribution in ${props.path}.`,
-          });
-        continue;
-      }
-      const contribution = {
-        ...validation.data,
-        contexts: validation.data.contexts ?? [],
-      };
-      const contributionDiagnostics =
-        context.branch === "productionSources"
-          ? []
-          : autoMovieLibraryContributionDiagnostics(
-              context.branch,
-              contribution,
-            );
-      for (const message of contributionDiagnostics)
-        diagnostics.push({
-          code: "source-export-invalid",
-          category: "error",
-          phase: "source",
-          target: `${target}:${entry.name}`,
-          path: props.path,
-          message,
-        });
-      if (contributionDiagnostics.length !== 0) continue;
-      registrations.push({
-        export: entry.name,
-        design: entry.design,
-        // Normalized once, here, where every executed owner passes. `contexts`
-        // is optional on the contract so a library source written before it
-        // existed still satisfies the shape; every reader after this point is
-        // owed a list, and three of them were each deciding that for
-        // themselves.
-        contribution,
-      });
-    }
-  } catch (error) {
-    const message =
-      typeof error === "object" && error !== null && "message" in error
-        ? String((error as { message: unknown }).message)
-        : String(error);
-    return {
-      registrations: [],
-      diagnostics: [
-        ...diagnostics,
-        {
-          code: "source-execution-failed",
-          category: "error",
-          phase: "source",
-          target,
-          path: props.path,
-          message: `Library source ${current} in ${props.path} failed while building its contribution: ${message}. No generated artifact was published. Correct the operation or precondition named by this fact, then rerun the same compile scope.`,
-        },
-      ],
-    };
-  }
-  return { registrations, diagnostics };
-};
+} =>
+  collectLibrarySourceRegistrations({
+    path: props.path,
+    load: () =>
+      createRequire(path.join(props.sourceRoot, "package.json"))(
+        path.resolve(props.sourceRoot, props.path),
+      ) as Readonly<Record<string, unknown>>,
+    context: props.context,
+    admit: props.admit,
+  });

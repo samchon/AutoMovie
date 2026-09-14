@@ -1,4 +1,3 @@
-import type { BoxParser, DataStream, MP4BoxBuffer, createFile } from "mp4box";
 import { createRequire } from "node:module";
 import type { PNG } from "pngjs";
 
@@ -25,23 +24,11 @@ import type { PNG } from "pngjs";
  */
 const load = createRequire(__filename);
 
-interface IMp4BoxModule {
-  BoxParser: typeof BoxParser;
-  DataStream: typeof DataStream;
-  MP4BoxBuffer: typeof MP4BoxBuffer;
-  createFile: typeof createFile;
-}
-
 interface IPngModule {
   PNG: typeof PNG;
 }
 
-let mp4: IMp4BoxModule | undefined;
 let png: IPngModule | undefined;
-
-/** The `mp4box` module, loaded once and kept. */
-export const residentMp4Box = (): IMp4BoxModule =>
-  (mp4 ??= load("mp4box") as IMp4BoxModule);
 
 /** The `pngjs` module, loaded once and kept.
  * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-font-decoder-closure Fixes the resident decoder the media probes depend on so a host codec cannot silently change what a probe reads.

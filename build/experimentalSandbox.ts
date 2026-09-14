@@ -8,8 +8,10 @@ import {
   assertScaffoldPhysicalDirectory,
   captureScaffoldFile,
   captureScaffoldPhysicalDirectory,
+  captureSingleLinkScaffoldFile,
   ensureScaffoldFileDirectory,
   readScaffoldFileSnapshot,
+  readSingleLinkScaffoldFileSnapshot,
   writeScaffoldFile,
 } from "../packages/template/src/scaffoldFileSnapshot";
 import {
@@ -46,10 +48,10 @@ export const experimentalSandboxIO: IExperimentalSandboxIO = {
   assertDirectory: assertScaffoldPhysicalDirectory,
   assertFile: assertScaffoldFileSnapshot,
   captureDirectory: captureScaffoldPhysicalDirectory,
-  captureFile: captureScaffoldFile,
+  captureFile: captureSingleLinkScaffoldFile,
   ensureDirectory: ensureScaffoldFileDirectory,
   readDirectory: fs.readdirSync,
-  readFile: readScaffoldFileSnapshot,
+  readFile: readSingleLinkScaffoldFileSnapshot,
   writeFile: writeScaffoldFile,
 };
 

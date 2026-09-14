@@ -67,6 +67,7 @@ The source preview accepts optional `navigation` from `viewer/preview.ts`: `item
 
 - `src`, `docs`, `test`, `public`, `lint.config.ts`, `scripts/emitDesign.ts`, and the screenplay index are project-owned inputs.
 - `automovie/design/shared` and `automovie/design/<production>` are tracked design records emitted or authored through their declared owners.
+- `automovie/productions.json` is the tracked production registry; commit it with the design records it names. `automovie/incarnation.json` and `automovie/productions/<production>/incarnation.json` are this checkout's incarnations and stay ignored.
 - `automovie/derived` contains Git-ignored precomputed outputs. Track their generator scripts, inputs, and `automovie/derived-artifacts.json` provenance ledger; run the production's explicit generation command before compiling a fresh checkout. Compilation verifies these outputs and never regenerates them.
 - `generated`, `automovie/productions/<production>`, and `renders` are builder or runtime outputs; do not edit them.
 - `src/examples` and `npm run derive:example` are teaching material, not production owners or evidence.

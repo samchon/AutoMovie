@@ -4,7 +4,6 @@ import {
   IAutoMovieCompiledInstanceSet,
   IAutoMovieModel,
   IAutoMovieModelPart,
-  IAutoMovieQuaternion,
   IAutoMovieSubjectArtifact,
   IAutoMovieSubjectBox,
   IAutoMovieSubjectDescription,
@@ -22,7 +21,8 @@ import {
 } from "./architecture";
 import { tessellate } from "./geometry";
 import { resolvePose } from "./kinematics";
-import { Matrix4, Quaternion, seededValue } from "./math";
+import { Matrix4, Quaternion } from "./math";
+import { instanceSlot } from "./populationRuntime/instanceSlot";
 import { compareAutoMovieRenderIds } from "./render";
 
 /**
@@ -471,7 +471,7 @@ const describeInstance = (
   set: IAutoMovieCompiledInstanceSet,
   slot: number,
 ): IAutoMovieSubjectDescription => {
-  const instance = materializeCompiledInstanceSlot(set, slot);
+  const instance = describedInstanceMember(set, slot);
   const model = instance.model;
   const transform = instance.transform;
   const runtimeModel = model === null ? undefined : context.models.get(model);
@@ -904,110 +904,63 @@ const findAddressedInstanceSlot = (
   return slot < set.count ? slot : null;
 };
 
-interface IMaterializedCompiledInstance {
+interface IDescribedInstanceMember {
   id: string;
   model: string | null;
   prototype: string;
   transform: IAutoMovieTransform;
 }
 
-const materializeCompiledInstanceSlot = (
+/**
+ * One instance member as a subject description reports it.
+ *
+ * Where the member stands, how it is turned and scaled, and which prototype it
+ * drew are the answer of {@link instanceSlot}, the engine's one instance-member
+ * regenerator, so a description cannot drift from the member the compiled set
+ * was measured with. It also refuses what that regenerator refuses, such as a
+ * hand-edited set whose variation derives a non-finite value or whose palette
+ * is empty, instead of describing a member nothing can draw.
+ *
+ * Two things are the description's own, because the member record does not
+ * carry them. The model is the first LOD tier's runtime model of the prototype
+ * the member drew, or of the set itself when it declares no prototype table.
+ * And a set that declares no prototype table, no lattice or explicit layout, no
+ * per-axis scale, no rotation range and no visibility probability regenerates
+ * members that name no prototype, rotation or per-axis scale, since its
+ * compiled record states none of them. Such a member is described as the
+ * default prototype, turned by the set heading about +Y with no offset, and
+ * scaled by its one scale on all three axes: the law the regenerator applies to
+ * a member whose rotation offset is the identity, and how the viewer turns and
+ * scales it.
+ */
+const describedInstanceMember = (
   set: IAutoMovieCompiledInstanceSet,
   slot: number,
-): IMaterializedCompiledInstance => {
-  const point = localInstancePoint(set, slot);
-  const explicit =
-    set.layout.kind === "explicit" ? set.layout.transforms[slot] : undefined;
-  const selected = selectedCompiledPrototype(set, slot, explicit?.prototype);
-  const scale = stableInterpolate(
-    set.variation.scale.min,
-    set.variation.scale.max,
-    seededValue(set.seed, slot, 0x7363616c),
-  );
-  const scale3 =
-    explicit?.scale ??
-    (set.variation.scale3 === undefined
-      ? { x: scale, y: scale, z: scale }
-      : {
-          x: stableInterpolate(
-            set.variation.scale3.min.x,
-            set.variation.scale3.max.x,
-            seededValue(set.seed, slot, 0x73637878),
-          ),
-          y: stableInterpolate(
-            set.variation.scale3.min.y,
-            set.variation.scale3.max.y,
-            seededValue(set.seed, slot, 0x73637979),
-          ),
-          z: stableInterpolate(
-            set.variation.scale3.min.z,
-            set.variation.scale3.max.z,
-            seededValue(set.seed, slot, 0x73637a7a),
-          ),
-        });
-  const rotation = Quaternion.normalize(
-    Quaternion.multiply(
-      Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, set.facingDeg),
-      explicit?.rotation ?? seededInstanceRotation(set, slot),
+): IDescribedInstanceMember => {
+  const member = instanceSlot(set, slot);
+  const prototype = member.prototype ?? "default";
+  return {
+    id: member.node,
+    model: lodModelOf(
+      set.prototypes?.find((choice) => choice.id === prototype)?.lod ?? set.lod,
     ),
-  );
-  return {
-    id: instanceId(set, slot),
-    model: selected.model,
-    prototype: selected.id,
+    prototype,
     transform: {
-      translation:
-        set.layout.kind === "along-route"
-          ? { x: point.x, y: set.anchor.y, z: point.z }
-          : rotateAndTranslatePoint(point, set.anchor, set.facingDeg),
-      rotation,
-      scale: scale3,
+      translation: member.position,
+      rotation:
+        member.rotation ??
+        Quaternion.normalize(
+          Quaternion.multiply(
+            Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, set.facingDeg),
+            Quaternion.identity(),
+          ),
+        ),
+      scale: member.scale3 ?? {
+        x: member.scale,
+        y: member.scale,
+        z: member.scale,
+      },
     },
-  };
-};
-
-const selectedCompiledPrototype = (
-  set: IAutoMovieCompiledInstanceSet,
-  slot: number,
-  explicit?: string,
-): { id: string; model: string | null; weight: number } => {
-  const choices = set.prototypes ?? [
-    {
-      id: "default",
-      modelRecipe: set.modelRecipe,
-      weight: 1,
-      lod: set.lod,
-      projectionRadius: set.projectionRadius,
-    },
-  ];
-  if (explicit !== undefined) {
-    const selected = choices.find((choice) => choice.id === explicit);
-    if (selected === undefined)
-      throw new Error(
-        `Instance set "${set.id}" slot ${slot} references missing prototype "${explicit}".`,
-      );
-    return {
-      id: selected.id,
-      model: lodModelOf(selected.lod),
-      weight: selected.weight,
-    };
-  }
-  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
-  let sample = seededValue(set.seed, slot, 0x70726f74) * total;
-  for (const choice of choices) {
-    if (sample < choice.weight)
-      return {
-        id: choice.id,
-        model: lodModelOf(choice.lod),
-        weight: choice.weight,
-      };
-    sample -= choice.weight;
-  }
-  const selected = choices.at(-1)!;
-  return {
-    id: selected.id,
-    model: lodModelOf(selected.lod),
-    weight: selected.weight,
   };
 };
 
@@ -1016,125 +969,3 @@ const runtimeModelOf = (set: IAutoMovieCompiledInstanceSet): string | null =>
 
 const lodModelOf = (lod: IAutoMovieCompiledInstanceSet["lod"]): string | null =>
   lod[0]?.model ?? null;
-
-const localInstancePoint = (
-  set: IAutoMovieCompiledInstanceSet,
-  slot: number,
-): IAutoMovieVector3 => {
-  const layout = set.layout;
-  if (layout.kind === "grid") {
-    const row = Math.floor(slot / layout.columns);
-    const column = slot % layout.columns;
-    return {
-      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
-      y: 0,
-      z: row * layout.spacing.z,
-    };
-  }
-  if (layout.kind === "scatter") {
-    const radius =
-      Math.sqrt(seededValue(set.seed, slot, 0x72616469)) * layout.radius;
-    const angle = seededValue(set.seed, slot, 0x616e676c) * Math.PI * 2;
-    return { x: Math.cos(angle) * radius, y: 0, z: Math.sin(angle) * radius };
-  }
-  if (layout.kind === "lattice") {
-    const perLayer = layout.rows * layout.columns;
-    const layer = Math.floor(slot / perLayer);
-    const within = slot % perLayer;
-    const row = Math.floor(within / layout.columns);
-    const column = within % layout.columns;
-    return {
-      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
-      y: layer * layout.spacing.y,
-      z: row * layout.spacing.z,
-    };
-  }
-  if (layout.kind === "explicit") {
-    return layout.transforms[slot]!.translation;
-  }
-  const route = set.route;
-  if (route === null || route.id !== layout.route || route.waypoints.length < 2)
-    throw new Error(
-      `Instance set "${set.id}" references unavailable route "${layout.route}".`,
-    );
-  const segments = route.waypoints.slice(1).map((right, index) => {
-    const left = route.waypoints[index]!;
-    return {
-      left,
-      right,
-      length: Math.hypot(right.x - left.x, right.z - left.z),
-    };
-  });
-  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
-  if (!Number.isFinite(total) || total <= 0)
-    throw new RangeError(
-      `Instance set "${set.id}" route "${layout.route}" must have finite non-zero length.`,
-    );
-  let remaining = ((slot + 0.5) / set.count) * total;
-  const segment = segments.find((candidate) => {
-    if (remaining <= candidate.length) return true;
-    remaining -= candidate.length;
-    return false;
-  }) as (typeof segments)[number];
-  const ratio = Math.min(1, remaining / segment.length);
-  const tangent = {
-    x: segment.right.x - segment.left.x,
-    z: segment.right.z - segment.left.z,
-  };
-  const tangentLength = Math.hypot(tangent.x, tangent.z);
-  const jitter =
-    (seededValue(set.seed, slot, 0x6a697474) * 2 - 1) * layout.lateralJitter;
-  return {
-    x:
-      segment.left.x + tangent.x * ratio - (tangent.z / tangentLength) * jitter,
-    y: 0,
-    z:
-      segment.left.z + tangent.z * ratio + (tangent.x / tangentLength) * jitter,
-  };
-};
-
-const rotateAndTranslatePoint = (
-  point: IAutoMovieVector3,
-  anchor: IAutoMovieVector3,
-  facingDeg: number,
-): IAutoMovieVector3 => {
-  const radians = (facingDeg * Math.PI) / 180;
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
-  return {
-    x: anchor.x + point.x * cosine + point.z * sine,
-    y: anchor.y + point.y,
-    z: anchor.z - point.x * sine + point.z * cosine,
-  };
-};
-
-const seededInstanceRotation = (
-  set: IAutoMovieCompiledInstanceSet,
-  slot: number,
-): IAutoMovieQuaternion => {
-  const ranges = set.variation.rotationDeg;
-  return ranges === undefined
-    ? Quaternion.identity()
-    : Quaternion.fromEuler({
-        x: stableInterpolate(
-          ranges.x.min,
-          ranges.x.max,
-          seededValue(set.seed, slot, 0x726f7478),
-        ),
-        y: stableInterpolate(
-          ranges.y.min,
-          ranges.y.max,
-          seededValue(set.seed, slot, 0x726f7479),
-        ),
-        z: stableInterpolate(
-          ranges.z.min,
-          ranges.z.max,
-          seededValue(set.seed, slot, 0x726f747a),
-        ),
-        order: "XYZ",
-      });
-};
-
-function stableInterpolate(from: number, to: number, ratio: number): number {
-  return from + (to - from) * ratio;
-}

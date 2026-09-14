@@ -1,4 +1,4 @@
-import { assertProductionRenditionClipDelivery } from "@automovie/production";
+import { assertProductionRenditionClipDelivery } from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, throwsError } from "../internal/predicates";

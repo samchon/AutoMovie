@@ -1,0 +1,301 @@
+# Settings common population account
+
+## Purpose fit {#purpose-fit}
+
+<!--
+@evidence obligations/core/common.md#purpose-fit 제작 규약·생활 물품·고정 공간의 세 파일이 시각적 본채 납품에 필요한 역할을 나누는지 비교한다.
+@evidenceReview obligations/core/common.md#purpose-fit #7b32c66 001이 없으면 같은 렌더 조건과 납품 범위가, 002가 없으면 방별 물품 구성이, 003이 없으면 한 계단과 층별 직접 연결이 미정이 된다. 33개 전체를 세 파일의 역할로 비교했으며 물리 검사 파일을 만들 필요는 이 납품에 없다.
+@evidence settings/001-production.md#delivery-scope 납품 파일의 전체 범위 소유다.
+@evidenceReview settings/001-production.md#delivery-scope #e880aeb 본채·물품·정원과 마지막 산출물을 빼면001의 제작 규약 역할이 끝을 잃는다.
+@evidence settings/001-production.md#governing-aim 제작 선택의 목적을 제공한다.
+@evidenceReview settings/001-production.md#governing-aim #599b9dd 가족의 같은 집 생활이라는 우선순위가001의 다른 유효한 외형 선택을 판별한다.
+@evidence settings/001-production.md#language-access 설명의 독자와 용어를 정한다.
+@evidenceReview settings/001-production.md#language-access #755a8cb 회랑·복도·절개 정의가 세 파일을 같은 한국어 독자가 읽게 하는 규약 역할이다.
+@evidence settings/001-production.md#operator-access 라이브러리 관찰·조작의 경계를 정한다.
+@evidenceReview settings/001-production.md#operator-access #a93aa3f 자유카메라와 문 상태 관찰을 빼면001에서 수신자가 실제3D를 어떻게 볼지 미정이 된다.
+@evidence settings/001-production.md#accessibility-products 대체 정보의 납품 상태를 정한다.
+@evidenceReview settings/001-production.md#accessibility-products #85fbb27 필수 텍스트와 미지원 조작의 분류가001의 독자별 제공 범위를 닫는다.
+@evidence settings/001-production.md#coordinate-datum 공유 좌표 규약을 제공한다.
+@evidenceReview settings/001-production.md#coordinate-datum #16a75be 두 마감면과 축·단위가 없으면002의 모델값과003의 층·계단이 같은 기준을 얻지 못한다.
+@evidence settings/001-production.md#reference-priority 원본의 권한과 적용 관계를 정한다.
+@evidenceReview settings/001-production.md#reference-priority #a00d7bd 다섯 이미지의 질문과 고정 그래프 우선이001의 시각 근거 역할을 수행한다.
+@evidence settings/001-production.md#visual-grammar 전역 건축 표현을 제공한다.
+@evidenceReview settings/001-production.md#visual-grammar #11442bf 목구조·벽·지붕·초가을 규칙이 빠지면 방별 물품만으로 한 집의 공통 양식을 결정할 수 없다.
+@evidence settings/001-production.md#fidelity 결과의 표현 수준을 정한다.
+@evidenceReview settings/001-production.md#fidelity #a346a43 초기 상자와 최종3D의 차이가001에서 실제 납품 품질의 해석을 닫는다.
+@evidence settings/001-production.md#review-condition 비교 이미지의 규격이다.
+@evidenceReview settings/001-production.md#review-condition #6a4100b 중립 주광·눈높이·화각·해상도가 없으면 같은 형체·재료를 비교할 조건을 새로 발명해야 한다.
+@evidence settings/001-production.md#observation-population 전체 관찰 대상의 선정 규칙이다.
+@evidenceReview settings/001-production.md#observation-population #9861871 모든 방·물품을 시각 질문으로 추적하는 규칙이001의 범위를 실제 관찰에 잇는다.
+@evidence settings/001-production.md#review-roles 수행자의 책임을 구별한다.
+@evidenceReview settings/001-production.md#review-roles #5d8cce2 저작자·관찰자·평가자가 PNG를 직접 읽는 역할은001의 검토 규약이며 방별생활 설정으로 대체되지 않는다.
+@evidence settings/001-production.md#completion-condition 마지막 현재 제출 상태를 정한다.
+@evidenceReview settings/001-production.md#completion-condition #5c1ac9c 현재 소스·관찰·미완료 해소를 묶어001의 약속이 어느 상태에서 끝나는지 판별한다.
+@evidence settings/001-production.md#pilot-boundary 우선 관찰의 범위를 정한다.
+@evidenceReview settings/001-production.md#pilot-boundary #f2cf384 홀 우선과 본채 전체를 구별해001의 순서 선택이 납품 축소로 바뀌지 않게 한다.
+@evidence settings/001-production.md#coverage-map 현재 설정의 소유 주소를 연결한다.
+@evidenceReview settings/001-production.md#coverage-map #0b38807 요구별32주소 표가 세 파일 사이에서 필요한 사실의 소유자를 찾게 한다.
+@evidence settings/001-production.md#subject-inventory 실제 대상과 역할을 분류한다.
+@evidenceReview settings/001-production.md#subject-inventory #9bc99bd 가족·운영자·물품·원본의 지위 차이가001의 전역 규약과002의 제작 목록을 잇는다.
+@evidence settings/002-household.md#household 방·가구 수의 거주 배경이다.
+@evidenceReview settings/002-household.md#household #b2e4e7a 네 거주자·여섯 식사 자리·세 침실의 배경이002의 생활 물품 선택을 설명한다.
+@evidence settings/002-household.md#family-hall 식사·난방 물품의 소유다.
+@evidenceReview settings/002-household.md#family-hall #083b751 긴 식탁·벤치·화구·쟁반·도기가002에서 공용 생활실을 구체화한다.
+@evidence settings/002-household.md#kitchen-pantry 조리와 식료 보관을 나눈다.
+@evidenceReview settings/002-household.md#kitchen-pantry #164c0f5 화구·도구와 자루·통의 차이가 없으면002가 두 별도 방의 물품을 정하지 못한다.
+@evidence settings/002-household.md#ledger-room 업무·문서 물품의 소유다.
+@evidenceReview settings/002-household.md#ledger-room #a7a9dd5 책상·필기구·장부·잠금함이 식사나 수면과 다른002의 업무실 역할을 남긴다.
+@evidence settings/002-household.md#service-room 젖은 세척·청소 물품을 정한다.
+@evidenceReview settings/002-household.md#service-room #9f1f11c 대야·통·건조대·빗자루는002에서 식료 보관과 분리할 생활 구성을 제공한다.
+@evidence settings/002-household.md#bedrooms 세 침실의 가구 차이를 정한다.
+@evidenceReview settings/002-household.md#bedrooms #3823886 부부와 각 자녀의 침구·수납이002의 사적층 생활 표현을 실제 물품으로 바꾼다.
+@evidence settings/002-household.md#upper-washroom 공용 세척·측간 구성을 정한다.
+@evidenceReview settings/002-household.md#upper-washroom #6cc0d8c 대야·오수 용기·칸막이는002에서 침실이나1층 세척실로 대신할 수 없는 상층 공용실을 남긴다.
+@evidence settings/002-household.md#upper-storage 공용 직물 보관의 소유다.
+@evidenceReview settings/002-household.md#upper-storage #8355a24 여벌 침구·깨끗한 수건을 개인 의복과 나누어002의 독립 수납 구획을 설명한다.
+@evidence settings/002-household.md#water-and-waste 방별 용기와 연못의 다른 역할을 정한다.
+@evidenceReview settings/002-household.md#water-and-waste #37fa029 오수와 깨끗한 물의 용기를 구별하여002의 여러 방에 걸친 물품 의미를 연결한다.
+@evidence settings/002-household.md#garden 중앙정원의 제작 구성을 정한다.
+@evidenceReview settings/002-household.md#garden #9d835ea 사과나무·연못·약초·길이002에서 본채 바깥 생활 표현을 맡아 방별 목록만 남는 축소를 막는다.
+@evidence settings/002-household.md#make-scope 물품의 제작 책임을 연결한다.
+@evidenceReview settings/002-household.md#make-scope #653e17b 원형·마감·배치의 담당과 외부자산 조건이002의 목록을 하위 제작에 넘기는 역할이다.
+@evidence settings/003-spatial-basis.md#single-house 단일 본채의 전역 형식이다.
+@evidenceReview settings/003-spatial-basis.md#single-house #2848dd3 남쪽으로 열린ㄷ자와 하나의 안팎 구조가003의 공간 기준 역할을 시작한다.
+@evidence settings/003-spatial-basis.md#area-budget 본채 모델 규모의 예산이다.
+@evidenceReview settings/003-spatial-basis.md#area-budget #6e24112 두 층·정원·개방부의 계산이003에서 약265㎡를 어떤 규모로 사용할지 설명한다.
+@evidence settings/003-spatial-basis.md#ground-access 지상층 직접 연결을 정한다.
+@evidenceReview settings/003-spatial-basis.md#ground-access #2193f75 연속 회랑과 각 필수실의 문이003에서1층의 고정 그래프를 남긴다.
+@evidence settings/003-spatial-basis.md#single-stair 유일한 수직 연결 형식이다.
+@evidenceReview settings/003-spatial-basis.md#single-stair #ae50e89 한90도 중간참과16오름이 없으면003의 두 층을 잇는 형식을 설계가 다시 선택해야 한다.
+@evidence settings/003-spatial-basis.md#upper-access 사적층 직접 연결을 정한다.
+@evidenceReview settings/003-spatial-basis.md#upper-access #99f3811 일자 복도와 다섯 실의 직접 문이003에서 상층을1층 회랑 복제로 만들지 않게 한다.
+@evidence settings/003-spatial-basis.md#surface-responsibility 안팎 면의 제작 소유를 정한다.
+@evidenceReview settings/003-spatial-basis.md#surface-responsibility #360ae9b 공유벽·지붕·개구부 테두리의 책임이003에서 한 건물의 외관과 실내를 같은 경계로 잇는다.
+-->
+
+현재 설정은 제작·납품 16개, 가족·물품 11개, 공간 구성 6개의 총 33개 H2다. 이미지 기반 중세 남작 기사 집의 외형·실내 구성·가구·재료를 실제 3D로 납품하는 목적에 맞춰 첫 파일은 제작과 관찰 규약, 둘째는 방별 생활 물품, 셋째는 단일 본채의 고정 연결을 소유한다. 홀 우선 관찰은 모든 방과 정원을 가진 납품 범위를 줄이지 않는다.
+
+## Layer boundary {#layer-boundary}
+
+<!--
+@evidence obligations/core/common.md#layer-boundary 세 설정 파일의 제작 규약·생활 구성·전역 공간 결정을 구현 설계와 구별한다.
+@evidenceReview obligations/core/common.md#layer-boundary #5271f94 001의 원본 권한과 표현·관찰, 002의 각 방 물품, 003의 고정 연결·면적 예산은 하위 설계가 소비할 canon이다. 실제 벽 polygon·메시 생성·재질 값은 설정에 구현 코드로 옮겨져 있지 않으며 make-scope가 그 하위 책임을 연결한다.
+@evidence settings/001-production.md#delivery-scope 납품 경계의 설정 역할이다.
+@evidenceReview settings/001-production.md#delivery-scope #e880aeb 본채·산출물·비요구를 정하며 메시나 카메라 좌표를 구현하지 않는다.
+@evidence settings/001-production.md#governing-aim 전역 선택 기준이다.
+@evidenceReview settings/001-production.md#governing-aim #599b9dd 같은 집의 생활 관계를 우선하는 canon이며 개별 방 배치를 대신하지 않는다.
+@evidence settings/001-production.md#language-access 작업 언어와 독자 조건이다.
+@evidenceReview settings/001-production.md#language-access #755a8cb 회랑·복도·절개 정의를 제공하고 실제 UI 문구 구현은 가져오지 않는다.
+@evidence settings/001-production.md#operator-access 납품 조작·관찰의 권한이다.
+@evidenceReview settings/001-production.md#operator-access #a93aa3f 볼 수 있는 대상과 상태 선택을 정하며 viewer 이벤트 처리 코드를 포함하지 않는다.
+@evidence settings/001-production.md#accessibility-products 대체 산출물의 분류다.
+@evidenceReview settings/001-production.md#accessibility-products #85fbb27 텍스트 필수와 트랙 부재를 결정하며 아직 촬영하지 않은 이미지 설명을 작성한 척하지 않는다.
+@evidence settings/001-production.md#coordinate-datum 공유 기준을 설정한다.
+@evidenceReview settings/001-production.md#coordinate-datum #16a75be 축·단위·마감면은 전역 canon이고 벽 두께·계단 실제 좌표는 설계가 정한다.
+@evidence settings/001-production.md#reference-priority 자료의 적용 권한이다.
+@evidenceReview settings/001-production.md#reference-priority #a00d7bd 원본별 관계와 고정 그래프 우선은 설정이며 이미지 픽셀로 기하를 복원하지 않는다.
+@evidence settings/001-production.md#visual-grammar 공통 시각 언어다.
+@evidenceReview settings/001-production.md#visual-grammar #11442bf 갈색 목재·회백색 벽·초가을 상태를 정하고 재질 셰이더 값을 설정에 옮기지 않는다.
+@evidence settings/001-production.md#fidelity 표현 수준과 추론 한계다.
+@evidenceReview settings/001-production.md#fidelity #a346a43 실제3D와 초기·최종의 수준을 구별하며 세부 메시 생성 방법을 결정하지 않는다.
+@evidence settings/001-production.md#review-condition 공유 이미지 규약이다.
+@evidenceReview settings/001-production.md#review-condition #6a4100b 눈높이·화각·해상도는 전역 기준이고 실제 방별 시점 좌표의 소유는 공간 설계다.
+@evidence settings/001-production.md#observation-population 관찰 대상 선정과 재관찰 범위다.
+@evidenceReview settings/001-production.md#observation-population #9861871 활성 소유자와 시각 질문을 기준으로 정하고 실제 전체 카메라 목록을 설정에 구현하지 않는다.
+@evidence settings/001-production.md#review-roles 수행 권한의 설정이다.
+@evidenceReview settings/001-production.md#review-roles #5d8cce2 저작·계측·독립 판정을 배정하며 실제 평가 결과나 실행 기록을 본문으로 가져오지 않는다.
+@evidence settings/001-production.md#completion-condition 종료 상태의 설정이다.
+@evidenceReview settings/001-production.md#completion-condition #5c1ac9c 현재 관찰·미완료 해소의 조건을 정하고 실제 미관찰 모델을 완료 보고로 바꾸지 않는다.
+@evidence settings/001-production.md#pilot-boundary 우선순위와 그 권한 범위다.
+@evidenceReview settings/001-production.md#pilot-boundary #f2cf384 홀 우선 검사는 순서 선택이고 홀의 실제 가구 배치는 하위 설계에 남는다.
+@evidence settings/001-production.md#coverage-map 설정 주소의 분류다.
+@evidenceReview settings/001-production.md#coverage-map #0b38807 32주소를 연결하되 사실을 재정의하지 않아 표가 다른 설정의 숨은 구현 소유자가 되지 않는다.
+@evidence settings/001-production.md#subject-inventory 대상의 설정 지위를 분류한다.
+@evidenceReview settings/001-production.md#subject-inventory #9bc99bd 인물 배경·운영 역할·물품을 나누며 원형·transform을 이 목록에서 생성하지 않는다.
+@evidence settings/002-household.md#household 거주·가구 수와 수동 경계다.
+@evidenceReview settings/002-household.md#household #b2e4e7a 네 거주자·여섯 자리·자율 행동 비요구는 canon이며 인물 동작 시퀀스가 아니다.
+@evidence settings/002-household.md#family-hall 홀의 생활 구성이다.
+@evidenceReview settings/002-household.md#family-hall #083b751 필수 물품과 제작 쟁반 크기는 조건이며 벤치 중심·화구 좌표는 정하지 않는다.
+@evidence settings/002-household.md#kitchen-pantry 조리·식료실의 물품과 연결 조건이다.
+@evidenceReview settings/002-household.md#kitchen-pantry #164c0f5 화구·도구·자루·통을 분배하고 각각 직접 문을 요구하며 선반 메시를 작성하지 않는다.
+@evidence settings/002-household.md#ledger-room 업무실의 기능·물품 조건이다.
+@evidenceReview settings/002-household.md#ledger-room #a7a9dd5 필기구·장부와 읽는 면을 정하지만 실제 문양이나 책상 기하를 구현하지 않는다.
+@evidence settings/002-household.md#service-room 세척실의 표현과 혼합 경계다.
+@evidenceReview settings/002-household.md#service-room #9f1f11c 석재 바닥·대야·빗자루는 용도 조건이며 바닥 재질의 수치 구현을 침범하지 않는다.
+@evidence settings/002-household.md#bedrooms 침실별 물품 배분이다.
+@evidenceReview settings/002-household.md#bedrooms #3823886 부부용과 자녀용 침구·수납을 나누고 침대 부재의 좌표·마감은 설계에 남긴다.
+@evidence settings/002-household.md#upper-washroom 공동 세척·측간의 구성 조건이다.
+@evidenceReview settings/002-household.md#upper-washroom #6cc0d8c 대야·빗장·칸막이와 현대 설비 제외를 정하며 잠금 동작 구현을 작성하지 않는다.
+@evidence settings/002-household.md#upper-storage 공용 직물 보관의 조건이다.
+@evidenceReview settings/002-household.md#upper-storage #8355a24 선반·함·내용물과 직접 문은 정하지만 형상·치수·배치는 명시적으로 설계에 맡긴다.
+@evidence settings/002-household.md#water-and-waste 용기와 연못의 표현 의미다.
+@evidenceReview settings/002-household.md#water-and-waste #37fa029 깨끗한 물·오수의 구별과 수류 비요구를 정하고 유체나 운반 경로를 구현하지 않는다.
+@evidence settings/002-household.md#garden 정원 대상과 보일 특징이다.
+@evidenceReview settings/002-household.md#garden #9d835ea 나무·연못 크기와 잎 틈·수면 층은 조건이며 가지·잎 생성 알고리즘은 하위에 남는다.
+@evidence settings/002-household.md#make-scope 하위 제작 책임의 연결이다.
+@evidenceReview settings/002-household.md#make-scope #653e17b spaces·models·materials·instances를 분리하고 prototype 수량은 해당design이 산정하게 한다.
+@evidence settings/003-spatial-basis.md#single-house 전체 건물의 고정 형식이다.
+@evidenceReview settings/003-spatial-basis.md#single-house #2848dd3 한ㄷ자·두 층·남쪽 정원은 전역 조건이며 실제 wall polygon을 설정에서 생성하지 않는다.
+@evidence settings/003-spatial-basis.md#area-budget 제작 규모의 도출이다.
+@evidenceReview settings/003-spatial-basis.md#area-budget #6e24112 채택한 외곽과 정원에서 면적을 계산하며 실별 유효면적 측정 보고를 설계의 필수작업으로 추가하지 않는다.
+@evidence settings/003-spatial-basis.md#ground-access 1층 고정 그래프다.
+@evidenceReview settings/003-spatial-basis.md#ground-access #2193f75 방의 방향은 예산으로 두고 실제 경계·문 위치를space가 소유한다고 명시한다.
+@evidence settings/003-spatial-basis.md#single-stair 수직 연결의 형식·오름 조건이다.
+@evidenceReview settings/003-spatial-basis.md#single-stair #ae50e89 90도·16×.18은 모델 구성 조건이며 계단판 꼭짓점·난간 부재를 이 설정에서 구현하지 않는다.
+@evidence settings/003-spatial-basis.md#upper-access 상층 연결과 배치 범위다.
+@evidenceReview settings/003-spatial-basis.md#upper-access #99f3811 일자 복도·직접 문을 고정하고 실제 문 위치와 방 분할은space 설계에 남긴다.
+@evidence settings/003-spatial-basis.md#surface-responsibility 면·부재·마감·배치의 책임 경계다.
+@evidenceReview settings/003-spatial-basis.md#surface-responsibility #360ae9b 공간이 경계·개구부를, 모델이 부재를, 재료가 마감을 맡는 규정이며 실제 표면 메시를 대체하지 않는다.
+-->
+
+001-production은 시각적 납품과 관찰 조건, 002-household는 가상 거주 배경과 모든 방의 물품, 003-spatial-basis는 ㄷ자 본채·층·회랑·계단·복도 구성을 정한다. 실제 polygon·벽 두께·가구 부재·재질과 배치는 하위 설계가 소유한다. 모델 치수는 제작 값이며 인테리어 사용성의 합격 보고가 아니다. 설정 검토와 현재 렌더의 시각적 완성도 구별한다.
+
+## Production language {#production-language}
+
+<!--
+@evidence obligations/core/common.md#production-language 모든 설정의 한국어 설명과 원문 기술 표기를 선언한 독자 조건에 대조한다.
+@evidenceReview obligations/core/common.md#production-language #3ef4142 언어·좌표·원본 파일·방별 물품·관찰 문단은 현대 한국어로 읽히고 API·PNG·Status 및 경로는 식별 기능으로 남는다. 회랑·복도·절개는 language-access가 풀이해 같은 공간이 설명되지 않은 언어 전환 뒤에 숨지 않는다.
+@evidence settings/001-production.md#delivery-scope 한국어로 납품과 제외를 설명한다.
+@evidenceReview settings/001-production.md#delivery-scope #e880aeb 현재 소스로 컴파일한 건물·모델·배치와 관찰 PNG를 한국어 문장으로 연결하여 영문 산출물 이름만 제시하지 않는다.
+@evidence settings/001-production.md#governing-aim 생활 목적을 일상 동사로 설명한다.
+@evidenceReview settings/001-production.md#governing-aim #599b9dd 먹고 일하고 씻고 잠드는 관계라는 표현으로 전역 목적을 전문어 없이 읽을 수 있다.
+@evidence settings/001-production.md#language-access 작업 한국어와 기술어 보존을 정한다.
+@evidenceReview settings/001-production.md#language-access #755a8cb 회랑·복도·절개의 정의와 코드 식별자 원문 보존이 전설정의 언어 기준을 제공한다.
+@evidence settings/001-production.md#operator-access 화면 조작의 의미를 한국어로 설명한다.
+@evidenceReview settings/001-production.md#operator-access #a93aa3f 자유 카메라·벽 숨김·문 상태 선택을 각각 설명하여 운영자가 코드 용어만 보고 조작을 추측하지 않는다.
+@evidence settings/001-production.md#accessibility-products 지원 상태를 한국어로 구별한다.
+@evidenceReview settings/001-production.md#accessibility-products #85fbb27 필수 텍스트·의도적 트랙 부재·미지원UI의 독자 결과가 설명되어 접근성 이름만 남지 않는다.
+@evidence settings/001-production.md#coordinate-datum 축·단위를 한국어 방향에 연결한다.
+@evidenceReview settings/001-production.md#coordinate-datum #16a75be +X는 동쪽·+Z는 남쪽이고Y=0은 지면이라 영문 축을 뜻 없이 나열하지 않는다.
+@evidence settings/001-production.md#reference-priority 원본 파일과 참조 관계를 함께 쓴다.
+@evidenceReview settings/001-production.md#reference-priority #a00d7bd 영문 파일명 옆에 ㄷ자 외피·생활 기능·사적 분위기를 한국어로 설명한다.
+@evidence settings/001-production.md#visual-grammar 재료·형체를 구체 한국어로 설명한다.
+@evidenceReview settings/001-production.md#visual-grammar #11442bf 짙은 갈색 목구조·회백색 충전벽·작은 지붕재의 관계가 번역되지 않은 스타일 이름에 숨지 않는다.
+@evidence settings/001-production.md#fidelity 표현 수준의 용어를 풀이한다.
+@evidenceReview settings/001-production.md#fidelity #a346a43 결정론적3D와 단순 상자의 차이를 형상·재료의 관찰로 설명하여 영문 품질 등급만 제시하지 않는다.
+@evidence settings/001-production.md#review-condition 이미지 규격을 한국어 대상에 붙인다.
+@evidenceReview settings/001-production.md#review-condition #6a4100b beauty PNG를 렌더 이미지로 설명하고 눈높이·화각·픽셀 값을 같은 문맥에서 읽게 한다.
+@evidence settings/001-production.md#observation-population 대상과 토폴로지의 뜻을 설명한다.
+@evidenceReview settings/001-production.md#observation-population #9861871 토폴로지는 면·연결·소속 관계로 풀어 실제 방·물품의 관찰 범위와 잇는다.
+@evidence settings/001-production.md#review-roles 저작·관찰·판정의 역할을 구별한다.
+@evidenceReview settings/001-production.md#review-roles #5d8cce2 sub-agent는 저작자와 별도 평가자의 실행 경계에만 쓰이고 수행할 일은 한국어로 설명된다.
+@evidence settings/001-production.md#completion-condition 제출과 종료를 한국어로 설명한다.
+@evidenceReview settings/001-production.md#completion-condition #5c1ac9c source·토폴로지는 저작 소스와 면·연결·소속으로 풀이되어 완료 조건을 영문 용어에서 추론하지 않는다.
+@evidence settings/001-production.md#pilot-boundary 선택 모드와 우선 관찰의 의미를 잇는다.
+@evidenceReview settings/001-production.md#pilot-boundary #f2cf384 complete-production·first-pilot·reset을 본채 전체와 홀 독립 선택·재개 전환의 한국어 설명에 연결한다.
+@evidence settings/001-production.md#coverage-map 요구와 소유자를 한국어 표로 연결한다.
+@evidenceReview settings/001-production.md#coverage-map #0b38807 생활·공간 요구의 행 표제가 현재 H2 링크와 함께 있어 파일 이름만으로 소유를 추측하지 않는다.
+@evidence settings/001-production.md#subject-inventory 대상의 한국어 이름과 지위를 설명한다.
+@evidenceReview settings/001-production.md#subject-inventory #9bc99bd 가족·독자·물품·원본의 행마다 배경·역할·제작대상을 구별하는 한국어 설명이 있다.
+@evidence settings/002-household.md#household 가족 수와 방 배정을 직접 설명한다.
+@evidenceReview settings/002-household.md#household #b2e4e7a 부부·자녀 둘·방문과 지원을 구별하여 네 거주자와 여섯 식사 자리의 의미를 읽을 수 있다.
+@evidence settings/002-household.md#family-hall 가구·생활 관계를 한국어로 명시한다.
+@evidenceReview settings/002-household.md#family-hall #083b751 배식구가 통행문이 아니라는 설명과 쟁반의 모델 값 표기가 다른 물품·접점 해석을 막는다.
+@evidence settings/002-household.md#kitchen-pantry 조리와 저장의 용어를 장소에 붙인다.
+@evidenceReview settings/002-household.md#kitchen-pantry #164c0f5 솥·국자·칼은 주방, 자루·통은 식료실로 연결되어 물품의 소속을 영문 ID에서 추측하지 않는다.
+@evidence settings/002-household.md#ledger-room 업무 가구와 소품을 평서체로 설명한다.
+@evidenceReview settings/002-household.md#ledger-room #a7a9dd5 펼친 장부·필기 도구·잠금 표현 함을 한국어로 명시하고 실제 개인 기록과 소품을 구별한다.
+@evidence settings/002-household.md#service-room 세척 물품의 장소를 직접 설명한다.
+@evidenceReview settings/002-household.md#service-room #9f1f11c 흙 묻은 물품·대야·건조 거치·빗자루가 젖은 작업 장소의 구체 내용을 제공한다.
+@evidence settings/002-household.md#bedrooms 침구 구성과 방별 배정을 설명한다.
+@evidenceReview settings/002-household.md#bedrooms #3823886 매트리스·담요·베개와 목제 프레임을 구별하고 각 작은 방이라는 분배를 한국어로 밝힌다.
+@evidence settings/002-household.md#upper-washroom 공동 세척·측간의 용도를 설명한다.
+@evidenceReview settings/002-household.md#upper-washroom #6cc0d8c 대야·오수 용기·칸막이를 명시하여 측간이라는 단어만으로 현대 변기를 상정하지 않게 한다.
+@evidence settings/002-household.md#upper-storage 공용 직물과 개인 수납을 구별한다.
+@evidenceReview settings/002-household.md#upper-storage #8355a24 깨끗한 수건·접은 직물·여벌 침구가 보관 내용이고 개인 의복과 별도라는 설명이 있다.
+@evidence settings/002-household.md#water-and-waste 용기와 물의 의미를 한국어로 잇는다.
+@evidenceReview settings/002-household.md#water-and-waste #37fa029 깨끗한 물과 오수는 다른 용기, 연못은 장식 표현으로 설명되어 이름만의 수계 구분이 아니다.
+@evidence settings/002-household.md#garden 식생·연못의 형태를 구체적으로 설명한다.
+@evidenceReview settings/002-household.md#garden #9d835ea 다갈래 가지·잎 빈틈과 자연석 테두리·얕은 가장자리·어두운 바닥이 관찰할 대상을 한국어로 밝힌다.
+@evidence settings/002-household.md#make-scope 가지 이름과 책임을 연결한다.
+@evidenceReview settings/002-household.md#make-scope #653e17b models는 입체 원형·materials는 마감·instances는 구성원과 배치라고 풀이하여 영문 가지를 의미 없이 남기지 않는다.
+@evidence settings/003-spatial-basis.md#single-house 집의 형식을 한국어 방향으로 설명한다.
+@evidenceReview settings/003-spatial-basis.md#single-house #2848dd3 남쪽으로 열린ㄷ자와 서측·후면·동측의 한 건물을 같은 좌표 문맥에서 읽을 수 있다.
+@evidence settings/003-spatial-basis.md#area-budget 계산 기호와 면적의 뜻을 함께 쓴다.
+@evidenceReview settings/003-spatial-basis.md#area-budget #6e24112 외곽·정원·개방부의 포함·제외가 산식 옆에 있어 숫자만 보고 유효면적을 추측하지 않는다.
+@evidence settings/003-spatial-basis.md#ground-access 회랑·문·현관의 관계를 설명한다.
+@evidenceReview settings/003-spatial-basis.md#ground-access #2193f75 직접 문과 한 실을 통과해야 하는 구조를 한국어로 구별하고space가 실제 위치를 정한다고 밝힌다.
+@evidence settings/003-spatial-basis.md#single-stair 두 층 사이 꺾임을 직접 설명한다.
+@evidenceReview settings/003-spatial-basis.md#single-stair #ae50e89 현관에서 시작해 중간참에서90도 꺾이고 위 계단참에 닿는 순서가 숫자와 함께 제시된다.
+@evidence settings/003-spatial-basis.md#upper-access 일자 복도와 방문의 접점을 설명한다.
+@evidenceReview settings/003-spatial-basis.md#upper-access #99f3811 끝 또는 측면의 직접 문을 설명해 연쇄 침실·ㄷ자 복도 제외를 도면 전문어 없이 읽게 한다.
+@evidence settings/003-spatial-basis.md#surface-responsibility 면의 담당과 기술어를 연결한다.
+@evidenceReview settings/003-spatial-basis.md#surface-responsibility #360ae9b space·model·material·instance를 경계·부재·마감·배치 책임의 한국어 서술과 함께 쓴다.
+-->
+
+33개 본문은 현대 표준 한국어로 제작 조건과 공간·물품 관계를 설명한다. Status, m·㎡, PNG·API와 정확한 source 식별자는 기술 식별을 위해 원문을 유지한다. 설정 문서의 한국어 설명은 뷰어 메뉴나 실제 이미지별 관찰 문서가 이미 완성됐다는 보고가 아니다.
+
+## Proportionate development {#proportionate-development}
+
+<!--
+@evidence obligations/core/common.md#proportionate-development 33개 설정의 분포와 본문을 전체 본채·물품·정원·시각 관찰의 책임에 비추어 비교한다.
+@evidenceReview obligations/core/common.md#proportionate-development #78feb28 제작 16개는 독자·참조·표현·관찰의 다른 소비자를, 생활 11개는 가족과 모든 실·물품·정원을, 공간 6개는 전체 형식과 층별 연결을 소유한다. 더 긴 지도·관찰 문단은 실제 주소와 판단 경계를 추가하며 짧은 방별 문단도 다른 방의 목록을 복제하지 않고 자체 물품을 남긴다.
+@evidence settings/001-production.md#delivery-scope 전체 납품의 분량을 결정한다.
+@evidenceReview settings/001-production.md#delivery-scope #e880aeb 포함·판단·비요구·산출물·제외·우선순위의 전개가 전체 본채 약속의 큰 영향에 대응한다.
+@evidence settings/001-production.md#governing-aim 단일 선택 기준을 압축한다.
+@evidenceReview settings/001-production.md#governing-aim #599b9dd 짧은 본문도 가족 생활 우선과 별채·계단 증설 거부를 담아 다른 방의 목록을 불필요하게 반복하지 않는다.
+@evidence settings/001-production.md#language-access 독자·용어·기술 표기를 나눈다.
+@evidenceReview settings/001-production.md#language-access #755a8cb 세 문단이 언어 선택·세 공간 용어·정확한 식별자 보존을 각각 맡아 독자 조건이 제목에만 남지 않는다.
+@evidence settings/001-production.md#operator-access 관찰과 상태 선택의 범위를 전개한다.
+@evidenceReview settings/001-production.md#operator-access #a93aa3f 정상 외관·숨김·선언 상태·편집기 비요구를 구별하여 조작 한 줄로 라이브러리 접근을 압축하지 않는다.
+@evidence settings/001-production.md#accessibility-products 지원 상태별 결과를 전개한다.
+@evidenceReview settings/001-production.md#accessibility-products #85fbb27 텍스트 필수·트랙 부재·시각 판단 한계·보조조작 미지원은 다른 독자 결과라 별도 설명이 필요하다.
+@evidence settings/001-production.md#coordinate-datum 공유 기준과 파생값을 전개한다.
+@evidenceReview settings/001-production.md#coordinate-datum #16a75be 축·원점·두 마감면·높이 차·seed 경계가 실제 공통 기준을 채워 숫자 목록만 남기지 않는다.
+@evidence settings/001-production.md#reference-priority 다섯 원본과 충돌 처리를 전개한다.
+@evidenceReview settings/001-production.md#reference-priority #a00d7bd 이미지별 표에 고정 그래프 우선·치수 역산 금지·실제3D 경계를 더해 출처 목록만으로 참조 적용을 대신하지 않는다.
+@evidence settings/001-production.md#visual-grammar 전역 재료와 지역 차이를 나눈다.
+@evidenceReview settings/001-production.md#visual-grammar #11442bf 외관·목재 흔적·실내 물품·계절 문단이 한 집의 표현을 채우고 각 방의 배치 수치로 분량을 늘리지 않는다.
+@evidence settings/001-production.md#fidelity 초기·최종과 추론 한계를 구별한다.
+@evidenceReview settings/001-production.md#fidelity #a346a43 결정론적 결과·현재 관찰·초기 허용·안전 추론의 네 역할이 표현 수준의 영향을 충분히 설명한다.
+@evidence settings/001-production.md#review-condition 재현 가능한 규격을 제공한다.
+@evidenceReview settings/001-production.md#review-condition #6a4100b 기본 눈높이·화각·해상도와 좁은 방·외관 예외가 있어 중립 이미지라는 이름만 남지 않는다.
+@evidence settings/001-production.md#observation-population 전체 대상과 변경 영향을 전개한다.
+@evidenceReview settings/001-production.md#observation-population #9861871 수정 후 영향 구획·필수 시각 질문·가림 보조·미관찰 경계가 전체 본채 관찰을 홀 한 장으로 축소하지 않는다.
+@evidence settings/001-production.md#review-roles 수행자를 필요한 수준으로 분리한다.
+@evidenceReview settings/001-production.md#review-roles #5d8cce2 직접열람·저작과판정·에이전트권한·내부자체검토가 다른 책임을 담고 새 외부 승인 단계를 늘리지 않는다.
+@evidence settings/001-production.md#completion-condition 전체 종료의 영향에 맞춰 전개한다.
+@evidenceReview settings/001-production.md#completion-condition #5c1ac9c 제출물 현재성·평가중 저작·미관찰·시각완성·비요구·최종 종료를 나누어 복잡한 종료를 한 성공문으로 압축하지 않는다.
+@evidence settings/001-production.md#pilot-boundary 순서와 전체 범위를 구별한다.
+@evidenceReview settings/001-production.md#pilot-boundary #f2cf384 홀의 우선 대상 뒤에 complete-production과 하위 책임 순서를 밝혀 국소 검사의 더 큰 설명량이 범위 우위를 만들지 않는다.
+@evidence settings/001-production.md#coverage-map 전체 요구 소유를 표로 전개한다.
+@evidenceReview settings/001-production.md#coverage-map #0b38807 32주소의 표가 실제 설정 분포를 담아 긴 지도가 장식 목록이 아니라 전체 범위를 탐색하는 구조다.
+@evidence settings/001-production.md#subject-inventory 대상별 지위를 충분히 분해한다.
+@evidenceReview settings/001-production.md#subject-inventory #9bc99bd 가족·역할·방별물품·정원·원본의16행이 서로 다른 납품 지위를 보유해 본채라는 한 단어에 물품을 숨기지 않는다.
+@evidence settings/002-household.md#household 가상 거주 배경의 필요한 조건을 담는다.
+@evidenceReview settings/002-household.md#household #b2e4e7a 네 거주자·여섯 자리·지원자의 비숙직·수동 자산으로 방과 가구 수를 설명하고 불필요한 인물 전기를 만들지 않는다.
+@evidence settings/002-household.md#family-hall 공용 생활의 여러 물품을 전개한다.
+@evidenceReview settings/002-household.md#family-hall #083b751 식사·난방·수납·직물·도기와 주방 접점을 담되 상세 착석시험으로 다른 방보다 분량을 부풀리지 않는다.
+@evidence settings/002-household.md#kitchen-pantry 두 방의 차이를 전개한다.
+@evidenceReview settings/002-household.md#kitchen-pantry #164c0f5 조리 도구·그을음과 저장 자루·통, 각 직접 문을 남겨 주방 한 목록으로 식료실을 생략하지 않는다.
+@evidence settings/002-household.md#ledger-room 업무실만의 구성을 담는다.
+@evidenceReview settings/002-household.md#ledger-room #a7a9dd5 두 문단에 책상·장부·필기구·잠금함과 직접 연결·소품 경계를 두어 짧아도 업무 기능의 제작 내용이 있다.
+@evidence settings/002-household.md#service-room 세척과 청소의 물품을 담는다.
+@evidenceReview settings/002-household.md#service-room #9f1f11c 낮은 세척대·통·건조 거치·빗자루와 식료 분리를 명시해 저장이라는 이름뿐인 방으로 압축하지 않는다.
+@evidence settings/002-household.md#bedrooms 세 방의 물품 배분을 담는다.
+@evidenceReview settings/002-household.md#bedrooms #3823886 한 H2라도 주침실과 작은 방 둘의 가구·침구 차이를 각각 정해 세 침실을 빈 이름 목록으로 남기지 않는다.
+@evidence settings/002-household.md#upper-washroom 공용 세척·측간의 물품과 제외를 담는다.
+@evidenceReview settings/002-household.md#upper-washroom #6cc0d8c 대야·용기·수건·빗장·칸막이와 현대설비 제외가 구체적이어서 별도 물리시험 설명 없이 실의 성격을 정한다.
+@evidence settings/002-household.md#upper-storage 독립 수납의 차이를 담는다.
+@evidenceReview settings/002-household.md#upper-storage #8355a24 선반·함·여벌직물과 개인수납·젖은물품의 구별이 있어 침실 수납의 반복 이름으로 처리하지 않는다.
+@evidence settings/002-household.md#water-and-waste 여러 방의 용기 의미를 연결한다.
+@evidenceReview settings/002-household.md#water-and-waste #37fa029 짧은 두 문단이 방별 용기와 연못 비설비·수류 부재를 정하고 물 운반 동작을 새 분량으로 추가하지 않는다.
+@evidence settings/002-household.md#garden 정원 구성의 실제 세부를 담는다.
+@evidenceReview settings/002-household.md#garden #9d835ea 한 나무·연못·약초·길에 가지·잎틈·수면·바닥의 특징을 더해 외부 영역이 조경이라는 표제로만 남지 않는다.
+@evidence settings/002-household.md#make-scope 전 제작 목록의 책임을 나눈다.
+@evidenceReview settings/002-household.md#make-scope #653e17b 제작 가지·외부자산·생성 예산의 세 문단은 모든 물품의 후속 작업 경로를 닫는 크기에 맞는다.
+@evidence settings/003-spatial-basis.md#single-house 전역 형식과 접근을 담는다.
+@evidenceReview settings/003-spatial-basis.md#single-house #2848dd3 두 문단이 한ㄷ자·두층·남쪽길·별채제외를 정하고 각 방의 설명을 중복해서 늘리지 않는다.
+@evidence settings/003-spatial-basis.md#area-budget 규모의 도출을 충분히 설명한다.
+@evidenceReview settings/003-spatial-basis.md#area-budget #6e24112 외곽·정원식과 개방부 보정·모델값 경계가 있어 약265㎡라는 목표만 남기지 않는다.
+@evidence settings/003-spatial-basis.md#ground-access 지상층 연결과 방향 예산을 전개한다.
+@evidenceReview settings/003-spatial-basis.md#ground-access #2193f75 각 필수실의 직접 문과 방향·연속회랑을 정해1층을 현관 하나로 요약하지 않는다.
+@evidence settings/003-spatial-basis.md#single-stair 한 수직 연결의 구성을 담는다.
+@evidenceReview settings/003-spatial-basis.md#single-stair #ae50e89 시작·중간참·종점·16오름·난간과 추가계단 제외가 있으며 보행 검사로 독립 역할을 늘리지 않는다.
+@evidence settings/003-spatial-basis.md#upper-access 사적층 모든 실의 연결을 담는다.
+@evidenceReview settings/003-spatial-basis.md#upper-access #99f3811 주침실·작은침실둘·세척·수납을 직접 연결하고 날개쪽 깊이 예외까지 정해 상층 범위를 압축하지 않는다.
+@evidence settings/003-spatial-basis.md#surface-responsibility 전체 면의 소유를 나눈다.
+@evidenceReview settings/003-spatial-basis.md#surface-responsibility #360ae9b 공유벽 양면·지붕 하면·개구부 테두리와 가지별 책임이 있어 보이는 정면만 본채 표면으로 세지 않는다.
+-->
+
+제작 규약 16개는 납품·언어·조작·접근성·좌표·참조·건축 언어·표현·관찰·역할·종료·우선순위·지도를 각각 소유한다. 생활 11개는 가족 배경과 각 방·물·정원·제작 책임을, 공간 6개는 본채·면적 예산·층별 연결·한 계단·표면 책임을 정한다. 두 지도는 이 구분을 대상과 주소로 연결하며 방의 목록을 상세 인체 검사로 확장하지 않는다. 한 홀의 상세 배치가 나머지 방의 제작 책임을 대신하지 않는다.

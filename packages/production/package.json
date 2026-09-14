@@ -49,7 +49,6 @@
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
-    "mp4box": "catalog:media",
     "pngjs": "catalog:media",
     "typia": "catalog:samchon"
   },

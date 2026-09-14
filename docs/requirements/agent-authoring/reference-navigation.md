@@ -22,4 +22,4 @@ Settings, research, 일곱 design 계층, treatments, scripts, screenplays와 br
 
 ### Client 교체 가능한 참조 {#agent-reference-transports}
 
-MCP client와 로컬 JSON 명령은 같은 참조 요청과 결과를 사용해야 한다. 설치된 production package만으로 동작하고 registry에서 새 package를 자동 설치하지 않는다. Client 등록과 지침은 일반 참조 경로를 발견하게 하되 다른 사용자 설정을 보존하며 충돌과 최초 trust 단계를 명시한다.
+MCP client와 로컬 JSON 명령은 같은 참조 요청과 결과를 사용해야 한다. 설치된 production package만으로 동작하고 registry에서 새 package를 자동 설치하지 않는다. Client 등록과 지침은 일반 참조 경로를 발견하게 하되 다른 사용자 설정을 보존하며 충돌과 최초 trust 단계를 명시한다. 등록의 소유는 그 등록이 이 production에 결속된 방식으로 판정하며, 기록된 실행 환경 경로가 달라진 것은 충돌이 아니라 갱신 사유다. 사용자가 편집했거나 다른 도구가 소유한 등록은 거부하고 그 내용을 보존한다.

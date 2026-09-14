@@ -1,12 +1,10 @@
+import { materializeCompiledInstanceSet } from "@automovie/engine";
 import {
   IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
-import {
-  materializeCompiledInstanceSet,
-  materializeProductionModels,
-} from "@automovie/production";
+import { materializeProductionModels } from "@automovie/production";
 import { buildInstancedInstanceSet, buildMaterial } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
@@ -138,7 +136,11 @@ const instanceAlbedos = (swatch: string): THREE.Color[] => {
   };
   const recipes = new Map([[recipe.id, recipe]]);
   const built = buildInstancedInstanceSet({
-    instanceSet: materializeCompiledInstanceSet(design, world, recipes),
+    instanceSet: materializeCompiledInstanceSet({
+      instanceSet: design,
+      world,
+      recipes,
+    }),
     models: new Map(
       [...materializeProductionModels(recipes).values()].map((model) => [
         model.id,

@@ -42,10 +42,65 @@ jobs:
       - run: pnpm install
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: node_modules/.cache/ttsc/plugins
-          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          # Two plugin caches, because two projects compile here from two
+          # working directories: the repository root, and the manor, whose own
+          # `lint:source` writes beside its own `node_modules`. The two build
+          # different plugin sets and hash apart, so without the second path the
+          # manor step rebuilds `@ttsc/lint` from a cold Go cache every run.
+          #
+          # The key carries `v2` so that second path is actually saved. An exact
+          # key hit makes `actions/cache` skip the save, so keeping the old key
+          # would have restored the root path, never written the manor one, and
+          # left it permanently cold while looking cached.
+          path: |
+            node_modules/.cache/ttsc/plugins
+            experimental/medieval-baron-manor/node_modules/.cache/ttsc/plugins
+          key: ttsc-plugins-v2-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Check repository tools
         run: pnpm exec ttsc -p build/tsconfig.json --noEmit
+      # The shipped scaffold is the code a generated project runs as its
+      # `npm run build`, `npm run lint` and `npm run sync`. No other lane
+      # compiles it, so without this step a workspace package can move a public
+      # export with every repository gate green while every generated project
+      # fails on its first command.
+      - name: Check the shipped scaffold
+        run: pnpm exec ttsc -p packages/template/tsconfig.scaffold.json --noEmit
+      # The manor is a tracked `pnpm-workspace.yaml` member that ships the same
+      # `lint:source` a generated project runs, and no lane compiled it, so the
+      # tree sat committed broken: 29 identities this campaign moved out of
+      # `@automovie/production` were still imported from there across 17 files,
+      # for 71 diagnostics, while every other gate stayed green. It is also the
+      # showcase the website builds from and the project a reader clones, so the
+      # first command that reader runs is the one this step runs.
+      #
+      # This runs the project's own script rather than a repository-side tsconfig
+      # like `packages/template/tsconfig.scaffold.json`. The scaffold needs one
+      # because it is not installed, so neither its `@automovie/*` specifiers nor
+      # `vite/client` resolve there. The manor is an installed workspace member,
+      # so its own config already resolves every specifier from workspace source:
+      # a second config would be a second file set, drifting from the command a
+      # clone actually runs. For the same reason no `paths` map is involved, and
+      # the inherited `types` entry needs no override -- `vite` is a declared
+      # dependency of this project, so `vite/client` resolves and tsgo checks
+      # files instead of aborting on an unresolvable entry and judging nothing.
+      #
+      # What this gate checks differently from a generated project: `@automovie/*`
+      # resolves to workspace source here, where a generated project installs the
+      # published packages and reads their emitted `.d.ts` under `stripInternal`
+      # (`config/tsconfig.json`), so a member marked `@internal` is visible here
+      # and absent there.
+      #
+      # Its reach is also exactly the manor's own `include`, which compiles
+      # TypeScript and nothing else: 116 of the project's 144 TypeScript and
+      # JavaScript files. No `allowJs` reaches the other 28, so they sit outside
+      # every compiler in this repository -- 16 `.mjs` derivation and measurement
+      # scripts under `scripts/`, the 8 authored `.js` scene modules under `src/`
+      # that `website/` itself bundles through a hand-written `.d.ts` shim,
+      # `viewer/src/sourcePreviewClient.js`, and
+      # `test/manorDoorConnections.test.mjs` -- while `viewer/preview.ts` and
+      # `viewer/src/preview.ts` stay out through the project's own `exclude`.
+      - name: Check the manor production
+        run: pnpm --filter medieval-baron-manor run lint:source
       - run: pnpm run build
       - run: pnpm run build:tgz
       - name: Verify validation left the checkout clean

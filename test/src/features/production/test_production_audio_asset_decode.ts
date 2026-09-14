@@ -1,4 +1,4 @@
-import { decodeProductionAudioAsset } from "@automovie/production";
+import { decodeProductionAudioAsset } from "@automovie/ingest";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";

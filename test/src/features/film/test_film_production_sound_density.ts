@@ -1,5 +1,7 @@
 import {
   deriveProductionSoundPlan,
+  materializeCompiledFormation,
+  materializeCompiledInstanceSet,
   renderProductionSound,
 } from "@automovie/engine";
 import {
@@ -9,10 +11,6 @@ import {
   IAutoMovieProductionSoundPlan,
   IAutoMovieShotContract,
 } from "@automovie/interface";
-import {
-  materializeCompiledFormation,
-  materializeCompiledInstanceSet,
-} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -40,20 +38,22 @@ const transform = (x: number, y: number, z: number) => ({
  */
 const unit = (id: string, count: number, lateral: number) =>
   materializeCompiledFormation({
-    id,
-    modelRecipe: `${id}-model`,
-    count,
-    layout: {
-      kind: "line",
-      ranks: 1,
-      files: count,
-      spacing: { lateral, depth: 1 },
+    formation: {
+      id,
+      modelRecipe: `${id}-model`,
+      count,
+      layout: {
+        kind: "line",
+        ranks: 1,
+        files: count,
+        spacing: { lateral, depth: 1 },
+      },
+      anchor: { x: 0, y: 0, z: -30 },
+      facingDeg: 0,
+      seed: 1,
+      capabilities: [],
+      heroOverrides: [],
     },
-    anchor: { x: 0, y: 0, z: -30 },
-    facingDeg: 0,
-    seed: 1,
-    capabilities: [],
-    heroOverrides: [],
   });
 
 const SMALL_COUNT = 4;
@@ -138,8 +138,8 @@ const compiled = (): IAutoMovieCompiledShotSource =>
       unit("large-unit", LARGE_COUNT, 0.03125),
     ],
     instanceSets: [
-      materializeCompiledInstanceSet(
-        {
+      materializeCompiledInstanceSet({
+        instanceSet: {
           id: "crowd",
           modelRecipe: "crowd-model",
           count: CROWD_COUNT,
@@ -163,16 +163,8 @@ const compiled = (): IAutoMovieCompiledShotSource =>
             traits: [],
           },
         },
-        {
-          id: "world",
-          units: "meter",
-          landmarks: [],
-          surfaces: [],
-          routes: [],
-          effectRecipes: [],
-          effectZones: [],
-        },
-      ),
+        world: { routes: [] },
+      }),
     ],
     effects: [],
   }) satisfies IAutoMovieCompiledShotSource;

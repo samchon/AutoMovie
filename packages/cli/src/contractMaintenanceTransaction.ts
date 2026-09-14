@@ -88,7 +88,7 @@ export interface IAutoMovieMaintenanceJournal {
 export interface IAutoMovieMaintenanceTransactionIO {
   /** Revalidate the held physical root and all relevant ancestors. */
   assertRoot(identity: string): void;
-  /** Read one physically confined single-link file, or its absence. */
+  /** Read one physically confined ordinary file, or its absence. */
   read(path: string): IAutoMovieMaintenanceFile | null;
   /** Create and durably verify an immutable candidate without overwriting. */
   stage(path: string, source: string): IAutoMovieMaintenanceFile;

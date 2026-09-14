@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "path": "automovie/derived/manor/environment-v24-critical.json",
+      "encoding": "utf8",
+      "generator": {
+        "path": "scripts/deriveManorEnvironment.mjs",
+        "digest": "sha256:030ab1ea532e9e6628d186370203b5dd3c77f49a37f55e5f0a6b2fa59efd4f6d"
+      },
+      "inputs": [
+        {
+          "path": "automovie/derived/manor/instances-v23-critical.json",
+          "digest": "sha256:99c79a16556cbec9cca1aebc1744d997053e2d372287f06655b26293020a07de"
+        },
+        {
+          "path": "package-lock.json",
+          "digest": "sha256:391133cb64c92790af9443863f1e7ecc681bd06ca7e6d61815baac459802cafb"
+        },
+        {
+          "path": "scripts/manorSpatialState.ts",
+          "digest": "sha256:42f7cc0d08fc9ec7d043d5ceb440edb4cdf636a3cbbe912aa230f1c5ce1770e0"
+        },
+        {
+          "path": "src/materials/manor.js",
+          "digest": "sha256:d38b33932f9da5a927ccf0322a55d743e3fc4e7d79bc773cf62dd78957f7e655"
+        },
+        {
+          "path": "src/models/manor-craft.js",
+          "digest": "sha256:565b79adf407589872ae1a8c8f9152354101f7244edc53970d4aa540f466f798"
+        },
+        {
+          "path": "src/models/manor-garden.js",
+          "digest": "sha256:953243211255ac29ff526fa65105cb87ee5d0294c71cb6e80b6580db185ff73a"
+        },
+        {
+          "path": "src/models/manor.js",
+          "digest": "sha256:2fe4676205527dedfdd5b9c3acc2349d02bf143ad2abb8fecdb28dce8953c394"
+        }
+      ],
+      "basisDigest": "sha256:6e993edd6fd96713f31b14444e46ec493e41d60ac613e044e29a9cb50be5f1b1",
+      "outputDigest": "sha256:2318dd9ad3e769b391ce36050b00101f2cbc09332f847e9dadda7ff43bd14609"
+    },
+    {
+      "path": "automovie/derived/manor/instances-v23-critical.json",
+      "encoding": "utf8",
+      "generator": {
+        "path": "scripts/deriveManorCritical.mjs",
+        "digest": "sha256:e63ab101f6213be753564cf616cc633fdc2a1fb585c1b46abf4215714ad6d1c9"
+      },
+      "inputs": [
+        {
+          "path": "package-lock.json",
+          "digest": "sha256:391133cb64c92790af9443863f1e7ecc681bd06ca7e6d61815baac459802cafb"
+        },
+        {
+          "path": "src/instances/manor.js",
+          "digest": "sha256:852c9d41bacc2b2408ad1b57e9bf9f2b28f34e53f4f3fa9e8848f6f33ba20955"
+        },
+        {
+          "path": "src/materials/manor.js",
+          "digest": "sha256:d38b33932f9da5a927ccf0322a55d743e3fc4e7d79bc773cf62dd78957f7e655"
+        },
+        {
+          "path": "src/models/manor-craft.js",
+          "digest": "sha256:565b79adf407589872ae1a8c8f9152354101f7244edc53970d4aa540f466f798"
+        },
+        {
+          "path": "src/models/manor-garden.js",
+          "digest": "sha256:953243211255ac29ff526fa65105cb87ee5d0294c71cb6e80b6580db185ff73a"
+        },
+        {
+          "path": "src/models/manor.js",
+          "digest": "sha256:2fe4676205527dedfdd5b9c3acc2349d02bf143ad2abb8fecdb28dce8953c394"
+        }
+      ],
+      "basisDigest": "sha256:1dd9f05a38f45f516e43c9012edcd02814a56814ec728285066386f53f7e3ea2",
+      "outputDigest": "sha256:99c79a16556cbec9cca1aebc1744d997053e2d372287f06655b26293020a07de"
+    }
+  ]
+}

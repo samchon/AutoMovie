@@ -2,12 +2,12 @@ import type {
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionSoundEvidence,
 } from "@automovie/interface";
+import { probeProductionMedia } from "@automovie/production";
 import {
   muxProductionFeatureMp4,
-  probeProductionMedia,
   probeProductionVideoMp4,
   trimProductionAudioPresentation,
-} from "@automovie/production";
+} from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 import { createFile } from "mp4box";
 

@@ -3,6 +3,10 @@ import type {
   AutoMovieContentDigest,
   IAutoMovieProductionPublicationIdentity,
 } from "@automovie/interface";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  resolveProductionRenderTierFrameFormat,
+} from "@automovie/render";
 import path from "node:path";
 import typia from "typia";
 
@@ -11,10 +15,6 @@ import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
 } from "./contentIdentity";
-import {
-  type IAutoMovieProductionRenderJobPlan,
-  resolveProductionRenderTierFrameFormat,
-} from "./productionRenderJob";
 
 type PublicationBasis = Omit<
   IAutoMovieProductionPublicationIdentity,

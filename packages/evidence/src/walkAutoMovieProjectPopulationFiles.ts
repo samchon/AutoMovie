@@ -14,10 +14,17 @@ interface IAutoMovieEvidencePhysicalFile {
 }
 
 /**
- * Decide whether one lstat entry is an independently owned evidence file.
+ * Decide whether one enumerated lstat entry is an independently owned evidence
+ * file.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses a second pathname for the same bytes instead of counting it as an independent contract or source.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Applies one regular-file, non-symlink, single-link predicate before any project evidence bytes are read.
+ * This is the population judgment, and the single-link requirement is what
+ * separates it from manifest admission: a walk can reach one inode through two
+ * names, and the graph would then carry two independent owners of one set of
+ * bytes. The identity manifest is admitted by its own decision at a fixed path
+ * and does not use a directory-entry count.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses a second enumerated pathname for the same bytes instead of counting it as an independent contract or source.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Implements the population half of the two separate physical judgments, including the single-link requirement only that half carries.
  * @author Samchon
  */
 export const isAutoMovieEvidencePhysicalFile = (

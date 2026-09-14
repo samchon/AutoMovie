@@ -5,6 +5,17 @@ import {
 } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+const documentReferences = (
+  files: readonly string[],
+): ITtscEvidenceGraphReference[] => [
+  {
+    type: "markdown",
+    root: "../../docs",
+    files: [...files],
+    symbol: ["h3"],
+  },
+];
+
 const topicReferences = (
   folders: readonly string[],
 ): ITtscEvidenceGraphReference[] => [
@@ -35,9 +46,32 @@ const topicReferences = (
 const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
 const captionSources = [
+  "src/caption/**/*.ts",
+  "!src/caption/index.ts",
   "src/captionPlan.ts",
   "src/captionSidecar.ts",
   "src/captionSlice.ts",
+];
+
+/**
+ * The media domain: output profiles, the occurrence key and the Node entry.
+ *
+ * These sources answer for the delivery contracts of the bytes they write and
+ * read, which are named document by document in their claim rather than by
+ * topic folder: selecting a folder would make this package answer for every
+ * unit in it, including the mixing, provider and human-judgment units it does
+ * not implement. The barrels re-export declarations that answer at their
+ * definition, and the model exporter answers under the two model-serialization
+ * claims instead, so all three are subtracted.
+ */
+const mediaSources = [
+  "src/delivery/**/*.ts",
+  "!src/delivery/index.ts",
+  "src/film/**/*.ts",
+  "!src/film/index.ts",
+  "src/node/**/*.ts",
+  "!src/node/index.ts",
+  "!src/node/exportModelToGLB.ts",
 ];
 
 /**
@@ -50,7 +84,7 @@ const captionSources = [
  */
 const renderSources = [
   ...allSources,
-  "!src/exportModel.ts",
+  "!src/node/exportModelToGLB.ts",
   "!src/screenplay.ts",
 ];
 
@@ -66,7 +100,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "model serialization implements bounded asset requirements",
       type: "typescript",
-      files: ["src/exportModel.ts"],
+      files: ["src/node/exportModelToGLB.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences([
         "requirements/asset-authoring",
@@ -76,7 +110,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "model serialization implements bounded asset specifications",
       type: "typescript",
-      files: ["src/exportModel.ts"],
+      files: ["src/node/exportModelToGLB.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences([
         "specifications/asset-and-representation",
@@ -99,6 +133,21 @@ const graph: ITtscEvidenceGraphConfig = {
       files: ["src/screenplay.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences(["specifications/narrative-and-intent"]),
+    },
+    {
+      name: "delivery and media declarations implement their delivery contracts",
+      type: "typescript",
+      files: mediaSources,
+      symbol: ["type", "function", "property"],
+      reference: documentReferences([
+        "requirements/delivery-and-accessibility/audio-streams-and-channels.md",
+        "requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md",
+        "requirements/delivery-and-accessibility/picture-color-and-image-sequences.md",
+        "requirements/sound/sources-and-external-assets.md",
+        "requirements/sound/validation-and-delivery.md",
+        "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+        "specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md",
+      ]),
     },
     {
       name: "render declarations implement rendering requirements",

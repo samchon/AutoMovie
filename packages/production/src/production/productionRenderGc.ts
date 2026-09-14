@@ -6,7 +6,7 @@ import {
 type AutoMovieContentDigest =
   import("@automovie/interface").AutoMovieContentDigest;
 type IAutoMovieProductionRenderJobPlan =
-  import("./productionRenderJob").IAutoMovieProductionRenderJobPlan;
+  import("@automovie/render").IAutoMovieProductionRenderJobPlan;
 
 /**
  * One renderer-owned disk entry considered by mark-and-sweep.

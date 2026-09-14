@@ -4,6 +4,7 @@ import {
   renderProductionSound,
   resolveProductionFrameRate,
 } from "@automovie/engine";
+import { decodeProductionAudioAsset } from "@automovie/ingest";
 import type {
   AutoMovieContentDigest,
   IAutoMovieCompiledShotSource,
@@ -13,16 +14,19 @@ import type {
 } from "@automovie/interface";
 import {
   type AutoMovieProductionProject,
-  type IAutoMovieProductionAudioAssetIdentity,
-  type IAutoMovieProductionRenderJobPlan,
-  decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
-  normalizeProductionH264Mp4,
   parseAutoMovieStructuredJson,
   readAutoMovieFilmTimeline,
-  trimProductionAudioPresentation,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionAudioAssetIdentity,
+  IAutoMovieProductionRenderJobPlan,
+} from "@automovie/render";
+import {
+  normalizeProductionH264Mp4,
+  trimProductionAudioPresentation,
+} from "@automovie/render/node";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

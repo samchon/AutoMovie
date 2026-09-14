@@ -1,5 +1,6 @@
 import {
   deriveProductionSoundPlan,
+  materializeCompiledFormation,
   renderProductionSound,
 } from "@automovie/engine";
 import {
@@ -10,7 +11,6 @@ import {
   IAutoMovieProductionSoundPlan,
   IAutoMovieShotContract,
 } from "@automovie/interface";
-import { materializeCompiledFormation } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -55,20 +55,22 @@ const unit = (props: {
   z: number;
 }) =>
   materializeCompiledFormation({
-    id: props.id,
-    modelRecipe: `${props.id}-model`,
-    count: props.count,
-    layout: {
-      kind: "line",
-      ranks: 1,
-      files: props.count,
-      spacing: { lateral: props.interval, depth: 1 },
+    formation: {
+      id: props.id,
+      modelRecipe: `${props.id}-model`,
+      count: props.count,
+      layout: {
+        kind: "line",
+        ranks: 1,
+        files: props.count,
+        spacing: { lateral: props.interval, depth: 1 },
+      },
+      anchor: { x: 0, y: 0, z: props.z },
+      facingDeg: 0,
+      seed: 1,
+      capabilities: [],
+      heroOverrides: [],
     },
-    anchor: { x: 0, y: 0, z: props.z },
-    facingDeg: 0,
-    seed: 1,
-    capabilities: [],
-    heroOverrides: [],
   });
 
 /**

@@ -22,6 +22,7 @@ import {
   AutoMovieProductionBuilder,
   AutoMovieProductionProject,
   IAutoMovieProductionDesignGraph,
+  createAutoMovieProductionSourceStatus,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   inspectAutoMovieLibraryProjectState,
@@ -562,13 +563,19 @@ export const loadAutoMovieProjectState = (
       path: null,
       message: `Authoring evidence belongs to "${path.resolve(authoringEvidence.root)}", not selected project root "${root}". Reopen the graph from this project before loading state.`,
     });
-  let buildStatus: IAutoMovieBuildProjectOutput | null = null;
-  try {
-    buildStatus = new AutoMovieProductionBuilder(
+  const sourceStatus = createAutoMovieProductionSourceStatus({
+    project,
+    builder: new AutoMovieProductionBuilder(
       project,
       authoringEvidence,
       input.currentAuthoringEvidence,
-    ).lint({ scope: "source" });
+    ),
+    authoringEvidence,
+    currentAuthoringEvidence: input.currentAuthoringEvidence,
+  });
+  let buildStatus: IAutoMovieBuildProjectOutput | null = null;
+  try {
+    buildStatus = sourceStatus();
   } catch (error) {
     problems.push({
       code: "compile-status-unavailable",
@@ -891,12 +898,7 @@ export const loadAutoMovieProjectState = (
     design,
     read: {
       revision: () => project.revision(),
-      compile: () =>
-        new AutoMovieProductionBuilder(
-          project,
-          authoringEvidence,
-          input.currentAuthoringEvidence,
-        ).lint({ scope: "source" }),
+      compile: sourceStatus,
       design: () => project.graph(),
       manifest: () => project.generatedManifest(),
     },

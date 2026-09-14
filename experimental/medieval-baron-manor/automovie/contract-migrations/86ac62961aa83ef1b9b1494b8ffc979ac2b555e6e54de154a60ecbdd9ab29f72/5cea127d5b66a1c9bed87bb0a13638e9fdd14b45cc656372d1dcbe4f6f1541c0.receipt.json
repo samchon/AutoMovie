@@ -1,0 +1,21 @@
+{
+  "actions": [],
+  "from": {
+    "identity": "sha256:2dab28f81ea39e80005c84520904c40b10824d3f8eb7ba763922333133d9013c",
+    "version": "0.1.1"
+  },
+  "language": "korean",
+  "observedInputDigest": "sha256:7edc4244bd6c5a2896e6bc6cf1cedff5074fbe4722af066e9a0d158c009523bf",
+  "planDigest": "sha256:86ac62961aa83ef1b9b1494b8ffc979ac2b555e6e54de154a60ecbdd9ab29f72",
+  "protocol": "automovie.contract-migration-receipt.v1",
+  "publicationGeneration": "86ac62961aa83ef1b9b1494b8ffc979ac2b555e6e54de154a60ecbdd9ab29f72",
+  "to": {
+    "identity": "sha256:ef7a1b14caed1f3e8dfd6792ff6322534cbd67c5239e9073275730a5ca77b8c7",
+    "version": "0.1.2"
+  },
+  "validation": {
+    "status": "completed",
+    "targetBaselineIdentity": "sha256:ef7a1b14caed1f3e8dfd6792ff6322534cbd67c5239e9073275730a5ca77b8c7"
+  },
+  "version": 1
+}

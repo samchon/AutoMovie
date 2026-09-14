@@ -1,0 +1,41 @@
+# 공간 모집단의 공통 책임
+
+## 파일의 제작상 필요 {#purpose-fit}
+<!--
+@evidence obligations/core/common.md#purpose-fit 단일 공간 파일이 전체 본채의 방·개구부·생활 물품을 같은 좌표계의 배치 결정으로 전달하는 역할을 비교한다.
+@evidenceReview obligations/core/common.md#purpose-fit #7b32c66 설정이 정한 홀·주방·침실·정원은 공간 파일에서 실제 방향과 배치 좌표를 얻는다. 이 파일을 없애면 상층 방과 계단의 연결 및 가구 위치를 source만 보고 다시 정해야 하므로 시각적 납품에 필요한 중간 설계 역할이다.
+@evidence spaces/001-manor.md#manor-space 층별 공간 구성과 홀·주방·장부실·세척실·상층·정원의 배치를 한 본채에 귀속한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 앞부분의 방별 방향 배정과 뒤의 가구 중심·계단판 좌표가 설정의 용도를 실제 환경 배치로 바꾼다. 수치가 실건물 검사 기준이 아니라 이 공간 설계의 제작 값임을 첫 문단이 한정한다.
+-->
+
+선택된 파일은 [저택 공간 설계](../../spaces/001-manor.md#manor-space) 하나다. 본채 전체의 방·개구부·물품 배치를 같은 환경에서 정하며, 설정의 용도와 source의 기하 사이에 필요한 공간 결정을 소유한다.
+
+## 설계 계층의 경계 {#layer-boundary}
+<!--
+@evidence obligations/core/common.md#layer-boundary 전체 파일의 결정을 공간 구성과 설치 위치로 분류하고 부재 생성·재질 구현은 source의 책임으로 구별한다.
+@evidenceReview obligations/core/common.md#layer-boundary #5271f94 본문은 방 위치·개구부·가구 중심·계단면·관찰 범위를 정하고 형상 생성 코드를 복사하지 않는다. 실건물의 동작·착석·통행 검사로 다른 목적의 설계를 끌어들이지 않는 경계도 명시돼 있다.
+@evidence spaces/001-manor.md#manor-space 하나의 고정 환경 설계가 실제 모델·배치에서 파생되는 공간 carrier를 사용한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 모델 entry와 instance-set은 전달 원천으로 설명되고 본문 자체는 층별 포함·배치·연결을 결정한다. 가구의 제작 값과 공간 위치를 다루면서 개별 메시 생성 알고리즘을 이 파일의 역할로 주장하지 않는다.
+-->
+
+전체 파일은 본채의 공간 구성과 물품 설치를 소유한다. 모델·재질 생성은 해당 source에 남기며 방의 위치와 시각 관찰의 관계를 설명한다. 사람의 물리 사용성은 이 공간 납품의 별도 역할로 추가하지 않는다.
+
+## 제작 언어 {#production-language}
+<!--
+@evidence obligations/core/common.md#production-language 한국어 배치 설명과 정확한 영문 source ID의 역할을 전체 파일에서 비교한다.
+@evidenceReview obligations/core/common.md#production-language #3ef4142 층별 목록의 hall·kitchen 등은 이어지는 한국어 방 배정과 가구 문단에서 의미를 얻는다. 좌표 축과 carrier·prototype은 기술 데이터의 표기이며 한국어 설명을 인물 대사나 영문 단락으로 전환하지 않는다.
+@evidence spaces/001-manor.md#manor-space 방 이름과 배치 결정을 한국어로 설명하면서 등록 ID와 좌표를 유지한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e master는 서쪽 날개의 주침실, washroom과 storage는 동쪽의 공동 세척·측간과 공용 수납으로 설명된다. 부재 ID를 번역해 주소를 깨뜨리지 않고 해당 생활 공간의 뜻을 본문에서 읽을 수 있다.
+-->
+
+한국어 공간 설명과 source 식별자를 구별한다. hall·kitchen·pantry·ledger·service는 각각 홀·주방·식료실·장부실·저장·세척실이고 상층 ID도 해당 방의 한국어 설명과 연결한다. 실제 뷰어 메뉴의 언어 상태는 이 문서만으로 완료라고 주장하지 않는다.
+
+## 규모에 맞는 설계 전개 {#proportionate-development}
+<!--
+@evidence obligations/core/common.md#proportionate-development 전체 본채의 층별 구성과 모든 방·정원의 설치 결정을 비교하고 홀의 상세 좌표가 다른 공간을 대신하지 않는지 판단한다.
+@evidenceReview obligations/core/common.md#proportionate-development #78feb28 홀과 계단은 더 많은 배치 치수를 갖지만 장부실·세척실·세 침실·공용 세척·수납과 정원도 각자의 방향과 물품 배치를 가진다. 부재 수를 분량 근거로 쓰지 않고 한 환경의 시각적 구성에 필요한 공간 결정이 전 실에 분포하는지 비교했다.
+@evidence spaces/001-manor.md#manor-space 본채와 층별 구성, 1층 생활 물품, 상층·계단, 외관·정원을 각각 전개한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 상층 문단은 침실 이름만 나열하지 않고 각 침대·탁자·수납·세척 물품의 배치를 정한다. 정원도 나무·연못·약초·자갈길의 구성과 남쪽 접근부를 남겨 홀 하나를 본채 전체의 설계로 제출하는 압축을 피한다.
+-->
+
+현재 공간 모집단은 전체 본채 한 H2다. 층별 구성에서 각 실의 방향과 직접 연결을 정하고 모든 생활 구획의 가구·설비 배치를 전개한다. 홀의 상세 수치는 유지하되 인체 검사 설명으로 분량을 채우지 않으며 외관·정원·상층의 시각적 완성은 현재 렌더에서 별도로 확인한다.

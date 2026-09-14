@@ -304,7 +304,7 @@ const CAMERA_MOVES = new Set([
 
 /**
  * The shot metadata fields validators used to pass ungated: `events`,
- * `cameraIntent`, `coverage`, and current-revision camera clearance.
+ * `cameraIntent`, `coverage`, and camera clearance.
  *
  * A field the engine emits and a consumer dereferences is part of the artifact
  * contract, not decoration: `playbackEvents` and `reviewVisualRead` iterate
@@ -385,7 +385,15 @@ const clearanceIntervalCount = (
     : frames;
 };
 
-/** Validate accepted, current-revision clearance evidence carried by a shot. */
+/**
+ * Validate the accepted clearance evidence a shot publishes.
+ *
+ * The report carries no revision of its own, so there is no revision pair to
+ * compare here. A published report must be `clear`, and an evaluation returns
+ * `stale` rather than `clear` whenever the revision it measured is not the one
+ * current at its gate, so refusing every non-clear status is what keeps stored
+ * clearance evidence tied to current geometry.
+ */
 const appendCameraClearanceArtifact = (
   reports: unknown,
   path: string,
@@ -438,26 +446,6 @@ const appendCameraClearanceArtifact = (
         `${reportPath}.camera`,
         `clearance camera "${report.camera}" must reference a scene camera`,
         report.camera,
-      );
-    validateNonEmptyId(
-      report.revision,
-      `${reportPath}.revision`,
-      "clearance geometry revision",
-      violations,
-    );
-    validateNonEmptyId(
-      report.currentRevision,
-      `${reportPath}.currentRevision`,
-      "clearance current revision",
-      violations,
-    );
-    if (report.revision !== report.currentRevision)
-      pushViolation(
-        violations,
-        "type",
-        `${reportPath}.currentRevision`,
-        "a published clearance report must match the current geometry revision",
-        report.currentRevision,
       );
     validateRange(
       report.sampleRate,

@@ -18,7 +18,7 @@ a typed entry under `scripts/*.ts`, which this boundary picks up automatically.
 ## Models (`.glb`)
 
 Each character is exported straight from its `build*` AST through
-`@automovie/render`'s `exportModelToGLB`:
+`@automovie/render/node`'s `exportModelToGLB`:
 
 ```bash
 pnpm build:models      # stickman, cat, horse, knight (all of the below)

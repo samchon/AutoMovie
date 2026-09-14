@@ -34,6 +34,8 @@ Local file claim은 같은 validated owner를 두 번 조회하여 모두 `absen
 
 모든 mutable transition, checkpoint, artifact commit과 publication은 owner generation 및 expected target generation을 함께 검증해야 한다. Older generation은 bytes가 valid해도 current mutation을 거부당하고 output을 orphan candidate로 격리하며 successor의 state를 삭제, replace 또는 roll back할 수 없다.
 
+같은 id의 production namespace를 삭제한 뒤 다시 등록하는 것도 target generation이 바뀌는 전이다. Namespace generation은 그 namespace를 가진 checkout 안에서 등록 record가 namespace를 가리킨 뒤 발급하고, 등록 record가 가리키지 않는 namespace의 generation은 새 등록 전에 폐기하며, version control 같은 추적 이력에 두거나 그 이력에서 복원하지 않는다. 따라서 삭제 전 generation을 가진 handle은 다시 등록되거나 이력에서 되살아난 namespace를 current로 받아들이지 못한다.
+
 Project revision domain은 non-negative safe integer이며 physical absence만 legacy revision 0으로 해석한다. Writer는 expected revision equality와 exact safe-integer successor를 payload staging 또는 output callback 전에 확정하고, malformed record나 최대 revision에서는 audit pathname을 포함한 어떤 mutable byte도 쓰지 않는다.
 
 ### Deadlock과 Starvation {#execution-deadlock-starvation}

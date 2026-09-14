@@ -1,5 +1,6 @@
 import {
   DEFAULT_SUBJECT_HEIGHT,
+  materializeCompiledFormation,
   performShot,
   productionRuntimeModelId,
   stageScene,
@@ -10,7 +11,6 @@ import {
   IAutoMovieModel,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import { materializeCompiledFormation } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -72,20 +72,22 @@ const memberModel: IAutoMovieModel = {
 /** One compiled unit of `count` members in a single rank, on the origin. */
 const unit = (id: string, count: number) =>
   materializeCompiledFormation({
-    id,
-    modelRecipe: "member",
-    count,
-    layout: {
-      kind: "line",
-      ranks: 1,
-      files: count,
-      spacing: { lateral: INTERVAL, depth: 1 },
+    formation: {
+      id,
+      modelRecipe: "member",
+      count,
+      layout: {
+        kind: "line",
+        ranks: 1,
+        files: count,
+        spacing: { lateral: INTERVAL, depth: 1 },
+      },
+      anchor: { x: 0, y: 0, z: 0 },
+      facingDeg: 0,
+      seed: 1,
+      capabilities: [],
+      heroOverrides: [],
     },
-    anchor: { x: 0, y: 0, z: 0 },
-    facingDeg: 0,
-    seed: 1,
-    capabilities: [],
-    heroOverrides: [],
   });
 
 const WIDE_UNIT = unit("wide-unit", FILES);

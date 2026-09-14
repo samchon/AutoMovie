@@ -43,7 +43,7 @@ export interface IAutoMovieMaintenanceObservationIO {
   assertDirectory(directory: IScaffoldPhysicalDirectory): void;
   /** Check the admitted pathname generation before our own descriptor opens. */
   assertFile(snapshot: IScaffoldFileSnapshot): void;
-  /** Read one ordinary single-link file through its captured descriptor. */
+  /** Read one ordinary file through its captured descriptor. */
   file(target: string): {
     bytes: Uint8Array;
     snapshot: IScaffoldFileSnapshot;
@@ -104,6 +104,8 @@ const inside = (root: string, target: string): boolean => {
  *
  * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Rejects physical escapes and retains absent destination slots without following a linked ancestor.
  * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Reads each selected source only under the same captured project root and ordinary directory generations.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Observes an input without counting its directory entries, because the publication it feeds replaces entries instead of rewriting the bytes another pathname shows.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Supplies the observation for the entry-replacing method, whose admission the entry count does not govern.
  */
 export const observeAutoMovieMaintenanceFiles = (props: {
   root: string | IScaffoldPhysicalDirectory;

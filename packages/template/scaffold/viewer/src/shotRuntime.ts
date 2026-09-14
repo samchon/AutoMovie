@@ -1,6 +1,7 @@
 import {
   type IAutoMovieDialogueExpressionLayers,
   type IAutoMovieDialogueVisemeTimeline,
+  type IAutoMovieFilmEffectCurrentIdentity,
   type IAutoMovieResolvedBone,
   type IAutoMovieWearableSoftFrame,
   lowerPlantingInstallation,
@@ -9,6 +10,8 @@ import {
   productionFrameBoundaryToSeconds,
   sampleAutoMovieDialogueExpression,
   sampleMotion,
+  sampleProductionFilmEffects,
+  selectProductionLiveWearableSoftBodies,
   simulateAutoMovieWearableSoftBody,
   softBodyStepAt,
   softBodySurfaceGeometry,
@@ -24,10 +27,6 @@ import type {
   IAutoMovieSoftBodyDomain,
   IAutoMovieTransform,
 } from "@automovie/interface";
-import {
-  type IAutoMovieFilmEffectCurrentIdentity,
-  sampleProductionFilmEffects,
-} from "@automovie/production";
 import {
   AutoMoviePlayer,
   type IAutoMovieModelObject,
@@ -52,7 +51,6 @@ import {
 } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { selectProductionLiveWearableSoftBodies } from "../../scripts/productionConfiguration";
 import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 

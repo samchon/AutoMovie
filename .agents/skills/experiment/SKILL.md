@@ -33,7 +33,7 @@ Creation packs every workspace package, so it runs each package's build and take
 
 Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites the manifest's tarball pins, reinstalls, and synchronizes owned reference-client entries without replacing production content.
 
-`experimental/` is gitignored. Delete a sandbox when its question is answered, and never commit anything from inside one.
+`experimental/` is tracked, but only for `experimental/medieval-baron-manor`, the finished manor production the website publishes (see the project skill). Every other directory there is a disposable sandbox: delete it when its question is answered, and never commit anything from inside one. `git status` shows a live sandbox as untracked; that is the reminder, not an invitation.
 
 ## What The Generator Wires, And Why It Matters
 
@@ -45,7 +45,7 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 | The tarball filename carries a content digest | `file:` specifiers are keyed by path, so a rebuilt package under an unchanged version would leave a sandbox installed against stale bytes |
 | Every packed package is pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
 | The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either; the same 404 just surfaces one package later |
-| A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, and `experimental/` is gitignored, so that lock would name a directory no other checkout has |
+| A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, so a disposable directory would leave the lock naming a path no other checkout has. `pnpm-workspace.yaml` lists the committed manor by exact path rather than `experimental/*` for the same reason |
 
 Linking the packages directly was tried first and is not viable. A `link:` resolves through `exports` to untransformed `src/*.ts`, so every sandbox script pays a full compile of the product tree before it does anything; the measured cost was **133 seconds** to reach a first answer, and it is paid again on the next run. Warming that compile is impossible too: `ttsx` writes its emitted output to a **PID-scoped** directory under `node_modules/.cache/ttsc/ttsx/project/`, so no later process reuses it, and a `ttsc` build beforehand changes nothing.
 

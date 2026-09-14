@@ -31,6 +31,10 @@ export interface IAutoMovieProductionServices {
   oracle: AutoMovieProductionOracleService;
   /**
    * Read-only source-gate status.
+   *
+   * Each call reads the gate's inputs again and runs the gate only when they
+   * moved since the last successful answer, so every capture, receipt and
+   * commit boundary stays fresh without executing unchanged source again.
    */
   buildStatus: () => IAutoMovieBuildProjectOutput;
 }

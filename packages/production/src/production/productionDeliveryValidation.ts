@@ -15,38 +15,30 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieShotContract,
 } from "@automovie/interface";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  assertProductionOpusProfile,
+  assertProductionPngPicture,
+  assertProductionVideoProfile,
+  canonicalProductionWebVtt,
+  productionVisualDeliveryOccurrence,
+  resolveProductionPngProfile,
+  resolveProductionVideoProfile,
+} from "@automovie/render";
+import { assertProductionFeatureUsesRenditionClips } from "@automovie/render/node";
 import path from "node:path";
 
+import { AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE } from "./AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import { assertProductionRenderedDeliverableFacts } from "./assertProductionRenderedDeliverableFacts";
 import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
-import {
-  assertProductionFeatureUsesRenditionClips,
-  productionVisualDeliveryOccurrence,
-} from "./muxProductionFeatureMp4";
-import {
-  AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
-  probeProductionMedia,
-} from "./probeProductionMedia";
+import { probeProductionMedia } from "./probeProductionMedia";
 import { errorMessage, normalizeSlash } from "./productionBuildDiagnostics";
-import {
-  assertProductionOpusProfile,
-  assertProductionRenderedDeliverableFacts,
-  assertProductionVideoProfile,
-  resolveProductionVideoProfile,
-} from "./productionMp4Profile";
-import {
-  assertProductionPngPicture,
-  resolveProductionPngProfile,
-} from "./productionPngPicture";
-import {
-  type IAutoMovieProductionRenderJobPlan,
-  canonicalProductionWebVtt,
-} from "./productionRenderJob";
 import {
   AutoMovieProductionRenderLedgerSchemaError,
   parseProductionRenderManifestBytes,

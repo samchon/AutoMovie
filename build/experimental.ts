@@ -445,7 +445,7 @@ export const runExperimental = (
         `The sandbox installs packed working-tree tarballs, so after changing a\n` +
         `package under packages/ rerun this command with --refresh, which repacks\n` +
         `and reinstalls without rewriting scaffold-managed work in progress.\n` +
-        `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
+        `A sandbox is never committed: delete the directory when the experiment is done.\n`,
     );
     return 0;
   } catch (error) {

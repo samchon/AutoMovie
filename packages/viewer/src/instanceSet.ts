@@ -1,6 +1,5 @@
 import {
-  Quaternion,
-  seededValue,
+  instanceSlot,
   selectFormationLod,
   srgbHexToLinearColor,
 } from "@automovie/engine";
@@ -369,6 +368,23 @@ export const buildInstancedInstanceSet = (input: {
 /**
  * Regenerate one exact instance from compact compiled parameters.
  *
+ * The member law is the engine's {@link instanceSlot}, the one a compiled set's
+ * bounds are measured with and a shot source's oracle answers through, so the
+ * member drawn here is the member the compiled record holds. A viewer copy of
+ * that law agreed on every valid record but refused less, and drew a
+ * hand-edited record the engine refuses as members standing on non-finite
+ * coordinates or painted with no swatch.
+ *
+ * It therefore throws what the engine throws: a slot outside the set, a route
+ * snapshot that is missing, names another route, or has no finite positive
+ * length, an explicit block missing the slot or naming a prototype no choice
+ * declares, and a derived non-finite value or an empty palette.
+ * {@link buildInstancedInstanceSet} regenerates every chunk slot through here
+ * while it builds, so such a refusal leaves that call before any batch of the
+ * set exists, and a host building a shot, such as a generated project's viewer
+ * runtime, fails its build with the engine's message instead of drawing the
+ * set.
+ *
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
  * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Regenerates the selected grid, scatter, lattice, explicit, or route layout from its declared parameters.
@@ -382,264 +398,7 @@ export const buildInstancedInstanceSet = (input: {
 export const regenerateInstanceSlot = (
   instanceSet: IAutoMovieCompiledInstanceSet,
   slot: number,
-): IAutoMovieInstanceSlot => {
-  if (
-    Number.isSafeInteger(slot) === false ||
-    slot < 0 ||
-    slot >= instanceSet.count
-  )
-    throw new RangeError(
-      `Instance set "${instanceSet.id}" slot ${slot} is outside 0..${instanceSet.count - 1}.`,
-    );
-  const point = instancePoint(instanceSet, slot);
-  const radians = instanceHeadingRadians(instanceSet.facingDeg);
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
-  const scale = stableInterpolate(
-    instanceSet.variation.scale.min,
-    instanceSet.variation.scale.max,
-    seededValue(instanceSet.seed, slot, 0x7363616c),
-  );
-  const paletteIndex = Math.min(
-    instanceSet.variation.palette.length - 1,
-    Math.floor(
-      seededValue(instanceSet.seed, slot, 0x70616c65) *
-        instanceSet.variation.palette.length,
-    ),
-  );
-  const explicit =
-    instanceSet.layout.kind === "explicit"
-      ? instanceSet.layout.transforms[slot]
-      : undefined;
-  const position =
-    instanceSet.layout.kind === "along-route"
-      ? { x: point.x, y: instanceSet.anchor.y, z: point.z }
-      : {
-          x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
-          y: instanceSet.anchor.y + point.y,
-          z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
-        };
-  const prototype = selectedInstancePrototype(
-    instanceSet,
-    slot,
-    explicit?.prototype,
-  );
-  const traits = Object.fromEntries(
-    instanceSet.variation.traits.map((trait, index) => [
-      trait.name,
-      stableInterpolate(
-        trait.min,
-        trait.max,
-        seededValue(instanceSet.seed, slot, index, 0x74726169),
-      ),
-    ]),
-  );
-  const base = {
-    slot,
-    node:
-      explicit === undefined
-        ? `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`
-        : `instance:${instanceSet.id}:${explicit.id}`,
-    modelRecipe: prototype.modelRecipe,
-    position,
-    facingDeg: instanceSet.facingDeg,
-    scale,
-    palette:
-      explicit?.palette ??
-      (instanceSet.variation.palette[paletteIndex] as string),
-    traits: { ...traits, ...explicit?.traits },
-  };
-  const legacy =
-    instanceSet.prototypes === undefined &&
-    instanceSet.layout.kind !== "lattice" &&
-    instanceSet.layout.kind !== "explicit" &&
-    instanceSet.variation.scale3 === undefined &&
-    instanceSet.variation.rotationDeg === undefined &&
-    instanceSet.variation.visibleProbability === undefined;
-  if (legacy) return base;
-  const scale3 =
-    explicit?.scale ??
-    (instanceSet.variation.scale3 === undefined
-      ? { x: scale, y: scale, z: scale }
-      : {
-          x: stableInterpolate(
-            instanceSet.variation.scale3.min.x,
-            instanceSet.variation.scale3.max.x,
-            seededValue(instanceSet.seed, slot, 0x73637878),
-          ),
-          y: stableInterpolate(
-            instanceSet.variation.scale3.min.y,
-            instanceSet.variation.scale3.max.y,
-            seededValue(instanceSet.seed, slot, 0x73637979),
-          ),
-          z: stableInterpolate(
-            instanceSet.variation.scale3.min.z,
-            instanceSet.variation.scale3.max.z,
-            seededValue(instanceSet.seed, slot, 0x73637a7a),
-          ),
-        });
-  return {
-    ...base,
-    prototype: prototype.id,
-    rotation: Quaternion.normalize(
-      Quaternion.multiply(
-        Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, instanceSet.facingDeg),
-        explicit?.rotation ?? seededInstanceRotation(instanceSet, slot),
-      ),
-    ),
-    scale3,
-    visible:
-      explicit?.visible ??
-      (instanceSet.variation.visibleProbability === undefined ||
-        seededValue(instanceSet.seed, slot, 0x76697369) <
-          instanceSet.variation.visibleProbability),
-  };
-};
-
-const selectedInstancePrototype = (
-  instanceSet: IAutoMovieCompiledInstanceSet,
-  slot: number,
-  explicit?: string,
-): { id: string; modelRecipe: string; weight: number } => {
-  const choices = instanceSet.prototypes ?? [
-    { id: "default", modelRecipe: instanceSet.modelRecipe, weight: 1 },
-  ];
-  if (explicit !== undefined) {
-    const selected = choices.find((choice) => choice.id === explicit);
-    if (selected === undefined)
-      throw new Error(
-        `Instance set "${instanceSet.id}" slot ${slot} references missing prototype "${explicit}".`,
-      );
-    return selected;
-  }
-  // Every choice but the last is tested; the last one is what remains, which is
-  // both the weighted answer and the answer when a float residue leaves the
-  // sample a hair above the final weight. Testing it as well would add an arm
-  // only that residue could ever take.
-  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
-  let sample = seededValue(instanceSet.seed, slot, 0x70726f74) * total;
-  for (const choice of choices.slice(0, -1)) {
-    if (sample < choice.weight) return choice;
-    sample -= choice.weight;
-  }
-  return choices[choices.length - 1]!;
-};
-
-const seededInstanceRotation = (
-  instanceSet: IAutoMovieCompiledInstanceSet,
-  slot: number,
-) => {
-  const ranges = instanceSet.variation.rotationDeg;
-  return ranges === undefined
-    ? Quaternion.identity()
-    : Quaternion.fromEuler({
-        x: stableInterpolate(
-          ranges.x.min,
-          ranges.x.max,
-          seededValue(instanceSet.seed, slot, 0x726f7478),
-        ),
-        y: stableInterpolate(
-          ranges.y.min,
-          ranges.y.max,
-          seededValue(instanceSet.seed, slot, 0x726f7479),
-        ),
-        z: stableInterpolate(
-          ranges.z.min,
-          ranges.z.max,
-          seededValue(instanceSet.seed, slot, 0x726f747a),
-        ),
-        order: "XYZ",
-      });
-};
-
-const instancePoint = (
-  instanceSet: IAutoMovieCompiledInstanceSet,
-  slot: number,
-): { x: number; y: number; z: number } => {
-  const layout = instanceSet.layout;
-  if (layout.kind === "grid") {
-    const row = Math.floor(slot / layout.columns);
-    const column = slot % layout.columns;
-    return {
-      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
-      y: 0,
-      z: row * layout.spacing.z,
-    };
-  }
-  if (layout.kind === "scatter") {
-    const radius =
-      Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
-      layout.radius;
-    const angle = seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
-    return {
-      x: Math.cos(angle) * radius,
-      y: 0,
-      z: Math.sin(angle) * radius,
-    };
-  }
-  if (layout.kind === "lattice") {
-    const perLayer = layout.rows * layout.columns;
-    const layer = Math.floor(slot / perLayer);
-    const within = slot % perLayer;
-    const row = Math.floor(within / layout.columns);
-    const column = within % layout.columns;
-    return {
-      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
-      y: layer * layout.spacing.y,
-      z: row * layout.spacing.z,
-    };
-  }
-  if (layout.kind === "explicit") {
-    const transform = layout.transforms[slot];
-    if (transform === undefined)
-      throw new Error(
-        `Instance set "${instanceSet.id}" slot ${slot} has no explicit transform.`,
-      );
-    return transform.translation;
-  }
-  const route = instanceSet.route;
-  if (route === null || route.waypoints.length < 2)
-    throw new Error(
-      `Instance set "${instanceSet.id}" route "${layout.route}" is unavailable.`,
-    );
-  const segments = route.waypoints.slice(1).map((right, index) => {
-    const left = route.waypoints[index]!;
-    return {
-      left,
-      right,
-      length: Math.hypot(right.x - left.x, right.z - left.z),
-    };
-  });
-  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
-  let remaining = ((slot + 0.5) / instanceSet.count) * total;
-  // The final segment is what the walk ends on, so it is not tested: an
-  // arc-length below the total always lands inside it once every earlier
-  // segment has been spent, and only a float residue could put it past.
-  let segment = segments[segments.length - 1]!;
-  for (const candidate of segments.slice(0, -1)) {
-    if (remaining <= candidate.length) {
-      segment = candidate;
-      break;
-    }
-    remaining -= candidate.length;
-  }
-  // The chosen segment always has positive length. Every slot's arc-length is
-  // strictly above zero, an earlier segment is only taken when it covers that
-  // length, and the final one is only reached with what is left of a route the
-  // builder already refused to materialize at zero length.
-  const ratio = Math.min(1, remaining / segment.length);
-  const tangentX = segment.right.x - segment.left.x;
-  const tangentZ = segment.right.z - segment.left.z;
-  const tangentLength = segment.length;
-  const jitter =
-    (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
-    layout.lateralJitter;
-  return {
-    x: segment.left.x + tangentX * ratio - (tangentZ / tangentLength) * jitter,
-    y: 0,
-    z: segment.left.z + tangentZ * ratio + (tangentX / tangentLength) * jitter,
-  };
-};
+): IAutoMovieInstanceSlot => instanceSlot(instanceSet, slot);
 
 const instanceMatrix = (
   slot: IAutoMovieInstanceSlot,
@@ -715,20 +474,17 @@ const boundsRadius = (
  * One instance set's base heading in radians, to the last bit.
  *
  * Not `THREE.MathUtils.degToRad`. That multiplies by a rounded `PI / 180`,
- * while the builder divides by 180 after multiplying by `Math.PI`, and the two
- * disagree in the final ulp for a great many headings: a plain three-degree set
- * already puts a slot's compiled `position.z` and the viewer's regenerated one
- * on different doubles. The viewer regenerates a slot rather than reading one,
- * so the arithmetic has to be the builder's own, not merely equivalent.
+ * while the engine divides by 180 after multiplying by `Math.PI`, and the two
+ * disagree in the final ulp for a great many headings. A member of a set that
+ * declares no rotation carries no quaternion, so its batch matrix is turned by
+ * this heading, which has to be the one the engine placed the member with
+ * rather than a neighbouring double.
  */
 const instanceHeadingRadians = (facingDeg: number): number =>
   (facingDeg * Math.PI) / 180;
 
 const vector = (value: { x: number; y: number; z: number }): THREE.Vector3 =>
   new THREE.Vector3(value.x, value.y, value.z);
-
-const stableInterpolate = (from: number, to: number, ratio: number): number =>
-  from * (1 - ratio) + to * ratio;
 
 /**
  * Instance colors multiply the material's diffuse color in Three.js. General

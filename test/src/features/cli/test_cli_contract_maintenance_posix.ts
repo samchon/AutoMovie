@@ -15,7 +15,10 @@ import { contractMaintenanceFailure } from "../internal/contractMaintenanceHarne
  * 1. Linux and Darwin choose native no-replace/exchange effects, preserve BOM
  *    bytes and physical generations, and close each read and flush descriptor.
  * 2. Missing children are absent; other native failures, nonordinary children,
- *    multiple links, changed reads and invalid UTF-8 refuse before acceptance.
+ *    changed reads and invalid UTF-8 refuse before acceptance. A second
+ *    directory entry is admitted instead, because this boundary never truncates
+ *    a resident: its actual guarantees are the version pin and the no-replace
+ *    rename, not a link count.
  * 3. Unsupported platforms refuse while Windows dispatch uses its own HANDLE
  *    adapter, never Node's POSIX descriptor operations.
  */
@@ -50,7 +53,7 @@ export const test_cli_contract_maintenance_posix = (): void => {
           ino: 8n,
           size: 12n,
           mtimeNs: state.changed && reads > 1 ? 2n : 1n,
-          nlink: state.afterFault === "links" && reads > 1 ? 2n : state.links,
+          nlink: state.links,
           isDirectory: () => state.directory,
           isFile: () =>
             !(state.afterFault === "regular" && reads > 1) && state.regular,
@@ -135,18 +138,29 @@ export const test_cli_contract_maintenance_posix = (): void => {
         .every((event) => (Number(event[3]) & 0x20000) === 0x20000),
     );
   }
+  const linked = create("linux");
+  linked.state.links = 2n;
+  TestValidator.equals(
+    "a second directory entry is still an admitted maintenance child",
+    contractMaintenanceNativeForTesting
+      .create(linked.input)
+      .read(10, "candidate"),
+    {
+      identity: "7:8",
+      source: `${String.fromCharCode(0xfeff)}candidate`,
+      version: "7:8:12:1",
+    },
+  );
   for (const fault of [
     "missing",
     "open",
     "parent",
     "regular",
-    "links",
     "changed",
     "utf8",
     "rename",
     "flush",
     "after-regular",
-    "after-links",
   ] as const) {
     const model = create("linux");
     model.state.descriptor = ["missing", "open", "flush"].includes(fault)
@@ -155,7 +169,6 @@ export const test_cli_contract_maintenance_posix = (): void => {
     model.state.errno = fault === "missing" ? 2 : 13;
     model.state.directory = fault !== "parent";
     model.state.regular = fault !== "regular";
-    model.state.links = fault === "links" ? 2n : 1n;
     model.state.changed = fault === "changed";
     model.state.invalid = fault === "utf8";
     model.state.rename = fault === "rename" ? -1 : 0;

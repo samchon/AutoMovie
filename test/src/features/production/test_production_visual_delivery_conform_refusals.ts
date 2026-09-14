@@ -2,11 +2,11 @@ import type {
   AutoMovieContentDigest,
   IAutoMovieFilmTimeline,
 } from "@automovie/interface";
+import { productionVisualDeliveryOccurrence } from "@automovie/render";
 import {
   assembleProductionChunkVideoMp4,
   conformProductionVisualDeliveryVideoMp4,
-  productionVisualDeliveryOccurrence,
-} from "@automovie/production";
+} from "@automovie/render/node";
 import { TestValidator } from "@nestia/e2e";
 
 import {

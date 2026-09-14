@@ -15,6 +15,17 @@ export const createScaffoldSnapshotFileSystem = () => {
     pathDevice: 1n,
     links: 1n,
     symbolic: false,
+    /** Whether the pathname still names an entry at all. */
+    present: true,
+    /**
+     * The inode a second pathname keeps after this entry is unlinked.
+     *
+     * A replacement that detaches the name instead of rewriting the resident
+     * inode leaves these two readable, so a scenario can assert what the other
+     * pathname still sees rather than inferring it from an absent truncate.
+     */
+    peerBytes: undefined as Buffer | undefined,
+    peerIdentity: undefined as bigint | undefined,
     readFailure: undefined as unknown,
     closeFailure: undefined as unknown,
     beforeRead: undefined as (() => void) | undefined,
@@ -51,6 +62,8 @@ export const createScaffoldSnapshotFileSystem = () => {
     lstatSync: (target: string) => {
       if (target !== root && target !== file)
         throw Object.assign(new Error("absent"), { code: "ENOENT" });
+      if (target === file && !state.present)
+        throw Object.assign(new Error("absent"), { code: "ENOENT" });
       return status(
         target === root,
         target === root ? 20n : state.identity,
@@ -60,6 +73,8 @@ export const createScaffoldSnapshotFileSystem = () => {
     realpathSync: nativeRealPath,
     openSync: (target: string) => {
       if (target !== root && target !== file)
+        throw Object.assign(new Error("absent"), { code: "ENOENT" });
+      if (target === file && !state.present)
         throw Object.assign(new Error("absent"), { code: "ENOENT" });
       const descriptor = nextDescriptor++;
       if (target === file && state.advanceChangeTimeOnOpen) state.changeClock++;
@@ -122,6 +137,22 @@ export const createScaffoldSnapshotFileSystem = () => {
       position: number,
     ) => state.bytes.copy(target, offset, position, position + length),
     fsyncSync: () => {},
+    unlinkSync: (target: string) => {
+      if (target !== file || !state.present)
+        throw Object.assign(new Error("absent"), { code: "ENOENT" });
+      events.push("unlink");
+      state.present = false;
+      if (state.links > 1n) {
+        // One entry of several: the inode and its bytes outlive this name, and
+        // the remaining pathname is what a peer still reads.
+        state.peerBytes = Buffer.from(state.bytes);
+        state.peerIdentity = state.identity;
+        state.links -= 1n;
+        return;
+      }
+      state.peerBytes = undefined;
+      state.peerIdentity = undefined;
+    },
   };
   return {
     root,
@@ -129,6 +160,23 @@ export const createScaffoldSnapshotFileSystem = () => {
     state,
     events,
     openCount: () => descriptors.size,
+    /**
+     * Attach a new inode to the same pathname, as an exclusive create does.
+     *
+     * The published bytes and identity replace what the name resolves to while
+     * `state.peerBytes` keeps whatever an earlier unlink left behind, so a
+     * scenario can read both sides of one replacement.
+     */
+    createEntry: (bytes: Buffer, identity = state.identity + 1n) => {
+      if (state.present)
+        throw Object.assign(new Error("exists"), { code: "EEXIST" });
+      events.push("create");
+      state.present = true;
+      state.identity = identity;
+      state.bytes = Buffer.from(bytes);
+      state.links = 1n;
+      state.clock++;
+    },
     run: <T>(task: () => T): T =>
       scaffoldFileSnapshotForTesting.withFileSystem(
         io as unknown as typeof fs,

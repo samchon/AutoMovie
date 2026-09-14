@@ -32,13 +32,6 @@ export const test_cli_scaffold_file_snapshot_refusal = (): void => {
   }
   TestValidator.predicate("read cause is retained", observed === failure);
   TestValidator.equals("failed read closes all handles", failed.openCount(), 0);
-  const linked = createScaffoldSnapshotFileSystem();
-  linked.state.links = 2n;
-  TestValidator.predicate(
-    "multiply linked input refuses",
-    throwsError(() => linked.run(() => readScaffoldFileSnapshot(linked.file))),
-  );
-  TestValidator.equals("linked input is never opened", linked.openCount(), 0);
   for (const readFails of [false, true]) {
     const closing = createScaffoldSnapshotFileSystem();
     const closeFailure = new Error("injected close failure");

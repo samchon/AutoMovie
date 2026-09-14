@@ -7,26 +7,8 @@ import {
   AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION,
   inspectAutoMovieCaptionReadability,
 } from "@automovie/production";
+import { inspectAutoMovieCaptionReadabilityWithRuntime } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
-import path from "node:path";
-
-import { loadSourceModule } from "../internal/loadSourceModule";
-
-const readability = loadSourceModule<{
-  inspectAutoMovieCaptionReadabilityWithRuntime: (
-    timeline: IAutoMovieFilmTimeline,
-    profiles: readonly IAutoMovieCaptionReadabilityProfile[],
-    runtime: {
-      identity: IAutoMovieCaptionGraphemeSegmentationIdentity;
-      segment(value: string): Iterable<unknown>;
-    },
-  ) => ReturnType<typeof inspectAutoMovieCaptionReadability>;
-}>(
-  path.resolve(
-    __dirname,
-    "../../../../packages/production/src/production/captionReadability.ts",
-  ),
-);
 
 const identity: IAutoMovieCaptionGraphemeSegmentationIdentity = {
   algorithm: "fixture-segmenter",
@@ -164,7 +146,7 @@ export const test_production_caption_readability_identity = (): void => {
       endFrame: 9,
     },
   ];
-  const inclusive = readability.inspectAutoMovieCaptionReadabilityWithRuntime(
+  const inclusive = inspectAutoMovieCaptionReadabilityWithRuntime(
     timeline(cues),
     [profile(identity, true)],
     runtime(identity),
@@ -182,18 +164,17 @@ export const test_production_caption_readability_identity = (): void => {
     ],
   );
 
-  const malformedLanguage =
-    readability.inspectAutoMovieCaptionReadabilityWithRuntime(
-      timeline(
-        cues.map((cue, index) => ({
-          ...cue,
-          id: `malformed-${index}`,
-          language: "en-12",
-        })),
-      ),
-      [{ ...profile(identity, true), language: "en-12" }],
-      runtime(identity),
-    );
+  const malformedLanguage = inspectAutoMovieCaptionReadabilityWithRuntime(
+    timeline(
+      cues.map((cue, index) => ({
+        ...cue,
+        id: `malformed-${index}`,
+        language: "en-12",
+      })),
+    ),
+    [{ ...profile(identity, true), language: "en-12" }],
+    runtime(identity),
+  );
   TestValidator.equals(
     "malformed languages never become a profile or gap identity",
     malformedLanguage.cues.map((cue) => ({
@@ -220,7 +201,7 @@ export const test_production_caption_readability_identity = (): void => {
     ],
   );
 
-  const exclusive = readability.inspectAutoMovieCaptionReadabilityWithRuntime(
+  const exclusive = inspectAutoMovieCaptionReadabilityWithRuntime(
     timeline(cues),
     [profile(identity, false)],
     runtime(identity),
@@ -269,7 +250,7 @@ export const test_production_caption_readability_identity = (): void => {
     "every complete identity mismatch is unsupported without fallback",
     mismatches.map(
       (requested) =>
-        readability.inspectAutoMovieCaptionReadabilityWithRuntime(
+        inspectAutoMovieCaptionReadabilityWithRuntime(
           timeline(cues.slice(0, 1)),
           [profile(requested, true)],
           runtime(identity),
@@ -288,12 +269,11 @@ export const test_production_caption_readability_identity = (): void => {
     granularity: "grapheme",
     locale: { kind: "locale-neutral" },
   };
-  const neutralOutcome =
-    readability.inspectAutoMovieCaptionReadabilityWithRuntime(
-      timeline(cues.slice(0, 1)),
-      [profile(neutralIdentity, true)],
-      runtime(neutralIdentity),
-    ).cues[0]!.outcome;
+  const neutralOutcome = inspectAutoMovieCaptionReadabilityWithRuntime(
+    timeline(cues.slice(0, 1)),
+    [profile(neutralIdentity, true)],
+    runtime(neutralIdentity),
+  ).cues[0]!.outcome;
   TestValidator.equals(
     "an exact locale-neutral runtime evaluates as its own identity",
     neutralOutcome.status,
@@ -306,7 +286,7 @@ export const test_production_caption_readability_identity = (): void => {
   } as unknown as IAutoMovieCaptionReadabilityProfile;
   TestValidator.equals(
     "a version-1 two-field identity is not reinterpreted as complete",
-    readability.inspectAutoMovieCaptionReadabilityWithRuntime(
+    inspectAutoMovieCaptionReadabilityWithRuntime(
       timeline(cues.slice(0, 1)),
       [oldProfile],
       runtime(identity),

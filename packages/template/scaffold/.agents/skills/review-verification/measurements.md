@@ -30,6 +30,12 @@ Read the final census together with the findings. It counts models, parts, parts
 
 A contradictory normalized binding is an error and makes the command fail. A surface too small to show one whole `surface-metres` tile is a warning because fitting one image to one face can be deliberate. Resolve the authored intent rather than converting every warning into a refusal.
 
+## Geometry questions
+
+Write an ordinary project script when a review needs a measured distance, an actor's reach to a target, the ground under a point, a formation's extent and ground contact in a shot, an effect's density along the camera's view, the film-global frame a time names, an actor's pose, or where subjects' roots project in a shot's camera. Load the project with `loadAutoMovieProjectState`, require it current with `requireCurrentAutoMovieProjectState`, and pass `state.design`, `state.generated.shots` and `state.generated.film` to `measureAutoMovieGeometry` from `@automovie/engine`. The query reads nothing else, which is why the currentness check comes first; a question the records cannot answer throws a message naming the selector, time or record at fault.
+
+Read each answer as the measurement it is. A formation's ground violations count only its representative members, the first, middle and last slot of each chunk, placed from the compiled record on its terrain snapshot. A camera answer projects subject roots and does not measure occlusion. An effect's visibility risk is its density along the camera's central ray, not a rendered frame. None of these is a review verdict; state what was measured in the review that asked.
+
 ## Gate use
 
 Run only the measurements the active design branches and delivery actually call for. The commands contribute falsifying observations to a space, material, model, instance, or system review set; their existence and exit code satisfy no principle, obligation, discovery duty, or evidence citation by themselves. After a source, design, binding, study input, or compile fingerprint changes, regenerate the current state and repeat every affected measurement before renewing that review. [Capture](capture.md) owns rendered artifact and frame identity checks.

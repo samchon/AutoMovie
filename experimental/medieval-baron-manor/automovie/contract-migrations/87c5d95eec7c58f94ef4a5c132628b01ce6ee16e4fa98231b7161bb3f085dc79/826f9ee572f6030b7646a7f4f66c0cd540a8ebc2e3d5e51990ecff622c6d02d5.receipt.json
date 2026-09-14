@@ -1,0 +1,30 @@
+{
+  "actions": [
+    {
+      "action": "write",
+      "afterSha256": "sha256:03942b9edab48a4bdaadbf722e958c2c0f849cd57f676a1c0382614e1db3b6af",
+      "beforeSha256": "sha256:f78529f511decd2469443d3fb66c9619b02b19859079d8b95f82de17135d80da",
+      "from": null,
+      "path": "docs/upstream/design/material-sources.md",
+      "status": "published"
+    }
+  ],
+  "from": {
+    "identity": "sha256:ef7a1b14caed1f3e8dfd6792ff6322534cbd67c5239e9073275730a5ca77b8c7",
+    "version": "0.1.2"
+  },
+  "language": "korean",
+  "observedInputDigest": "sha256:7edc4244bd6c5a2896e6bc6cf1cedff5074fbe4722af066e9a0d158c009523bf",
+  "planDigest": "sha256:87c5d95eec7c58f94ef4a5c132628b01ce6ee16e4fa98231b7161bb3f085dc79",
+  "protocol": "automovie.contract-migration-receipt.v1",
+  "publicationGeneration": "87c5d95eec7c58f94ef4a5c132628b01ce6ee16e4fa98231b7161bb3f085dc79",
+  "to": {
+    "identity": "sha256:d7d2269a4db249dd4a7cf6abd25e5995714d4472eb86b16150f5787e584de533",
+    "version": "0.1.3"
+  },
+  "validation": {
+    "status": "completed",
+    "targetBaselineIdentity": "sha256:d7d2269a4db249dd4a7cf6abd25e5995714d4472eb86b16150f5787e584de533"
+  },
+  "version": 1
+}

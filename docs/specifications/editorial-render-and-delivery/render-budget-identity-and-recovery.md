@@ -38,6 +38,8 @@ Raster admission은 declared width와 height의 exact pixel product를 overflow 
 
 Frame input identity는 production·compiled·edit revision, global sample time와 number, camera·view, pass, dimensions, shutter schedule, renderer·runtime profile, settings와 model·texture·font·media·color-transform 등 모든 external dependency digest를 canonical serialization으로 묶는다. Property와 collection ordering, relative path, rational, finite scalar, string과 absent value의 표현을 고정하며 mutable alias나 remote current를 digest 없이 허용하지 않는다.
 
+Structured identity의 canonical serialization은 `automovie.canonical-json.v2` 하나다. Identity bytes는 lone surrogate를 포함하지 않는 canonical text의 UTF-8 encoding이고 fingerprint는 그 bytes의 SHA-256이다. Node builder, capture와 browser viewer는 같은 input에서 같은 bytes와 digest를 계산하며, browser에서 수행하는 identity 검증도 host-specific module 없이 같은 digest를 낸다. 실행 환경에 따라 다른 stringify, Unicode 처리, encoding 또는 hash를 쓰는 것은 대체 구현이 아니라 새 protocol revision이다.
+
 Input fingerprint, canonical pixel·channel content digest와 encoded file byte digest는 서로 다른 사실이다. Human-readable production·time·view suffix에는 collision-resistant fingerprint를 결합하되 filename을 truth로 사용하지 않는다. Current 판정은 expected fingerprint, receipt, actual bytes와 dependency closure의 일치를 모두 요구하고 source, edit, runtime, pass 또는 setting 변경을 relation에 따라 stale로 만든다.
 
 같은 identity에 다른 content가 연결되거나 다른 identity가 같은 final destination을 요구하면 publication을 멈춘다. Corrupt entry와 partial bytes는 격리할 수 있지만 이름이나 크기로 복구하지 않는다. Canonicalization failure, missing digest, unsafe path, numeric unsupported value와 receipt-byte mismatch는 해당 frame을 거절하고 independent valid cache만 보존한다.
@@ -46,7 +48,7 @@ Input fingerprint, canonical pixel·channel content digest와 encoded file byte 
 
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Target-local fingerprint가 versioned canonical field encoding을 사용하게 한다. -->
 
-Target fingerprint protocol은 canonical field ordering과 encoding revision을 identity input에 포함한다. Protocol revision 없이 serialization meaning을 바꾸거나 human-readable suffix를 fingerprint로 대신하지 않는다.
+Target fingerprint protocol은 canonical field ordering과 encoding revision을 identity input에 포함한다. Protocol revision 없이 serialization meaning을 바꾸거나 human-readable suffix를 fingerprint로 대신하지 않는다. Protocol revision은 field ordering, text encoding과 hash algorithm을 함께 고정하므로 같은 input에서 두 실행 환경이 서로 다른 bytes나 digest를 만들 수 없다.
 
 ### Target dependency fingerprint {#spec-render-target-dependency-fingerprint}
 

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "units": [
+    {
+      "anchor": "manor-space",
+      "sources": [
+        "src/spaces/manor.ts"
+      ],
+      "observations": [
+        {
+          "id": "whole-manor-context",
+          "evidence": "artifact"
+        }
+      ],
+      "receipts": []
+    }
+  ]
+}

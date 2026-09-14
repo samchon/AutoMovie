@@ -44,6 +44,7 @@
     "automovie": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/human": "{{version:human}}",
+    "@automovie/ingest": "{{version:ingest}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/production": "{{version:production}}",
     "@automovie/render": "{{version:render}}",

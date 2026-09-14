@@ -8,9 +8,7 @@ import {
 } from "@automovie/interface";
 import {
   AUTOMOVIE_SEMANTIC_MASK_MEDIA_TYPE,
-  IAutoMovieProductionRenderChunk,
   IAutoMovieProductionRenderChunkReceipt,
-  IAutoMovieProductionRenderJobPlan,
   IAutoMovieProductionSemanticMaskEvidence,
   IAutoMovieProductionSemanticMaskReceipt,
   assertAutoMovieProductionDeliverableSemanticMask,
@@ -24,6 +22,10 @@ import {
   verifyAutoMovieProductionSemanticMaskReceipt,
   verifyProductionRenderChunkReceipt,
 } from "@automovie/production";
+import type {
+  IAutoMovieProductionRenderChunk,
+  IAutoMovieProductionRenderJobPlan,
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 

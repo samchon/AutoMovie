@@ -6,3 +6,6 @@ export * from "./softFurnishing";
 export * from "./planting";
 export * from "./validatePlantingDomain";
 export * from "./plantingInstallation";
+export * from "./productionSoftBodyUsesMovingBoundary";
+export * from "./readProductionLiveWearableSoftBodies";
+export * from "./selectProductionLiveWearableSoftBodies";

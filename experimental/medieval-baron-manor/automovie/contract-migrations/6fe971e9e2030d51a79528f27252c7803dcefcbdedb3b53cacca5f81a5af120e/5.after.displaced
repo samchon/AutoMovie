@@ -1,0 +1,51 @@
+# 저택 공간의 설계 책임
+
+## 공간 결정의 주소 {#addressable-spatial-decisions}
+<!--
+@evidence obligations/design/spaces.md#addressable-spatial-decisions 현재 활성 환경의 공간 결정을 manor-space 한 주소에 모으고 실제 방·개구부·물품의 source 식별자를 유지한다.
+@evidenceReview obligations/design/spaces.md#addressable-spatial-decisions #9c97153 이 납품의 활성 공간 source는 전체 본채 한 환경을 내보내며 본문은 그 환경의 층·방·연결·배치를 함께 결정한다. 방은 별도 건물이나 숨은 공간 소유자로 나뉘지 않고 안정된 source ID로 식별된다. 새로 독립 저작할 공간을 이 주소에 이름만 추가하는 경우는 같은 판단을 상속할 수 없다.
+@evidence spaces/001-manor.md#manor-space 단일 고정 본채의 전체 공간 배치와 source 소유를 한 H2에서 결정한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 첫 문단과 등록 소유자 문단이 전체 환경을 지정하고 뒤의 네 구간이 같은 환경의 층·실·물품을 전개한다. 설정의 방 이름만 빌려 별도 공간 설계가 있는 것으로 주장하지 않는다.
+-->
+
+현재 선택은 [manor-space](../../spaces/001-manor.md#manor-space) 하나이며 한 source가 전체 본채를 실현한다. 방·개구부·계단·배치의 식별자는 같은 환경에서 유지한다. 독립 공간 소유자가 생기면 이 전체 환경 주소만으로 그 저술을 완료라고 할 수 없다.
+
+## 좌표와 연결 그래프 {#space-reference-topology}
+<!--
+@evidence obligations/design/spaces.md#space-reference-topology 같은 세계 좌표계의 지면·두 층·각 방과 회랑·계단·복도 사이 포함과 직접 연결을 비교한다.
+@evidenceReview obligations/design/spaces.md#space-reference-topology #5053f99 1층 세 회랑과 중앙 현관, 북쪽에서 동쪽으로 꺾이는 계단, 상층 일자 복도 및 각 방의 직접 문이 한 본채 안에서 이어진다. 위층의 다른 침실을 경유하거나 정원을 방 union으로 메우는 연결은 본문의 명시된 구성과 충돌한다.
+@evidence spaces/001-manor.md#manor-space 층별 방 ID와 개구부·surface·connector를 같은 실제 모델 원천에서 등록한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 지상 마감 0.45·중간참 1.89·상층 마감 3.33이 한 계단으로 이어지며 master·두 child·washroom·storage는 일자 복도에 직접 문을 둔다. 좌표의 근거는 coordinate-datum이고 방마다 원점을 새로 추정하지 않는다.
+-->
+
+세계 좌표와 두 층의 기준면을 공유한다. 지상층 필수실은 같은 회랑 또는 현관에, 상층 필수실은 같은 일자 복도에 직접 연결한다. 이름·경계·개구부를 같은 모델 원천에서 등록하여 서로 다른 건물의 연결을 섞지 않는다.
+
+## 외피와 실내의 접점 {#space-envelope-interface}
+<!--
+@evidence obligations/design/spaces.md#space-envelope-interface 본채 외벽·지붕·층·내부 방과 개구부가 같은 형상에서 나온다는 관계를 전체 공간에서 비교한다.
+@evidenceReview obligations/design/spaces.md#space-envelope-interface #4b397de source의 wall segment와 opening을 공간 경계로 쓰므로 외관의 창과 실내의 창을 별개 건물로 꾸밀 수 없다. 중정·계단 개방부를 메우지 않는 문장과 전체 외피를 보는 관찰이 안팎 불일치의 직접 반례를 남긴다. 보이지 않는 접합의 수치 증명은 이 납품의 추가 조건이 아니다.
+@evidence spaces/001-manor.md#manor-space 외벽·내벽·창·문·지붕을 하나의 실제 본채 형상으로 표현한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 공간 carrier가 실제 모델·배치의 파생 형상을 받고 별도 축약 상자로 대체하지 않는다는 결정은 안팎 원천을 일치시킨다. 절개로 층을 설명하면서 정상 외관도 함께 보는 범위가 한쪽만 남긴 표현을 검출한다.
+-->
+
+외피와 실내는 같은 원천 벽과 개구부를 사용한다. 정상 외관과 층별 관찰에서 한 본채의 지붕·벽·창·층 구성이 읽히는지 판단하며 실건물 접합·지지의 수치 인증으로 확대하지 않는다.
+
+## 관찰 공간과 접근의 경계 {#space-access-circulation}
+<!--
+@evidence obligations/design/spaces.md#space-access-circulation 현재 납품이 요구하는 관찰 카메라의 시점과 자유 이동을 실제 인체 통행 요구와 구별하여 적용한다.
+@evidenceReview obligations/design/spaces.md#space-access-circulation #5aabbab 적용할 사람이 통과하는 폭·운반·작업 profile은 delivery-scope에서 비요구다. 남는 공간 책임은 고정 문·회랑·계단 구성과 운영자의 실제 3D 관찰이며, 외관·정원과 관찰 구간의 선정 원칙 문단은 가려진 물품에 선언 상태·근접 시점을 사용한다고 정한다. 자유 카메라를 실건물의 장애물 없는 사람 경로로 해석하지 않는다.
+@evidence spaces/001-manor.md#manor-space 현재 활성 공간을 읽을 시점과 선언 상태를 정하며 물리 시험용 경로를 촬영 의무로 삼지 않는다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 외관·정원과 관찰 구간의 선정 원칙 문단은 실제 배치에서 물품이 가려졌을 때 상태·시점을 바꾸도록 하고 route·working-clear 뷰의 자동 의무를 거부한다. 이 경계는 방과 물품 자체를 생략하는 허용이 아니며 관찰하지 않은 대상을 완료라고 하지 않는다.
+-->
+
+시각적 납품에서 필요한 접근은 현재 공간·물품을 볼 수 있는 운영자의 관찰이다. 고정된 문·회랑·복도·계단의 구성을 보존하고 가려진 대상에는 다른 시점이나 선언 상태를 사용한다. 사람의 통행·유효 치수·작업 여유를 검사하는 납품은 요구되지 않는다.
+
+## 공간 관찰의 구성 {#space-review-set}
+<!--
+@evidence obligations/design/spaces.md#space-review-set 현재 3D의 외관·층·방·물품을 읽는 관찰을 평면·절개·투시와 실제 배치의 필요한 역할로 구별한다.
+@evidenceReview obligations/design/spaces.md#space-review-set #a5185f5 공간 본문은 정상 외관과 절개, 모든 방 및 실제 물품·재료를 읽을 시점을 요구한다. 근접과 상태 변경은 가림을 해결할 때 추가되며 기술 메뉴의 전체 수나 사용성 경로를 관찰 충분성으로 삼지 않는다. 현재 캡처 전에는 그 계획의 실행을 완료라고 하지 않는다.
+@evidence spaces/001-manor.md#manor-space 원본 다섯 장의 외피·절개·정원·홀·사적층 관계를 현재 시각 관찰에 연결한다.
+@evidenceReview spaces/001-manor.md#manor-space #3c2441e 외관·정원 문단과 각 층의 방·물품 배치가 관찰할 실제 대상을 남긴다. 외관·정원과 관찰 구간의 선정 원칙 문단은 정상 외관을 유지하고 현재 렌더의 직접 열람을 요구하므로 오래된 진단 사진이나 존재하는 뷰 이름만으로 그 대상을 본 것으로 처리하지 않는다.
+-->
+
+관찰 집합은 실제 활성 소유자와 원본 다섯 장의 시각 질문에서 정한다. 외관·층별 구성·모든 방과 물품·재료를 현재 렌더로 읽으며, 필요할 때 절개·근접·선언 상태를 사용한다. 물리 시험용 왕복 경로와 모든 UI 항목을 추가 완료 분모로 삼지 않는다.

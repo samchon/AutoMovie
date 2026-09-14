@@ -456,7 +456,6 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary No generator, seed, platform-dependent codec, or network operation is invoked.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-freshness-diff Staleness comparison belongs to the production revision store.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection No raster or video input is accepted by this API.
- * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection No audio input is accepted by this API.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Consumes normalized take, node, time, interpolation, and channel facts.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-spatial-data-inspection No map, survey, raster, or vector spatial data is accepted.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection No text document or instruction-bearing metadata is interpreted.

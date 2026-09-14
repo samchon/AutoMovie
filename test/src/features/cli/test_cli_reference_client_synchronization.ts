@@ -13,6 +13,14 @@ import {
   failContractMaintenanceEvent,
 } from "../internal/contractMaintenanceHarness";
 
+/** Count the maintenance journals a run actually opened. */
+const journals = (
+  harness: ReturnType<typeof createContractMaintenanceHarness>,
+): number =>
+  harness.events.filter(
+    (event) => event.operation === "begin" && event.moment === "before",
+  ).length;
+
 const fixture = (sources: Record<string, string> = {}) => {
   const harness = createContractMaintenanceHarness(sources);
   const root = {
@@ -94,7 +102,11 @@ const fixture = (sources: Record<string, string> = {}) => {
   };
 };
 
-/** Both local clients preserve user settings and use one physical, private publication. */
+/**
+ * Both local clients preserve user settings and use one physical, private
+ * publication, and a registration this toolchain wrote under another Node
+ * install is republished rather than refused.
+ */
 export const test_cli_reference_client_synchronization = (): void => {
   verifyRefusals();
   const input = {
@@ -153,6 +165,63 @@ export const test_cli_reference_client_synchronization = (): void => {
     writes,
   );
   TestValidator.equals("retry still freshly admitted", state.assertions(), 2);
+  verifyExecutableChange(input);
+};
+
+/**
+ * The Node install that wrote a registration is not the one that may sync it.
+ *
+ * Two Node installs on one machine, a Node upgrade, or a different host each
+ * make the recorded launch command differ from `process.execPath`. Ownership
+ * rests on the installed-bin/root binding instead, so synchronization
+ * republishes both entries and reaches instruction publication.
+ */
+const verifyExecutableChange = (input: Record<string, string>): void => {
+  const foreign = path.resolve("foreign", "node.exe");
+  const prior = planAutoMovieReferenceClientConfiguration({
+    root: path.resolve("reference-project"),
+    nodeExecutable: foreign,
+    claude: input[".mcp.json"],
+    codex: input[".codex/config.toml"],
+  });
+  const upgraded = fixture({
+    ".mcp.json": prior.claude.content,
+    ".codex/config.toml": prior.codex.content,
+  });
+  TestValidator.equals(
+    "a registration from another Node install republishes",
+    synchronizeAutoMovieReferenceClients(upgraded.root, upgraded.io),
+    [".mcp.json", ".codex/config.toml"],
+  );
+  const published = planAutoMovieReferenceClientConfiguration({
+    root: upgraded.root.path,
+    nodeExecutable: upgraded.io.nodeExecutable,
+    claude: prior.claude.content,
+    codex: prior.codex.content,
+  });
+  TestValidator.equals(
+    "the republished Claude entry binds this executable",
+    upgraded.harness.read(".mcp.json")!.source,
+    published.claude.content,
+  );
+  TestValidator.equals(
+    "the republished Codex block binds this executable",
+    upgraded.harness.read(".codex/config.toml")!.source,
+    published.codex.content,
+  );
+  // Taken from the contract rather than from the planner's own output: the
+  // entry records the executable this run would launch the installed bin with.
+  TestValidator.equals(
+    "the republished Claude entry records the running executable",
+    JSON.parse(upgraded.harness.read(".mcp.json")!.source).mcpServers
+      .automovie_reference.command,
+    upgraded.io.nodeExecutable,
+  );
+  TestValidator.predicate(
+    "neither republished file still names the foreign executable",
+    !upgraded.harness.read(".mcp.json")!.source.includes(foreign) &&
+      !upgraded.harness.read(".codex/config.toml")!.source.includes(foreign),
+  );
 };
 
 /** Refusals leave unrelated settings and competing maintenance untouched. */
@@ -172,6 +241,37 @@ const verifyRefusals = (): void => {
     "conflict causes no changes",
     [...conflict.harness.files.entries()],
     before,
+  );
+  // Ownership is judged while planning, which happens before any journal opens.
+  // A refusal that had already opened one would leave a pending marker behind
+  // and convert this recoverable conflict into a permanent interrupted-attempt
+  // refusal on every later run: the same permanent failure, relocated.
+  const edited = fixture({
+    ".mcp.json": JSON.stringify({
+      mcpServers: {
+        automovie_reference: {
+          type: "stdio",
+          command: path.resolve("node.exe"),
+          args: ["user.js", "--root", path.resolve("reference-project")],
+        },
+      },
+    }),
+  });
+  TestValidator.predicate(
+    "an entry bound to another bin refuses despite a valid executable",
+    contractMaintenanceFailure(() =>
+      synchronizeAutoMovieReferenceClients(edited.root, edited.io),
+    ) instanceof Error,
+  );
+  TestValidator.equals(
+    "an ownership refusal opens no journal",
+    journals(edited.harness),
+    0,
+  );
+  TestValidator.equals(
+    "an ownership refusal stages nothing",
+    [...edited.harness.files.keys()],
+    [".mcp.json"],
   );
   const pending = fixture({
     "automovie/contract-maintenance.pending.json": "pending-contract",
@@ -214,6 +314,14 @@ const verifyRefusals = (): void => {
     ) instanceof Error,
   );
   TestValidator.predicate("requested fault reached", fired());
+  // The twin for the refusal above: a failure reached after preparation does
+  // open a journal, so counting them distinguishes the two rather than
+  // reporting zero for every outcome.
+  TestValidator.equals(
+    "a failure after preparation did open one",
+    journals(failed.harness),
+    1,
+  );
   TestValidator.equals(
     "failed new target remains absent",
     failed.harness.read(".mcp.json"),
