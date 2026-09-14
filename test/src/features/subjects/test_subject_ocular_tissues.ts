@@ -1,10 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitOcularTissueBoundary,
   createPortraitOcularTissues,
-} from "../../subjects/generated-korean-girl-01/ocularTissues";
-import { portraitPoint } from "../../subjects/geometry";
+} from "@automovie/human/components/ocularTissues";
+import { portraitPoint } from "@automovie/human/geometry/geometry";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose } from "../internal/predicates";
 
 /**

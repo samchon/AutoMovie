@@ -1,3 +1,8 @@
+import { buildPortraitHead } from "@automovie/human/components/head";
+import {
+  portraitDocument,
+  portraitGltfExtensions,
+} from "@automovie/human/geometry/portraitDocument";
 import { NodeIO } from "@gltf-transform/core";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
@@ -6,12 +11,7 @@ import { chromium } from "playwright";
 
 import { portraitAssembly } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../src/subjects/generated-korean-girl-01/head";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
-import {
-  portraitDocument,
-  portraitGltfExtensions,
-} from "../../src/subjects/portraitDocument";
 import { withPortraitCapture } from "./capture-diagnostic";
 
 // This is a labelled projection diagnostic over existing images, not another

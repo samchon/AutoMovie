@@ -1,11 +1,5 @@
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  measuredPortraitAssembly,
-  portraitComponentsFor,
-  portraitEyeShape,
-  portraitNoseShape,
-} from "../../subjects/generated-korean-girl-01/configuration";
 import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/model";
 
 /**
@@ -13,26 +7,20 @@ import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/
  * This is a buffer/assembly test, not a likeness judgment.
  *
  * Scenarios:
- * 1. Construct a coarse preview through every anatomical builder, including the
- *    cheek, nasal, orbital and perioral supports plus the rough hair proxy; confirm
- *    static generated identity and complete material bindings.
+ * 1. Compose an unrefined host, ears and rough hair proxy; confirm static
+ *    generated identity and complete material bindings. Anatomical components
+ *    and refined-skin supports have their own attachment scenarios; this unit
+ *    owns only model assembly, buffer layout and the metre boundary.
  * 2. Every mesh has aligned finite positions/normals, integral resident triangle
  *    indices and no skeletal data. The metre-scale bounds reject unit mistakes.
  */
 export const test_subject_portrait_model = (): void => {
-  const eye = {
-    ...portraitEyeShape,
-    browFibres: 6,
-    upperLashes: 3,
-    sampling: { eyeColumns: 12, eyeRows: 6, irisColumns: 16, irisRows: 4 },
-  };
   const model = buildReferencePortrait({
     hairProxy: true,
-    components: portraitComponentsFor(eye, eye, portraitNoseShape),
+    components: [],
     // This scenario owns complete part/material wiring and units. Refinement
     // and refined contact are covered by their smaller mechanism scenarios.
     subdivisionRounds: 0,
-    surfaceLayers: measuredPortraitAssembly.surfaceLayers,
   });
   TestValidator.equals(
     "static generated model",

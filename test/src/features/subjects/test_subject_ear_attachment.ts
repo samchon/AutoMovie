@@ -1,10 +1,10 @@
-import type { IAutoMovieMesh } from "@automovie/interface";
-import { TestValidator } from "@nestia/e2e";
-
 import {
   buildPortraitEars,
   portraitEarShape,
-} from "../../subjects/generated-korean-girl-01/ears";
+} from "@automovie/human/components/ears";
+import type { IAutoMovieMesh } from "@automovie/interface";
+import { TestValidator } from "@nestia/e2e";
+
 import { throwsError } from "../internal/predicates";
 
 /**

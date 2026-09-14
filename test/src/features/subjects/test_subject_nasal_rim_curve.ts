@@ -1,14 +1,14 @@
+import {
+  type IPortraitNoseShape,
+  createPortraitNoseComponent,
+} from "@automovie/human/components/nose";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   portraitNoseShape,
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import {
-  type IPortraitNoseShape,
-  createPortraitNoseComponent,
-} from "../../subjects/generated-korean-girl-01/nose";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { throwsError } from "../internal/predicates";
 
 /**

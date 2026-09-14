@@ -1,3 +1,9 @@
+import { portraitLipTriangles } from "@automovie/human/components/mouth";
+import {
+  appendPortraitNostrils,
+  portraitNoseDepth,
+  portraitNostrilContains,
+} from "@automovie/human/components/nose";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,12 +11,6 @@ import {
   portraitNoseShape,
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import { portraitLipTriangles } from "../../subjects/generated-korean-girl-01/mouth";
-import {
-  appendPortraitNostrils,
-  portraitNoseDepth,
-  portraitNostrilContains,
-} from "../../subjects/generated-korean-girl-01/nose";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

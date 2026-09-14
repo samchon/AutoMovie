@@ -1,10 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   attachPortraitDentalRow,
   buildPortraitDentalRow,
-} from "../../subjects/generated-korean-girl-01/dentalRow";
-import { portraitPoint as p } from "../../subjects/geometry";
+} from "@automovie/human/components/dentalRow";
+import { portraitPoint as p } from "@automovie/human/geometry/geometry";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

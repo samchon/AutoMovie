@@ -1,3 +1,8 @@
+import {
+  appendPortraitNostrils,
+  createPortraitNoseComponent,
+  portraitCutBoundary,
+} from "@automovie/human/components/nose";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,11 +10,6 @@ import {
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import {
-  appendPortraitNostrils,
-  createPortraitNoseComponent,
-  portraitCutBoundary,
-} from "../../subjects/generated-korean-girl-01/nose";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

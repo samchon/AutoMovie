@@ -1,10 +1,10 @@
 import { validateMeshTopology } from "@automovie/engine";
-import { TestValidator } from "@nestia/e2e";
-
 import {
   assertPortraitDentalCrown,
   buildPortraitDentalCrown,
-} from "../../subjects/generated-korean-girl-01/dentalCrown";
+} from "@automovie/human/components/dentalCrown";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

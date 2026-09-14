@@ -1,6 +1,6 @@
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { throwsError } from "../internal/predicates";
 
 /**

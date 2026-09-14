@@ -1,6 +1,6 @@
+import { createPortraitLipSection } from "@automovie/human/components/lipSection";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitLipSection } from "../../subjects/generated-korean-girl-01/lipSection";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

@@ -1,11 +1,11 @@
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
+import { applyPortraitFinalSurfaces } from "@automovie/human/geometry/portraitFinalSurface";
+import { applyPortraitRegionReplacements } from "@automovie/human/geometry/portraitRegionReplacement";
+import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
-import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
-import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
 import { createPortraitMeshPatchComponent } from "../../subjects/portraitMeshPatch";
-import { applyPortraitRegionReplacements } from "../../subjects/portraitRegionReplacement";
-import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

@@ -1,6 +1,6 @@
 # Direct face web workbench
 
-This test utility displays the actual named meshes in an exported `model.json`. It has no model editor or dependency on `@automovie/face`. It accepts static, untransformed mesh parts from the current direct study. A future geometry producer can reuse the inspection controls by supplying the same export contract.
+This test utility displays the actual named meshes in an exported `model.json`. It has no model editor. It accepts static, untransformed mesh parts from the current direct study. The human numerical editor lives in `packages/playground/face.html`; other geometry producers can reuse this inspection utility by supplying the same export contract.
 
 From the repository root:
 

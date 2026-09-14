@@ -1,6 +1,6 @@
+import { portraitCutBoundary } from "@automovie/human/components/nose";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitCutBoundary } from "../../subjects/generated-korean-girl-01/nose";
 import { throwsError } from "../internal/predicates";
 
 /**

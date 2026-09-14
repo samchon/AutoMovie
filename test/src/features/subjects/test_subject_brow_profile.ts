@@ -1,15 +1,16 @@
-import { TestValidator } from "@nestia/e2e";
-
-import {
-  portraitComponentsFor,
-  portraitEyeShape,
-  portraitNoseShape,
-} from "../../subjects/generated-korean-girl-01/configuration";
 import {
   assertPortraitEyebrowProfile,
   portraitEyebrowProfile,
-} from "../../subjects/generated-korean-girl-01/eyebrows";
-import { buildReferencePortrait } from "../../subjects/generated-korean-girl-01/model";
+} from "@automovie/human/components/eyebrows";
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
+import { buildPortraitHead } from "@automovie/human/components/head";
+import { TestValidator } from "@nestia/e2e";
+
+import {
+  portraitEyeShape,
+  portraitEyeSockets,
+} from "../../subjects/generated-korean-girl-01/configuration";
+import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
 import { throwsError } from "../internal/predicates";
 
 /**
@@ -68,18 +69,28 @@ export const test_subject_brow_profile = (): void => {
   );
   const eye = {
     ...portraitEyeShape,
-    browProfile: { ...profile },
+    browProfile: {
+      ...profile,
+      rootBand: [0.1, 0.22] as [number, number],
+      endFade: [0.1, 0.2] as [number, number],
+      flow: {
+        sections: [0, 1].map((at) => ({
+          at,
+          lower: { tip: 0.6, outwardBend: 1 },
+          upper: { tip: 0.4, outwardBend: 1 },
+        })),
+      },
+    },
     browFibres: 0,
     upperLashes: 1,
     sampling: { eyeColumns: 4, eyeRows: 2, irisColumns: 8, irisRows: 2 },
   };
-  const components = portraitComponentsFor(eye, eye, portraitNoseShape);
+  const component = createPortraitEyeComponent(portraitEyeSockets[0], eye);
   eye.browProfile.radius = -1;
-  const model = buildReferencePortrait({ components, subdivisionRounds: 0 });
-  TestValidator.predicate(
-    "hair proxy is opt-in",
-    !model.parts.some((part) => part.material === "hair"),
-  );
+  eye.browProfile.rootBand[0] = -1;
+  eye.browProfile.endFade[0] = -1;
+  eye.browProfile.flow.sections[0].upper.tip = 2;
+  const model = buildPortraitHead(referenceControlNet, [component], 0);
   TestValidator.predicate(
     "copied profile survives caller mutation",
     model.parts.length > 0 &&

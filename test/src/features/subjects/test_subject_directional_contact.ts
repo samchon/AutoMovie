@@ -1,6 +1,6 @@
+import { createPortraitDirectionalContact } from "@automovie/human/geometry/portraitDirectionalContact";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitDirectionalContact } from "../../subjects/portraitDirectionalContact";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

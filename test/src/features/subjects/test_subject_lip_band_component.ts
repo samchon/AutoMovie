@@ -1,7 +1,7 @@
+import { createPortraitMouthComponent } from "@automovie/human/components/mouth";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitMouthShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitMouthComponent } from "../../subjects/generated-korean-girl-01/mouth";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

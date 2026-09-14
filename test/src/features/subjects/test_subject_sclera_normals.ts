@@ -1,8 +1,8 @@
+import { buildPortraitEye } from "@automovie/human/components/eyes";
+import { portraitPoint } from "@automovie/human/geometry/geometry";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { buildPortraitEye } from "../../subjects/generated-korean-girl-01/eyes";
-import { portraitPoint } from "../../subjects/geometry";
 import { nclose } from "../internal/predicates";
 
 /**

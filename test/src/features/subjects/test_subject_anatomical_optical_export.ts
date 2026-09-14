@@ -1,7 +1,7 @@
+import { portraitDocument } from "@automovie/human/geometry/portraitDocument";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitDocument } from "../../subjects/portraitDocument";
 import {
   anatomicalStudyShape,
   buildAnatomicalStudy,

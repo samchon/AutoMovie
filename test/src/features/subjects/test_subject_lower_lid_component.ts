@@ -1,3 +1,10 @@
+import {
+  type IPortraitEyeShape,
+  appendPortraitEyeMargins,
+  createPortraitEyeComponent,
+} from "@automovie/human/components/eyes";
+import { buildPortraitHead } from "@automovie/human/components/head";
+import type { IPortraitLowerLidProfile } from "@automovie/human/components/lowerLidSection";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,13 +12,6 @@ import {
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import {
-  type IPortraitEyeShape,
-  appendPortraitEyeMargins,
-  createPortraitEyeComponent,
-} from "../../subjects/generated-korean-girl-01/eyes";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
-import type { IPortraitLowerLidProfile } from "../../subjects/generated-korean-girl-01/lowerLidSection";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -115,14 +115,28 @@ export const test_subject_lower_lid_component = (): void => {
         p.some((v, axis) => !nclose(v, plain.cage.positions[i][axis])),
       ),
     );
-    const remembered = JSON.stringify(detailed.refined);
+    // Ownership belongs to fitting/attachment, not to rebuilding optics and
+    // subdividing the complete head a third time for the same scalar mutation.
+    const ownedRows = () => {
+      const plan = component.fit(host);
+      const targets = new Map(
+        plan.constraints.map((c) => [c.vertex, c.target]),
+      );
+      const positions = host.positions.map((p, id) => [
+        ...(targets.get(id) ?? p),
+      ]);
+      const cage = {
+        positions,
+        indices: [] as number[],
+        groups: [] as number[],
+      };
+      plan.attach(cage, positions, () => 1);
+      return cage.positions;
+    };
+    const remembered = ownedRows();
     const first = profile.sections[0].section.pretarsalCrest.projection;
     profile.sections[0].section.pretarsalCrest.projection = 100;
-    TestValidator.equals(
-      "component owns detail",
-      JSON.stringify(buildPortraitHead(host, [component], 1).refined),
-      remembered,
-    );
+    TestValidator.equals("component owns detail", ownedRows(), remembered);
     profile.sections[0].section.pretarsalCrest.projection = first;
   }
   TestValidator.predicate(

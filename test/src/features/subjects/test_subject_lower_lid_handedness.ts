@@ -1,8 +1,8 @@
+import { appendPortraitEyeMargins } from "@automovie/human/components/eyes";
+import type { IPortraitLowerLidProfile } from "@automovie/human/components/lowerLidSection";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { appendPortraitEyeMargins } from "../../subjects/generated-korean-girl-01/eyes";
-import type { IPortraitLowerLidProfile } from "../../subjects/generated-korean-girl-01/lowerLidSection";
 import { nclose } from "../internal/predicates";
 
 /**

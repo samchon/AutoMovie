@@ -1,14 +1,14 @@
 import { validateModel } from "@automovie/engine";
+import {
+  portraitDocument,
+  portraitGltfExtensions,
+} from "@automovie/human/geometry/portraitDocument";
 import { NodeIO } from "@gltf-transform/core";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 
 import { portraitCaptureProfile } from "../../src/subjects/captureProfile";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
-import {
-  portraitDocument,
-  portraitGltfExtensions,
-} from "../../src/subjects/portraitDocument";
 import basis from "../../src/subjects/reference-anatomy/mesh.json";
 import {
   anatomicalStudyShape,

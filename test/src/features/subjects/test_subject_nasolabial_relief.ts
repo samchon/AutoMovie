@@ -1,7 +1,7 @@
 import { createAutoMovieMeshDeformer } from "@automovie/engine";
+import { createPortraitCheekLayer } from "@automovie/human/components/cheeks";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitCheekLayer } from "../../subjects/generated-korean-girl-01/cheeks";
 import { createPortraitCheekFixture } from "../internal/createPortraitCheekFixture";
 import { nclose } from "../internal/predicates";
 

@@ -1,7 +1,7 @@
+import { portraitNormals } from "@automovie/human/geometry/geometry";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitNormals } from "../../subjects/geometry";
 import { replacePortraitRimAttachment } from "../../subjects/replacePortraitRim";
 import { nclose, throwsError } from "../internal/predicates";
 

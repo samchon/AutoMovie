@@ -1,11 +1,11 @@
-import { TestValidator } from "@nestia/e2e";
-
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
 import {
   type IPortraitEyeShape,
   appendPortraitEyeMargins,
   createPortraitEyeComponent,
-} from "../../subjects/generated-korean-girl-01/eyes";
+} from "@automovie/human/components/eyes";
+import { TestValidator } from "@nestia/e2e";
+
+import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
 import { throwsError } from "../internal/predicates";
 
 /**

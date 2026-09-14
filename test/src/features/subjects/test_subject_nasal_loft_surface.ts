@@ -1,12 +1,12 @@
+import { createPortraitNasalBodySurface } from "@automovie/human/components/nasalBodySurface";
+import { createPortraitNoseComponent } from "@automovie/human/components/nose";
+import { applyPortraitFinalSurfaces } from "@automovie/human/geometry/portraitFinalSurface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   portraitNoseShape,
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitNasalBodySurface } from "../../subjects/generated-korean-girl-01/nasalBodySurface";
-import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
-import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

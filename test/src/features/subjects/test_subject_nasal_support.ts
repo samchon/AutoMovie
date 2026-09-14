@@ -1,6 +1,6 @@
+import { createPortraitNasalSupport } from "@automovie/human/components/nasalSupport";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitNasalSupport } from "../../subjects/generated-korean-girl-01/nasalSupport";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

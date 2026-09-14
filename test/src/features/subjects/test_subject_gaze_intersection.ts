@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   portraitPoint as p,
   portraitRayIntersection,
-} from "../../subjects/geometry";
+} from "@automovie/human/geometry/geometry";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

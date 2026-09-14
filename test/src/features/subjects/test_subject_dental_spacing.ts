@@ -1,7 +1,7 @@
+import { buildPortraitMouth } from "@automovie/human/components/mouth";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitMouthShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { buildPortraitMouth } from "../../subjects/generated-korean-girl-01/mouth";
 
 /**
  * Crown width and interdental clearance are distances along the dental row,

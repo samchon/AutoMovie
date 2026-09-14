@@ -1,9 +1,9 @@
+import { buildPortraitDentalRow } from "@automovie/human/components/dentalRow";
+import { buildPortraitMouth } from "@automovie/human/components/mouth";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitMouthShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { buildPortraitDentalRow } from "../../subjects/generated-korean-girl-01/dentalRow";
-import { buildPortraitMouth } from "../../subjects/generated-korean-girl-01/mouth";
 import { nclose } from "../internal/predicates";
 
 /**

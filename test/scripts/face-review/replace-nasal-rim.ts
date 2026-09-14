@@ -1,3 +1,7 @@
+import {
+  portraitDocument,
+  portraitGltfExtensions,
+} from "@automovie/human/geometry/portraitDocument";
 import type { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
 import { NodeIO } from "@gltf-transform/core";
 import assert from "node:assert/strict";
@@ -8,10 +12,6 @@ import path from "node:path";
 
 import { portraitAssembly } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
-import {
-  portraitDocument,
-  portraitGltfExtensions,
-} from "../../src/subjects/portraitDocument";
 import { replacePortraitRimAttachment } from "../../src/subjects/replacePortraitRim";
 
 /**

@@ -1,10 +1,10 @@
 import { createAutoMovieMeshDeformer } from "@automovie/engine";
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitOrbitalSupportShape,
   createPortraitOrbitalSupport,
-} from "../../subjects/generated-korean-girl-01/orbitalSupport";
+} from "@automovie/human/components/orbitalSupport";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

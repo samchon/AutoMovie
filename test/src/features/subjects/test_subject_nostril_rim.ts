@@ -1,6 +1,6 @@
+import { fitPortraitNostrilRim } from "@automovie/human/components/nostrilRim";
 import { TestValidator } from "@nestia/e2e";
 
-import { fitPortraitNostrilRim } from "../../subjects/generated-korean-girl-01/nostrilRim";
 import { throwsError } from "../internal/predicates";
 
 /**

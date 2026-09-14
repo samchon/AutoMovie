@@ -17,7 +17,8 @@
     "@automovie/template": "workspace:^",
     "create-automovie": "workspace:^",
     "@automovie/engine": "workspace:^",
-    "@automovie/face": "workspace:^",
+    "@automovie/human": "workspace:^",
+    "@automovie/playground": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/mcp": "workspace:^",
     "@automovie/interface": "workspace:^",
@@ -36,6 +37,8 @@
     "@nestia/e2e": "catalog:samchon"
   },
   "devDependencies": {
+    "jsdom": "26.1.0",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "catalog:utils",
     "@types/pngjs": "catalog:media",
     "@types/three": "catalog:three",

@@ -1,13 +1,13 @@
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
-import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
 import {
   portraitEyeShape,
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 
 /**
  * An upper-lid fold survives refinement without becoming an aperture control.

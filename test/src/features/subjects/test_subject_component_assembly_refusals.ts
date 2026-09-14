@@ -1,11 +1,11 @@
-import { TestValidator } from "@nestia/e2e";
-
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
+import { buildPortraitHead } from "@automovie/human/components/head";
 import type {
   IPortraitComponent,
   IPortraitComponentPlan,
-} from "../../subjects/portraitComponents";
+} from "@automovie/human/geometry/portraitComponents";
+import { TestValidator } from "@nestia/e2e";
+
+import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
 import { throwsError } from "../internal/predicates";
 
 /**

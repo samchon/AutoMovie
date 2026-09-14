@@ -1,4 +1,10 @@
 import { validateModel } from "@automovie/engine";
+import { portraitNeckShape } from "@automovie/human/components/cranium";
+import { portraitEarShape } from "@automovie/human/components/ears";
+import {
+  portraitDocument,
+  portraitGltfExtensions,
+} from "@automovie/human/geometry/portraitDocument";
 import { NodeIO } from "@gltf-transform/core";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
@@ -25,13 +31,7 @@ import {
   portraitOrbitalSupportShapes,
 } from "../../src/subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../src/subjects/generated-korean-girl-01/controlNet";
-import { portraitNeckShape } from "../../src/subjects/generated-korean-girl-01/cranium";
-import { portraitEarShape } from "../../src/subjects/generated-korean-girl-01/ears";
 import { buildReferencePortrait } from "../../src/subjects/generated-korean-girl-01/model";
-import {
-  portraitDocument,
-  portraitGltfExtensions,
-} from "../../src/subjects/portraitDocument";
 
 async function main() {
   await fs.mkdir(".shots/face-experiment", { recursive: true });
@@ -68,6 +68,7 @@ async function main() {
   const configuration = JSON.stringify(
     {
       foundation: "measured",
+      appearance: portraitAssembly.materials,
       rightEye: portraitEyeShape,
       leftEye: portraitEyeShape,
       nose: portraitNoseShape,

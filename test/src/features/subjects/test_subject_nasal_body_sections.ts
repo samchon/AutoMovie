@@ -1,10 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitNasalBodyShape,
   createPortraitNasalBody,
   portraitNasalViewRay,
-} from "../../subjects/generated-korean-girl-01/nasalBody";
+} from "@automovie/human/components/nasalBody";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

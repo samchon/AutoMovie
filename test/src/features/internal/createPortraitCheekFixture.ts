@@ -1,8 +1,8 @@
 import type {
   IPortraitCheekShape,
   IPortraitCheekSocket,
-} from "../../subjects/generated-korean-girl-01/cheeks";
-import type { IPortraitSurfaceHost } from "../../subjects/portraitSurface";
+} from "@automovie/human/components/cheeks";
+import type { IPortraitSurfaceHost } from "@automovie/human/geometry/portraitSurface";
 
 /** Independent millimetre attachments with separated volume centres and one straight fold. */
 export function createPortraitCheekFixture(): {

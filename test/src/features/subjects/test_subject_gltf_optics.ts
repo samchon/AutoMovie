@@ -1,3 +1,7 @@
+import {
+  portraitDocument,
+  portraitGltfExtensions,
+} from "@automovie/human/geometry/portraitDocument";
 import { NodeIO } from "@gltf-transform/core";
 import type {
   Clearcoat,
@@ -7,10 +11,6 @@ import type {
 } from "@gltf-transform/extensions";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitDocument,
-  portraitGltfExtensions,
-} from "../../subjects/portraitDocument";
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 import { nclose, throwsError } from "../internal/predicates";
 

@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   buildPortraitEyebrow,
   portraitEyebrowProfile,
-} from "../../subjects/generated-korean-girl-01/eyebrows";
+} from "@automovie/human/components/eyebrows";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
