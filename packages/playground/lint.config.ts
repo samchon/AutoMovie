@@ -1,6 +1,9 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+/** The anatomical editor is a separate application surface; every other new module remains a prototype carrier. */
+const prototypeSources = ["src/**/*.ts", "!src/human/**/*.ts"];
+
 /**
  * The private playground still carries a real deterministic-prototype contract.
  *
@@ -17,9 +20,57 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
+      name: "face application implements anatomical editor requirements",
+      type: "typescript",
+      files: ["src/human/**/*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["requirements/actors/facial-authoring/**/README.md"],
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/actors/facial-authoring/**/*.md",
+            "!requirements/actors/facial-authoring/**/README.md",
+          ],
+          symbol: "h3",
+        },
+      ],
+    },
+    {
+      name: "face application implements anatomical editor specifications",
+      type: "typescript",
+      files: ["src/human/**/*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/asset-and-representation/facial-authoring/**/README.md",
+          ],
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/asset-and-representation/facial-authoring/**/*.md",
+            "!specifications/asset-and-representation/facial-authoring/**/README.md",
+          ],
+          symbol: "h3",
+        },
+      ],
+    },
+    {
       name: "playground demonstrations realize prototype requirements",
       type: "typescript",
-      files: ["src/**/*.ts"],
+      files: prototypeSources,
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
@@ -31,7 +82,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "playground demonstrations realize prototype specifications",
       type: "typescript",
-      files: ["src/**/*.ts"],
+      files: prototypeSources,
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",

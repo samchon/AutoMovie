@@ -1,0 +1,96 @@
+# @automovie/human
+
+Procedural anatomical face construction. Components fit to one immutable host, share their skin boundaries and finish internal geometry against the refined surface. The package contains no named person, photograph or fitting runtime. Construction coordinates use millimetres, +Y up, +Z anterior and anatomical left +X; the model boundary converts them to metres.
+
+The [face requirements](../../docs/requirements/actors/facial-authoring/contract.md) and [parameter and editing specifications](../../docs/specifications/asset-and-representation/facial-authoring/contract.md) own the contract. Optional numerical hair cards and skin-following eyebrow ribbons belong to the same static facial asset.
+
+Node consumers require Node 22.23.2 or later. Older Node 22 loaders can expose an unevaluated ES-module dependency when a CommonJS package and an external ES-module glTF reader share the same import graph. Consumer import order must not be used to mask that runtime defect.
+
+## Face documents and editing
+
+`IAutoMovieHumanFaceDocument` separates a versioned observed host and part recipe from intermediate controls, exact detail overrides, side-specific settings, appearance and current expression. `parseHumanFaceDocument` and `serializeHumanFaceDocument` admit the complete JSON schema without fetching provenance. `resolveHumanFaceDocument` applies version defaults, basis settings, `humanFaceControlDefinitions` trait offsets, exact details and independent sides in that order. `mergeHumanFaceSettings` recurses through objects and replaces an array's entire population; it never merges array elements by position. An absent optional anatomical component stays absent unless a complete valid profile is supplied.
+
+`buildHumanFace(document, subdivisionRounds = 2)` constructs the resident model. `humanFaceExpressionDefinitions` and `resolveHumanFaceExpression` describe and admit independent lid closure, brow elevation, mouth-corner elevation, lip separation/protrusion, jaw opening and gaze. Omitted current channels mean neutral, not the photographed expression. Source expression is explicit. A nonzero mandibular angle needs an authored `basis.bindings.jawHinge`; its hidden position is an estimate, not a recovered scan. Eyes need a full limbus and corneal contact for performance. Upper crowns use separate `dentition` with a maxillary binding and an empty `mouth.crowns` array.
+
+`frame.browProjection` changes the shared superior-orbit foundation before eyes and their skin attachments are fitted. Positive millimetres advance both brow supports; negative values recess them. This is a bilateral identity control, separate from expression brow elevation and the optional post-refinement orbital layer. The document keeps its original observed coordinates. A compact envelope starts 0.5 mm above the higher aperture, reaches the mean lower-brow height and fades into the forehead; overlapping medial shoulders use their maximum influence. These are construction controls, not measured bone or tissue thickness. Zero preserves earlier geometry. Direct `createPortraitFacialFrame` callers supply both eye sockets as its third argument when using a nonzero value; document resolution supplies its own bindings.
+
+```ts
+import {
+  buildHumanFace,
+  parseHumanFaceDocument,
+  serializeHumanFaceDocument,
+  setHumanFaceDetail,
+} from "@automovie/human";
+
+// suppliedJson contains the complete numerical basis and recipe, not a photo.
+export function wink(suppliedJson: string) {
+  const observed = parseHumanFaceDocument(suppliedJson);
+  const edited = setHumanFaceDetail(observed, "eye.foldDepth", 0.4, "left");
+  edited.expression = {
+    ...edited.expression,
+    blink: { right: 0, left: 1 },
+  };
+  return {
+    model: buildHumanFace(edited),
+    json: serializeHumanFaceDocument(edited),
+  };
+}
+```
+
+The document owns a `mediapipe-478/1` correspondence basis, including the 478 coordinates, original face triangles, view direction, anatomical bindings, observed expression and complete required eye/nose/mouth profiles. Its topology name defines landmark interpretation; the package neither invokes MediaPipe nor fits an image. Schema validation, finite-number admission, geometry admission and likeness are distinct checks. Provenance fields are descriptive and never fetched. A different basis revision requires rebuilding dependent bindings rather than reusing the old IDs blindly.
+
+`humanFaceControlDefinitions` contains fifteen intermediate traits. `humanFaceDetailChannels` supplies scalar editing envelopes, each with units, signed effect, inherited neutral, paired ownership and attachment context. These are convenient scalar controls, not a claim that every nested profile is a slider. `humanFaceRegions` and `replaceHumanFaceRegion` also expose complete object/array profiles: hair guides, cranial stations, neck sections, ordered crowns, nasal section/loft alternatives, lower-lid sections, orbital sections and relief curves. The owning public type documents the coupled dimensions. `humanFaceRegionValue` and `humanFaceDetailValue` return applied values after resolution; undefined means that optional profile is not present. Exact details override earlier traits; clearing a detail restores inheritance. A side override is available only for eye, cheek and ear profiles; orbital right/left groups live explicitly inside `orbits`.
+
+Facial frame controls deform the common host before fitting any parts. Width/length use the nasion; jaw/chin/forehead/temple offsets use named compact supports. Dependent eye/nose/mouth boundaries and the jaw hinge use that same transformed basis. Cranial sections continue the resulting facial oval, ears sample the resulting temporal surface, and cervical sections join the shared cranial collar. These controls do not reconstruct unseen anatomy from one photograph.
+
+Expression controls are builder-time kinematics, not a real-time skinned animation export, speech model or muscle simulation. Blink uses a common closed seam without shrinking the globe. Gaze rotates the iris/cornea around its optical centre. Brow movement carries its skin attachment. Lip separation, paired corner elevation and pucker alter common oral boundaries; jaw motion shares an authored hinge with the lower face and optional mandibular row. The upper arch remains maxillary. `lowerDentition` supplies an independently sized, upward-facing enamel row; lip separation does not translate its teeth. No tongue, gingival tissue or general inter-arch collision solver is claimed. Individually valid scalar values can form an invalid combined geometry and must be built before publication.
+
+`mouth.seamProjection` controls the depth of both oral rims separately from lip-body fullness and aperture. Positive millimetres advance the contact line, with a smooth fade to zero at the outer vermilion boundary and corners. A coincident closed seam stays closed. Omission is the legacy zero offset. This identity control does not infer a person's hidden oral anatomy from a photograph.
+
+`createHumanFaceEditor({ document, model, build })` owns a validated initial pair, edit/reset/undo/redo history and the latest-request rule. Pass `buildHumanFace` through the application's asynchronous worker. Only the latest successful build commits its document and model together; failed builds preserve the last valid pair and do not consume undo history. `cancel()` withdraws pending publication authority and restores ready status without changing that pair or its history. The application still cancels worker work and disposes obsolete renderer resources. `snapshot()` returns owned settings and the renderer's read-only model. The application owns controls, camera interaction and file selection.
+
+Build with `pnpm --filter @automovie/human build` before running a browser consumer in the workspace. The package emits CommonJS for Node and an ES-module `browser` condition for bundlers. Both are compiled through the schema transformer, so browser JSON admission uses the same generated validator as published Node consumption. A plain TypeScript transpiler is not a replacement for this build step.
+
+## Construction surface
+
+`components/` owns cranial and cervical continuation, cheeks, orbital support, eyes and eyelids, nasal subunits and cavities, lips, dental arches and crowns, pinnae and material defaults. `geometry/` owns component attachment, shared subdivision, surface layers, contact, topology, mesh buffers and static face export. Each definition states its units and admission rules. The root barrel and the corresponding component or geometry subpath expose the same definitions.
+
+`buildPortraitHead(host, components, rounds, layers, anatomy)` fits all selected components to the same input host, rejects overlapping cut ownership, joins their surfaces, subdivides common skin and resolves final contact. Optional `anatomy` selects cranial and cervical profiles. An empty component population leaves the host's facial skin intact. `createPortraitEyeComponent`, `createPortraitNoseComponent`, `createPortraitMouthComponent` and `createPortraitDentalComponent` receive caller-owned attachment bindings and shape values. Shape arrays are copied at admission rather than retained as mutable caller state.
+
+`eye.skinBridge: "sampled"` requires `skinAttachment: "reserve"`. It retains original-skin interior height witnesses inside the replacement annulus and redistributes interior edges before common subdivision. `refinePortraitSkinBridge` preserves the admitted boundary; a missing supporting sample refuses before attachment mutates the cage. Omission preserves the earlier boundary-only bridge. This changes skin reconstruction, not eye size or optical identity.
+
+`eye.upperLidProfile` supplies two through 32 complete medial-to-lateral sections for the margin, tarsal body, both crease banks, hood and preseptal transition. Every section has strictly ordered outward offsets, signed anterior projections and a farther live-skin attachment, all in millimetres. `createPortraitUpperLidProfile` uses the same order-preserving interpolation as `createPortraitLowerLidProfile`. The eye replaces its basic upper rows within a canthal sine fade; it does not add fold depth and volume twice. The wet aperture and optical dimensions remain independently owned. Use the complete eye region to save or replace sections, including independent left/right profiles. Omission keeps the basic upper formula. These are visible-surface controls, not a muscle simulation or recovered tissue thickness.
+
+`eye.globeLift` places the optical body independently of the surrounding skin attachment. Positive millimetres move it along the normalized observation ray toward the recorded camera; negative values recess it. The lid's inner contact follows the globe while its outer attachment targets do not translate with it. Shared subdivision and final optical contact still adapt the emitted skin; this is not a promise that every surrounding vertex stays fixed. This differs from `socketLift`, which translates the socket and its skin targets together. Omission or zero retains the original fitted globe. The scalar editor exposes a signed authoring envelope, not a clinical range; combined geometry still requires construction and render inspection. Blink and gaze use the resulting identity centre rather than adding the depth again.
+
+Eye performance keeps a resident globe and rotates its iris/cornea about the fixed centre. `createPortraitMouthPerformance` pairs oral margins in 3D, preserving vermilion thickness during closure; `posePortraitJawPoint` supplies the shared transverse hinge calculation. `createPortraitFacePerformanceComponent` moves the adjacent lower face and the brow attachments, while an `observed-maxilla` dental attachment retains the upper arch. `sealPortraitContactSeams` welds only explicitly closed free rims and removes opposed commissural folds after common refinement. `buildPortraitEars` accepts an optional side selector so different pinna profiles can attach to the same temporal skin independently.
+
+`await exportHumanFace(model)` returns `{ glb, gltf }`: GLB bytes plus a glTF JSON document with its resident binary resources. It validates the actual Float32 output geometry and preserves supported optical material fields. The package owns both document construction and serialization, so these portable outputs work across CommonJS and ES-module consumers. Register `portraitGltfExtensions` when reading the assets with glTF-Transform.
+
+`portraitDocument(model)` remains the low-level static document converter. Resident PNG data URIs in the base-colour and normal slots carry UV0, alpha masks and normal strength into the asset; external images, transformed texture bindings and other texture slots refuse. Normal RGB is linear tangent-space data. Export checks the PNG container header and positive dimensions; the receiving image decoder validates the compressed pixels. Its writer must use the same glTF-Transform module instance and register `portraitGltfExtensions`. Mixing CommonJS and ES-module Document/writer instances can silently lose geometry; prefer `exportHumanFace` unless the application deliberately manages that boundary. Both routes refuse bone bindings and unsupported resources; neither is a general scene or animation exporter.
+
+### Surface hair and eyebrow cost
+
+`recipe.hair` or `detail.hair` supplies a complete `IPortraitHairShape`. Each `IPortraitHairCard` has root-to-tip guide stations, paired transverse width directions and an authored width in head millimetres. The author places those guides against the current scalp; changing cranial proportions requires inspecting and refitting their attachments. `buildPortraitHairCards` emits two triangles per longitudinal interval regardless of painted fibre count. Width, tip taper, coverage and segments have scalar editor controls; the complete guide array is edited through the hair region. An empty card array removes the hairstyle, while omission adds none. The supplied finish must exist and the derived `:hair-cards` finish identity must be free.
+
+`createPortraitHairTexture` creates a deterministic 128 by 256 PNG with multiple painted fibres, sparse roots and staggered tips. The builder embeds that mask without a source photograph, network request or native image library. This is a bounded static card renderer, not a physical hair-scattering model, dynamic strand simulation or automatic hairstyle fitter. Inspect the front, sides and back for scalp gaps and card intersections.
+
+`hair.fibreNormalScale` adds a scalar editor control in [0,1]. `createPortraitHairNormalTexture` derives a linear RGB normal PNG from the same fibre centres and radii as the colour mask. Positive strength replaces the normal binding on the owned card finish; zero or omission retains the base finish's binding unchanged. One uses the full circular cross-section, while intermediate values scale the transverse normal. The texture and strength survive GLB/glTF export. This changes shading without adding triangles or changing the silhouette; it cannot repair scalp gaps or guide intersections.
+
+Use base-colour alpha, not normal RGB, to determine painted coverage. A fibre centre can encode the same nearly flat normal as empty space. Conversely, a softened edge can retain a transverse normal when its small coverage rounds to zero in the 8-bit alpha channel. The normal texture describes orientation, not occupancy.
+
+`createPortraitHairMaterial` supplies the builder's independent card finish and retains an explicitly authored base finish's `alphaCutoff`; omission uses 0.45. Set `alphaMode: "mask"` on that base finish when supplying a cutoff. This threshold changes coverage after texture filtering, not card geometry or the painted fibre population. Inspect the intended viewing distance: fine, sparse tips can disappear and reappear as their projected width changes. A lower threshold is an appearance choice, not a geometric collision repair.
+
+`eye.browProfile.representation: "ribbon"` uses skin-following strips instead of the default eight-sided tubes. At the same longitudinal sampling it uses one eighth of the triangles. Both paths keep the current brow boundary and surface contact, so brow elevation moves the attached hairs. Omission preserves earlier documents.
+
+`eye.browProfile.flow` authors two through 32 medial-to-lateral direction witnesses. Each section has `at`, `lower` and `upper`; each direction gives a `tip` across the supporting brow (lower zero, upper one) and signed `outwardBend` in millimetres. Lower and upper address the ends of `rootBand`, allowing upper hairs to converge downward with lower hairs. `createPortraitEyebrowFlow` blends along the brow with cubic smoothstep and across that band linearly; a collapsed root band uses the midpoint direction. Flow replaces the ordinary `span` and `outwardBend` in both tube and ribbon construction without adding fibres or subdivisions. Omission preserves the basic direction formula. Save or replace the complete profile through the eye region, including independent side overrides.
+
+Set `eye.browProfile.densitySeed` to an unsigned 32-bit integer, including zero, to thin faded ends independently of root height. Different seeds select different retained strands without changing each strand's dimensions; no random state enters replay. With no endpoint fades the seed changes no geometry. Omission retains the original coupled density pattern for existing numerical documents, including the time-capped study; that pattern can leave root-height bands empty near faded ends. New authored profiles can select the independent pattern explicitly.
+
+The extraction initially retains the `Portrait` symbol names so the existing measured subject and its regression tests replay the same calculations. Subject coordinates and settings live in the test studies, outside this package. A successfully constructed or exported face is not by itself an accepted likeness.
+
+## Browser editor and studies
+
+Run `pnpm --filter @automovie/playground dev` from the repository and open `/face.html`. The development command builds the human browser entry before starting Vite. The page exposes the nineteen issue subjects, intermediate traits, scalar and complete-region detail, independent sides, expression presets/channels, material colour, roughness and clearcoat, orbit views and clay. Model construction runs in a worker. Failed geometry keeps the last valid model; history and JSON/GLB/glTF downloads refer to that committed state. A JSON glTF download also needs all its sibling buffer and image files in the same directory.
+
+The [reference studies](../../test/src/subjects/README.md) own photo selection, numerical fits and observation status. Their files are examples, not defaults shipped by this package. Reconstruction remains provisional: single-view depths, posterior anatomy and material choices are estimates; matching landmarks and passing topology checks do not establish photographic identity. Reproducibility should name the runtime and compare both numeric geometry and serialized bytes; separate JavaScript runtimes can differ at floating-point rounding even for the same document.

@@ -12,6 +12,14 @@ Each model-source file contains a concrete named exported class, and every expor
 
 Before drafting, complete `discovery/core/common.md`, `discovery/design/designs.md`, and `discovery/design/models.md` against the actual represented subjects, source assets, downstream consumers, and review promise, then settle every retained rule or truthful no-result through [Design branches](design-branches.md#discovery-and-draft-procedure). Inventory independent representation owners and apply `docs/obligations/design/models.md#addressable-model-decisions`. Separate geometry or hierarchy, articulation interfaces, surface partitions, fidelity limits, and neutral observations when they have different consumers or change paths. Material construction and response belong in `docs/materials`. Compare the completed dimensions, pivots, surfaces, and review views with their settings basis and applicable model obligations.
 
+## Anatomical face models
+
+Use `@automovie/human` when a reviewed model calls for numerically authored facial anatomy. Its installed package README and public JSDoc describe `IAutoMovieHumanFaceDocument`, `buildHumanFace`, component profiles and scalar controls. Keep the production's observed or authored basis, part settings, provenance and visible limitations under its model-source owner. The package supplies capability, not named people or photograph fitting.
+
+Identity, observed expression and current expression are separate records. An omitted current expression means neutral; it does not replay the photographed smile. A motion owner may evaluate its reviewed time-varying expression and call the face builder for the selected pose. This is procedural reconstruction, not a skinned animation or a real-time playback guarantee. Record the sampling cost and supported combinations before choosing it for a shot.
+
+Use the returned metre-valued `IAutoMovieModel` through the same model and instance realization path as other authored geometry. `exportHumanFace(model)` produces portable GLB bytes and glTF/resources without handing a class-bound document across module instances. A static facial GLTF/GLB may instead be adopted as an external model under the existing adoption procedure; its exported pose has no facial animation channels. Review the actual eyes, lips, dental occlusion, shared skin and all required views through the review-verification skill. Construction success does not settle likeness, hidden anatomy or unsupported oral physiology.
+
 ## Motion decisions
 
 `docs/motions` records a named transition over time: subject and starting state, endpoint, duration or timing domain, interpolation, invariants, collision or range limits, composition behavior, and observable acceptance. It cites the settings facts it preserves and every reviewed map, model, space, material, instance, or system interface whose state it changes; a motion that changes no model cites no model merely to fill the graph.

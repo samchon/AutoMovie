@@ -1,7 +1,6 @@
 /**
- * The closed set of **morph names** for the parametric head built on the clean
- * MakeHuman-derived base: the flat vocabulary that {@link IAutoMovieHead}
- * projects onto and the `@automovie/face` `morphHead` applies.
+ * The closed set of **morph names** that {@link IAutoMovieHead} projects onto.
+ * An authored head template owns its topology and supplies the target deltas.
  *
  * These are the comprehensive identity/shape controls (not expression): head
  * silhouette and proportion, brow, eyes (incl. the East-Asian epicanthus and
@@ -10,8 +9,8 @@
  * weight deviates from the neutral average (`0`), the sign picking direction.
  *
  * Distinct from {@link AutoMovieFaceParameterName}, which is the legacy
- * MediaPipe-topology vocabulary; this set targets the full-head topology and is
- * the one the head editor exposes.
+ * facial vocabulary; this set includes full-head shape. Neither is the
+ * anatomical component document interpreted by the separate human face editor.
  *
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `AutoMovieHeadParameterName` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `AutoMovieHeadParameterName` as a coarse proxy parameter under the representation-fidelity ceiling.

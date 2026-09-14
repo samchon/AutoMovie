@@ -1,4 +1,5 @@
 import { measureAutoMovieMeshClearance } from "@automovie/engine";
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -6,7 +7,6 @@ import {
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
 
 /**
  * Optional ocular tissue is owned by its eye and consumes the same completed

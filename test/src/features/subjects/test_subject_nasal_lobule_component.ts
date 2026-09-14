@@ -1,3 +1,4 @@
+import { createPortraitNoseComponent } from "@automovie/human/components/nose";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,7 +6,6 @@ import {
   portraitNoseShape,
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

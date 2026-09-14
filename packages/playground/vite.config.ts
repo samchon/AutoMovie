@@ -2,6 +2,9 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // This linked package is rebuilt through typia's compiler transform. Do not
+  // retain an optimized copy of yesterday's region inventory after a rebuild.
+  optimizeDeps: { exclude: ["@automovie/human"] },
   server: {
     host: "127.0.0.1",
     port: 5173,
@@ -27,7 +30,6 @@ export default defineConfig({
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),
         face: resolve(__dirname, "face.html"),
-        head: resolve(__dirname, "head.html"),
       },
     },
   },

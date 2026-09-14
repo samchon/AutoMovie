@@ -54,6 +54,7 @@
   "devDependencies": {
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
+    "@automovie/human": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/mcp": "workspace:^",

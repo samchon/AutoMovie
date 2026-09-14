@@ -1,9 +1,9 @@
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
+import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
 import { TestValidator } from "@nestia/e2e";
 
-import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
 import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
-import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
 import { createPortraitReservationHost } from "../internal/portraitReservation";
 import { throwsError } from "../internal/predicates";
 
@@ -13,7 +13,7 @@ import { throwsError } from "../internal/predicates";
  * separate input; changing attachment mode is not an eye-size correction.
  *
  * Scenarios:
- * 1. Two aperture widths on nested planar rings preserve outside controls and
+ * 1. Two aperture widths and both bridge modes on nested rings preserve controls and
  *    close every shared edge around exactly one declared ocular opening.
  * 2. Mutating the caller's mode after construction does not change the fitted
  *    eye. An unrelated adaptation that invalidates nesting refuses before any
@@ -32,77 +32,117 @@ export const test_subject_eye_skin_reservation = (): void => {
     browTop: [2],
     browBottom: [2],
   };
-  for (const widthScale of [1, 1.4]) {
-    const shape = {
-      ...portraitEyeShape,
-      widthScale,
-      openingScale: 1,
-      browFibres: 0,
-    };
-    const component = createPortraitEyeComponent(socket, shape);
-    shape.skinAttachment = undefined;
-    const plan = component.fit(host);
-    TestValidator.predicate(
-      "reserved mode owns its input without spreading the seam",
-      plan.constraints.length === 5 &&
-        plan.constraints.every((c) => c.reach === 0),
-    );
-    const seam = plan.constraints.find(
-      (constraint) => constraint.vertex === 3,
-    )!;
-    TestValidator.predicate(
-      "another component cannot contradict the internal seam",
-      throwsError(
-        () =>
-          blendPortraitSkin(host.positions, host.indices, [
-            ...plan.constraints,
-            {
-              ...seam,
-              target: seam.target.map(
-                (value, axis) => value + (axis === 2 ? 1 : 0),
-              ),
-            },
-          ]),
-        "different positions",
-      ),
-    );
-    const source = blendPortraitSkin(
-      host.positions,
-      host.indices,
-      plan.constraints,
-    );
-    const cut = new Set(plan.cutFaces);
-    const indices = host.indices.filter(
-      (_id, i) => !cut.has(Math.floor(i / 3)),
-    );
-    const cage = {
-      positions: source.map((p) => [...p]),
-      indices,
-      groups: new Array(indices.length / 3).fill(0),
-    };
-    const attached = plan.attach(cage, source, () => 1);
-    assertPortraitSkinTopology(cage, attached.openings);
-    TestValidator.equals("one optical opening", attached.openings.length, 1);
-    TestValidator.equals(
-      "host boundary stays in place",
-      cage.positions.slice(5, host.positions.length),
-      host.positions.slice(5),
-    );
-    const invalid = {
-      positions: source.map((p, id) =>
-        id >= 5 ? [p[0] + 100, p[1], p[2]] : [...p],
-      ),
-      indices: [...indices],
-      groups: new Array(indices.length / 3).fill(0),
-    };
-    const before = structuredClone(invalid);
-    TestValidator.predicate(
-      "adapted join refuses invalid nesting",
-      throwsError(() => plan.attach(invalid, source, () => 1)),
-    );
-    TestValidator.equals("join admission precedes mutation", invalid, before);
-  }
+  for (const widthScale of [1, 1.4])
+    for (const skinBridge of [undefined, "sampled"] as const) {
+      const shape = {
+        ...portraitEyeShape,
+        widthScale,
+        openingScale: 1,
+        browFibres: 0,
+        skinBridge,
+      };
+      const component = createPortraitEyeComponent(socket, shape);
+      shape.skinAttachment = undefined;
+      const plan = component.fit(host);
+      TestValidator.predicate(
+        "reserved mode owns its input without spreading the seam",
+        plan.constraints.length === 5 &&
+          plan.constraints.every((c) => c.reach === 0),
+      );
+      const seam = plan.constraints.find(
+        (constraint) => constraint.vertex === 3,
+      )!;
+      TestValidator.predicate(
+        "another component cannot contradict the internal seam",
+        throwsError(
+          () =>
+            blendPortraitSkin(host.positions, host.indices, [
+              ...plan.constraints,
+              {
+                ...seam,
+                target: seam.target.map(
+                  (value, axis) => value + (axis === 2 ? 1 : 0),
+                ),
+              },
+            ]),
+          "different positions",
+        ),
+      );
+      const source = blendPortraitSkin(
+        host.positions,
+        host.indices,
+        plan.constraints,
+      );
+      const cut = new Set(plan.cutFaces);
+      const indices = host.indices.filter(
+        (_id, i) => !cut.has(Math.floor(i / 3)),
+      );
+      const cage = {
+        positions: source.map((p) => [...p]),
+        indices,
+        groups: new Array(indices.length / 3).fill(0),
+      };
+      const attached = plan.attach(cage, source, () => 1);
+      assertPortraitSkinTopology(cage, attached.openings);
+      TestValidator.equals("one optical opening", attached.openings.length, 1);
+      TestValidator.equals(
+        "host boundary stays in place",
+        cage.positions.slice(5, host.positions.length),
+        host.positions.slice(5),
+      );
+      const invalid = {
+        positions: source.map((p, id) =>
+          id >= 5 ? [p[0] + 100, p[1], p[2]] : [...p],
+        ),
+        indices: [...indices],
+        groups: new Array(indices.length / 3).fill(0),
+      };
+      const before = structuredClone(invalid);
+      TestValidator.predicate(
+        "adapted join refuses invalid nesting",
+        throwsError(() => plan.attach(invalid, source, () => 1)),
+      );
+      TestValidator.equals("join admission precedes mutation", invalid, before);
+      if (skinBridge === "sampled") {
+        const outside = {
+          positions: source.map((p, id) =>
+            id >= 5 ? [p[0] * 10, p[1] * 10, p[2]] : [...p],
+          ),
+          indices: [...indices],
+          groups: new Array(indices.length / 3).fill(0),
+        };
+        const retained = structuredClone(outside);
+        TestValidator.predicate(
+          "sampled bridge cannot invent missing skin",
+          throwsError(
+            () => plan.attach(outside, source, () => 1),
+            "original skin support",
+          ),
+        );
+        TestValidator.equals(
+          "missing sample does not partially mutate",
+          outside,
+          retained,
+        );
+      }
+    }
   const invalidShape = { ...portraitEyeShape };
+  for (const change of [
+    { skinBridge: "unknown" },
+    { skinBridge: "sampled", skinAttachment: undefined },
+  ]) {
+    const invalid = {
+      ...portraitEyeShape,
+      ...change,
+    } as typeof portraitEyeShape;
+    TestValidator.predicate(
+      "sampled mode requires reservation",
+      throwsError(
+        () => createPortraitEyeComponent(socket, invalid),
+        "reserved skin attachment",
+      ),
+    );
+  }
   Reflect.set(invalidShape, "skinAttachment", "unknown");
   TestValidator.predicate(
     "unknown attachment mode",

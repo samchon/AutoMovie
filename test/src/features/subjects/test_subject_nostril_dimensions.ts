@@ -1,7 +1,7 @@
+import { createPortraitNoseComponent } from "@automovie/human/components/nose";
+import { resizePortraitNostrilRim } from "@automovie/human/components/nostrilRim";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
-import { resizePortraitNostrilRim } from "../../subjects/generated-korean-girl-01/nostrilRim";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

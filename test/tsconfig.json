@@ -1,7 +1,6 @@
 {
   "extends": "../config/tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
     "noEmit": true,
     "resolveJsonModule": true,
     "types": ["node"]

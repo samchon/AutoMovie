@@ -1,7 +1,18 @@
 import { mergeAutoMovieMeshes } from "@automovie/engine";
+import {
+  attachPortraitDentalRow,
+  buildPortraitDentalRow,
+} from "@automovie/human/components/dentalRow";
+import {
+  buildPortraitEyebrow,
+  portraitEyebrowProfile,
+} from "@automovie/human/components/eyebrows";
+import {
+  portraitPart,
+  portraitPoint,
+} from "@automovie/human/geometry/geometry";
 import type { IAutoMovieModel } from "@automovie/interface";
 
-import { portraitPart, portraitPoint } from "../geometry";
 import { assertPortraitFitBasis } from "../portraitFitBasis";
 import {
   anatomicalStudyShape,
@@ -15,8 +26,6 @@ import {
   portraitHairShape,
 } from "./configuration";
 import { referenceControlNet } from "./controlNet";
-import { attachPortraitDentalRow, buildPortraitDentalRow } from "./dentalRow";
-import { buildPortraitEyebrow, portraitEyebrowProfile } from "./eyebrows";
 import { buildPortraitHairProxy } from "./hairProxy";
 import fit from "./surfaceFit.json";
 
@@ -55,6 +64,20 @@ export function buildFittedReferencePortrait(
     const fitted = (fit.landmarks as Record<string, number[]>)[String(id)];
     return [...(fitted ?? p)];
   });
+  return attachFittedPortraitContext(model, landmarks);
+}
+
+/**
+ * Add the target's coarse context to an admitted, fitted anatomical skin.
+ * The caller supplies the fitted landmark coordinates in millimetres; this
+ * stage does not rebuild the prior or change its fitted surface. Brows sample
+ * that skin, the dental arch uses oral landmarks and hair encloses the result.
+ * The supplied model receives the context parts and target identity in place.
+ */
+export function attachFittedPortraitContext(
+  model: IAutoMovieModel,
+  landmarks: readonly number[][],
+): IAutoMovieModel {
   const skin = mergeAutoMovieMeshes(
     model.parts
       .filter((p) => p.id.startsWith("anatomical-"))

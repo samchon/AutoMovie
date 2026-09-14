@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitLowerLidSection,
   createPortraitLowerLidProfile,
-} from "../../subjects/generated-korean-girl-01/lowerLidSection";
+} from "@automovie/human/components/lowerLidSection";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

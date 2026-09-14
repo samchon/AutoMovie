@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitNasalLobule,
   createPortraitNasalLobules,
-} from "../../subjects/generated-korean-girl-01/nasalLobule";
+} from "@automovie/human/components/nasalLobule";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

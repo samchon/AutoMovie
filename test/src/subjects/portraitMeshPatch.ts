@@ -3,10 +3,11 @@ import {
   selectAutoMovieTriangleRegion,
   triangulateAutoMovieRegion,
 } from "@automovie/engine";
+import { portraitPart } from "@automovie/human/geometry/geometry";
+import type { IPortraitComponent } from "@automovie/human/geometry/portraitComponents";
+import type { IPortraitFinalSurfaceHost } from "@automovie/human/geometry/portraitFinalSurface";
+import type { IControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 
-import { portraitPart } from "./geometry";
-import type { IPortraitComponent } from "./portraitComponents";
-import type { IPortraitFinalSurfaceHost } from "./portraitFinalSurface";
 import { fitPortraitJoinReference } from "./portraitJoinReference";
 import {
   type IPortraitPatchAttachment,
@@ -14,7 +15,6 @@ import {
 } from "./portraitPatchAttachment";
 import { fairPortraitSurface } from "./portraitSurfaceFairing";
 import { refinePortraitJoin } from "./refinePortraitJoin";
-import type { IControlMesh } from "./subdivideControlMesh";
 
 /** A source patch in the host's millimetre frame, with an oriented boundary. */
 export interface IPortraitMeshPatch {

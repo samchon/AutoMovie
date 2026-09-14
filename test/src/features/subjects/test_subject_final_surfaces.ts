@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   type IPortraitFinalSurfaceHost,
   applyPortraitFinalSurfaces,
-} from "../../subjects/portraitFinalSurface";
+} from "@automovie/human/geometry/portraitFinalSurface";
+import { TestValidator } from "@nestia/e2e";
+
 import { throwsError } from "../internal/predicates";
 
 /**

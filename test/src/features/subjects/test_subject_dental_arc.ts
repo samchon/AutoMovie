@@ -1,6 +1,6 @@
+import { createPortraitDentalArc } from "@automovie/human/components/dentalArc";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitDentalArc } from "../../subjects/generated-korean-girl-01/dentalArc";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
 /**

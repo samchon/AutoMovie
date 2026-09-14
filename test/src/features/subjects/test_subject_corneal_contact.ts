@@ -1,15 +1,15 @@
 import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
-import { TestValidator } from "@nestia/e2e";
-
-import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
 import {
   type IPortraitEyeShape,
   appendPortraitEyeMargins,
   createPortraitEyeComponent,
-} from "../../subjects/generated-korean-girl-01/eyes";
-import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
+} from "@automovie/human/components/eyes";
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
+import { applyPortraitFinalSurfaces } from "@automovie/human/geometry/portraitFinalSurface";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
+import { TestValidator } from "@nestia/e2e";
+
+import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
 import { throwsError } from "../internal/predicates";
 
 /**

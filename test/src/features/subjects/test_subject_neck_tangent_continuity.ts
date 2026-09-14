@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   appendPortraitNeck,
   portraitNeckShape,
-} from "../../subjects/generated-korean-girl-01/cranium";
+} from "@automovie/human/components/cranium";
+import { TestValidator } from "@nestia/e2e";
+
 import { throwsError } from "../internal/predicates";
 
 /**

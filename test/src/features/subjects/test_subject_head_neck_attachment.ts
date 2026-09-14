@@ -1,10 +1,10 @@
-import { TestValidator } from "@nestia/e2e";
-
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
 import {
   appendPortraitCranium,
   appendPortraitNeck,
-} from "../../subjects/generated-korean-girl-01/cranium";
+} from "@automovie/human/components/cranium";
+import { TestValidator } from "@nestia/e2e";
+
+import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
 
 /**
  * The cranial underside and neck owe one connected, consistently wound skin.

@@ -1,11 +1,11 @@
+import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   type IPortraitMeshPatch,
   createPortraitMeshPatchComponent,
 } from "../../subjects/portraitMeshPatch";
-import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { throwsError } from "../internal/predicates";
 
 /**

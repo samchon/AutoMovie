@@ -1,6 +1,6 @@
+import { applyPortraitSurfaceLayers } from "@automovie/human/geometry/portraitSurface";
 import { TestValidator } from "@nestia/e2e";
 
-import { applyPortraitSurfaceLayers } from "../../subjects/portraitSurface";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

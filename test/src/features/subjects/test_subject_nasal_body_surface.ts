@@ -1,8 +1,8 @@
+import type { IPortraitNasalBodyShape } from "@automovie/human/components/nasalBody";
+import { createPortraitNasalBodySurface } from "@automovie/human/components/nasalBodySurface";
+import { applyPortraitFinalSurfaces } from "@automovie/human/geometry/portraitFinalSurface";
 import { TestValidator } from "@nestia/e2e";
 
-import type { IPortraitNasalBodyShape } from "../../subjects/generated-korean-girl-01/nasalBody";
-import { createPortraitNasalBodySurface } from "../../subjects/generated-korean-girl-01/nasalBodySurface";
-import { applyPortraitFinalSurfaces } from "../../subjects/portraitFinalSurface";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -136,7 +136,12 @@ export const test_subject_nasal_body_surface = (): void => {
     TestValidator.predicate(
       "degenerate or overflowing boundary refuses",
       throwsError(
-        () => run({ ...mesh, positions: [first, ...mesh.positions.slice(1)] }),
+        () =>
+          propose({
+            ...mesh,
+            positions: [first, ...mesh.positions.slice(1)],
+            normals: mesh.positions.flatMap(() => [0, 0, 1]),
+          }),
         "nonzero edges",
       ),
     );

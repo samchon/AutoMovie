@@ -6,8 +6,8 @@ import {
 /**
  * Per-group field → morph-name map: how each anatomy-grouped
  * {@link IAutoMovieHead} leaf projects onto its flat
- * {@link AutoMovieHeadParameterName}. The grouping is for the LLM's benefit; the
- * `@automovie/face` consumes the flat names.
+ * {@link AutoMovieHeadParameterName}. The grouping is for the LLM's benefit;
+ * authored morph templates consume the flat names independently of topology.
  */
 const MAP: Record<string, Record<string, AutoMovieHeadParameterName>> = {
   shape: {
@@ -63,8 +63,9 @@ const MAP: Record<string, Record<string, AutoMovieHeadParameterName>> = {
 
 /**
  * Project an anatomy-grouped {@link IAutoMovieHead} document onto the flat morph
- * weights {@link AutoMovieHeadParameterName} the face package's `morphHead`
- * applies.
+ * weights {@link AutoMovieHeadParameterName} for an authored morph template.
+ * The caller supplies the template's neutral geometry and matching targets;
+ * this projection does not construct an anatomical face document.
  *
  * Omitted groups and fields are skipped (they stay neutral), so the result
  * carries only the traits the document set. The map covers every leaf exactly

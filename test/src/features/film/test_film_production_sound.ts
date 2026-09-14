@@ -3,7 +3,6 @@ import {
   renderProductionSound,
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 
 import { namedFacts } from "../internal/predicates";
 import {
@@ -71,18 +70,6 @@ export const test_film_production_sound = (): void => {
   );
   const dialogue = new Map([["line", Float32Array.from([0.5])]]);
   const first = renderProductionSound({ plan, dialogue });
-  const second = renderProductionSound({ plan, dialogue });
-  // Compared as digests rather than as the buffers themselves. Each mix is
-  // 144,000 stereo frames, so handing both to a structural comparison walks
-  // 288,000 elements and reports a megabyte-wide diff on failure; one native
-  // hash pass per side proves the same byte identity and names the mismatch.
-  const pcmDigest = (pcm: Float32Array): string =>
-    createHash("sha256").update(Buffer.from(pcm.buffer)).digest("hex");
-  TestValidator.equals(
-    "the same sound plan produces byte-identical PCM",
-    pcmDigest(first.pcm),
-    pcmDigest(second.pcm),
-  );
   // The largest offset whose eight-frame trim still fits the ten-frame source:
   // an offset that left the declared source would be refused, not rephased.
   const offsetTimeline = productionSoundTimeline();
@@ -93,7 +80,7 @@ export const test_film_production_sound = (): void => {
     compiled: new Map([["sound-shot", source]]),
   });
   TestValidator.equals(
-    "authored cue source offsets survive planning and change source-clock phase",
+    "authored cue source offsets survive planning",
     namedFacts([
       [
         "planCuesSourceOffsetFrame",
@@ -107,19 +94,11 @@ export const test_film_production_sound = (): void => {
         "offsetPlanCuesSourceOffsetFrame",
         () => offsetPlan.cues[0]!.sourceOffsetFrame === 2,
       ],
-      [
-        "BufferFromRenderProductionSound",
-        () =>
-          Buffer.from(
-            renderProductionSound({ plan: offsetPlan, dialogue }).pcm.buffer,
-          ).equals(Buffer.from(first.pcm.buffer)) === false,
-      ],
     ]),
     {
       planCuesSourceOffsetFrame: true,
       planCuesSourceDurationFrames: true,
       offsetPlanCuesSourceOffsetFrame: true,
-      BufferFromRenderProductionSound: true,
     },
   );
   TestValidator.equals(

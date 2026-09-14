@@ -1,11 +1,11 @@
 import { createAutoMovieMeshDeformer } from "@automovie/engine";
+import { createPortraitReliefLayer } from "@automovie/human/geometry/portraitRelief";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   portraitNasalLayerFor,
   portraitNasalRelief,
 } from "../../subjects/generated-korean-girl-01/anatomy";
-import { createPortraitReliefLayer } from "../../subjects/portraitRelief";
 import { nclose } from "../internal/predicates";
 
 /**

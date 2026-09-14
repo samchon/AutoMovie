@@ -1,12 +1,8 @@
 # @automovie/playground
 
-`@automovie/playground`는 엔진과 뷰어를 브라우저에서 직접 확인하는 개발용 표면이다.
+Browser development surfaces for inspecting engine geometry, poses, motion, cameras and object placement. Most pages use the AutoMovie viewer; the anatomical face editor loads its actual exported GLB with Three.js.
 
-목적은 마케팅 페이지가 아니라 렌더링, 자세, 모션, 카메라, 오브젝트 이동이 실제로 어떻게 보이는지 빠르게 확인하는 것이다.
-
-모든 화면은 `@automovie/interface` 데이터와 `@automovie/engine` 결과를 `@automovie/viewer`가 그리는 구조를 따른다.
-
-## 실행
+## Run
 
 ```bash
 pnpm --filter @automovie/playground dev
@@ -14,54 +10,37 @@ pnpm --filter @automovie/playground build
 pnpm --filter @automovie/playground preview
 ```
 
-개발 서버 기본 주소는 `http://127.0.0.1:5173`이다.
+The default development URL is `http://127.0.0.1:5173`. The development command first builds `@automovie/human`, including its schema-transformed browser entry. After changing human source, rebuild that package and reload the editor.
 
-## 주요 페이지
+## Anatomical face editor
 
-- `index.html`: 절차적 blockman 캐릭터 에디터. 체형 슬라이더, 관절 포즈, 내장 wave 클립을 확인한다.
-- `drivers.html`: 3관절 팔과 two-bone IK, driver resolver를 확인한다.
-- `stickman.html`: stickman/humanoid 및 cat 모션 클립을 선택 재생한다.
-- `gesture.html`, `showcase.html`: 엔진이 합성하는 gesture/action vocabulary를 확인한다.
-- `film.html`: script/stage/block/perform/cut 파이프라인의 결과를 확인한다.
-- `launch.html`, `impact.html`, `attach.html`, `trampoline.html`: projectile, impact, attach, jump 계열의 엔진 모션을 확인한다.
-- `knight.html`, `archery.html`, `spar.html`: mounted, archery, boxing 장면을 확인한다.
-- `body.html`, `face.html`, `head.html`, `mhhead.html`, `mhfull.html`: face/head/body 연구 표면. 현재 제품 경로의 중심은 아니지만 asset/shape 검증용으로 보존한다.
+Open `/face.html`. The editor consumes [human](../human/README.md) and the nineteen numerical [subject documents](../../test/src/subjects/human-face-documents), not photographs or a live fitting service. The old face-package page and `/head.html` have been retired.
 
-## 모션 자산 인벤토리
+Select a subject, adjust intermediate traits or an anatomical detail, and wait for the worker to build the model. Scalar fields show units and applied values; the region JSON editor handles nested objects and complete arrays. Eyes, cheeks and ears have independent side overrides. Expression controls and presets include paired blink, brow, smile and gaze plus jaw opening, lip separation and pucker. Camera presets, orbit controls and clay help inspect geometry.
 
-현재 playground에는 세 종류의 모션 자산이 있다.
+Fit frames the complete three-dimensional face and hair envelope for every orbit direction. It accounts for the viewport aspect and optical zoom, and expands the orbit limit and clipping range when needed. This changes only inspection, never the saved face or its exported geometry.
 
-첫째, 손으로 작성한 clip library다.
+Appearance exposes linear RGB, surface roughness and clearcoat strength for skin, lips, brows, teeth and the resident finish named by the applied hair profile. A custom hair-material id is editable too. Roughness and clearcoat use [0,1]; absent clearcoat displays zero without changing the document until an edit is committed. Each entry changes only its selected coefficient or colour channel and retains the guide geometry, texture coverage and other finish properties. Choosing a different hair finish through region replacement moves these controls to that owner.
 
-- `src/stickman-motion.ts`: `jumpingJack`, `wave`, `walk`, `run`, `hop`, `kick`, `dance`, `turn`, `combo`, `shadowbox`, `stroll`, `sprint`.
-- `src/horse-motion.ts`: `idle`, `walk`, `trot`, `gallop`, `gallopTravel`, `turn`, `rear`, `performance`.
-- `src/cat-motion.ts`: `idle`, `walk`, `leap`, `sit`, `stretch`, `tailFlick`, `combo`, `prowl`, `bound`.
-- `src/spar.ts`: `redClip`, `blueClip`. boxing 교환, 방어, KO 흐름을 하나의 장면용 clip으로 만든다.
+A rejected edit preserves the last valid document/model. Undo, redo and reset operate on successful edits. Save/load JSON keeps the complete numerical basis and explicit overrides. GLB is self-contained; glTF downloads include sibling buffers and any resident PNG images, which must stay alongside the JSON file. Downloaded meshes represent the current built expression, not a rigged animation. Generated geometry and unresolved likeness are separate outcomes.
 
-둘째, 엔진 action에서 생성되는 장면 모션이다.
+Pure editor adapter tests live in the workspace test package and import this private application's `src/human` modules through its workspace dependency. They construct an in-memory DOM or renderer port without starting a browser. `viewport` owns scene publication, disposal, lighting and frame state; `workerPort` adapts browser messages and `workerHandler` owns parsing, construction and export failure replies. Manual frame completion applies the current clay and orbit state before drawing, just as the animation loop does. Actual GPU captures remain a separate visual check.
 
-- `attach-view.ts`: `attachTo`가 부모 손 FK를 따라 오브젝트 motion을 만든다.
-- `launch-view.ts`: `launch`가 투사체 motion과 피격 react를 함께 만든다.
-- `impact-view.ts`: 충돌/반동 계열을 장면으로 확인한다.
-- `trampoline-view.ts`, `gesture-view.ts`, `showcase-view.ts`, `film-view.ts`: `performShot`과 관련 action builder가 생성한 clip을 확인한다.
+## Other pages
 
-셋째, 모델/리그 빌드 스크립트다.
+- `index.html`: procedural blockman proportions, joint poses and the built-in wave clip.
+- `drivers.html`: three-joint arm, two-bone IK and driver resolution.
+- `stickman.html`: stickman/humanoid and cat clips.
+- `gesture.html`, `showcase.html`: engine gesture/action vocabulary.
+- `film.html`: script/stage/block/perform/cut pipeline output.
+- `launch.html`, `impact.html`, `attach.html`, `trampoline.html`: projectile, impact, attachment and jump actions.
+- `knight.html`, `archery.html`, `spar.html`: mounted, archery and boxing scenes.
+- `body.html`, `mhhead.html`, `mhfull.html`: retained body and MakeHuman research surfaces, independent from the human face editor.
 
-- `scripts/build-stickman.ts`, `scripts/build-horse.ts`, `scripts/build-cat.ts`, `scripts/build-knight.ts`: viewer가 읽는 GLB scaffold를 만든다.
-- `scripts/mh/*`: MakeHuman 계열 연구/검증 스크립트다.
+## Motion assets
 
-## Profile 이관 기준
+Hand-authored libraries remain in `src/stickman-motion.ts` (including walk/run, wave, dance and shadowbox), `src/horse-motion.ts` (gaits, turns and rear), `src/cat-motion.ts` (gaits, leap, sit, stretch and tail flick) and `src/spar.ts` (the boxing exchange).
 
-선언형 Profile/gait 이관은 clip을 한꺼번에 없애는 작업이 아니다.
+Engine-generated motion is exercised by `attach-view.ts`, `launch-view.ts`, `impact-view.ts`, `trampoline-view.ts`, `gesture-view.ts`, `showcase-view.ts` and `film-view.ts`. Model/rig build scripts under `scripts/` produce the GLB scaffolds; `scripts/mh/` retains separate MakeHuman research utilities.
 
-우선 순위는 locomotion이다.
-
-1. humanoid `walk`, `run`, `stroll`, `sprint`.
-2. horse `walk`, `trot`, `gallop`, `gallopTravel`.
-3. cat `walk`, `prowl`.
-
-`jumpingJack`, `wave`, `kick`, `dance`, `shadowbox`, `rear`, `leap`, `sit`, `stretch`, `tailFlick`, boxing scene clip은 gait만으로 표현하기 어렵다.
-
-이들은 별도 gesture/action profile이나 driven-driver 이관 기준이 생길 때까지 손작성 clip으로 둔다.
-
-Profile-generated clip으로 바꾸는 PR은 기존 clip과 key observable을 비교하는 regression을 먼저 추가하고, playground capture로 silhouette와 timing을 확인한다.
+Locomotion migration prioritizes humanoid walk/run/stroll/sprint, horse walk/trot/gallop/travel and cat walk/prowl. Non-gait gestures remain hand-authored until their own action/profile contract exists. A profile-generated replacement first needs regression checks against the existing observable behavior and playground captures for silhouette and timing.

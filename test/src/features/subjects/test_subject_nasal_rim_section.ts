@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   appendPortraitNasalRimSection,
   createPortraitNasalRimSection,
-} from "../../subjects/generated-korean-girl-01/nasalRimSection";
+} from "@automovie/human/components/nasalRimSection";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

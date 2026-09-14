@@ -7,22 +7,22 @@ import { IAutoMovieFaceMouth } from "./IAutoMovieFaceMouth";
 import { IAutoMovieFaceNose } from "./IAutoMovieFaceNose";
 
 /**
- * A face-shape specification: the document the face editor's tool calling emits
- * and the engine morphs deterministically.
+ * A portable facial trait vector for authored morph templates. This retained
+ * engine vocabulary is independent of the anatomical face documents in
+ * `@automovie/human`.
  *
  * The document mirrors facial anatomy: overall head form at the top level, then
  * one named group per feature ({@link IAutoMovieFaceEyeSet eyes},
  * {@link IAutoMovieFaceNose nose}, {@link IAutoMovieFaceJaw jaw}…), each group an
  * interface of its own so an LLM reads the schema the way a person reads a
- * face. Every leaf is a signed morph weight in `[-2, 2]` over a face template
- * (the canonical neutral topology, or a character whose `identity` morph is
- * already baked): `0` is the template unchanged, the sign picks the direction,
+ * face. Every leaf is a signed morph weight in `[-2, 2]` over the caller's
+ * face template: `0` is the template unchanged, the sign picks the direction,
  * `±1` is one nameable trait step, and beyond `±1` exaggerates toward
  * caricature. **Omitted fields and groups mean neutral**: emit only the traits
  * you intend to change. Magnitudes are enforced at runtime by the engine
- * validator; each leaf projects onto one glTF morph target
- * ({@link AutoMovieFaceParameterName}) the face package bakes into the
- * template.
+ * validator; each leaf projects onto one named morph target
+ * ({@link AutoMovieFaceParameterName}). The asset author supplies the neutral
+ * geometry and corresponding target deltas.
  *
  * Identity (whose face this is) and skin texture are asset concerns living in
  * the template, not here: this document stays a pure, portable trait vector, so

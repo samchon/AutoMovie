@@ -1,8 +1,8 @@
 import { measureAutoMovieMeshClearance } from "@automovie/engine";
+import { buildPortraitDentalCrown } from "@automovie/human/components/dentalCrown";
+import { buildPortraitDentalRow } from "@automovie/human/components/dentalRow";
 import { TestValidator } from "@nestia/e2e";
 
-import { buildPortraitDentalCrown } from "../../subjects/generated-korean-girl-01/dentalCrown";
-import { buildPortraitDentalRow } from "../../subjects/generated-korean-girl-01/dentalRow";
 import { throwsError } from "../internal/predicates";
 
 /**

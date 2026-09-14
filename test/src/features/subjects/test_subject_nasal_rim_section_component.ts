@@ -1,12 +1,12 @@
+import { createPortraitNoseComponent } from "@automovie/human/components/nose";
+import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
+import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   portraitNoseShape,
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
-import { assertPortraitSkinTopology } from "../../subjects/portraitSkinTopology";
-import { subdivideControlMesh } from "../../subjects/subdivideControlMesh";
 import { nclose } from "../internal/predicates";
 
 /**

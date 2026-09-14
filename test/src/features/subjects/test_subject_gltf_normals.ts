@@ -1,9 +1,9 @@
+import { portraitDocument } from "@automovie/human/geometry/portraitDocument";
+import { portraitMeshBuffers } from "@automovie/human/geometry/portraitMeshBuffers";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitDocument } from "../../subjects/portraitDocument";
-import { portraitMeshBuffers } from "../../subjects/portraitMeshBuffers";
 import { createModel } from "../internal/fixtures";
 import { nclose, throwsError } from "../internal/predicates";
 

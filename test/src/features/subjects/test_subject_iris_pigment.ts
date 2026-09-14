@@ -1,3 +1,6 @@
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
+import { buildPortraitHead } from "@automovie/human/components/head";
+import { createPortraitIrisMaterials } from "@automovie/human/components/irisPigment";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,9 +8,6 @@ import {
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
-import { createPortraitIrisMaterials } from "../../subjects/generated-korean-girl-01/irisPigment";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -18,6 +18,8 @@ import { nclose, throwsError } from "../internal/predicates";
  *    variation; invalid identity, vector shape and color domains refuse.
  * 2. One eye owns its palette immediately, while another may retain the shared
  *    palette. Mutating caller colors cannot change the constructed material.
+ *    Sparse tessellation need not select every colour, but each emitted region
+ *    uses its matching owned band and all iris triangles survive partitioning.
  */
 export const test_subject_iris_pigment = (): void => {
   const base: [number, number, number] = [0.2, 0.4, 0.6];
@@ -113,7 +115,21 @@ export const test_subject_iris_pigment = (): void => {
   const colors = colored.parts.filter((p) => p.id.startsWith("right-iris-"));
   TestValidator.predicate(
     "actual iris parts bind their owned palette",
-    colors.length === 8 && colors.every((p) => p.material === p.id),
+    colors.length > 0 &&
+      colors.every(
+        (p) =>
+          p.material === p.id &&
+          eye.materials!.some((material) => material.id === p.material),
+      ),
+  );
+  TestValidator.equals(
+    "pigment partition retains all sampled iris triangles",
+    colors.reduce((sum, part) => {
+      if (part.geometry.type !== "mesh")
+        throw new Error("Iris pigment regions must remain indexed meshes.");
+      return sum + part.geometry.mesh.indices!.length / 3;
+    }, 0),
+    2 * small.sampling.irisColumns * small.sampling.irisRows,
   );
   TestValidator.predicate(
     "omission retains the shared material path",

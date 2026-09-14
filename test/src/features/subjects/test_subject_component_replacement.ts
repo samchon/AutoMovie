@@ -1,6 +1,7 @@
+import { buildPortraitHead } from "@automovie/human/components/head";
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
 import { TestValidator } from "@nestia/e2e";
 
-import { blendPortraitSkin } from "../../subjects/blendPortraitSkin";
 import {
   alternatePortraitEye,
   alternatePortraitNose,
@@ -9,7 +10,6 @@ import {
   portraitNoseShape,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
 
 /**
  * Replace one eye and the nose through the same host protocol. The unchanged eye

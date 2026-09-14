@@ -1,5 +1,3 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   portraitMix,
   portraitNormals,
@@ -9,7 +7,9 @@ import {
   portraitRegion,
   portraitSpline,
   portraitTube,
-} from "../../subjects/geometry";
+} from "@automovie/human/geometry/geometry";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

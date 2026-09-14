@@ -1,11 +1,11 @@
-import { TestValidator } from "@nestia/e2e";
-
-import { portraitPoint as p } from "../../subjects/geometry";
+import { portraitPoint as p } from "@automovie/human/geometry/geometry";
 import {
   fitPortraitEyeSphere,
   portraitEyeSphereHeight,
   portraitEyeSphereIntersection,
-} from "../../subjects/portraitEyeSphere";
+} from "@automovie/human/geometry/portraitEyeSphere";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

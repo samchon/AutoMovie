@@ -359,17 +359,16 @@ export interface IAutoMovieHeadJaw {
 }
 
 /**
- * A full-head shape specification for the parametric head built on the clean
- * MakeHuman-derived base: the document the head editor's tool calling emits and
- * the engine projects (via `flattenHead`) onto
- * {@link AutoMovieHeadParameterName} morph weights the face package's
- * `morphHead` applies.
+ * A coarse full-head trait vector for authored morph templates. The engine's
+ * `flattenHead` projects its leaves onto {@link AutoMovieHeadParameterName}
+ * weights; the asset author supplies the neutral geometry and target deltas.
+ * This retained vocabulary is independent of the numerical face documents in
+ * `@automovie/human`.
  *
  * Anatomy-grouped so an LLM reads it the way a person reads a face; every leaf
- * is a signed weight in `[-2, 2]` (`0` = the neutral average). Omitted fields
- * and groups mean neutral. This is the comprehensive identity/shape spec (cute
- * / beauty / plain archetypes and East-Asian cues are all reachable);
- * expression is out of scope.
+ * is a signed weight in `[-2, 2]` (`0` = the unchanged template). Omitted fields
+ * and groups mean neutral. The template determines the visible meaning of
+ * each weight; expression is a separate contract.
  *
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `IAutoMovieHead` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `IAutoMovieHead` as a coarse proxy parameter under the representation-fidelity ceiling.

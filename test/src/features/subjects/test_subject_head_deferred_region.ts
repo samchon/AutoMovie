@@ -1,8 +1,8 @@
+import { buildPortraitHead } from "@automovie/human/components/head";
 import type { IAutoMovieModelPart } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
 
 /**
  * The actual head assembler installs a sampled part after refining its socket.

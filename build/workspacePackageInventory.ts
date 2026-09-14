@@ -84,6 +84,12 @@ export const AUTOMOVIE_PACKAGE_INVENTORY = Object.freeze([
     disposition: "pack",
   },
   {
+    key: "human",
+    directory: "human",
+    name: "@automovie/human",
+    disposition: "pack",
+  },
+  {
     key: "evidence",
     directory: "evidence",
     name: "@automovie/evidence",
@@ -137,12 +143,6 @@ export const AUTOMOVIE_PACKAGE_INVENTORY = Object.freeze([
     disposition: "exclude",
     reason:
       "the creator is the front door, not a generated project's dependency",
-  },
-  {
-    directory: "face",
-    name: "@automovie/face",
-    disposition: "exclude",
-    reason: "the dormant compatibility package is outside the scaffold graph",
   },
   {
     directory: "playground",

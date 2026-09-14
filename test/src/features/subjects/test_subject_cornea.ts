@@ -1,15 +1,15 @@
 import { validateMeshTopology } from "@automovie/engine";
+import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
+import {
+  type IPortraitCornea,
+  buildPortraitCornea,
+} from "@automovie/human/geometry/portraitCornea";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   portraitEyeShape,
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
-import { createPortraitEyeComponent } from "../../subjects/generated-korean-girl-01/eyes";
-import {
-  type IPortraitCornea,
-  buildPortraitCornea,
-} from "../../subjects/portraitCornea";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

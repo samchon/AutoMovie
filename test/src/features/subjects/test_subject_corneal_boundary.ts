@@ -1,3 +1,8 @@
+import {
+  type IPortraitEyeShape,
+  createPortraitEyeComponent,
+} from "@automovie/human/components/eyes";
+import { buildPortraitHead } from "@automovie/human/components/head";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -5,11 +10,6 @@ import {
   portraitEyeSockets,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import {
-  type IPortraitEyeShape,
-  createPortraitEyeComponent,
-} from "../../subjects/generated-korean-girl-01/eyes";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

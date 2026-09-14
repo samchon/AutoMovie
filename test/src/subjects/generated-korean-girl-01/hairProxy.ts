@@ -1,12 +1,11 @@
 import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
-import type { IAutoMovieMesh } from "@automovie/interface";
-
 import {
   portraitNormals,
   portraitPart,
   portraitPatch,
   portraitPoint,
-} from "../geometry";
+} from "@automovie/human/geometry/geometry";
+import type { IAutoMovieMesh } from "@automovie/interface";
 
 /** Subject-owned continuous hair-cap controls. */
 export interface IPortraitHairShape {

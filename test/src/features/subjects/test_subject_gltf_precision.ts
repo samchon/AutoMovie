@@ -1,13 +1,13 @@
 import { inspectAutoMovieMeshTopology } from "@automovie/engine";
+import { portraitDocument } from "@automovie/human/geometry/portraitDocument";
+import {
+  placePortraitMesh,
+  portraitMeshBuffers,
+} from "@automovie/human/geometry/portraitMeshBuffers";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitDocument } from "../../subjects/portraitDocument";
-import {
-  placePortraitMesh,
-  portraitMeshBuffers,
-} from "../../subjects/portraitMeshBuffers";
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 import { nclose, throwsError } from "../internal/predicates";
 

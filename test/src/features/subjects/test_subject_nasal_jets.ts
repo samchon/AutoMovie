@@ -1,9 +1,9 @@
-import { TestValidator } from "@nestia/e2e";
-
 import {
   portraitNasalJetCorrection,
   samplePortraitNasalSection,
-} from "../../subjects/generated-korean-girl-01/nasalAperture";
+} from "@automovie/human/components/nasalAperture";
+import { TestValidator } from "@nestia/e2e";
+
 import { nclose, throwsError } from "../internal/predicates";
 
 /**

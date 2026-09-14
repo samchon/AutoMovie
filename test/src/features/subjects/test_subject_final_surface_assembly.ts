@@ -1,8 +1,8 @@
+import { buildPortraitHead } from "@automovie/human/components/head";
+import type { IPortraitComponent } from "@automovie/human/geometry/portraitComponents";
 import { TestValidator } from "@nestia/e2e";
 
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
-import type { IPortraitComponent } from "../../subjects/portraitComponents";
 
 /**
  * The head assembler applies collected final proposals before its common normal

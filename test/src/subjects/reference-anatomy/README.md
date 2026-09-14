@@ -1,6 +1,6 @@
 # Anatomical surface reference
 
-This is the attributed anatomical prior used by the reference study and optional recorded subject fit. It is not the completed reference portrait and does not use `@automovie/face` or `@automovie/human`. AutoMovie model types and the general engine-backed geometry helpers construct its resident meshes.
+This is the attributed anatomical prior used by the reference study and optional recorded subject fit. It is not the completed reference portrait or the human editor's foundation. AutoMovie model types and the engine-backed geometry helpers now hosted by `@automovie/human` construct its resident meshes.
 
 `mesh.json` contains the head and upper-neck portion of MakeHuman's `hm08` base mesh, lip-region membership, eye-joint anchors and four sparse target sets. The asset source is [MPFB2 at commit 437dd513888a92399d1d3200d2e80859fae55abc](https://github.com/makehumancommunity/mpfb2/tree/437dd513888a92399d1d3200d2e80859fae55abc). Its base-mesh header explicitly releases the asset under CC0, and the repository's asset license separately covers targets and mesh-information data. [LICENSE.CC0.md](LICENSE.CC0.md) retains that asset license. MPFB program logic has not been incorporated.
 

@@ -1,3 +1,5 @@
+import { buildPortraitHead } from "@automovie/human/components/head";
+import { createPortraitNoseComponent } from "@automovie/human/components/nose";
 import { TestValidator } from "@nestia/e2e";
 
 import { portraitNasalLayerFor } from "../../subjects/generated-korean-girl-01/anatomy";
@@ -6,8 +8,6 @@ import {
   portraitNoseSocket,
 } from "../../subjects/generated-korean-girl-01/configuration";
 import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
-import { buildPortraitHead } from "../../subjects/generated-korean-girl-01/head";
-import { createPortraitNoseComponent } from "../../subjects/generated-korean-girl-01/nose";
 import { nclose } from "../internal/predicates";
 
 /**

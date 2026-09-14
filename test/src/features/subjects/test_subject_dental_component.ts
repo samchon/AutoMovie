@@ -1,6 +1,6 @@
+import { createPortraitDentalComponent } from "@automovie/human/components/dentalComponent";
 import { TestValidator } from "@nestia/e2e";
 
-import { createPortraitDentalComponent } from "../../subjects/generated-korean-girl-01/dentalComponent";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
