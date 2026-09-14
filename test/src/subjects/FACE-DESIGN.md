@@ -1,6 +1,6 @@
 # Anatomical face construction
 
-This design governs the direct studies and the later extraction of their demonstrated construction rules into `@automovie/human`. The current portrait remains unfinished. A valid mesh, an optional field or a reviewed formula does not establish a faithful likeness. The active source and its current capture, rather than this design, determine which capabilities have actually been demonstrated.
+This design describes the anatomical construction used by the direct studies and `@automovie/human`. The package's [face specification](../../../docs/specifications/asset-and-representation/facial-authoring/contract.md) owns the public document and editing contract. The current portraits remain unfinished. A valid mesh, an optional field or a reviewed formula does not establish a faithful likeness. The active source and its current capture, rather than this design, determine which capabilities have actually been demonstrated.
 
 The [anatomical form and control inventory](FACE-ANATOMY.md) distinguishes the current active implementation, fixed internal form, insufficient detail, absent owners and required connections across the whole face. Read it before treating an existing component name or scalar as evidence that a visible anatomical requirement is expressible.
 
@@ -57,7 +57,7 @@ The existing nasal section primitives provide physical position/derivative jets 
 
 A complete detailed component uses the existing fit/cut/attach protocol to replace its owned region when needed. It is not restricted to editing Z on the old skin. Its outer boundary is anatomical and group-owned. A rectangular fade can be useful for a bounded deformation, but it is not a substitute for the perimeter and transition of a whole nose, lip or ear.
 
-An optional coupled control field can retain sound topology while replacing one region's independent support amplitudes. Each anatomical control specifies the total XYZ movement at its position. A shared interpolation solve includes the neighbouring controls, including explicit zero anchors, before it emits the engine's existing compact fields. `portraitControlLayer.ts` obtains its matrix values from that same engine evaluator and retains the engine's differential and emitted-triangle checks. This is a volume deformation of existing skin and lining, not new topology or a claim to have reconstructed cartilage. Close or singular control populations are refused; open-rim protection remains owned by the surface assembler.
+An optional coupled control field can retain sound topology while replacing one region's independent support amplitudes. Each anatomical control specifies the total XYZ movement at its position. A shared interpolation solve includes the neighbouring controls, including explicit zero anchors, before it emits the engine's existing compact fields. [portraitControlLayer.ts](../../../packages/human/src/geometry/portraitControlLayer.ts) obtains its matrix values from that same engine evaluator and retains the engine's differential and emitted-triangle checks. This is a volume deformation of existing skin and lining, not new topology or a claim to have reconstructed cartilage. Close or singular control populations are refused; open-rim protection remains owned by the surface assembler.
 
 The assembler distinguishes continuity obligations. Homogeneous visible skin requires a coherent geometric transition. Separate surfaces such as teeth/lips and globe/lids require correct contact, overlap or clearance; welding them into one mesh would erase the physical interface. The component design specifies which condition applies and supplies the numerical and rendered observations that could falsify it.
 
@@ -129,9 +129,9 @@ The current custom construction graph remains strict for structural/source relat
 
 ## Extraction into human {#human-extraction}
 
-The direct study PR precedes the `human` package PR. The new package receives demonstrated reusable types, resolution rules, component builders and group calculations. Subject observations, fitted values and provenance remain in their authored study owner. Existing `face` remains dormant until its authorized retirement in the extraction phase.
+The `human` package receives reusable types, resolution rules, component builders and group calculations. Subject observations, fitted values and provenance remain in their authored study owner. Issue #2469 retires the old `face` package and its exclusive consumers; engine/interface face and rig primitives remain independent and supported.
 
-The extraction PR changes `test` to consume the actual `human` package. It freezes the pre-extraction input, resolved parameters, model buffers, GLTF delivery and capture profile, then reproduces them through the new package path. IDs, ordering, units, materials and derived bindings are part of that equivalence. It republishes the complete render set at `.shots/face-experiment/preview`. A file move or passing unit suite alone does not complete extraction.
+The extraction changes `test` to consume the actual `human` package. It freezes the pre-extraction input, resolved parameters, model buffers, GLTF delivery and capture profile, then reproduces them through the new package path. IDs, ordering, units, materials and derived bindings are part of that equivalence. Captures identify their exact frozen directory and bytes; `.shots/face-experiment/preview` is the legacy publisher's current bundle, not the identity of every separate study. A file move or passing unit suite alone does not complete extraction.
 
 ## Research basis and limits {#research-basis}
 

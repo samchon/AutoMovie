@@ -1,12 +1,11 @@
 import { createAutoMovieMeshDepthSampler } from "@automovie/engine";
-import type { IAutoMovieMesh } from "@automovie/interface";
-
 import {
   portraitNormals,
   portraitPart,
   portraitPatch,
   portraitPoint,
-} from "../geometry";
+} from "@automovie/human/geometry/geometry";
+import type { IAutoMovieMesh } from "@automovie/interface";
 
 /** Subject-owned continuous hair-cap controls. */
 export interface IPortraitHairShape {
@@ -91,10 +90,7 @@ export function buildPortraitHairProxy(
   // hairline therefore keeps its measured clearance while its tangent turns
   // continuously through the temple.
   const smoothMaximum = (a: number, b: number, transition: number): number => {
-    const weight = Math.max(
-      0,
-      Math.min(1, 0.5 + (a - b) / (2 * transition)),
-    );
+    const weight = Math.max(0, Math.min(1, 0.5 + (a - b) / (2 * transition)));
     const eased = weight * weight * (3 - 2 * weight);
     return eased * a + (1 - eased) * b;
   };
@@ -115,11 +111,7 @@ export function buildPortraitHairProxy(
       const fringe = support === undefined ? 0 : (1 - lateral * lateral) ** 2;
       const frontalBoundary = -70 + 152 * front ** 2;
       const boundaryY =
-        smoothMaximum(
-          smoothMaximum(25, frontalBoundary, 8),
-          earClearance,
-          8,
-        ) -
+        smoothMaximum(smoothMaximum(25, frontalBoundary, 8), earClearance, 8) -
         fringe * (19 + 2 * Math.cos(12 * angle));
       const polar = 0.002 + v * (Math.acos((boundaryY - 30) / ry) - 0.002);
       const point = portraitPoint(

@@ -1,13 +1,13 @@
 import {
   type IPortraitSurfaceControl,
   createPortraitControlLayer,
-} from "../portraitControlLayer";
+} from "@automovie/human/geometry/portraitControlLayer";
 import {
   type IPortraitReliefCurve,
   type IPortraitReliefRegion,
   createPortraitReliefLayer,
-} from "../portraitRelief";
-import type { IPortraitSurfaceLayer } from "../portraitSurface";
+} from "@automovie/human/geometry/portraitRelief";
+import type { IPortraitSurfaceLayer } from "@automovie/human/geometry/portraitSurface";
 
 /**
  * Optional coupled nasal detail. Omission retains the complete basic supports.

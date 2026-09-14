@@ -1,20 +1,20 @@
-import type { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
-
 import {
   appendPortraitNeck,
   portraitNeckShape,
-} from "../generated-korean-girl-01/cranium";
-import { createPortraitMaterials } from "../generated-korean-girl-01/materials";
-import { portraitCutBoundary } from "../generated-korean-girl-01/nose";
+} from "@automovie/human/components/cranium";
+import { createPortraitMaterials } from "@automovie/human/components/materials";
+import { portraitCutBoundary } from "@automovie/human/components/nose";
 import {
   portraitNormals,
   portraitPart,
   portraitPatch,
   portraitPoint,
   portraitRegion,
-} from "../geometry";
-import { portraitEyeSphereIntersection } from "../portraitEyeSphere";
-import { assertPortraitSkinTopology } from "../portraitSkinTopology";
+} from "@automovie/human/geometry/geometry";
+import { portraitEyeSphereIntersection } from "@automovie/human/geometry/portraitEyeSphere";
+import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
+import type { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
+
 import {
   type IPortraitSurfaceFit,
   createPortraitSurfaceFitter,

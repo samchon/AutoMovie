@@ -1,8 +1,7 @@
+import { portraitCutBoundary } from "@automovie/human/components/nose";
+import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
+import { portraitNormals } from "@automovie/human/geometry/geometry";
 import type { IAutoMovieMesh } from "@automovie/interface";
-
-import { blendPortraitSkin } from "./blendPortraitSkin";
-import { portraitCutBoundary } from "./generated-korean-girl-01/nose";
-import { portraitNormals } from "./geometry";
 
 /**
  * Replace a boundary on an already refined skin mesh without refining it again.

@@ -1,9 +1,41 @@
-import type { IPortraitComponent } from "../portraitComponents";
+import {
+  type IPortraitCheekShape,
+  type IPortraitCheekSocket,
+  createPortraitCheekLayer,
+} from "@automovie/human/components/cheeks";
+import { createPortraitDentalComponent } from "@automovie/human/components/dentalComponent";
+import type { IPortraitDentalRow } from "@automovie/human/components/dentalRow";
+import { portraitEyebrowProfile } from "@automovie/human/components/eyebrows";
+import {
+  type IPortraitAegyoSalShape,
+  type IPortraitEyeShape,
+  type IPortraitEyeSocket,
+  createPortraitEyeComponent,
+} from "@automovie/human/components/eyes";
+import { createPortraitMaterials } from "@automovie/human/components/materials";
+import {
+  type IPortraitMouthShape,
+  type IPortraitMouthSocket,
+  createPortraitMouthComponent,
+} from "@automovie/human/components/mouth";
+import type { IPortraitNasalSection } from "@automovie/human/components/nasalSection";
+import {
+  type IPortraitNoseShape,
+  type IPortraitNoseSocket,
+  createPortraitNoseComponent,
+  portraitNostrilContains,
+} from "@automovie/human/components/nose";
+import {
+  type IPortraitOrbitalSupportShape,
+  createPortraitOrbitalSupport,
+} from "@automovie/human/components/orbitalSupport";
+import type { IPortraitComponent } from "@automovie/human/geometry/portraitComponents";
 import {
   createPortraitReliefCurveLayer,
   createPortraitReliefLayer,
-} from "../portraitRelief";
-import type { IPortraitSurfaceLayer } from "../portraitSurface";
+} from "@automovie/human/geometry/portraitRelief";
+import type { IPortraitSurfaceLayer } from "@automovie/human/geometry/portraitSurface";
+
 import {
   type IPortraitNasalDetail,
   portraitNasalLayerFor,
@@ -11,38 +43,8 @@ import {
   portraitPerioralRelief,
   portraitPhiltralCurves,
 } from "./anatomy";
-import {
-  type IPortraitCheekShape,
-  type IPortraitCheekSocket,
-  createPortraitCheekLayer,
-} from "./cheeks";
 import { referenceControlNet } from "./controlNet";
-import { createPortraitDentalComponent } from "./dentalComponent";
-import type { IPortraitDentalRow } from "./dentalRow";
-import { portraitEyebrowProfile } from "./eyebrows";
-import {
-  type IPortraitAegyoSalShape,
-  type IPortraitEyeShape,
-  type IPortraitEyeSocket,
-  createPortraitEyeComponent,
-} from "./eyes";
 import type { IPortraitHairShape } from "./hairProxy";
-import {
-  type IPortraitMouthShape,
-  type IPortraitMouthSocket,
-  createPortraitMouthComponent,
-} from "./mouth";
-import type { IPortraitNasalSection } from "./nasalSection";
-import {
-  type IPortraitNoseShape,
-  type IPortraitNoseSocket,
-  createPortraitNoseComponent,
-  portraitNostrilContains,
-} from "./nose";
-import {
-  type IPortraitOrbitalSupportShape,
-  createPortraitOrbitalSupport,
-} from "./orbitalSupport";
 
 /** Subject-owned continuous hair-cap boundary fit for the reference fringe. */
 export const portraitHairShape: IPortraitHairShape = {
@@ -97,27 +99,22 @@ export const portraitEyeShape: IPortraitEyeShape = {
   foldWidth: 1.15,
   foldDepth: 0.14,
   upperLidVolume: 0.18,
-  // The source shows a roughly six-millimetre pretarsal roll immediately below
-  // the lashes. Keep the crest visible, then let the lower shoulder fall away
-  // before the preseptal field; this is visible fullness, not a bag or muscle
-  // thickness estimate. These offsets reshape surrounding tissue while the
-  // aperture remains its own rim.
+  // Localize the visible pretarsal roll immediately below the lashes. These
+  // are authored surface offsets, not a muscle-thickness measurement.
   lowerLidWidth: 0.55,
   lowerLidVolume: 0,
   // The visible pretarsal body is owned by the grouped aegyo-sal field below.
   // Keep the construction envelope as a quiet supporting seam so its repeated
   // rings do not compete with the single rounded surface roll.
   aegyoSal: {
-    offset: 1.1,
-    projection: 3,
-    // Reference projection measures a 55–63 px lower-roll span at
-    // 0.4357646 mm/px; 24 mm is the conservative paired-eye envelope.
-    width: 24,
-    height: 2,
+    offset: 0.6,
+    projection: 0.6,
+    width: 23,
+    height: 1,
     // The socket's canthus-to-canthus span is approximately 24 mm in the
     // same projection, so the reach participates in the envelope as well.
     reach: 24,
-    weights: [0.48, 0.84, 1, 1, 1, 0.84, 0.48],
+    weights: [0.1, 0.55, 0.9, 1, 0.9, 0.55, 0.1],
   } satisfies IPortraitAegyoSalShape,
   // Explicit tissue sections replace the two-control lower envelope within a
   // canthal fade. The roll, its lower boundary and the preseptal transition
@@ -194,9 +191,16 @@ export const portraitEyeShape: IPortraitEyeShape = {
     lowerMarginWidth: 0.15,
     lowerMarginLift: 0.035,
   },
-  browFibres: 420,
-  browProfile: { ...portraitEyebrowProfile },
-  upperLashes: 24,
+  browFibres: 800,
+  browProfile: {
+    ...portraitEyebrowProfile,
+    radius: 0.0475,
+    outwardBend: 1.4,
+    rootBand: [0.05, 0.55],
+    span: 0.3,
+    endFade: [0.12, 0.25],
+  },
+  upperLashes: 64,
   sampling: { eyeColumns: 80, eyeRows: 28, irisColumns: 84, irisRows: 20 },
 };
 
@@ -357,12 +361,10 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // The outer vermilion is an anatomical curve shared with neighbouring skin.
   // Its refinement should not inherit zigzags from opposite triangle vertices.
   borderRefinement: "curve",
-  // The captured smile occupies a narrower, shallower oral frame than the
-  // resident landmark cage. Keep the corner identities and dental group
-  // shared, while letting the fitted vermilion carry that proportion as one
-  // optional oral-frame control.
-  widthScale: 0.86,
-  openingScale: 0.8,
+  // The former 0.86 width reduced a 133 px measured corner span to 110 px.
+  // Compensate that shrinkage while retaining the same oral attachments.
+  widthScale: 1.03,
+  openingScale: 0.9,
   cornerLift: 1,
   upperLipProjection: 0,
   lowerLipProjection: 0,
@@ -370,31 +372,19 @@ export const portraitMouthShape: IPortraitMouthShape = {
   // inner aperture. The central pad remains broad; the lateral vermilion tapers
   // toward shared corners. These are provisional fit ratios, not measurements.
   band: {
-    upper: [
-      { at: -1, scale: 1 },
-      { at: -0.65, scale: 0.8 },
-      { at: 0, scale: 1.05 },
-      { at: 0.65, scale: 0.8 },
-      { at: 1, scale: 1 },
-    ],
-    lower: [
-      { at: -1, scale: 1 },
-      { at: -0.65, scale: 0.62 },
-      { at: 0, scale: 0.78 },
-      { at: 0.65, scale: 0.62 },
-      { at: 1, scale: 1 },
-    ],
+    upper: 1.1,
+    lower: 1.08,
   },
   // Add cross-sectional body between the existing cutaneous and oral borders.
   // The central upper tubercle and lower paired pads are independent from the
   // broad body. Projections use mm; widths/offsets use oral half-width fractions.
   // This provisional shape retains the photographed aperture and dental frame.
   section: {
-    upperBody: 0.18,
-    upperTubercle: 0.14,
+    upperBody: 0.6,
+    upperTubercle: 0.2,
     upperTubercleWidth: 0.33,
-    lowerBody: 0.1,
-    lowerPads: 0.02,
+    lowerBody: 0.6,
+    lowerPads: 0.12,
     lowerPadOffset: 0.28,
     lowerPadWidth: 0.26,
   },
@@ -471,14 +461,16 @@ export const portraitMouthShape: IPortraitMouthShape = {
  * arc-distance centres for the complete group without sampling the lip shape.
  */
 export const portraitDentalRow: IPortraitDentalRow = {
-  halfWidth: 24,
-  depth: 18,
+  halfWidth: 23,
+  depth: 16,
   gap: 0.08,
   // Nominal arc gaps do not measure the rotating proximal surfaces. Fit those
   // resident crown meshes with a separate, small physical separation constraint.
   contactGap: 0.02,
   crowns: portraitMouthShape.crowns.map((crown) => ({
     ...crown,
+    // Width fitting is independent of the crown's full anatomical height.
+    width: crown.width * 0.94,
     depth: 1.5,
     cervicalWidth: crown.cervicalWidth ?? 0.78,
     edgeRise: crown.edgeRise ?? 0.035 * crown.height,
@@ -497,7 +489,7 @@ export const portraitDentalSocket = {
  * lip; positive recess moves the entire arch posteriorly. These are authored
  * estimates and require both profile views after every placement change.
  */
-export const portraitDentalPlacement = { lift: 1.5, recess: 6 };
+export const portraitDentalPlacement = { lift: 1.7, recess: 6 };
 
 /**
  * Retained skin identities for the paired cheek masses and nasolabial paths.
@@ -625,6 +617,28 @@ export const portraitNasalSupportDetail: IPortraitNasalDetail | undefined =
 
 /** Retained measured-cage baseline for independent component experiments. */
 export const measuredPortraitAssembly = {
+  // Appearance is authored independently of the shared anatomical source basis.
+  materials: createPortraitMaterials().map((material) => {
+    const finishes: Record<string, { rgb: number[]; roughness: number }> = {
+      skin: { rgb: [0.62, 0.42, 0.32], roughness: 0.72 },
+      lips: { rgb: [0.48, 0.12, 0.15], roughness: 0.65 },
+      teeth: { rgb: [0.78, 0.73, 0.62], roughness: 0.35 },
+    };
+    const finish = finishes[material.id];
+    if (finish === undefined) return material;
+    return {
+      ...material,
+      baseColor: {
+        r: finish.rgb[0],
+        g: finish.rgb[1],
+        b: finish.rgb[2],
+        a: 1,
+        hex: null,
+      },
+      roughness: finish.roughness,
+      ...(material.id === "skin" ? { clearcoat: 0.02 } : {}),
+    };
+  }),
   hairProxy: true,
   components: portraitComponentsFor(
     portraitEyeShape,

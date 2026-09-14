@@ -1,4 +1,4 @@
-import type { IAutoMovieModelPart } from "@automovie/interface";
+import type { IAutoMovieMesh, IAutoMovieModelPart } from "@automovie/interface";
 
 import { assertPortraitFitBasis } from "../portraitFitBasis";
 import type { IPortraitMeshPatch } from "../portraitMeshPatch";
@@ -55,12 +55,32 @@ export function buildPortraitNasalReference(
       { type: "mesh" }
     >
   ).mesh;
+  return admitPortraitNasalPatch(
+    skin,
+    input,
+    fit.basis.targetControlNetSha256,
+    targetBytes,
+  );
+}
+
+/**
+ * Admit an already-built fitted nasal skin before interpreting boundary IDs.
+ * This is the shared boundary between expensive prior construction and the
+ * numerical patch consumer: exact source/target bytes are checked first, then
+ * metre coordinates and topology are copied into an owned millimetre patch.
+ */
+export function admitPortraitNasalPatch(
+  skin: IAutoMovieMesh,
+  input: { sourceSkinSha256: string; sourceBoundary: readonly number[] },
+  targetControlNetSha256: string,
+  targetBytes: Uint8Array,
+): IPortraitMeshPatch {
   assertPortraitFitBasis(
     {
       sourceModelSha256: input.sourceSkinSha256,
-      targetControlNetSha256: fit.basis.targetControlNetSha256,
+      targetControlNetSha256,
     },
-    encoder.encode(JSON.stringify(skin)),
+    new TextEncoder().encode(JSON.stringify(skin)),
     targetBytes,
   );
   return {

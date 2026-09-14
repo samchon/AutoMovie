@@ -1,23 +1,24 @@
-import type { IAutoMovieModel } from "@automovie/interface";
+import { buildPortraitEars } from "@automovie/human/components/ears";
+import { buildPortraitHead } from "@automovie/human/components/head";
+import { createPortraitMaterials } from "@automovie/human/components/materials";
+import { portraitPart } from "@automovie/human/geometry/geometry";
+import type { IPortraitComponent } from "@automovie/human/geometry/portraitComponents";
+import { applyPortraitOralContact } from "@automovie/human/geometry/portraitOralContact";
+import type { IPortraitSurfaceLayer } from "@automovie/human/geometry/portraitSurface";
+import type { IAutoMovieMaterial, IAutoMovieModel } from "@automovie/interface";
 
-import { portraitPart } from "../geometry";
-import type { IPortraitComponent } from "../portraitComponents";
-import { applyPortraitOralContact } from "../portraitOralContact";
-import type { IPortraitSurfaceLayer } from "../portraitSurface";
-import { referenceControlNet } from "./controlNet";
 import { portraitHairShape } from "./configuration";
-import { buildPortraitEars } from "./ears";
+import { referenceControlNet } from "./controlNet";
 import { buildFittedReferencePortrait } from "./fittedModel";
 import { buildPortraitHairProxy } from "./hairProxy";
-import { buildPortraitHead } from "./head";
-import { createPortraitMaterials } from "./materials";
 import type { portraitReview } from "./review";
 
 /**
  * Assemble this one reference face from independently inspectable anatomical
- * builders. This direct study has no dependency on a human parameter module.
- * Construction coordinates
- * are millimetres, +Y is up and +Z points out of the face. Anatomical left is +X.
+ * builders now shared by the human package. This study retains its own measured
+ * basis and configuration rather than loading the portable face-document API.
+ * Construction coordinates are millimetres, +Y is up and +Z points out of the
+ * face. Anatomical left is +X.
  *
  * The anatomical foundation delegates to the connected prior and recorded fit;
  * the procedural foundation uses the replaceable component protocol below.
@@ -47,6 +48,18 @@ import type { portraitReview } from "./review";
  * @evidence src/subjects/generated-korean-girl-01/review.md#reference Supplies the geometry compared against the photograph in its recorded camera pose.
  * @evidence src/subjects/generated-korean-girl-01/review.md#clay Supplies the shared surface inspected independently of its material colours.
  * @evidence src/subjects/generated-korean-girl-01/review.md#component-replacement Assembles the component selections exercised by the replacement tests; fresh alternate-assembly captures remain pending for this revision.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#front #7c8e313 Reopened the frozen front frame after a byte-identical Node 22 GLB replay: the connected nose retains an angular base, the lower lids form regular bands and the visible crowns remain coarse. No likeness acceptance follows.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#left-oblique #580c386 Reopened the positive-yaw frozen frame: the exposed pinna and continuous nasal sidewall remain visible, with a broad cheek-to-mouth depression. Hidden anatomy and eye fitting remain unaccepted.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#right-oblique #5a791c9 Reopened the negative-yaw frozen frame: no detached upper nasal crosspiece is visible, the far eye is occluded and the coarse temporal hair overhang dominates.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#left-profile #6a3370e Reopened the frozen anatomical-left profile: forehead, nasal, lip and chin silhouettes are continuous without the rejected bridge spikes. Single-view depth inference is not independently verified.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#right-profile #c836ccb Reopened the opposing frozen profile: the nasal silhouette remains connected while the curtain hides most of the side head. Coarse lip and crown form does not establish posterior likeness.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#back #5c7de2a Reopened the frozen back frame and corrected the observation to retain its visible horizontal cap-to-curtain seam. The tightly framed coarse hair mass is not a reproduced groom.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#top #0b45dcc Reopened the frozen overhead frame: the cap is helmet-like and the exposed nasal silhouette has no detached triangular bridge projections. Posterior dimensions remain inferred.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#bottom #cd2a6e6 Reopened the frozen underside: two nasal openings and their lining are visible, the cropped neck is open, and the broad chin-to-throat transition and simplified columella remain unaccepted.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#rear-oblique #706d696 Reopened the frozen rear oblique and retained its cap-to-curtain seam in the record. No detached ear fragment is visible, while the curtain hides most of the head and cannot establish unseen likeness.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#reference #1899ddf Reopened the frozen recorded-pose frame and read the earlier measured oral-fit record. Synthetic lid, nasal and crown forms remain visible; the historical pixel comparisons were not remeasured in this pass.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#clay #6263b83 Reopened all three frozen clay frames: connected nasal and cranial surfaces retain angular alar form, broad perioral depressions and raised vermilion. Opaque clay corneas are not a colour-render optical verdict.
+ * @evidenceReview src/subjects/generated-korean-girl-01/review.md#component-replacement #91a7335 Read the replacement history and its explicit uncertified contact figures against the preserved package replay. The byte-identical GLB establishes frozen construction preservation only; earlier numeric contacts, alternate assemblies and whole-PR review are not recertified here.
  * @evidence {@link portraitReview} Retains the construction review carrier for this assembled face; its written observations do not accept the likeness.
  */
 export function buildReferencePortrait(
@@ -61,6 +74,8 @@ export function buildReferencePortrait(
         components: IPortraitComponent[];
         subdivisionRounds: number;
         surfaceLayers?: readonly IPortraitSurfaceLayer[];
+        /** Optional complete base palette; omission retains the construction basis. Component-owned optical finishes remain additional. */
+        materials?: readonly IAutoMovieMaterial[];
         /** Include only the coarse hairstyle mass; omitted for isolated face inspection. */
         hairProxy?: boolean;
         /** Named assembled oral surfaces and nonnegative clearance in metres. */
@@ -122,7 +137,7 @@ export function buildReferencePortrait(
         : []),
     ],
     materials: [
-      ...createPortraitMaterials(),
+      ...structuredClone(assembly.materials ?? createPortraitMaterials()),
       ...assembly.components.flatMap((component) => component.materials ?? []),
     ],
     skeleton: null,
