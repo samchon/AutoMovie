@@ -12,6 +12,7 @@ import {
  * Zero length/width disables the corresponding surface independently.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Separates medial conjunctiva and wet lower-lid margin from optical shells.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines millimetre extent and relief controls, with zero length/width independently omitting either tissue surface.
+ * @author Samchon
  */
 export interface IPortraitOcularTissueShape {
   /** Medial tissue's extent from the inner canthus towards the iris, in mm. */
@@ -32,6 +33,7 @@ export interface IPortraitOcularTissueShape {
  * Upper and lower curves share endpoints and return millimetre head coordinates.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Binds ocular tissues to the same refined lid curves and support used by the eye.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries anatomical handedness, ordered canthal X bounds and live upper/lower/globe samples in head millimetres.
+ * @author Samchon
  */
 export interface IPortraitOcularTissueBoundary {
   /** Anatomical side determining which canthus is medial. */

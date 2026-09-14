@@ -9,6 +9,7 @@ import { posePortraitJawPoint } from "./jawPerformance";
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-expression Separates oral opening from the identity lip sections and crown dimensions.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression Evaluates neutral closure relative to the authored observed aperture.
+ * @author Samchon
  */
 export interface IPortraitMouthPerformance {
   /** Current central lip separation in [0,30] mm, before mandibular rotation. */

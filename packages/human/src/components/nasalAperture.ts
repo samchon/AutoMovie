@@ -5,6 +5,7 @@ import { Vector3 } from "@automovie/engine";
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Gives adjacent nasal skin and lining sections one shared position-and-tangent boundary.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries head-frame XYZ and its unnormalized derivative with respect to physical millimetre section distance.
+ * @author Samchon
  */
 export interface IPortraitNasalJet {
   /** XYZ in the common head frame, in mm. */
@@ -123,6 +124,7 @@ export function portraitNasalJetCorrection(
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Separates vestibular placement from broader nasal-body shaping.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines one group-owned millimetre origin and nonzero inward axis that body sections cannot refit.
+ * @author Samchon
  */
 export interface IPortraitNasalApertureFrame {
   /** Vestibular axis origin in head millimetres. */
@@ -136,6 +138,7 @@ export interface IPortraitNasalApertureFrame {
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Shares the final aperture position and exterior direction between nasal skin and lining.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries one cyclic unit tangent and outward co-normal at each retained rim sample.
+ * @author Samchon
  */
 export interface IPortraitNasalRimJet {
   /** Shared rim position in head millimetres. */

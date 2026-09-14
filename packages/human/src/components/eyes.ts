@@ -105,6 +105,7 @@ export interface IPortraitEyeSocket {
  * thickness or a detached tissue mesh.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Separates optional pretarsal fullness from optical contact and the upper-lid fold.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines one continuous lower roll with metric crest/shoulder dimensions and optional seven-station medial-to-lateral weights.
+ * @author Samchon
  */
 export interface IPortraitAegyoSalShape {
   /** Distance from the lower-lid margin to the roll crest, in millimetres. */

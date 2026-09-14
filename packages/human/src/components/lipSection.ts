@@ -4,6 +4,7 @@
  * Widths and pad separation are fractions of the inner mouth's half-width.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Separates upper tubercle, lower lateral pads and broad vermilion bodies from the mouth aperture.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines signed millimetre relief and normalized widths for independent upper and lower lip sections.
+ * @author Samchon
  */
 export interface IPortraitLipSection {
   /** Broad upper vermilion body projection, in mm. */
@@ -27,6 +28,7 @@ export interface IPortraitLipSection {
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Locates vermilion relief within the upper or lower lip independently of mesh vertex IDs.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Names anatomical transverse progress and cutaneous-to-oral depth within a curved lip band.
+ * @author Samchon
  */
 export interface IPortraitLipCoordinate {
   /** Upper or lower vermilion band; independent of anatomical left/right. */

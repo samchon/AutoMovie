@@ -7,6 +7,7 @@ import { samplePortraitNasalSection } from "./nasalAperture";
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Separates columellar/infratip, paired shoulder and alar forward extents at one lower-nose section.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines an ordered head-Y station and three independent millimetre section values.
+ * @author Samchon
  */
 export interface IPortraitNasalBodyStation {
   /** Head-Y station, increasing from sill toward the lower dorsum, in mm. */
@@ -24,6 +25,7 @@ export interface IPortraitNasalBodyStation {
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Controls a connected lower-nose body independently of nostril placement.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines longitudinal stations, transverse widths and independent paired alar fullness, spread and crease profiles.
+ * @author Samchon
  */
 export interface IPortraitNasalBodyShape {
   /** At least two ordered longitudinal stations; endpoint extents must be zero. */

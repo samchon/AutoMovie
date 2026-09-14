@@ -3,6 +3,7 @@
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Defines local tip or alar section curvature and tangent independently of its host datum.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries a retained anchor, metric apex offset, ellipsoidal radii, inner core and optional head-XY slope.
+ * @author Samchon
  */
 export interface IPortraitNasalLobule {
   /** Resident skin datum; the group supplies its already scaled XYZ position. */
