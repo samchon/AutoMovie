@@ -305,6 +305,9 @@ importers:
       '@automovie/template':
         specifier: workspace:^
         version: link:../template
+      tsx:
+        specifier: ^4.23.1
+        version: 4.23.1
     devDependencies:
       '@ttsc/evidence':
         specifier: catalog:typescript
