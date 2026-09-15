@@ -102,7 +102,6 @@ jobs:
       - name: Check the manor production
         run: pnpm --filter medieval-baron-manor run lint:source
       - run: pnpm run build
-      - run: pnpm run build:tgz
       - name: Verify validation left the checkout clean
         run: |
           git diff --check HEAD --

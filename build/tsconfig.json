@@ -3,7 +3,13 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "..",
-    "types": ["node"]
+    "types": ["node"],
+    "plugins": [
+      {
+        "transform": "@ttsc/lint",
+        "configFile": "../config/lint.config.ts"
+      }
+    ]
   },
   "include": ["."]
 }
