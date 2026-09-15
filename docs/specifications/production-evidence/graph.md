@@ -56,7 +56,7 @@ Source host는 공통 branch glob과 typed additive claim의 root·files·symbol
 
 <!-- @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension 작품 전용 관계를 허용하면서 공통 그래프의 무력화를 차단한다. -->
 
-팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim과 실행 canary를 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
+팩터리는 공통 작품별 발견·원칙·의무·저작 단계·source 단계 claim을 먼저 완성하고, 입력의 `claims`를 그 배열 뒤에 이어 붙인다. 호출자는 공통 배열이나 reference를 입력으로 받지 않으므로 기존 계약을 대체하는 확장 경로를 갖지 않는다.
 
 작품 고유 저술 의무 선언은 평면 계약 문서 하나, 소유 construction layer와 populationScope, 선택적 종합 증언을 쓸 account 주소를 묶는다. 공통 builder는 선언된 account와 layer·scope가 유도한 전체 authored H2를 host로 하고, 계약 H2를 ordinary coverage target으로 선택한다. 자연스러움 pass의 obligation을 거부한다. 같은 construction 계층과 계약 문서에 대한 obligation 중복 선언, account 주소 중복과 공통 예약 주소 충돌을 거부한다. 활성 계약 target은 존재하며 H2를 가져야 한다.
 

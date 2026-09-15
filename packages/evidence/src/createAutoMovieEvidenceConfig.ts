@@ -3757,20 +3757,7 @@ export const createAutoMovieEvidenceConfig = (
   graph: IProductionGraph,
 ): ITtscEvidenceGraphConfig => {
   validateProductionGraph(graph);
-  const shared = [
-    ...sharedClaimBindings(graph).map((binding) => binding.claim),
-    {
-      name: "the reserved evidence-lint canary proves the generated graph is running",
-      type: "typescript" as const,
-      files: ["test/__evidenceGraphCanary.ts"],
-      symbol: "property" as const,
-      reference: principleReference(
-        sharedDocsRoot(graph.location),
-        "common.md",
-        false,
-      ),
-    },
-  ];
+  const shared = sharedClaimBindings(graph).map((binding) => binding.claim);
   return {
     claims: [...shared, ...projectAutoMovieNativeClaims(graph.claims ?? [])],
   };

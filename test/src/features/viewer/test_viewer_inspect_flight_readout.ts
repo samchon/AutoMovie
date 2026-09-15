@@ -1,20 +1,6 @@
 import { TestValidator } from "@nestia/e2e";
-import path from "node:path";
 
-import { loadSourceModule } from "../internal/loadSourceModule";
-
-const { flightSpeedReadout } = loadSourceModule<{
-  flightSpeedReadout: (
-    speed: number,
-    frames: readonly number[],
-    budgetSeconds: number,
-  ) => string;
-}>(
-  path.resolve(
-    __dirname,
-    "../../../../packages/template/scaffold/src/viewer/flightSpeedReadout.ts",
-  ),
-);
+import { flightSpeedReadout } from "../../../../packages/template/scaffold-variants/source-viewer/src/viewer/flightSpeedReadout";
 
 const filled = (seconds: number): number[] =>
   new Array<number>(15).fill(seconds);
