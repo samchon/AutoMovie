@@ -1,6 +1,6 @@
 # Capture
 
-Capture is an observation of an exact source result under declared conditions. The scaffold supplies a live source viewer, not a stored capture or delivery service. Implement a requested capture through the public viewer and render APIs in production-owned source; do not recreate a project state store.
+Capture is an observation of an exact source result under declared conditions. Implement a requested capture through the public viewer and render APIs in production-owned source; [Live viewing](live-viewing.md) owns the view's creation when one is needed. The scaffold supplies no capture or delivery service.
 
 ## Declare the observation
 

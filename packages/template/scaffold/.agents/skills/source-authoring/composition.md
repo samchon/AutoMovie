@@ -188,10 +188,8 @@ The film's shot order is data the table already holds. Build the edit by walking
 
 Placement timing, transitions, and edge states still belong to the edit's own rules. Deriving the order does not license deriving a continuity claim: an edge state asserts a measured fact about two specific shots, and a factory cannot know it.
 
-## Read the shipped technique examples
+## Reuse techniques, not content
 
-The scaffold leaves production branches empty and ships reusable technique examples only under `src/examples/`. They demonstrate a building assembled by loops over its storeys, a physically-based finish and the ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Production owners belong under `src/maps`, `src/models`, `src/spaces`, `src/materials`, `src/instances`, `src/motions`, and `src/systems`; examples never become owners merely because they compile.
+Read the public package APIs and the design branch that owns the current problem. Derive repetition, surface allocation, quantities, placement, and phase changes from the production's reviewed inputs. A shared concern has one source owner; a complete visual surface is not split merely to distribute files.
 
-Two more are about the scale this handbook is written for, and a production authored across several passes wants both early. `src/examples/surfaceQuantities.ts` makes a surface publish what it laid, counted from the elements it emitted and split into the categories a frame cannot tell apart, so a wall nobody has clad yet stops reading as a finished one. `src/examples/surfaceOwnership.ts` divides the work by complete visual surface, one owner per surface and never a surface split across two, and gives a concern that genuinely crosses every surface, such as finish binding, its own single owner rather than a decision each surface's file makes for itself.
-
-Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how demonstration furniture ends up in somebody's film.
+Create production modules only when their active branch needs real implementation. A familiar example may suggest a technique, but its dimensions, layout, assets, identities, and content are not production authority.

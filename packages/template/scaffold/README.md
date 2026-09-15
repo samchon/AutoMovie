@@ -32,15 +32,14 @@ Use the commands declared in `package.json`:
 | `npm run lint` | Check the complete TypeScript program and active authored evidence. |
 | `npm run format` | Format source with the configured compiler formatter. |
 | `npm run sync` | Replace generated instructions from tracked production facts. |
-| `npm run viewer` | Open the production-owned source preview. |
 
-The scaffold does not provide a completed film build, capture, render, or publication command. Author the requested producer and consumers under `src` using the installed packages' public APIs. A source preview is an authoring instrument, not proof that a delivery pipeline exists or a film is complete.
+The scaffold provides instructions, contracts, and source lint, not prewritten production or viewer code. Author only the concrete source the requested work needs through the packages' public APIs. It supplies no film build, capture, render, or publication command.
 
 The installed `automovie` CLI separately provides Markdown TOC maintenance, external-asset inspection, and capability routes. Read its local help before invoking a command. These operations do not authorize a project state store.
 
-## Source preview navigation
+## Visual work
 
-The source preview accepts optional `navigation` from `src/createPreview.ts`: `items` contain unique nonempty `id`, `label`, optional `group`, and optional `keywords`; `apply(id)` synchronously updates the shared camera and optional target. The common viewer owns search, grouped selection, result counts, and panel collapse. Searching does not change the view. Selecting an item applies it; **Go to view** applies the selected item again after free flight. The producer supplies data and view changes without constructing menu DOM. See [Live viewing](.agents/skills/review-verification/live-viewing.md) for the preview lifecycle and evidence boundary.
+When the task needs a model view, building walkthrough, or film playback, follow [Live viewing](.agents/skills/review-verification/live-viewing.md) to implement the required view over the production's own source. A page and its controls are authored for that need, not selected from seeded viewer templates.
 
 ## Ownership
 
@@ -49,6 +48,5 @@ The source preview accepts optional `navigation` from `src/createPreview.ts`: `i
 - `docs` holds authored decisions, contracts, and review observations. Git holds change history. Neither is replaced by a generated state ledger.
 - `package.json` is the only project JSON file. Keep package and compiler settings there; do not create another JSON configuration, design store, registry, migration journal, receipt, or cache file in the project.
 - Execute production and measurement functions over typed values. Images, media, and reader-facing documents are outputs; serialized project state is not an authoring product.
-- `src/examples` is teaching material, not production content or evidence.
 
 Run the applicable [Author process Self-Review](.agents/skills/review-verification/self-review.md) before handing off a completed authoring, evidence, review, or stage-transition boundary.

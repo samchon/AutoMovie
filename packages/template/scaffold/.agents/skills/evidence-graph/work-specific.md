@@ -51,7 +51,7 @@ Give every adopted rule one owner:
 
 Narrative order is not a settings fact. A repeated visual or writing condition is not a distributed role. A role required somewhere in one population is not a per-unit checklist. A representation choice is not a world capability, and a timed path is not a model interface. A condition belongs in a production principle file when every selected unit must answer it separately, and in a production obligation file when the selected population covers it between its units; putting a per-unit condition in an obligation lets one owner answer for the whole population. Do not copy one rule across settings, principles, obligations, and source.
 
-Every production-specific target is a file directly under `docs/contracts`. Do not create family subdirectories or a catch-all production contract file; split rules among the semantic owners above. `index.md` carries truthful discovery negatives and nothing else.
+Every production-specific target is a file directly under `docs/contracts`. Create that directory with its first actual discovery record or adopted target, not with an empty placeholder. Do not create family subdirectories or a catch-all production contract file; split rules among the semantic owners above. `index.md` carries truthful discovery negatives and nothing else.
 
 State a settings fact's authority under [Settings](../production-lifecycle/settings.md#decomposition-and-structure). In a production-local target, state its authority, exact applicability, intended effect, success boundary, and representative failure. Supporting research does not become the authority that selected a creative decision.
 

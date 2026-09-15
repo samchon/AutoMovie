@@ -11,12 +11,12 @@ Read the applicable sibling in full before acting:
 - [Production review](review.md) owns evidence review and final whole-production review.
 - [Capture](capture.md) owns exact targets, passes, observation identity, and refusal recovery.
 - [Inspection](inspection.md) owns render-free structural descriptions of compiled subjects, parts, instances, and spaces.
-- [Live viewing](live-viewing.md) owns the persistent source viewer while authoring.
+- [Live viewing](live-viewing.md) owns creating and running a source view when visual authoring needs one.
 - [Offline measurements](measurements.md) owns current-state building drawings, placement and storage measurements, and texture-scale census.
 - [Debugging](debugging.md) owns diagnostics-first correction across ownership, derived artifacts, compile, inspection, capture, and render.
 - [Recording authored work](recording-work.md) owns coherent staging, commit boundaries, messages, and strict text checks; read it before committing production work.
 
-Use the source viewer for direct visual inspection, the engine queries for structural questions, and production-owned source for any requested capture or measurements. The scaffold provides no stored capture or delivery command.
+Use engine queries for structural questions. When the task needs a visual observation, follow [Live viewing](live-viewing.md) before creating a view or capture path. Source and presentation tooling are authored for that task rather than supplied as scaffold stubs.
 
 ## Review discipline
 

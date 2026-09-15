@@ -4,6 +4,8 @@ This directory is the production's self-contained evidence root. The generated [
 
 The [contract-target procedure](../.agents/skills/evidence-graph/contract-targets.md) owns shared and language target forms. [Production-specific contract](../.agents/skills/evidence-graph/work-specific.md) owns local contract discovery and placement, [Evidence staging](../.agents/skills/evidence-graph/staging.md) owns annotations and branch stages, and [Production kinds](../.agents/skills/production-lifecycle/production-kinds.md) decides which authored rows are active. Read those owners instead of inferring semantics from directory names.
 
+The table maps document roles; it does not require empty directories for inactive work. Create each authored directory when it receives real content at its applicable lifecycle stage. Shared contract targets remain scaffold-owned files.
+
 | Path | Physical owner |
 | --- | --- |
 | `discovery`, `naturalness`, `upstream`, `principles`, `obligations` | Scaffold-supplied reusable contract targets. Naturalness applies only to dialogue, narration, and audience-read language in final screenplays; mechanical description remains construction text. |
