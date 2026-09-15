@@ -35,7 +35,7 @@ const unit = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/commandArguments.ts",
+    "../../../../packages/template/scaffold/src/scripts/commandArguments.ts",
   ),
 );
 

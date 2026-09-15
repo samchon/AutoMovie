@@ -26,7 +26,7 @@ interface ISoundCacheModule {
 const unit = loadSourceModule<ISoundCacheModule>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/soundCacheSnapshot.ts",
+    "../../../../packages/template/scaffold/src/scripts/soundCacheSnapshot.ts",
   ),
 );
 

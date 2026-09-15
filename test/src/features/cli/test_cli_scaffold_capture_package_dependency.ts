@@ -24,7 +24,7 @@ const unit = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/capturePackageDependency.ts",
+    "../../../../packages/template/scaffold/src/scripts/capturePackageDependency.ts",
   ),
 );
 

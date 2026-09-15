@@ -11,7 +11,7 @@ const { hasProductionArtifactEntries } = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/productionArtifactEntries.ts",
+    "../../../../packages/template/scaffold/src/scripts/productionArtifactEntries.ts",
   ),
 );
 

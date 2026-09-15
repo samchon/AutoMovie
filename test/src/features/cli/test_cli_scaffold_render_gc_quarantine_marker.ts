@@ -65,7 +65,7 @@ interface IQuarantineMarkerModule {
 const unit = loadSourceModule<IQuarantineMarkerModule>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/renderGcSnapshot.ts",
+    "../../../../packages/template/scaffold/src/scripts/renderGcSnapshot.ts",
   ),
 );
 

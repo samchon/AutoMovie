@@ -93,7 +93,7 @@ interface IConfigurationModule {
 
 const configSource = path.resolve(
   __dirname,
-  "../../../../packages/template/scaffold/scripts/productionConfiguration.ts",
+  "../../../../packages/template/scaffold/src/scripts/productionConfiguration.ts",
 );
 const configuration = loadSourceModule<IConfigurationModule>(configSource);
 

@@ -11,7 +11,7 @@ const { readCaptureGraphicsBackend } = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/captureGraphicsBackend.ts",
+    "../../../../packages/template/scaffold/src/scripts/captureGraphicsBackend.ts",
   ),
 );
 

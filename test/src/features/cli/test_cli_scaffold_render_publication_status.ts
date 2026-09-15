@@ -29,7 +29,7 @@ const unit = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/renderReadOnlyRuntime.ts",
+    "../../../../packages/template/scaffold/src/scripts/renderReadOnlyRuntime.ts",
   ),
 );
 

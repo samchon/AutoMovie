@@ -132,7 +132,7 @@ interface IGenerationChunk {
 const cacheModule = createRequire(__filename)(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/dialogueCacheTextIdentity.ts",
+    "../../../../packages/template/scaffold/src/scripts/dialogueCacheTextIdentity.ts",
   ),
 ) as IDialogueCacheModule;
 const {

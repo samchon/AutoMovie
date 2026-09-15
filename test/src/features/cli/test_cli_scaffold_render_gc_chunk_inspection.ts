@@ -88,7 +88,7 @@ interface IChunkInspectionModule {
 const unit = loadSourceModule<IChunkInspectionModule>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/renderChunkInspection.ts",
+    "../../../../packages/template/scaffold/src/scripts/renderChunkInspection.ts",
   ),
 );
 

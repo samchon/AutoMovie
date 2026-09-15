@@ -17,7 +17,7 @@ const { selectAutoMovieProjectProductionId: select } = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/projectIdentity.ts",
+    "../../../../packages/template/scaffold/src/scripts/projectIdentity.ts",
   ),
 );
 

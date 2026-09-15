@@ -28,7 +28,7 @@ const { inspectAutoMovieBuilding } = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/buildingInspection.ts",
+    "../../../../packages/template/scaffold/src/scripts/buildingInspection.ts",
   ),
 );
 

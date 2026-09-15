@@ -36,6 +36,8 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 ### 실제 대상과 계보의 무결성 {#agent-production-evidence-physical-integrity}
 
+소스의 물리 배치와 제작 증거 모집단은 구별해야 한다. 제작 저작물, 실행 도구, viewer와 config가 같은 `src/` 안에 있더라도 제작 실현 의무는 선언된 graph population의 실제 저작 소유자에 적용해야 한다. 도구 파일명 예외 목록이나 디렉터리 위치만으로 의무를 부여하거나 제작 저작물의 누락을 정당화해서는 안 된다.
+
 활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 그래프가 모집단으로 열거하는 각 입력 파일은 symlink가 아닌 regular file이고 정확히 하나의 directory entry만 가져야 하며, 같은 inode를 여러 경로가 독립 계약이나 source처럼 소유하게 해서는 안 된다. 프로젝트 identity manifest는 모집단으로 열거되지 않고 고정된 한 경로에서 한 번만 읽으므로, symlink가 아닌 regular file이어야 하지만 directory entry 수를 identity 속성으로 요구해서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다. Final screenplay는 construction screenplay의 delivery group, index H1, unit 파일과 H1, H2/H3/H4 anchor·깊이·순서를 정확히 보존하고 각 file과 unit이 같은 construction counterpart 하나에만 연결되어야 한다.
 
 계약·TOC 유지보수가 중단된 트리는 일부 successor가 존재하더라도 완전한 계약 generation으로 받아들이지 않아야 한다. Pending recovery marker의 잘못된 형식이나 읽을 수 없는 entry도 부재로 해석하지 않는다.

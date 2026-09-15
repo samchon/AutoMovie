@@ -34,7 +34,7 @@ const unit = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/runtimePackageGeneration.ts",
+    "../../../../packages/template/scaffold/src/scripts/runtimePackageGeneration.ts",
   ),
 );
 

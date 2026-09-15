@@ -18,7 +18,7 @@ const unit = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/inspectRequest.ts",
+    "../../../../packages/template/scaffold/src/scripts/inspectRequest.ts",
   ),
 );
 

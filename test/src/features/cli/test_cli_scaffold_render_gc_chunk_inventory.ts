@@ -81,7 +81,7 @@ interface IChunkInventoryModule {
 const unit = loadSourceModule<IChunkInventoryModule>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/renderChunkSnapshot.ts",
+    "../../../../packages/template/scaffold/src/scripts/renderChunkSnapshot.ts",
   ),
 );
 

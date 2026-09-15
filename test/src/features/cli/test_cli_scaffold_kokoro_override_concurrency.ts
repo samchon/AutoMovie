@@ -27,7 +27,7 @@ interface IKokoroLoaderModule {
 const { loadKokoroRuntime } = createRequire(__filename)(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/loadKokoroRuntime.ts",
+    "../../../../packages/template/scaffold/src/scripts/loadKokoroRuntime.ts",
   ),
 ) as IKokoroLoaderModule;
 

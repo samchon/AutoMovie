@@ -12,7 +12,7 @@ const { flightSpeedReadout } = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/viewer/src/flightSpeedReadout.ts",
+    "../../../../packages/template/scaffold/src/viewer/flightSpeedReadout.ts",
   ),
 );
 

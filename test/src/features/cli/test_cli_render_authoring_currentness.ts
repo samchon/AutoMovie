@@ -18,7 +18,7 @@ const runtime = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/renderAuthoringCurrentness.ts",
+    "../../../../packages/template/scaffold/src/scripts/renderAuthoringCurrentness.ts",
   ),
 );
 

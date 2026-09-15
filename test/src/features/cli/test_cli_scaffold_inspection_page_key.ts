@@ -19,7 +19,7 @@ const keys = loadSourceModule<{
 }>(
   path.resolve(
     __dirname,
-    "../../../../packages/template/scaffold/scripts/inspectionPageKey.ts",
+    "../../../../packages/template/scaffold/src/scripts/inspectionPageKey.ts",
   ),
 );
 
