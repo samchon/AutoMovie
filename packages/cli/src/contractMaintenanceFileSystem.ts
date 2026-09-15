@@ -85,8 +85,6 @@ const inside = (root: string, target: string): boolean => {
  *
  * @evidence requirements/story/delivery-index.md#story-delivery-index Rejects physical escapes and retains absent destination slots without following a linked ancestor.
  * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Reads each selected source only under the same captured project root and ordinary directory generations.
- * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Observes an input without counting its directory entries, because the publication it feeds replaces entries instead of rewriting the bytes another pathname shows.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Supplies the observation for the entry-replacing method, whose admission the entry count does not govern.
  */
 export const observeAutoMovieMaintenanceFiles = (props: {
   root: string | IScaffoldPhysicalDirectory;

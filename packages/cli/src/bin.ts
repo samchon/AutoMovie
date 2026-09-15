@@ -554,6 +554,8 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude specifications/execution-and-recovery/contract-migration-plan.md#execution-contract-migration-plan The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Passes each observed index predecessor to the ordinary-file writer, which refuses multiply-linked files rather than rewriting bytes visible through another pathname.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Supplies exact file and parent snapshots without aliased-entry replacement authority, preserving the writer's refusal of shared-inode mutation.
  */
 export const run = (argv: readonly string[]): number => {
   try {

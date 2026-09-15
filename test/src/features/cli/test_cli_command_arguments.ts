@@ -1,9 +1,9 @@
 import { TestValidator } from "@nestia/e2e";
-
 import {
   dispatchAutoMovieCommandArguments,
   readAutoMovieCommandArguments,
-} from "../../../../packages/cli/src/commandArguments";
+} from "automovie";
+
 import { throwsError } from "../internal/predicates";
 
 /**
