@@ -151,6 +151,8 @@ Follow the repository [viewer verification](../../../.agents/skills/viewer-verif
 
 `test/lint.config.ts` connects the model to every H2 view in its inspection record and connects `review.ts` to the complete construction export population. TypeScript evidence uses type-only imports and `{@link ...}` targets. A changed referenced declaration invalidates its `@evidenceReview` fingerprint. New source enters either its declared subject or the shared residual population.
 
+The frozen study's [root construction record](generated-korean-girl-01/review.ts) retains separate ocular, nasal, oral, surface, study and diagnostic review carriers. Each domain preserves its original source inspections and historical capture limitations. The native graph requires every domain from the root and retains complete source coverage across those carriers; moving a note does not renew its source or rendered acceptance.
+
 The model review graph reports warnings. Rendering precedes visual review, so missing or expired review evidence must allow the authoring entrypoint to run under `ttsx`. A warning remains an outstanding inspection obligation; it does not accept the model's appearance.
 
 Before changing geometry or an appearance dependency, remove the affected review companions. Build a new GLTF, freeze its bytes and capture profile, and inspect front, both obliques, both profiles, back, reference pose and clay. Compare visible feature boundaries against the original image. Write the observed failures as well as the successes, then write new review companions. A compiler-provided fingerprint is not a visual review, and a green graph is not an acceptance of likeness.

@@ -59,7 +59,10 @@ const graph: ITtscEvidenceGraphConfig = {
       {
         name: `${subject}: reviewed construction basis`,
         type: "typescript" as const,
-        files: [`src/subjects/${subject}/review.ts`],
+        files: [
+          `src/subjects/${subject}/review.ts`,
+          `src/subjects/${subject}/**/*-review.ts`,
+        ],
         symbol: "property" as const,
         reference: [
           {
@@ -69,6 +72,7 @@ const graph: ITtscEvidenceGraphConfig = {
               ...sharedSources,
               `src/subjects/${subject}/**/*.ts`,
               "!src/subjects/**/review.ts",
+              `!src/subjects/${subject}/**/*-review.ts`,
             ],
             symbol: ["type", "function", "property"],
             noEvidenceExclude: true,
@@ -83,6 +87,19 @@ const graph: ITtscEvidenceGraphConfig = {
             requireReview: true,
           },
         ],
+      },
+      {
+        name: `${subject}: construction review retains domain inspections`,
+        type: "typescript" as const,
+        files: [`src/subjects/${subject}/review.ts`],
+        symbol: "property" as const,
+        reference: {
+          type: "typescript" as const,
+          files: [`src/subjects/${subject}/**/*-review.ts`],
+          symbol: "property" as const,
+          requireReview: true,
+          noEvidenceExclude: true,
+        },
       },
       {
         name: `${subject}: model retains its review carrier`,
