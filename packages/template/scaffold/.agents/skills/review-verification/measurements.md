@@ -4,6 +4,12 @@ Use these measurements after a current compile when a design question is exact i
 
 These commands refuse missing or stale generated state. Compile again before measuring rather than treating old output as evidence about changed source.
 
+## Measurement basis
+
+State the measured quantity, unit, coordinate frame, population, artifact revision, method and uncertainty before using a result. Verify the measuring path against an independent known case. For geometry claims, measure the actual assembled or exported surface consumed by the renderer; for other claims, use the corresponding current consumer artifact. A copied implementation formula is not an independent oracle.
+
+Distinguish observations from inferred hidden dimensions and population priors. Use applicable primary references for physical or anatomical assumptions, record the passage or method actually examined, and justify how it applies to this authored subject and state. Detector landmarks, finite collision samples, bounding boxes, triangle ordering and image masks measure different properties. A lower residual against any one of them does not by itself establish physical validity, visual improvement or likeness. Judge the claimed result through the corresponding current views and states under [Production review](review.md#compare-and-observe).
+
 ## Placement and storage
 
 Run `npm run building:inspect` to write `reports/<environment>/inspection.json` for each compiled building. Declare reference ground height and contact tolerance in metres per environment in `scripts/productionPlacementStudies.ts`. Without that declaration the support result says `not-run`; overlap candidates and storage counts are still measured.

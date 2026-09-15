@@ -16,6 +16,8 @@ Every rendered project is self-contained:
 
 The generated scaffold's [static-document policy](./scaffold/README.md#static-document-updates) distinguishes tracked overview snapshots from the ignored instruction surface and migratable contract targets. Package upgrades never overwrite a production's tracked README files.
 
+Instruction candidates validate local targets and heading links from every shipped Markdown skill topic as well as the five `SKILL.md` routers and generated `AGENTS.md`. Synchronization derives its project-file read population from those routes, including referenced README, configuration and asset files, before validation. These project-owned bytes remain read-only and are never included in instruction publication. Router frontmatter and H1-only shape apply to entry points; conditional procedures keep their own headings. A broken sibling route refuses creation or synchronization before publication.
+
 Generated graph evaluation never resolves evidence targets from `node_modules/@automovie/template`. The package ships the scaffold bytes that become project-owned inputs; `@automovie/evidence` supplies the reusable graph mechanics that validate those local inputs.
 
 The scaffold deliberately contains no production content and no provider-specific hook. Its installed `reference` script and lifecycle guide route the four read-only Markdown operations; the CLI's explicit create/sync operation owns local Claude/Codex registration, not `renderScaffold` or a reference read.

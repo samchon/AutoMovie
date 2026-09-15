@@ -1,3 +1,14 @@
+/**
+ * Admit the generated project's complete instruction routes before publication.
+ * Initial creation and instruction synchronization supply an immutable map of
+ * project-relative files through renderAutoMovieProductionInstructionCandidate.
+ * Normalize paths, admit the five router identities/frontmatter, then resolve
+ * every Markdown topic link against that same population. No filesystem reads
+ * or writes occur here. A broken conditional route must refuse the candidate
+ * before the publication owner can replace installed instructions. Non-Markdown
+ * resources remain addressable data; this validator does not judge instruction
+ * meaning, evidence realization or the content of external HTTP references.
+ */
 import { projectAutoMovieMarkdownSyntax } from "@automovie/evidence";
 import path from "node:path";
 import { isMap, parseDocument } from "yaml";
@@ -44,6 +55,68 @@ export const validateAutoMovieInstructionLink = (
   const source = normalizeSourcePath(sourcePath);
   if (!files.has(source))
     throw new Error(`${source}: instruction route source is not published.`);
+  const link = resolveInstructionRoute(source, destination);
+  if (link === null) return;
+  const { resolved, anchor } = link;
+  const target = files.get(resolved);
+  const directory = [...files.keys()].some((candidate) =>
+    candidate.startsWith(`${resolved.replace(/\/$/u, "")}/`),
+  );
+  if (target === undefined && !directory)
+    throw new Error(
+      `${source}: instruction route targets missing target ${destination}.`,
+    );
+  if (anchor !== undefined && anchor !== "") {
+    if (target === undefined)
+      throw new Error(
+        `${source}: instruction anchor targets a directory: ${destination}.`,
+      );
+    if (!markdownAnchors(target).has(anchor))
+      throw new Error(
+        `${source}: instruction route targets missing anchor ${destination}.`,
+      );
+  }
+};
+
+/**
+ * Select project-owned file targets needed by the installed skill population.
+ *
+ * Synchronization reads these files before validating or publishing instructions.
+ * The same route parser owns percent decoding, portable separators and root
+ * refusal here and in link validation. External URLs and generated instruction
+ * targets need no project read. Anchors are checked after target bytes arrive;
+ * referenced project documents are not recursively treated as instructions.
+ *
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Includes the actual project documents and data advertised by conditional skill topics.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Derives the required read population from installed links instead of a duplicate topic-specific filename list.
+ */
+export const getAutoMovieInstructionProjectTargets = (
+  sources: Readonly<Record<string, string>>,
+): string[] => {
+  const targets = new Set<string>();
+  for (const [file, content] of Object.entries(sources)) {
+    const source = normalizeSourcePath(file);
+    if (!source.startsWith(".agents/skills/") || !source.endsWith(".md"))
+      continue;
+    for (const match of content.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)) {
+      const link = resolveInstructionRoute(source, match[1]!);
+      if (
+        link !== null &&
+        !link.resolved.startsWith(".agents/skills/") &&
+        link.resolved !== "AGENTS.md" &&
+        link.resolved !== "CLAUDE.md"
+      )
+        targets.add(link.resolved);
+    }
+  }
+  return [...targets];
+};
+
+/** Normalize one link before either collecting its file or checking its bytes. */
+const resolveInstructionRoute = (
+  source: string,
+  destination: string,
+): { resolved: string; anchor: string | undefined } | null => {
   const separator = destination.indexOf("#");
   const encodedRoute =
     separator === -1 ? destination : destination.slice(0, separator);
@@ -69,7 +142,7 @@ export const validateAutoMovieInstructionLink = (
   const scheme = /^([A-Za-z][A-Za-z0-9+.-]*):/u.exec(route)?.[1];
   if (scheme !== undefined) {
     if (scheme.toLowerCase() === "http" || scheme.toLowerCase() === "https")
-      return;
+      return null;
     throw new Error(
       `${source}: instruction route uses unsupported scheme ${scheme}: ${destination}.`,
     );
@@ -81,32 +154,13 @@ export const validateAutoMovieInstructionLink = (
       : path.posix.normalize(
           path.posix.join(path.posix.dirname(source), portableRoute),
         );
-  if (
-    resolved === ".." ||
-    resolved.startsWith("../") ||
-    path.posix.isAbsolute(portableRoute)
-  )
+  // Absolute Windows/POSIX routes were already refused before separator
+  // normalization; only relative traversal can leave the root at this point.
+  if (resolved === ".." || resolved.startsWith("../"))
     throw new Error(
       `${source}: instruction route escapes its project root: ${destination}.`,
     );
-  const target = files.get(resolved);
-  const directory = [...files.keys()].some((candidate) =>
-    candidate.startsWith(`${resolved.replace(/\/$/u, "")}/`),
-  );
-  if (target === undefined && !directory)
-    throw new Error(
-      `${source}: instruction route targets missing target ${destination}.`,
-    );
-  if (anchor !== undefined && anchor !== "") {
-    if (target === undefined)
-      throw new Error(
-        `${source}: instruction anchor targets a directory: ${destination}.`,
-      );
-    if (!markdownAnchors(target).has(anchor))
-      throw new Error(
-        `${source}: instruction route targets missing anchor ${destination}.`,
-      );
-  }
+  return { resolved, anchor };
 };
 
 /** Validate every Markdown link carried by one instruction document. */
@@ -125,12 +179,13 @@ export const validateAutoMovieInstructionDocumentLinks = (
 };
 
 /**
- * Validate every installed `SKILL.md` as an H1-only root-bound router.
+ * Validate installed H1-only routers and every conditional Markdown topic route.
  *
  * Link resolution is performed over an explicit source population so missing
  * files, missing anchors, and root escapes are ordinary deterministic cases.
  * A directory route is accepted only when at least one source is resident
- * below that directory.
+ * below that directory. Topic documents retain their ordinary heading structure;
+ * only SKILL.md carries the router/frontmatter restrictions.
  *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Refuses an instruction entry point that cannot reach the procedure it advertises.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Keeps every shipped authoring route inside the generated project's complete instruction and contract source population.
@@ -176,6 +231,9 @@ export const validateAutoMovieSkillRouterLinks = (
     for (const match of body.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu))
       validateAutoMovieInstructionLink(sources, file, match[1]!);
   }
+  for (const [file] of skillFiles)
+    if (file.endsWith(".md") && !expected.has(file))
+      validateAutoMovieInstructionDocumentLinks(sources, file);
 };
 
 const markdownAnchors = (markdown: string): ReadonlySet<string> => {
