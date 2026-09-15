@@ -42,16 +42,4 @@ The blank scaffold provides source lint and authoring documents. It ships no aut
 
 ## API
 
-The package exports the CLI runner, read-only project-state helpers, and bounded Markdown observation helpers. Require current state before using a compiled snapshot for an offline measurement:
-
-```ts
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
-
-const loaded = loadAutoMovieProjectState({ root: process.cwd() });
-const state = requireCurrentAutoMovieProjectState(loaded);
-```
-
-Project-state loading performs filesystem I/O. Use it from CLI, measurement, test, or diagnostic hosts, never from deterministic shot or film build functions.
+The package exports the CLI runner, closed command-argument parser and dispatcher, scaffold next-step text, and bounded Markdown observation helpers. Production values and runtime composition belong to the project's authored source and the public engine, ingest, production, render, and viewer APIs that consume them; this CLI does not load a second persisted production-state store.

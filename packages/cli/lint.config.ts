@@ -16,17 +16,12 @@ const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
 const authoringSurface = ["src/bin.ts", "src/scaffoldNextSteps.ts"];
 
-const inspectionSurface = [
-  "src/loadAutoMovieProjectState.ts",
-  "src/closeAutoMovieProjectState.ts",
-];
-
 /**
  * The operational domain is the residual of the derived population.
  *
  * Writing it as a subtraction rather than a list is what keeps the default
  * inside the graph: a new CLI source answers for the operational contracts
- * until someone deliberately assigns it to the authoring or inspection domain,
+ * until someone deliberately assigns it to the authoring or delivery domain,
  * instead of silently answering for nothing.
  */
 const operationsSurface = [
@@ -34,7 +29,6 @@ const operationsSurface = [
   "!src/scaffoldNextSteps.ts",
   "!src/contractMaintenanceFileSystem.ts",
   "!src/readAutoMovieMaintenanceMarkdownPaths.ts",
-  ...inspectionSurface.map((file) => `!${file}`),
 ];
 
 const deliverySurface = [
@@ -154,60 +148,6 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/editorial-render-and-delivery/**/*.md",
             "specifications/execution-and-recovery/**/*.md",
             "specifications/interchange-and-adoption/**/*.md",
-            "!specifications/**/README.md",
-          ],
-          symbol: ["h3"],
-        },
-      ],
-    },
-    {
-      name: "public CLI inspection exports implement requirements",
-      type: "typescript",
-      files: inspectionSurface,
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/diagnostics/**/README.md",
-            "requirements/evidence-and-provenance/**/README.md",
-          ],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/diagnostics/**/*.md",
-            "requirements/evidence-and-provenance/**/*.md",
-            "!requirements/**/README.md",
-          ],
-          symbol: ["h3"],
-        },
-      ],
-    },
-    {
-      name: "public CLI inspection exports implement specifications",
-      type: "typescript",
-      files: inspectionSurface,
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/evidence-and-provenance/**/README.md",
-            "specifications/validation-and-diagnostics/**/README.md",
-          ],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/evidence-and-provenance/**/*.md",
-            "specifications/validation-and-diagnostics/**/*.md",
             "!specifications/**/README.md",
           ],
           symbol: ["h3"],
