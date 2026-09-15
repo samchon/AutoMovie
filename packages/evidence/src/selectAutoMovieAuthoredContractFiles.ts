@@ -65,7 +65,12 @@ export function selectAutoMovieAuthoredContractFiles(
   };
 }
 
-/** Selects audience-language contracts for final screenplay revision. */
+/**
+ * Selects audience-language contracts for final screenplay revision.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Selects shared and creation-language targets for the expression-only final pass.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Gives final screenplay claims one complete role-specific contract inventory.
+ */
 export function selectAutoMovieScreenplayNaturalnessContractFiles(): string[] {
   return [
     "naturalness/core/common.md",
@@ -74,7 +79,12 @@ export function selectAutoMovieScreenplayNaturalnessContractFiles(): string[] {
   ];
 }
 
-/** Binds every final screenplay unit to every selected naturalness target. */
+/**
+ * Binds every final screenplay unit to every selected naturalness target.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Requires each final unit to answer its selected naturalness contracts without exclusions.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Carries the visible final stage into every naturalness target's review requirement.
+ */
 export function createAutoMovieScreenplayNaturalnessReferences(
   review: boolean,
 ): ITtscEvidenceGraphMarkdownReference[] {

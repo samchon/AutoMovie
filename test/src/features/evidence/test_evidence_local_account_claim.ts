@@ -145,7 +145,12 @@ export const test_evidence_local_account_claim = (): void => {
         mode: "first-pilot";
         partitionGroup: "001-opening";
       },
-      reviewedBranches: ["treatments", "scripts", "screenplays"],
+      reviewedBranches: [
+        "treatments",
+        "scripts",
+        "screenplays",
+        "screenplayNaturalness",
+      ],
       retainedHosts: [],
     },
   };

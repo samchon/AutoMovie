@@ -28,6 +28,8 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 ### 제작 종류와 단계 {#agent-production-evidence-shape-stage}
 
+아직 제작 종류를 선택하지 않은 명시적 선언은 영화로 추정하지 않아야 한다. 생성 프로젝트의 build와 제작 lint는 종류 선택을 요구하며, 거부된 blank build가 제작 namespace나 incarnation을 만들어서는 안 된다. 선언 자체를 받지 않는 기존 API의 호환 경로와 명시적으로 비어 있는 선언은 구별해야 한다.
+
 그래프는 `film`, `brief`, `library`를 상호 배타적인 제작 종류로 다루고, 각 구성 분기와 선택된 자연스러움 pass를 `disabled -> draft -> evidence -> review` 순서와 부모 단계 선행 조건에 따라 전진시켜야 한다. Film 자연스러움은 construction screenplay review 뒤에만 열리고 shots는 final naturalness review 뒤에만 열려야 한다. Brief와 library는 자연스러움을 활성화할 수 없다. 같은 선언에서 settings와 design foundation topology를 투영하여 stage 선택과 account 행렬이 모순되지 않게 해야 한다. 간단한 영상에는 장편 서사 단계를 강요하지 않고, 재사용 자산에는 촬영·편집 단계를 강요하지 않아야 한다.
 
 렌더된 실현을 확인하는 source 관계는 구조와 관찰 의무를 분리해야 한다. 미관찰·stale 시각 review는 첫 compile과 capture를 허용하는 warning이되, 대상 coverage·소유·cardinality, 저술 및 비시각 source review는 error를 유지해야 한다. Warning만 남았다는 사실은 관찰 완료나 final 수용이 아니며, 실제 다각도·시간·전달 개체군의 current physical evidence가 독립적으로 충족되어야 한다.

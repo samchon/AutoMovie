@@ -1,8 +1,17 @@
-import { AutoMovieProductionBinder } from "@automovie/production";
+import {
+  AutoMovieProductionBinder,
+  type AutoMovieProductionDocumentPass,
+} from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
-/** The reader binder resolves the reviewed final screenplay tree explicitly. */
+/**
+ * The reader binder resolves the final screenplay tree explicitly.
+ *
+ * Scenarios:
+ * 1. Final exposes a distinct source and filename; construction remains the API default.
+ * 2. A non-screenplay final pass and an unknown runtime pass are refused.
+ */
 export const test_production_document_binder_final_pass = (): void => {
   const root = path.resolve("production");
   const binder = new AutoMovieProductionBinder({
@@ -50,6 +59,16 @@ export const test_production_document_binder_final_pass = (): void => {
         title: "Invalid",
         layer: "scripts",
         pass: "final",
+      }),
+  );
+  TestValidator.error(
+    "unknown runtime passes are refused",
+    () =>
+      new AutoMovieProductionBinder({
+        root,
+        title: "Invalid",
+        layer: "screenplays",
+        pass: "unknown" as AutoMovieProductionDocumentPass,
       }),
   );
 };

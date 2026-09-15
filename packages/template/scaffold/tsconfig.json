@@ -16,6 +16,7 @@
   "include": [
     "src",
     "scripts",
+    "test",
     "vendor/sharp-disabled/index.ts",
     "viewer",
     "repaintSelectionReviews.ts",

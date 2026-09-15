@@ -42,7 +42,12 @@ export interface IAutoMovieFilmPopulationTransitionReceipt {
     partitionGroup: `001-${string}`;
   };
   /** Complete film ladder that was in review when the receipt was made. */
-  reviewedBranches: readonly ["treatments", "scripts", "screenplays"];
+  reviewedBranches: readonly [
+    "treatments",
+    "scripts",
+    "screenplays",
+    "screenplayNaturalness",
+  ];
   /** Pilot hosts preserved into the reset tree. */
   retainedHosts: readonly IAutoMovieRetainedPilotHost[];
 }
@@ -143,6 +148,10 @@ export interface IValidateAutoMoviePopulationTransitionProps {
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const FILM_BRANCHES = ["treatments", "scripts", "screenplays"] as const;
+const REVIEWED_FILM_BRANCHES = [
+  ...FILM_BRANCHES,
+  "screenplayNaturalness",
+] as const;
 const LIBRARY_PAIRS = new Map<string, string>([
   ["instances", "instanceSources"],
   ["maps", "mapSources"],
@@ -295,7 +304,7 @@ export function validateAutoMoviePopulationTransition(
   }
 }
 
-/** Require the exact three reviewed film branches to reset together. */
+/** Reset construction together after the complete final pilot was reviewed. */
 function validateFilmReceipt(
   receipt: IAutoMovieFilmPopulationTransitionReceipt,
   stages: Readonly<Record<string, string>>,
@@ -309,13 +318,17 @@ function validateFilmReceipt(
     );
   if (
     !Array.isArray(receipt.reviewedBranches) ||
-    receipt.reviewedBranches.length !== FILM_BRANCHES.length ||
-    FILM_BRANCHES.some(
+    receipt.reviewedBranches.length !== REVIEWED_FILM_BRANCHES.length ||
+    REVIEWED_FILM_BRANCHES.some(
       (branch, index) => receipt.reviewedBranches[index] !== branch,
     )
   )
     throw new Error(
       "A film reset receipt requires the complete reviewed narrative ladder.",
+    );
+  if (stages.screenplayNaturalness !== "disabled")
+    throw new Error(
+      "A film reset requires screenplay naturalness to be disabled.",
     );
   for (const branch of FILM_BRANCHES)
     if (stages[branch] !== "draft")

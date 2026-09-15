@@ -22,11 +22,11 @@ Each discovery H2 owns an open production-specific search whose result cannot be
 
 ## Naturalness
 
-Each final screenplay H2, H3, and H4 answers every selected `naturalness/core/common.md`, `naturalness/story/screenplays.md`, and `language/naturalness/screenplays.md` H2 as a no-exclusion checklist. These targets open only after the complete construction screenplay is reviewed and frozen. They judge expression in context and never authorize a new content decision.
+Each final screenplay H2, H3, and H4 answers every selected `naturalness/core/common.md`, `naturalness/story/screenplays.md`, and `language/naturalness/screenplays.md` H2 as a no-exclusion checklist. Apply these checklists to final expression after the complete construction screenplay is reviewed and frozen. They never authorize a new content decision.
 
-Construction principles own semantic and structural adequacy from the first draft. [Screenplay naturalness](../production-lifecycle/naturalness.md) owns the audience-language revision procedure and its protected mechanical-description boundary. Population recurrence remains an obligation answered across construction owners; it does not become a second final-unit checklist.
+Construction principles own semantic and structural adequacy from the first draft. [Mechanical audiovisual description](../../../docs/principles/story/screenplays.md#mechanical-audiovisual-description) owns the protected physical clauses; [Screenplay naturalness](../production-lifecycle/naturalness.md) owns the audience-language revision procedure. Population recurrence remains an obligation answered across construction owners; it does not become a second final-unit checklist.
 
-One final file and each final unit cite exactly one construction counterpart. The graph and physical validator enforce identical filenames, H1 titles, anchored H2/H3/H4 identities, nesting, and order. Final carries no copied construction checklist, discovery, obligation, or upstream annotation.
+Use [Evidence staging](staging.md#relationship-types) for final-to-construction lineage and the separate annotation populations.
 
 ## Upstream revision
 

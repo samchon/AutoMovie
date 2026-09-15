@@ -1,14 +1,14 @@
 # Screenplay naturalness
 
-Naturalness is the film-only audience-language pass from the reviewed construction screenplay in `docs/screenplays` to the final screenplay in `docs/final/screenplays`. It revises dialogue, narration, and audience-read language against AI-slop and translated or assembled phrasing. It does not literary-naturalize external appearance, geometry, material, placement, physical action, state, or timing. It begins only after `screenplays` reaches `review`, and shots remain closed until `naturalness.screenplays` reaches `review`.
+Naturalness is the film-only audience-language pass from the reviewed construction screenplay in `docs/screenplays` to the final screenplay in `docs/final/screenplays`. Use this phase after construction review; [Evidence staging](../evidence-graph/staging.md#transitions) owns its entry and downstream gates.
 
 ## Expression-only boundary
 
-Freeze the complete construction screenplay before revision. Final may change only dialogue, narration, audience-read wording, and the local rhythm and register of those eligible language passages. Copy mechanically exact action lines and descriptions of appearance, geometry, material, spatial relation, placement, physical state, contact, movement, sound event, transition event, and timing unchanged. Final must preserve every event, fact, participant, motive, knowledge state, action, reaction, speech act and meaning, audiovisual requirement, numeric timing decision, authority carrier, file identity, H1, anchored H2/H3/H4 identity, nesting, and order.
+Freeze the complete construction screenplay before revision. The [common naturalness contract](../../../docs/naturalness/core/common.md) owns eligible language and protected content; [Mechanical audiovisual description](../../../docs/principles/story/screenplays.md#mechanical-audiovisual-description) owns the clauses copied unchanged. [Evidence staging](../evidence-graph/staging.md#relationship-types) owns exact final lineage and annotation populations.
 
 A request for a more natural or better-written final grants no authority to change content. Record a substantive defect against its earliest settings, treatment, script, or screenplay-construction owner; repair and review that lineage within the user's authorized scope; freeze the new construction population; then restart final revision. Never conceal a content repair in final wording.
 
-Copy no construction evidence annotation into final. Final file and unit comments carry only their exact construction lineage, selected naturalness answers, and reviews. Construction remains independently auditable and unchanged by an expression-only edit.
+Keep construction independently auditable and unchanged by an expression-only edit.
 
 ## Qualified complete reading
 
@@ -19,22 +19,22 @@ Use counts or diagnostics only to locate passages after a literal reading has es
 ## Revision procedure
 
 1. Confirm `screenplays: "review"`, settle the exact selected population, and set `naturalness.screenplays: "draft"` while creating the matching `docs/final/screenplays` tree.
-2. Mirror every construction delivery-group directory, index H1, unit filename and H1, and exact anchored H2/H3/H4 identity, nesting, and order. Run `npm run toc`; the final managed indexes remain structural and contain no authored scene body.
+2. Mirror the construction tree under the exact topology in [Evidence staging](../evidence-graph/staging.md#states). Run `npm run toc` to refresh its managed indexes.
 3. Read the complete construction population without annotations and write the final body in context. Copy mechanical description exactly; revise only eligible audience language. An unchanged eligible passage is valid when the qualified reading finds no expression defect.
-4. Open every selected `naturalness/core/common.md`, `naturalness/story/screenplays.md`, `language/naturalness/screenplays.md`, and configured work-specific naturalness target only after the complete final population exists. Answer each H2 target for every final H2/H3/H4 by judging all instances it governs in context.
+4. After the complete final population exists, apply every selected shared, language, and work-specific naturalness target to all instances it governs in context. This is the time to judge the finished expression, not a prohibition on reading the contracts before authoring.
 5. Compare construction and final lineages. Verify every protected content decision, mechanical clause, and numeric selector, then reread eligible language as an audience and the complete final population as an independent shot author.
-6. Move to `evidence` only after final bodies and fidelity checks are complete. Add one exact construction file citation before each H1 and one same-depth construction-unit citation plus every naturalness answer beneath each governed H2/H3/H4.
+6. After final bodies and fidelity checks are complete, move to `evidence` and write the final lineage and naturalness batch under [Evidence staging](../evidence-graph/staging.md#tags).
 7. Follow [Evidence staging](../evidence-graph/staging.md), then [Author process Self-Review](../review-verification/self-review.md) through a complete clean round before `review`.
 
 ## Work-specific naturalness
 
-The production-specific discovery pass may retain an expression condition not covered by the shared or language modules. Put that condition in one flat `docs/contracts/*.md` H2 and bind it with `createAutoMovieProductionPrincipleClaim` using `pass: "naturalness"`, `layer: "screenplays"`, final screenplay file selectors, and the visible `naturalness.screenplays` stage. A population comparison remains an obligation on construction; naturalness accepts only per-unit final checklists.
+When production-specific discovery retains an expression condition beyond the shared or language modules, follow [Production-specific claims](../evidence-graph/staging.md#production-specific-claims) to bind it to the final pass. That owner distinguishes a final per-unit checklist from a construction population obligation.
 
 ## Fidelity and unavailable evidence
 
-Compare every final unit with its exact construction counterpart rather than relying on memory. If language qualification, speech performance, or another required observation is unavailable, state the missing capability and stop the affected review. Do not report an unperformed check as passed or weaken the target to fit available tools.
+If language qualification, speech performance, or another required observation is unavailable, state the missing capability and stop the affected review. Do not report an unperformed check as passed or weaken the target to fit available tools.
 
-Naturalness does not require a larger body. Eligible language size may rise or fall as expression is clarified, but a changed mechanical clause or a material change in scene content, timing, or audience information is a failed fidelity check and returns upstream.
+Naturalness does not require a larger body. Eligible language size may rise or fall within the frozen content boundary.
 
 ## Handoff
 

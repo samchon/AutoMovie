@@ -3,7 +3,7 @@ import {
   type AutoMovieAuthoredDocumentLayer as EvidenceAuthoredDocumentLayer,
 } from "@automovie/evidence";
 import { randomUUID } from "node:crypto";
-import type { Dirent } from "node:fs";
+import type { Dirent, Stats } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -167,6 +167,11 @@ export class AutoMovieProductionBinder {
 
   /** Renders the integrated reader edition without writing it. */
   public async markdown(): Promise<string> {
+    await validateAutoMovieProductionDocumentAncestors(
+      this.root,
+      this.pass,
+      fs.lstat,
+    );
     const parts: string[] = [`# ${this.title}`];
     if (GROUPED_DOCUMENT_LAYERS.has(this.layer)) {
       const groups: IAuthoredDocumentGroup[] = await readGroupedLayer(
@@ -209,6 +214,39 @@ export class AutoMovieProductionBinder {
       markdown,
     );
     return target;
+  }
+}
+
+/**
+ * Refuses linked or absent ancestors before reading an authored document pass.
+ *
+ * Final adds a directory between docs and its layer. Checking only the layer's
+ * immediate parent would admit a linked docs root. The injected observation
+ * keeps the same boundary applicable to grouped and flat reader editions.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Keeps a reader edition bound to its physical authored source tree.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Checks every authored ancestor introduced by the selected source pass before reading its inventory.
+ */
+export async function validateAutoMovieProductionDocumentAncestors(
+  root: string,
+  pass: AutoMovieProductionDocumentPass,
+  lstat: (
+    directory: string,
+  ) => Promise<Pick<Stats, "isSymbolicLink" | "isDirectory">>,
+): Promise<void> {
+  const docs = path.join(root, "docs");
+  const ancestors =
+    pass === "final" ? [docs, path.join(docs, "final")] : [docs];
+  for (const directory of ancestors) {
+    const status = await lstat(directory).catch(() => undefined);
+    if (
+      status === undefined ||
+      status.isSymbolicLink() ||
+      !status.isDirectory()
+    )
+      throw new Error(
+        `${directory}: authored docs must be one physical directory.`,
+      );
   }
 }
 
@@ -331,16 +369,6 @@ const UNIT_PATTERN: RegExp = /^([0-9]{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u;
 async function readGroupedLayer(
   layerRoot: string,
 ): Promise<IAuthoredDocumentGroup[]> {
-  const docsRoot: string = path.dirname(layerRoot);
-  const docsStatus = await fs.lstat(docsRoot).catch(() => undefined);
-  if (
-    docsStatus === undefined ||
-    docsStatus.isSymbolicLink() ||
-    !docsStatus.isDirectory()
-  )
-    throw new Error(
-      `${docsRoot}: authored docs must be one physical directory.`,
-    );
   const entries = await physicalEntries(layerRoot).catch((error: unknown) => {
     if (error instanceof Error && error.message.startsWith(layerRoot))
       throw error;
@@ -443,10 +471,7 @@ function numberedOrder(
 
 /** Walks regular Markdown files without following a symbolic directory entry. */
 async function listMarkdownFiles(root: string): Promise<string[]> {
-  if (
-    (await fs.lstat(path.dirname(root))).isSymbolicLink() ||
-    (await fs.lstat(root)).isSymbolicLink()
-  )
+  if ((await fs.lstat(root)).isSymbolicLink())
     throw new Error(`${root}: authored layers may not be links.`);
   const result: string[] = [];
   const walk = async (directory: string): Promise<void> => {

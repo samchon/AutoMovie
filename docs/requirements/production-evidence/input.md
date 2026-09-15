@@ -8,4 +8,6 @@
 
 첫 pilot은 실제 분할을 소유한 film의 첫 script·construction screenplay·final screenplay delivery group만 정확히 선택할 수 있어야 한다. Flat treatment 모집단과 library의 기존 design/source 분기에 허구의 분할 selector, file-per-owner 규칙이나 임시 glob을 도입해서는 안 된다. Film reset은 screenplay 자연스러움을 비활성화하고 stale final host를 지워야 한다. Brief와 제작 종류를 아직 선택하지 않은 빈 프로젝트에는 pilot이나 reset을 허용해서는 안 된다.
 
+Reset은 통과한 pilot의 정확한 선행 본문과 증거를 보존했는지 확인하는 전이 체크포인트여야 하며, 본문을 다시 쓰는 장기 상태가 되어서는 안 된다. 검증된 체크포인트에서 완전한 제작의 일반 단계로 복귀할 때는 pilot 원본을 복구 가능한 이력과 비활성 보관본으로 남기고, 아직 부모가 준비되지 않은 후속 초안과 예전 증거가 현재 제작의 완료 사실처럼 선택되지 않게 해야 한다. 보관본은 현재 모집단의 계약을 충족하지 않으며 각 후속 계층의 부모가 검토된 뒤에만 재작성의 입력으로 사용할 수 있다.
+
 재사용 패키지는 검증 동작만 제공한다. 숨은 기본값, 별도 로컬 설정 파일이나 생성된 중간 상태가 프로젝트의 명시적 선택을 보충하거나 덮어써서는 안 된다.
