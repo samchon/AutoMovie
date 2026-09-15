@@ -3,7 +3,7 @@ import { blendPortraitSkin } from "@automovie/human/geometry/blendPortraitSkin";
 import { assertPortraitSkinTopology } from "@automovie/human/geometry/portraitSkinTopology";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { createPortraitReservationHost } from "../internal/portraitReservation";
 import { throwsError } from "../internal/predicates";
 
@@ -20,6 +20,9 @@ import { throwsError } from "../internal/predicates";
  *    cage mutation. An unknown attachment mode refuses at construction.
  */
 export const test_subject_eye_skin_reservation = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
+  // This scenario explicitly selects the attachment mode it exercises.
+  portraitEyeShape.skinAttachment = "reserve";
   const host = createPortraitReservationHost();
   host.positions = host.positions.map((point) =>
     point.map((value) => value * 4),

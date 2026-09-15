@@ -1,7 +1,7 @@
 import { appendPortraitEyeMargins } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose } from "../internal/predicates";
 
 /**
@@ -14,6 +14,7 @@ import { nclose } from "../internal/predicates";
  * 2. Upper rows and centreline samples remain identical on both eyes.
  */
 export const test_subject_aegyo_handedness = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const source = [
     [-4, 0, 0],
     [0, 2, 0],
@@ -42,7 +43,11 @@ export const test_subject_aegyo_handedness = (): void => {
       {
         ...portraitEyeShape,
         aegyoSal: {
-          ...portraitEyeShape.aegyoSal!,
+          // Round-mm section dimensions belong to this synthetic aperture.
+          offset: 0.5,
+          height: 1,
+          width: 6,
+          reach: 6,
           projection: 1,
           weights: [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1],
         },

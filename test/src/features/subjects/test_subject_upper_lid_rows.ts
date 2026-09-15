@@ -5,7 +5,7 @@ import {
 import type { IPortraitUpperLidProfile } from "@automovie/human/components/upperLidSection";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose } from "../internal/predicates";
 
 /**
@@ -21,6 +21,7 @@ import { nclose } from "../internal/predicates";
  *    outer rim remain fixed, testing the detailed contact-to-host bridge.
  */
 export const test_subject_upper_lid_rows = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const source = [
     [-4, 0, 0],
     [-2, 1.5, 0],

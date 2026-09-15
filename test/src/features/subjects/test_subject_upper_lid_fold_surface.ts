@@ -3,7 +3,7 @@ import { createPortraitUpperLidProfile } from "@automovie/human/components/upper
 import { subdivideControlMesh } from "@automovie/human/geometry/subdivideControlMesh";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { upperLidFoldFixture } from "../internal/upperLidFoldFixture";
 
 /**
@@ -17,6 +17,7 @@ import { upperLidFoldFixture } from "../internal/upperLidFoldFixture";
  *    region. Ring identities and material populations remain the same.
  */
 export const test_subject_upper_lid_fold_surface = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const aperture = [
       [-4, 0, 0],
       [-2, 1.5, 0],
