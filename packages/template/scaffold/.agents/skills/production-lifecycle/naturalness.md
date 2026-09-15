@@ -38,4 +38,6 @@ Naturalness does not require a larger body. Eligible language size may rise or f
 
 ## Handoff
 
+Before opening shot source work, update the machine screenplay index's screenplay-level and per-scene document paths to their exact final counterparts. Preserve its scene identifiers, authority fields, treatment pointers, and locks. Shot source lineage and the compiler's index-derived owner must name the same final unit; retaining a construction path in that index cannot answer a final owner edge.
+
 Run `npm run toc -- --check`, `npm run lint`, and `npm run book -- --layer screenplays --pass final --title <title>`. Read the bound final edition without contracts or evidence annotations. Only a reviewed naturalness stage is eligible for shot and film-source realization.

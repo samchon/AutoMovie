@@ -11,8 +11,9 @@ import { TestValidator } from "@nestia/e2e";
  * 1. Disabled empty populations pass without reading; resident residue refuses.
  * 2. Active empty, missing, extra, renamed, and reordered files refuse.
  * 3. Changed H1, unit count, depth, anchor, lineage, title, or order refuses.
- * 4. Draft annotations refuse, while later-stage annotations and revised body
- *    language preserve identity; group titles remain exact in every stage.
+ * 4. Draft annotations refuse and evidence-stage citations cannot swap parents.
+ * 5. Later-stage annotations and revised body language preserve identity;
+ *    group titles remain exact in every stage.
  */
 export const test_evidence_final_screenplay_population = (): void => {
   const document: IAutoMovieScreenplayDocumentIdentity = {
@@ -99,12 +100,46 @@ export const test_evidence_final_screenplay_population = (): void => {
       document.source,
   };
   refuse({ readFinal: () => annotated }, "before evidence tags are authored");
+  refuse(
+    {
+      stage: "evidence",
+      readFinal: () => ({
+        ...document,
+        source:
+          "<!-- @evidence screenplays/002-part/001-return.md Wrong construction file. -->\n" +
+          document.source,
+      }),
+    },
+    "exact construction counterpart",
+  );
   for (const stage of ["evidence", "review"] as const)
     validateAutoMovieFinalScreenplayPopulation({
       ...base,
       stage,
-      readFinal: () => annotated,
+      readFinal: (relative) => ({
+        ...document,
+        source:
+          `<!-- @evidence screenplays/${relative} Exact construction file. -->\n` +
+          document.source +
+          `\n<!-- @evidenceReview screenplays/${relative}#gate #abcdef0 Read the gate.\n@evidence naturalness/core/common.md#naturalness-earned-element Naturalness answer. -->\n`,
+      }),
     });
+  for (const citation of [
+    "@evidence screenplays/001-part/001-arrival.md#other Wrong unit.",
+    "@evidenceReview screenplays/002-part/001-return.md#gate #abcdef0 Wrong file.",
+    "@evidenceExclude screenplays/001-part/001-arrival.md File cited by a unit.",
+    "@evidenceExcludeReview screenplays/001-part/001-arrival.md#other #abcdef0 Wrong excluded unit.",
+  ])
+    refuse(
+      {
+        stage: "evidence",
+        readFinal: () => ({
+          ...document,
+          source: document.source + `\n<!-- ${citation} -->\n`,
+        }),
+      },
+      "exact construction counterpart",
+    );
   refuse(
     { readGroupTitles: () => ({ construction: "Part", final: "Other" }) },
     "delivery-group H1 title",

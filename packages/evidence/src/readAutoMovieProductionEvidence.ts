@@ -350,7 +350,7 @@ const sourceOwnerBindingsOf = (
       continue;
     const targetSymbols = new Set(binding.target.symbols);
     const targets = new Map<string, IMarkdownSourceOwnerTarget>();
-    for (const file of resolvePopulationFiles(
+    for (const file of resolveAutoMovieProductionEvidencePopulationFiles(
       root,
       binding.target.root,
       binding.target.files,
@@ -365,7 +365,7 @@ const sourceOwnerBindingsOf = (
         if (targetSymbols.has(`h${target.depth}`))
           targets.set(target.relativeTarget, target);
     }
-    for (const sourcePath of resolvePopulationFiles(
+    for (const sourcePath of resolveAutoMovieProductionEvidencePopulationFiles(
       root,
       binding.host.root,
       binding.host.files,
@@ -671,7 +671,7 @@ const sourceBindingOf = (
     symbols: [...new Set(candidates.flatMap((item) => item.host.symbols))].sort(
       compareCodeUnits,
     ),
-    paths: resolvePopulationFiles(
+    paths: resolveAutoMovieProductionEvidencePopulationFiles(
       root,
       candidate.host.root,
       candidate.host.files,
@@ -808,28 +808,45 @@ const visibleMarkdownLines = (source: string): readonly string[] =>
     path: "document.md",
     source,
   }).visibleLines;
-/** Resolve manifest source globs without walking unrelated project trees. */
-const resolvePopulationFiles = (
+/**
+ * Resolve manifest globs within the production's controlled source or document tree.
+ *
+ * A manifest's reference root is an addressing base, not its physical host
+ * population. A source claim rooted at the project still owns only `src`;
+ * vendored package links and tool-created artifacts do not become evidence.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Keeps physical validation on the controlled authored population while preserving its complete selected files.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity Separates the citation base from the docs or src walk without weakening linked-host refusal.
+ */
+export const resolveAutoMovieProductionEvidencePopulationFiles = (
   projectRoot: string,
   populationRoot: string,
   patterns: readonly string[],
   extension: ".md" | ".ts" = ".ts",
+  io: {
+    walk: typeof walkAutoMovieProjectPopulationFiles;
+    glob: (patterns: readonly string[], root: string) => string[];
+  } = populationIO,
 ): string[] => {
   const root = path.resolve(projectRoot, populationRoot);
-  const candidates = walkAutoMovieProjectPopulationFiles(
+  const candidates = io.walk(
     projectRoot,
-    root,
+    path.resolve(projectRoot, extension === ".ts" ? "src" : "docs"),
     extension,
   );
   const selected = new Set(
-    fs
-      .globSync(patterns, { cwd: root })
-      .map((file) => path.resolve(root, file)),
+    io.glob(patterns, root).map((file) => path.resolve(root, file)),
   );
   return candidates
     .filter((file) => selected.has(file))
     .map((file) => posix(path.relative(projectRoot, file)))
     .sort(compareCodeUnits);
+};
+
+const populationIO = {
+  walk: walkAutoMovieProjectPopulationFiles,
+  glob: (patterns: readonly string[], root: string): string[] =>
+    fs.globSync(patterns, { cwd: root }),
 };
 
 /** List one already-validated Markdown population without leaving its root. */

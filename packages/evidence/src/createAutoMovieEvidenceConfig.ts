@@ -1125,6 +1125,29 @@ const EVIDENCE_STAGES: readonly unknown[] = [
 const describeDeclarationValue = (value: unknown): string =>
   typeof value === "string" ? JSON.stringify(value) : String(value);
 
+/**
+ * Validate the explicit, closed stage map for the final audience-language pass.
+ *
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Refuses omitted or misspelled final-pass selection instead of inferring it from resident files.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Admits only the screenplay naturalness key and the shared lifecycle stages.
+ */
+export const validateAutoMovieNaturalnessStages = (value: unknown): void => {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new Error(
+      `Production evidence naturalness must be an explicit stage map; received ${describeDeclarationValue(value)}.`,
+    );
+  const keys = Object.keys(value);
+  if (keys.length !== 1 || keys[0] !== "screenplays")
+    throw new Error(
+      "Production evidence naturalness must contain exactly the screenplays stage.",
+    );
+  const stage = (value as Record<string, unknown>).screenplays;
+  if (!EVIDENCE_STAGES.includes(stage))
+    throw new Error(
+      `screenplayNaturalness has unsupported evidence stage ${describeDeclarationValue(stage)}.`,
+    );
+};
+
 const validatePopulationScope = (graph: IProductionGraph): void => {
   const scope: unknown = graph.populationScope;
   if (scope === null || typeof scope !== "object" || Array.isArray(scope))
@@ -1248,14 +1271,7 @@ const validateDeclaration = (graph: IProductionGraph): void => {
       `Unsupported production language ${describeDeclarationValue(graph.language)}.`,
     );
   validatePopulationScope(graph);
-  if (
-    graph.naturalness === null ||
-    typeof graph.naturalness !== "object" ||
-    Array.isArray(graph.naturalness)
-  )
-    throw new Error(
-      `Production evidence naturalness must be an explicit stage map; received ${describeDeclarationValue(graph.naturalness)}.`,
-    );
+  validateAutoMovieNaturalnessStages(graph.naturalness);
   for (const name of [
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
     ...(Object.keys(SOURCES) as SourceLayer[]),
@@ -1266,10 +1282,6 @@ const validateDeclaration = (graph: IProductionGraph): void => {
         `${name} has unsupported evidence stage ${describeDeclarationValue(stage)}.`,
       );
   }
-  if (!EVIDENCE_STAGES.includes(revisionStage(graph)))
-    throw new Error(
-      `screenplayNaturalness has unsupported evidence stage ${describeDeclarationValue(revisionStage(graph))}.`,
-    );
   if (graph.claims !== undefined && !Array.isArray(graph.claims))
     throw new Error(
       "Production evidence claims must be an array when present.",
@@ -2831,7 +2843,7 @@ const validateHosts = (graph: IProductionGraph): void => {
     construction: new Map(
       [...(identities.get("screenplays") ?? [])].map(([file, units]) => [
         file,
-        { title: titles.get("screenplays")!.get(file)!, units, source: "" },
+        { title: titles.get("screenplays")!.get(file)!, units },
       ]),
     ),
     readFinal: (relative) => {

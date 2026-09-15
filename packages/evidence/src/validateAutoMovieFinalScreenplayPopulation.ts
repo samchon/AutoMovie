@@ -2,7 +2,7 @@ import type { AutoMovieEvidenceStage } from "./createAutoMovieEvidenceConfig";
 import { parseAutoMovieEvidenceSyntax } from "./parseAutoMovieEvidenceSyntax";
 
 /**
- * Parsed construction identity and the body of one screenplay file.
+ * Parsed identity and the body of one screenplay file.
  *
  * @author Samchon
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Represents the exact construction identity protected by final revision.
@@ -41,7 +41,7 @@ export interface IAutoMovieScreenplayDocumentIdentity {
  * Protect the construction population while final audience language changes.
  *
  * Physical enumeration and Markdown parsing belong to the graph factory.
- * These comparisons decide population identity and draft annotation admission;
+ * These comparisons decide population identity, counterpart selection, and draft admission;
  * literal content and mechanical-clause fidelity still require author review.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity Refuses final residue, incomplete populations, and changed construction identities.
@@ -51,7 +51,10 @@ export const validateAutoMovieFinalScreenplayPopulation = (props: {
   stage: AutoMovieEvidenceStage;
   residents: readonly string[];
   files: readonly string[];
-  construction: ReadonlyMap<string, IAutoMovieScreenplayDocumentIdentity>;
+  construction: ReadonlyMap<
+    string,
+    Omit<IAutoMovieScreenplayDocumentIdentity, "source">
+  >;
   readFinal: (relative: string) => IAutoMovieScreenplayDocumentIdentity;
   readGroupTitles: (group: string) => {
     construction: string;
@@ -80,16 +83,38 @@ export const validateAutoMovieFinalScreenplayPopulation = (props: {
   for (const relative of props.files) {
     const final = props.readFinal(relative);
     const construction = props.construction.get(relative)!;
-    if (
-      props.stage === "draft" &&
-      parseAutoMovieEvidenceSyntax({
-        path: `docs/final/screenplays/${relative}`,
-        source: final.source,
-      }).length !== 0
-    )
+    const file = `docs/final/screenplays/${relative}`;
+    const annotations = parseAutoMovieEvidenceSyntax({
+      path: file,
+      source: final.source,
+    });
+    if (props.stage === "draft" && annotations.length !== 0)
       throw new Error(
         `docs/final/screenplays/${relative} is draft and must be completed before evidence tags are authored.`,
       );
+    // Native graph validation owns presence, cardinality, and review syntax.
+    // A bijection alone permits swapped parents, so this product invariant
+    // checks which construction counterpart an existing citation selects.
+    const counterparts = new Map<string, string>([
+      [`${file}::file`, `screenplays/${relative}`],
+      ...final.units.map(
+        (unit) =>
+          [
+            `${file}#${unit.anchor}`,
+            `screenplays/${relative}#${unit.anchor}`,
+          ] as const,
+      ),
+    ]);
+    for (const annotation of annotations) {
+      const target =
+        /^@evidence(?:Review|Exclude|ExcludeReview)?\s+(screenplays\/\S+)/u.exec(
+          annotation.text,
+        )?.[1];
+      if (target !== undefined && target !== counterparts.get(annotation.host))
+        throw new Error(
+          `${file}:${annotation.line} must cite its exact construction counterpart, not ${target}.`,
+        );
+    }
     if (final.title !== construction.title)
       throw new Error(
         `final/screenplays/${relative} must exactly preserve the construction screenplay H1 title.`,
