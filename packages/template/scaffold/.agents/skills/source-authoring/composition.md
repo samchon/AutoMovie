@@ -94,27 +94,20 @@ Buildings use the same rule without pretending they are formations. A building c
 import {
   AutoMovieSubject,
   type IAutoMovieSubjectContribution,
-  mergeAutoMovieSpaces,
+  mergeAutoMovieSubjectContributions,
 } from "@automovie/engine";
 import type { IAutoMovieShotBuildContext } from "@automovie/interface";
 
-export const stageTower = (
-  tower: AutoMovieSubject<unknown>,
+export const stageSubjects = (
+  subjects: readonly AutoMovieSubject<unknown>[],
   context: IAutoMovieShotBuildContext,
-): IAutoMovieSubjectContribution => {
-  const architecture = tower.render(context);
-  return {
-    models: [...(architecture.models ?? [])],
-    builtEnvironments: [...(architecture.builtEnvironments ?? [])],
-    stage: {
-      // actor/camera/light fields omitted here
-      set: [...(architecture.set ?? [])],
-      space: mergeAutoMovieSpaces("shot-space", architecture.spaces ?? []),
-    },
-    // script, blocking, performance, and eventSamples remain shot-owned
-  } as IAutoMovieSubjectContribution;
-};
+): IAutoMovieSubjectContribution =>
+  mergeAutoMovieSubjectContributions(
+    subjects.map((subject) => subject.render(context)),
+  );
 ```
+
+The contribution keeps `set` and `spaces` alongside `models` and `builtEnvironments`. The shot places the merged `set` in its stage and calls `mergeAutoMovieSpaces` on the merged `spaces` when assembling that stage. Actors, cameras, lights, script, blocking, performance, and event samples remain the shot's assembly responsibility; a subject contribution is not a partial shot program.
 
 The building owns its interior, exterior envelope, roof, facade attachments, exterior stairs, ladders, rails, and helipad. Surrounding ground, parks, sky, and natural water stay in the world subject. Water simulation is its own subject/domain; an interior water feature composes it with a building space instead of making fluid an architecture-only feature.
 
