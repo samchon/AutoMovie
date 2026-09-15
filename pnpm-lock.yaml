@@ -77,11 +77,11 @@ catalogs:
       version: 13.2.0
   three:
     '@types/three':
-      specifier: ^0.169.0
-      version: 0.169.0
+      specifier: ^0.186.0
+      version: 0.186.0
     three:
-      specifier: ^0.169.0
-      version: 0.169.0
+      specifier: ^0.186.0
+      version: 0.186.0
   typescript:
     '@trivago/prettier-plugin-sort-imports':
       specifier: ^5.2.2
@@ -230,7 +230,7 @@ importers:
         version: file:experimental/medieval-baron-manor/vendor/sharp-disabled
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
     devDependencies:
       '@automovie/evidence':
         specifier: workspace:^
@@ -252,7 +252,7 @@ importers:
         version: 6.0.5
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       playwright:
         specifier: catalog:media
         version: 1.62.0
@@ -335,7 +335,7 @@ importers:
         version: 6.1.3
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       ttsc:
         specifier: catalog:typescript
         version: 0.29.0
@@ -539,7 +539,7 @@ importers:
         version: link:../viewer
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
     devDependencies:
       '@gltf-transform/core':
         specifier: catalog:gltf
@@ -555,7 +555,7 @@ importers:
         version: 6.0.5
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       esbuild:
         specifier: catalog:vite
         version: 0.21.5
@@ -720,7 +720,7 @@ importers:
         version: 6.0.5
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       automovie:
         specifier: workspace:^
         version: link:../cli
@@ -741,7 +741,7 @@ importers:
         version: 6.1.3
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       ttsc:
         specifier: catalog:typescript
         version: 0.29.0
@@ -762,14 +762,14 @@ importers:
         version: link:../interface
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.29.0
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
@@ -853,7 +853,7 @@ importers:
         version: 7.0.0
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
@@ -869,7 +869,7 @@ importers:
         version: 6.0.5
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       chalk:
         specifier: catalog:utils
         version: 4.1.2
@@ -908,7 +908,7 @@ importers:
         version: link:../experimental/medieval-baron-manor
       three:
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
@@ -918,7 +918,7 @@ importers:
         version: 22.19.20
       '@types/three':
         specifier: catalog:three
-        version: 0.169.0
+        version: 0.186.0
       gh-pages:
         specifier: ^6.3.0
         version: 6.3.0
@@ -1001,6 +1001,9 @@ packages:
   '@csstools/css-tokenizer@3.0.4':
     resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
     engines: {node: '>=18'}
+
+  '@dimforge/rapier3d-compat@0.12.0':
+    resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -1700,8 +1703,8 @@ packages:
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
 
-  '@types/three@0.169.0':
-    resolution: {integrity: sha512-oan7qCgJBt03wIaK+4xPWclYRPG9wzcg7Z2f5T8xYTNEF95kh0t0lklxLLYBDo7gQiGLYzE6iF4ta7nXF2bcsw==}
+  '@types/three@0.186.0':
+    resolution: {integrity: sha512-mxYSBpDC+D0pLfSP6sW4WZTcT+nrtmZcimMqnVmy36Hte3XpeYSrvgg4TRdaM1GemGog1AWzI5qL2VoIfMXbJQ==}
 
   '@types/tough-cookie@4.0.5':
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
@@ -1843,9 +1846,6 @@ packages:
 
   '@typia/utils@14.0.0':
     resolution: {integrity: sha512-zXJUft0gI/CJ8DxxBZUFb7HtyqxoUB1qhNkscvagCgTmQeuZFdQgkDIkgYMxKa48M9+pv4FbOFlDo7rDWO9Ytw==}
-
-  '@webgpu/types@0.1.70':
-    resolution: {integrity: sha512-LFiNHHKMvmAEvwVew3JLJmTdShhbdwRFSImUshGhE2mGE8ybQzIo63l5uRp+YKnNx+8Qno8Kf6gN+DKMreIJCA==}
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -2372,12 +2372,12 @@ packages:
     resolution: {integrity: sha512-2HvIEKRoqS62guEC+qBjpvRubdX910WCMuJTZ+I9yvqKU2/12eSL549HMwtabb4oupdj2sMP50k+XJfB/8JE6w==}
     engines: {node: '>=8'}
 
-  is-potential-custom-element-name@1.0.1:
-    resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
-
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
+
+  is-potential-custom-element-name@1.0.1:
+    resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
   is-promise@4.0.0:
     resolution: {integrity: sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==}
@@ -2488,8 +2488,8 @@ packages:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
     engines: {node: '>= 8'}
 
-  meshoptimizer@0.18.1:
-    resolution: {integrity: sha512-ZhoIoL7TNV4s5B6+rx5mC//fw8/POGyNxS/DZyCJeiZ12ScLfVwRE/GfsxwiTkMYYD5DmK2/JXnEVXqL4rF+Sw==}
+  meshoptimizer@1.1.1:
+    resolution: {integrity: sha512-oRFNWJRDA/WTrVj7NWvqa5HqE1t9MYDj2VaWirQCzCCrAd2GHrqR/sQezCxiWATPNlKTcRaPRHPJwIRoPBAp5g==}
 
   micromark-core-commonmark@2.0.3:
     resolution: {integrity: sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==}
@@ -2938,8 +2938,8 @@ packages:
     resolution: {integrity: sha512-MFO/QzvtAOmJbkhOaCTvbGcFN9L9b+JunIsDwaKljSOdcLMea3NJ1k9Usz/rjdfSXTq4dfzfeS7W4p4YOAAHeA==}
     engines: {node: '>=18'}
 
-  three@0.169.0:
-    resolution: {integrity: sha512-Ed906MA3dR4TS5riErd4QBsRGPcx+HBDX2O5yYE5GqJeFQTPU+M56Va/f/Oph9X7uZo3W3o4l2ZhBZ6f6qUv0w==}
+  three@0.186.0:
+    resolution: {integrity: sha512-cr/fIM2ddMSVbYVgkfD4jLJv7Fh/8ZTjvo+7gQeSVGUZHxpx9FDwoL5iC7hUz/LiRA8wMbqfnb90xKfm1/HHkQ==}
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
@@ -3219,6 +3219,8 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
 
   '@csstools/css-tokenizer@3.0.4': {}
+
+  '@dimforge/rapier3d-compat@0.12.0': {}
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
@@ -3676,14 +3678,14 @@ snapshots:
 
   '@types/stats.js@0.17.4': {}
 
-  '@types/three@0.169.0':
+  '@types/three@0.186.0':
     dependencies:
+      '@dimforge/rapier3d-compat': 0.12.0
       '@tweenjs/tween.js': 23.1.3
       '@types/stats.js': 0.17.4
       '@types/webxr': 0.5.24
-      '@webgpu/types': 0.1.70
       fflate: 0.8.3
-      meshoptimizer: 0.18.1
+      meshoptimizer: 1.1.1
 
   '@types/tough-cookie@4.0.5': {}
 
@@ -3762,8 +3764,6 @@ snapshots:
   '@typia/utils@14.0.0':
     dependencies:
       '@typia/interface': 14.0.0
-
-  '@webgpu/types@0.1.70': {}
 
   accepts@2.0.0:
     dependencies:
@@ -4356,9 +4356,9 @@ snapshots:
 
   is-interactive@1.0.0: {}
 
-  is-potential-custom-element-name@1.0.1: {}
-
   is-number@7.0.0: {}
+
+  is-potential-custom-element-name@1.0.1: {}
 
   is-promise@4.0.0: {}
 
@@ -4497,7 +4497,7 @@ snapshots:
 
   merge2@1.4.1: {}
 
-  meshoptimizer@0.18.1: {}
+  meshoptimizer@1.1.1: {}
 
   micromark-core-commonmark@2.0.3:
     dependencies:
@@ -5040,7 +5040,7 @@ snapshots:
       minizlib: 3.1.0
       yallist: 5.0.0
 
-  three@0.169.0: {}
+  three@0.186.0: {}
 
   through@2.3.8: {}
 
@@ -5055,6 +5055,10 @@ snapshots:
     dependencies:
       tldts-core: 6.1.86
 
+  to-regex-range@5.0.1:
+    dependencies:
+      is-number: 7.0.0
+
   toidentifier@1.0.1: {}
 
   tough-cookie@5.1.2:
@@ -5064,10 +5068,6 @@ snapshots:
   tr46@5.1.1:
     dependencies:
       punycode: 2.3.1
-
-  to-regex-range@5.0.1:
-    dependencies:
-      is-number: 7.0.0
 
   trim-repeated@1.0.0:
     dependencies:
