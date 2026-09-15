@@ -95,7 +95,7 @@ export const renderAutoMovieProductionRouter = (
 ${description}
 This file governs authoring this production. Read it before acting, then read the documents it routes to.
 
-It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`src/lint.config.ts\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped skill inventory so one generated project cannot silently fork the shared doctrine.
+It is updated from the installed scaffold by \`npm run sync\`. Change production facts in \`package.json\`, \`src/lint.config.ts\`, or \`docs\`, then synchronize. Follow the [static-document update policy](README.md#static-document-updates) to review and commit the instruction changes.
 
 ## This production
 

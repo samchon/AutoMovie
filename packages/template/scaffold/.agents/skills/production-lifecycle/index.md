@@ -18,7 +18,7 @@ Choose exactly one shape in `src/lint.config.ts`. [Production kinds](production-
 
 ## Generated instructions
 
-`AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are ignored generated instructions. `npm run sync` deletes and replaces that surface from the installed template, then renders the root router from `package.json`, `src/lint.config.ts`, active authored owners, and `docs/contracts`. Change production facts only in tracked owners and run sync again; do not preserve a local doctrine fork.
+`npm run sync` updates `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` from the installed template, then renders the root router from `package.json`, `src/lint.config.ts`, active authored owners, and `docs/contracts`. Follow the [static-document update policy](../../../README.md#static-document-updates) for their version control. Change production facts in their canonical owners before synchronization; shared doctrine improvements belong in the upstream template.
 
 Start the coding-agent session from this project root after sync. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
 

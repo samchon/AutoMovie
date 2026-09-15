@@ -12,9 +12,9 @@ import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 /**
  * Overwrite one generated project's shared instruction surface from its template.
  *
- * `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are generated and ignored.
+ * `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are version-controlled.
  * Every fact the production owns remains tracked elsewhere: the package
- * manifest, `lint.config.ts`, authored documents, source, and local
+ * manifest, `src/lint.config.ts`, authored documents, source, and local
  * contracts. Sync therefore removes the old shipped skill tree before copying
  * the installed one, so a renamed doctrine file cannot survive as a stale fork.
  *
@@ -75,11 +75,8 @@ export const writeAutoMovieProductionInstructions = (props: {
     evidence: identity,
     sources,
   });
-  // The generated instruction surface is ignored and regenerated from tracked
-  // owners, and the documented script runner gives every root-direct file of a
-  // generated project a second directory entry while a command runs. So this
-  // caller grants entry replacement, which leaves any peer entry's bytes alone,
-  // rather than rewriting a resident inode two pathnames name.
+  // Replace the addressed entry without changing any hard-linked peer's bytes.
+  // The caller reviews and commits the resulting instruction diff.
   const receipt = publishFiles(root, files, {
     force: true,
     replaceAliasedEntries: true,

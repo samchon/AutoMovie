@@ -10,7 +10,7 @@ Use [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) 
 
 ## Static-document updates
 
-This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. Instruction synchronization replaces only the ignored `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` surface. Compare and adopt tracked scaffold revisions explicitly under source control, preserving production-owned documents, source, and assets.
+This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are also version-controlled project files. Instruction synchronization replaces that instruction surface; inspect and commit its changes together with the production declaration that caused them. Compare and adopt other scaffold revisions explicitly under source control, preserving production-owned documents, source, and assets.
 
 Use ordinary coding-agent tools for authoring. Scaffold creation and instruction synchronization do not register an MCP client or write client configuration.
 

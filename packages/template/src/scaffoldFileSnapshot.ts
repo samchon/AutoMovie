@@ -291,10 +291,7 @@ const physicalDirectoryIdentity = (
   absolute: string,
   status: fs.BigIntStats,
 ): string => {
-  const descriptor = fs.openSync(
-    absolute,
-    fs.constants.O_RDONLY,
-  );
+  const descriptor = fs.openSync(absolute, fs.constants.O_RDONLY);
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isDirectory() === false || opened.ino !== status.ino)
@@ -587,13 +584,10 @@ const overwriteScaffoldFile = (props: {
  * the same name through the ordinary new-file boundary, which owns the write,
  * the sync, the readback and the resident verification.
  *
- * This surface needs no durable journal. `AGENTS.md`, `CLAUDE.md` and
- * `.agents/skills` are ignored generated instructions regenerated from tracked
- * owners (`package.json`, `lint.config.ts`, authored documents, source and
- * `docs/contracts`), so an interrupted attempt is a rerun rather than a
- * recovery, and the next run creates the absent name through the same exclusive
- * path. A contract target would need the journal, because its predecessor bytes
- * are tracked and cannot be regenerated.
+ * Instruction synchronization can recreate its candidate from the installed
+ * template and production owners after interruption. Git preserves the prior
+ * committed instructions; the caller inspects the complete replacement diff.
+ * This function itself neither journals nor recovers predecessor content.
  *
  * A publication that refuses after the entry is gone is reported as partial
  * rather than refused: the predecessor no longer exists, so claiming that
