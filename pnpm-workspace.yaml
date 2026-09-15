@@ -8,9 +8,6 @@ packages:
   - experimental/medieval-baron-manor
   - website
 
-overrides:
-  "@huggingface/transformers>sharp": "file:packages/template/scaffold/vendor/sharp-disabled"
-
 catalogs:
   samchon:
     typia: &typia ^13.2.0

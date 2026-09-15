@@ -15,6 +15,7 @@ Follow the literal request; it is the contract, not a hint at what the user "rea
 - **Evidence precedes correction.** Treat issue reports, review proposals, and claims that something is wrong or missing as hypotheses. Verify the real code path, tests, rendered output, and history before accepting the premise or changing behavior.
 - **Trace the consequence surface.** A named file or failing case is the starting point, not the investigation boundary. Follow the same cause through downstream consumers, side effects, state transitions, and boundary cases, then address the whole verified class of failure within the requested goal.
 - **Default over ask.** On an ambiguous detail, pick the sensible default and say what you chose; reserve questions for forks only the user can settle.
+- **Record every user directive.** Immediately preserve each user instruction in the durable `.wiki/` worklog and track its implementation. Keep superseded instructions in the chronology with the instruction that replaces them; a session transition never cancels an unfulfilled request. The documentation skill owns the record's form and location.
 - **Ship each topic as a PR.** Standing instruction (user, 2026-07-06): every topic-unit of work is submitted as its own PR; never commit to `master` directly. Merge only on explicit user request or under a standing autonomous mandate (see the pull-request skill). Green CI remains the normal merge path.
 
 ## Skills

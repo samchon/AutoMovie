@@ -1,4 +1,4 @@
-import type { IAutoMovieSourcePreview } from "./src/sourcePreview";
+import type { IAutoMovieSourcePreview } from "./viewer/sourcePreview";
 
 /**
  * Import this production's source and build its scene through @automovie/viewer.
