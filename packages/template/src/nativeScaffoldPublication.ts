@@ -902,12 +902,6 @@ const NATIVE_ENVIRONMENT = createNativeEnvironment({
   platform: process.platform,
 });
 
-/** @internal Injectable native boundary used only by semantic unit tests. */
-export const nativeScaffoldPublicationForTesting = {
-  createEnvironment: createNativeEnvironment,
-  publish: publishNativeScaffoldFileWithEnvironment,
-};
-
 const invalidWindowsHandle = (
   foreign: typeof koffi,
   handle: unknown,
