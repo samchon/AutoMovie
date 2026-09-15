@@ -20,7 +20,7 @@ type CommandPlan =
     }
   | { command: "toc"; check: boolean }
   | { command: "routes"; kind: "film" | "brief" | "library" }
-  | { command: "sync" | "verify" }
+  | { command: "sync" }
   | { command: "render"; arguments: readonly string[] };
 
 const unit = loadSourceModule<{
@@ -113,15 +113,15 @@ export const test_cli_command_arguments = (): void => {
             ["contracts"],
             ["contracts", "migrate"],
             ["contracts", "migrate", "--dry-run"],
+            ["verify"],
+            ["verify", "--force"],
           ].every((args) => refuses(args, "Unknown command")),
       ],
       [
         "zeroArgumentCommandsConsumeNothingElse",
         () =>
           read("sync").command === "sync" &&
-          read("verify").command === "verify" &&
-          refuses(["sync", "extra"], "sync takes no arguments") &&
-          refuses(["verify", "--force"], "verify takes no arguments"),
+          refuses(["sync", "extra"], "sync takes no arguments"),
       ],
       [
         "maintenanceCommandsConsumeOneClosedMode",
