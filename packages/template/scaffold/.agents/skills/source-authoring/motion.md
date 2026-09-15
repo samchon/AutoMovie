@@ -61,7 +61,7 @@ Feed them from the record rather than from a constant. `spaceGround` adapts a sp
 
 Two of the answers come with a correction, and neither applies itself. `plantStanceFeet` is the pass that removes skate: it detects stance, solves the leg back onto the pinned contact, and clamps the result into the rig's own range of motion, so a residual it cannot hold stays a warning rather than a silent edit. `detectBodyCollision` returns the response `suggestCollisionResponse` computes at the deepest contact, bounded by joint range of motion into a flinch. Both are hints; the authored reaction stays yours, and this document's contact section already says why a stronger or subtler one can be right.
 
-These calls run in a project script under `scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
+These calls run in a project script under `src/scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
 
 ```ts
 import {

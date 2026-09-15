@@ -1,6 +1,6 @@
 # Evidence graph
 
-Read `lint.config.ts`, [Production documents](../../../docs/README.md), the active host population, and every selected target before changing a governed artifact. The document map owns physical placement, [Contract targets](contract-targets.md) owns the shared and language inventory forms, and the generated `AGENTS.md` reports the factory-selected bindings. `lint.config.ts` remains the single typed declaration consumed by graph lint.
+Read `src/lint.config.ts`, [Production documents](../../../docs/README.md), the active host population, and every selected target before changing a governed artifact. The document map owns physical placement, [Contract targets](contract-targets.md) owns the shared and language inventory forms, and the generated `AGENTS.md` reports the factory-selected bindings. `src/lint.config.ts` remains the single typed declaration consumed by graph lint.
 
 ## Required routes
 

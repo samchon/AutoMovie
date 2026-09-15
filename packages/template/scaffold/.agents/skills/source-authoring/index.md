@@ -1,6 +1,6 @@
 # Source and geometry authoring
 
-Read `AGENTS.md`, `lint.config.ts`, `docs/README.md`, the reviewed design owner, and its active source branch before writing source. Source implements reviewed decisions; it does not invent a missing model, space, material, motion, subject, or delivery contract. Return a newly exposed decision to its earliest document owner first.
+Read `AGENTS.md`, `src/lint.config.ts`, `docs/README.md`, the reviewed design owner, and its active source branch before writing source. Source implements reviewed decisions; it does not invent a missing model, space, material, motion, subject, or delivery contract. Return a newly exposed decision to its earliest document owner first.
 
 Keep time in seconds, space in right-handed Y-up metres, and randomness in explicit seeds. Shot and film build functions use no clock, network, process, filesystem, or unseeded randomness. `src/examples` is reading material: adapt a technique into its owning branch and never import examples into delivered source.
 
@@ -27,8 +27,8 @@ Read only the craft that the current source change reaches:
 - [Sound](sound.md) for events, dialogue, ambience, spatialization, and mix hierarchy.
 - [Spatial design](spatial-design.md) for plan, circulation, openings, daylight, proportion, exterior/interior agreement, and distinct plan/section/elevation/perspective/traversal judgments.
 
-## Derived records and verification
+## Source execution and verification
 
-`scripts/emitDesign.ts` initially refuses. After reviewed design and source exist, extend only its marked block with explicit imports and `emit` calls for exactly the records this production owns. Preserve its unchanged-record behavior and orphan refusal. It writes and never deletes.
+Implement reviewed design decisions as typed values and functions in their source owners. Follow [Ownership](ownership.md) for the boundary between authoring inputs and outputs, and [Compilation](compilation.md) for execution.
 
-Never edit generated output or renders. Correct authored source, regenerate, and renew stale reviews. Run `npm run lint:source` while authoring, `npm run design` when reviewed design records are ready, and `npm run build` as the only command allowed to update builder-owned output. A clean compile proves structure, not appearance; hand rendered claims to [Review verification](../review-verification/SKILL.md).
+Correct authored source, rerun its consumers, and renew stale reviews. Run the declared source lint while authoring and the applicable execution command when its inputs are ready. A clean compile proves structure, not appearance; hand rendered claims to [Review verification](../review-verification/SKILL.md).

@@ -1,10 +1,10 @@
 # Production lifecycle
 
-You are authoring one production: this project. Read `AGENTS.md`, `lint.config.ts`, `docs/README.md`, every active upstream layer, and every contract selected by the evidence graph before drafting. Write only what the user requested. Do not create placeholder files, headings, or invented production content.
+You are authoring one production: this project. Read `AGENTS.md`, `src/lint.config.ts`, `docs/README.md`, every active upstream layer, and every contract selected by the evidence graph before drafting. Write only what the user requested. Do not create placeholder files, headings, or invented production content.
 
 ## Ordered procedure
 
-Before first-version drafting while a layer is disabled, read the exact contract inventory routed by `AGENTS.md` and `lint.config.ts`. Apply unit-level principles from the beginning, but defer population-distribution and post-draft questions until their complete selected population exists. A contract annotation records work already done and never substitutes for authorship.
+Before first-version drafting while a layer is disabled, read the exact contract inventory routed by `AGENTS.md` and `src/lint.config.ts`. Apply unit-level principles from the beginning, but defer population-distribution and post-draft questions until their complete selected population exists. A contract annotation records work already done and never substitutes for authorship.
 
 Select the production kind and settle complete settings before downstream work. Activate only the next applicable layer whose direct parents are reviewed, author one coherent version, stage its evidence, review it, and only then open its child. A later finding returns to the earliest semantic owner, propagates through every affected descendant, and renews their evidence and review.
 
@@ -14,25 +14,25 @@ Do not partition one authored layer into release and non-release populations. Tr
 
 Record authorship and assistance truthfully in Git history and durable source provenance where the production contract calls for it. Do not move process history into current canon, attribute generated output as human observation, or treat tool assistance as authority for a production fact.
 
-Choose exactly one shape in `lint.config.ts`. [Production kinds](production-kinds.md) is the sole semantic owner of the film, brief, and library ladders, their parallel inputs, and their refusals. This lifecycle index routes to that decision and does not restate it.
+Choose exactly one shape in `src/lint.config.ts`. [Production kinds](production-kinds.md) is the sole semantic owner of the film, brief, and library ladders, their parallel inputs, and their refusals. This lifecycle index routes to that decision and does not restate it.
 
 ## Generated instructions
 
-`AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are ignored generated instructions. `npm run sync` deletes and replaces that surface from the installed template, then renders the root router from `package.json`, `lint.config.ts`, active authored owners, and `docs/contracts`. Change production facts only in tracked owners and run sync again; do not preserve a local doctrine fork.
+`AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are ignored generated instructions. `npm run sync` deletes and replaces that surface from the installed template, then renders the root router from `package.json`, `src/lint.config.ts`, active authored owners, and `docs/contracts`. Change production facts only in tracked owners and run sync again; do not preserve a local doctrine fork.
 
 Start the coding-agent session from this project root after sync. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
 
-Sync also updates the owned `automovie_reference` entry in project-local `.mcp.json` and `.codex/config.toml`, using this project's installed package and absolute root. It preserves unrelated client settings and refuses an edited or conflicting owned entry. These local files are ignored because machine paths and other client settings are not production facts. Review the client trust prompt yourself: neither sync nor a reference request grants trust or edits global configuration. Moving a project requires sync before restarting its clients. If an entry conflicts, inspect that exact entry and explicitly reconcile ownership before rerunning; do not discard the rest of the configuration. A changed Node path is not a conflict: sync records the current executable and republishes the owned entry.
+Instruction synchronization owns only instructions. Follow [Ownership](../../../README.md#ownership) for the project source and file boundary; client registration is not a production step.
 
 ### Read-only authored reference
 
-The MCP server exposes only `get_index_of_layer`, `get_index_of_file`, `read_section_without_annotations`, and `read_file_without_annotations`. Start with a layer index, inspect the selected file's explicit anchors, then read the smallest useful section. A file revision or continuation identifies the bytes actually read; rediscover after a stale response. Requests cannot change the bound production root. The allowed layers are settings, research, maps, models, spaces, materials, instances, motions, systems, treatments, scripts, screenplays, and briefs.
+Use ordinary file navigation to read authored Markdown and inspect its explicit anchors. An optional installed reference provider may offer annotation-free views, but it does not own authoring or evidence review.
 
-Without MCP, use the same provider through `npm run reference -- --request '{"operation":"get_index_of_layer","layer":"settings"}'`. The installed script binds this project root; it does not fetch a package or run lint, compile, or render. Use normal source tools to edit files and to inspect TypeScript, contracts, accounts, configuration, or evidence annotations. Comment-free reference results are not evidence audits or complete review reads, and neither these tools nor a reader edition pays an authoring or observation obligation.
+Use normal source tools to edit files and inspect TypeScript, contracts, accounts, configuration, and evidence annotations. Comment-free reference results are not evidence audits or complete review reads, and neither they nor a reader edition pays an authoring or observation obligation.
 
 ### Interrupted maintenance
 
-Contract and TOC updates preserve candidates, predecessor bytes and a durable journal beneath `automovie/contract-migrations`. A pending `automovie/contract-maintenance.pending.json` means the current file tree is not admitted for graph success, even when some successor files already exist. Rerun the same explicit mutating command to attempt its generation-bound recovery; `--dry-run` and `--check` refuse without recovering. Do not delete markers or restore a baseline alone to bypass this state. Preserve the named archive, competitors and primary failure if recovery requires manual adjudication. Reference-client registration uses its separate ignored `automovie/reference-client-maintenance` archive and pending marker; run sync to resume that operation. An interrupted operation must be recovered before starting another maintenance kind.
+Preserve a coherent Git checkpoint before changing contracts or delivery indexes. After an interruption, inspect the complete diff and the affected graph before resuming. Reconcile the owned files against that checkpoint without discarding production edits, then rerun their declared checks. A partially applied update is not an admitted authoring state.
 
 ## External retrieval
 

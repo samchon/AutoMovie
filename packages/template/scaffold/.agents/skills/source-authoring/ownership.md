@@ -1,18 +1,18 @@
 # Source Ownership
 
-The coding agent owns `src`, `docs`, `test`, and declared assets. AutoMovie owns tracked design records under `automovie`; review observations remain in evidence citations and Git rather than a second project ledger. The builder alone owns `generated`. Render commands own content-addressed `renders`.
+The project [Ownership](../../../README.md#ownership) section owns source placement, allowed files, and the source-first execution boundary. Review observations remain in evidence citations and Git rather than a second project ledger.
 
-Deterministic derived artifacts have their own owner inside `automovie`. An explicit generation script you write publishes the exact bytes under `automovie/derived/` and the ledger that records their basis; compilation verifies both and never regenerates either. Hand-editing the bytes or the ledger, and registering a derived path in the external asset ledger, are both refused. [Compilation](compilation.md) owns that contract.
+Keep deterministic derivation in source functions over explicit inputs. Share a producer between its preview, measurements, and delivery consumers so they cannot silently inspect different geometry. Record external-input provenance at the authored owner that adopts the input.
 
-`npm run derive:example` is an executable teaching specimen, not this production's generation command or a gate. It reads the fixed scaffold example `src/examples/buildings.ts` and publishes that example's line index so you can inspect or run one complete self-declaring generator and ledger publication. Its success proves only that the example is reproducible and satisfies no production obligation. When production source needs a precomputed result, create a production-named generator script and package command, declare the script itself, every input, and its project-owned output, then run that command explicitly before compiling.
+Examples teach operations and supply no production content. Adapt the required technique into the owning source branch and verify it against that branch's design.
 
-Never patch `generated` to fix a source problem. Its manifest records every builder-owned path and digest; unowned or modified output blocks compilation. Edit the owning source or design, then run the scaffold compile command or the package builder API.
+Never patch a rendered output to fix a source problem. Edit the owning source or design, execute its producer again, and repeat every affected observation.
 
 Shot source runs through ordinary Node module loading under `ttsx`. Keep its output reproducible from explicit inputs and design seeds. Use runtime imports directly from the owning packages; [TypeScript](typescript.md) routes common authoring questions to those APIs.
 
 The build context contains immutable builder-generated `runtimeModels` and compact `formationRuntime`. `engine.formationSlot` regenerates one exact representative without serializing the group.
 
-It also carries `derivedArtifacts`, whose live basis and output digests the builder re-verified on this run. A missing or stale one refuses the compile instead of handing source an approximate value.
+Pass derived values explicitly to consumers. A missing dependency remains a missing input rather than being replaced by an approximate cached value.
 
 Source returns a registered thin actor, script, stage, blocking, and performance program, event sample times, optional `enact` clips, optional bounded formation and effect cues, and optionally its own generated models, semantic props, structured built environments, the observation and lineage records those buildings cite, and the fluid, cloth, planting, and service-network domains it stages with the bindings that attach them.
 

@@ -1,18 +1,18 @@
 # {{name}}
 
-This is a coding-agent-first AutoMovie production repository. Author production facts, construction and final screenplay documents, source, assets, and delivery indexes as ordinary tracked files; emit derived design records from reviewed source. AutoMovie owns deterministic generated output, render state, receipts, and review freshness.
+This is a coding-agent-first AutoMovie production repository. Author production facts, construction and final screenplay documents, source, assets, and delivery indexes as ordinary tracked files. Production execution consumes typed source directly.
 
 ## Authoring routes
 
 The generated `AGENTS.md` reports the current production kind, active branches, owners, and selected contract bindings. It routes contract lookup through the [contract skill](.agents/skills/contract/SKILL.md), production work through [production lifecycle](.agents/skills/production-lifecycle/SKILL.md), graph changes through [evidence graph](.agents/skills/evidence-graph/SKILL.md), implementation through [source authoring](.agents/skills/source-authoring/SKILL.md), and observation or completion through [review verification](.agents/skills/review-verification/SKILL.md).
 
-Use [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) before selecting `kind` in `lint.config.ts`. Use [Production documents](docs/README.md) for physical document ownership, [Contract targets](.agents/skills/evidence-graph/contract-targets.md) for shared and language target forms, [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) for local discovery results, and [Evidence staging](.agents/skills/evidence-graph/staging.md) before changing a branch stage or evidence annotation. Those routes own their semantics; this README only makes them reachable.
+Use [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) before selecting `kind` in `src/lint.config.ts`. Use [Production documents](docs/README.md) for physical document ownership, [Contract targets](.agents/skills/evidence-graph/contract-targets.md) for shared and language target forms, [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) for local discovery results, and [Evidence staging](.agents/skills/evidence-graph/staging.md) before changing a branch stage or evidence annotation. Those routes own their semantics; this README only makes them reachable.
 
 ## Static-document updates
 
-This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. `npm run sync` replaces the ignored `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` instruction surface and synchronizes local reference-client entries, while `npm run contracts:migrate` updates only the reusable target inventory owned by [Contract targets](.agents/skills/evidence-graph/contract-targets.md). Neither command overwrites these two tracked overview files. A package upgrade therefore does not silently adopt a later overview revision into an existing production; compare and adopt such a revision explicitly under source control.
+This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. Instruction synchronization replaces only the ignored `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` surface. Compare and adopt tracked scaffold revisions explicitly under source control, preserving production-owned documents, source, and assets.
 
-Client registration is separately synchronized in ignored project-local `.mcp.json` and `.codex/config.toml`; unrelated settings are preserved and ownership conflicts refuse. See [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions) for first-client trust and recovery.
+Use ordinary coding-agent tools for authoring. Scaffold creation and instruction synchronization do not register an MCP client or write client configuration.
 
 ## First run
 
@@ -61,15 +61,15 @@ The table names entry points, not completion evidence. Read the linked procedure
 
 ## Source preview navigation
 
-The source preview accepts optional `navigation` from `viewer/preview.ts`: `items` contain unique nonempty `id`, `label`, optional `group`, and optional `keywords`; `apply(id)` synchronously updates the shared camera and optional target. The common viewer owns search, grouped selection, result counts, and panel collapse. Searching does not change the view. Selecting an item applies it; **Go to view** applies the selected item again after free flight. The producer supplies data and view changes without constructing menu DOM. See [Live viewing](.agents/skills/review-verification/live-viewing.md) for the preview lifecycle and evidence boundary.
+The source preview accepts optional `navigation` from `src/createPreview.ts`: `items` contain unique nonempty `id`, `label`, optional `group`, and optional `keywords`; `apply(id)` synchronously updates the shared camera and optional target. The common viewer owns search, grouped selection, result counts, and panel collapse. Searching does not change the view. Selecting an item applies it; **Go to view** applies the selected item again after free flight. The producer supplies data and view changes without constructing menu DOM. See [Live viewing](.agents/skills/review-verification/live-viewing.md) for the preview lifecycle and evidence boundary.
 
 ## Ownership
 
-- `src`, `docs`, `test`, `public`, `lint.config.ts`, `scripts/emitDesign.ts`, and the screenplay index are project-owned inputs.
-- `automovie/design/shared` and `automovie/design/<production>` are tracked design records emitted or authored through their declared owners.
-- `automovie/productions.json` is the tracked production registry; commit it with the design records it names. `automovie/incarnation.json` and `automovie/productions/<production>/incarnation.json` are this checkout's incarnations and stay ignored.
-- `automovie/derived` contains Git-ignored precomputed outputs. Track their generator scripts, inputs, and `automovie/derived-artifacts.json` provenance ledger; run the production's explicit generation command before compiling a fresh checkout. Compilation verifies these outputs and never regenerates them.
-- `generated`, `automovie/productions/<production>`, and `renders` are builder or runtime outputs; do not edit them.
-- `src/examples` and `npm run derive:example` are teaching material, not production owners or evidence.
+- All source code belongs under `src`, including command entry points, viewer code, configuration modules, review declarations, and any test source. Source location does not make tooling a production design owner; the typed evidence declaration selects the authored populations.
+- `public` holds HTML and static assets. Keep executable code in imported `src` modules rather than inline HTML scripts or asset directories.
+- `docs` holds authored decisions, contracts, and review observations. Git holds change history. Neither is replaced by a generated state ledger.
+- `package.json` is the only project JSON file. Keep package and compiler settings there; do not create another JSON configuration, design store, registry, migration journal, receipt, or cache file in the project.
+- Execute production and measurement functions over typed values. Images, media, and reader-facing documents are outputs; serialized project state is not an authoring product.
+- `src/examples` is teaching material, not production content or evidence.
 
 Run the applicable [Author process Self-Review](.agents/skills/review-verification/self-review.md) before handing off a completed authoring, evidence, review, or stage-transition boundary.

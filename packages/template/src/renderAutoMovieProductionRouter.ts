@@ -95,13 +95,13 @@ export const renderAutoMovieProductionRouter = (
 ${description}
 This file governs authoring this production. Read it before acting, then read the documents it routes to.
 
-It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`lint.config.ts\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped skill inventory so one generated project cannot silently fork the shared doctrine.
+It is generated from the installed scaffold by \`npm run sync\` and is not tracked. Do not edit it: change \`package.json\`, \`src/lint.config.ts\`, \`docs\`, or the installed AutoMovie version, then run the command again. Sync deliberately overwrites this router and the shipped skill inventory so one generated project cannot silently fork the shared doctrine.
 
 ## This production
 
 - Package \`${evidence.packageName}\`.
 - Production authoring language \`${evidence.manifest.language}\`; its exact contract is materialized under \`docs/language\`.
-- \`lint.config.ts\` is the single typed production-kind, population-scope, branch, custom-claim, and graph declaration. Lint, sync, and final review consume the same exported value; the generated branch-and-stage view below reports it but never overrides it.
+- \`src/lint.config.ts\` is the single typed production-kind, population-scope, branch, custom-claim, and graph declaration. Lint, sync, and final review consume the same exported value; the generated branch-and-stage view below reports it but never overrides it.
 - ${shapeProcedure(evidence.manifest.kind)}
 - ${branchLine}
 
@@ -121,7 +121,7 @@ ${designOwnerLines.join("\n")}
 
 ## Contracts this production answers
 
-Reusable contracts live in this project's own \`docs/{discovery,naturalness,upstream,principles,obligations}\` inventory and are selected by \`lint.config.ts\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their project-local evidence roots.
+Reusable contracts live in this project's own \`docs/{discovery,naturalness,upstream,principles,obligations}\` inventory and are selected by \`src/lint.config.ts\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their project-local evidence roots.
 
 ${bindingLines.join("\n")}
 
@@ -130,7 +130,7 @@ Project-local contracts are flat files under \`docs/contracts\`; every item belo
 ${localContractLines.join("\n")}
 ${localBindingLines.join("\n")}
 
-Add a local contract only after [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`lint.config.ts\`, and run \`npm run sync\` so this router lists it.
+Add a local contract only after [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`src/lint.config.ts\`, and run \`npm run sync\` so this router lists it.
 
 ## Instruction loading
 
@@ -138,8 +138,8 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 ## Commands
 
-- \`npm run sync\` overwrites this router and the five shipped skills, and synchronizes the owned local reference-client entries while preserving unrelated client settings and tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) for client trust, conflicts, and interrupted maintenance.
-- \`npm run reference -- --request '<JSON>'\` uses the same read-only Markdown provider as the local MCP server: \`get_index_of_layer\`, \`get_index_of_file\`, \`read_section_without_annotations\`, and \`read_file_without_annotations\`. These tools navigate authored content; they do not edit files, execute production commands, inspect TypeScript, or replace full evidence review.
+- \`npm run sync\` overwrites this router and the five shipped skills while preserving tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md).
+- Read and edit authored Markdown and TypeScript with ordinary coding-agent tools. Follow [Ownership](README.md#ownership) for the source and file boundary.
 - \`npm run lint:source\` checks TypeScript and authored evidence; \`npm run lint\` also checks the production builder's runtime review gates.
 - \`npm run book -- --layer <layer> --pass <construction|final> --title <title>\` binds one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. Screenplays default to the final pass; other layers default to construction. It preserves numbered groups, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run build\` is the only command that may update builder-owned output.
@@ -286,6 +286,6 @@ const shapeProcedure = (
     case "library":
       return "Production kind `library`; follow the [library procedure](.agents/skills/production-lifecycle/production-kinds.md#library).";
     case null:
-      return "No production kind is selected. Choose it through [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) and record it in `lint.config.ts` before authoring a downstream branch.";
+      return "No production kind is selected. Choose it through [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) and record it in `src/lint.config.ts` before authoring a downstream branch.";
   }
 };
