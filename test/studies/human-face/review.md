@@ -116,6 +116,26 @@ State: construction admitted; standalone document replay admitted; static glTF a
 
 [Replay document](generated-black-girl-01.json) · [Original selection and quality](inputs.md#input-generated-black-girl-01). Selected original: `generated-black-girl-01_age-15_front-smile.png`.
 
+2026-09-16 optical partial adoption: the current document sets `sphereFit: observation-ray`, `opticalFrame: radial`, `canthalSupport: tangent` and `surfaceRadius: 12`. All other authored values, source identity and observed expression remain exact. Two independent complete builds reproduce the retained candidate's model and GLB exactly. The spherical radius is an authored approximation at human-eye scale, not person-specific biometry. [Adult CT measurements](https://pmc.ncbi.nlm.nih.gov/articles/PMC4238270/) describe varying, unequal axes; [juvenile longitudinal biometry](https://pubmed.ncbi.nlm.nih.gov/23575156/) measures axial growth. Neither establishes a universal 12-mm spherical radius or a radius recoverable from this photograph. The fixed-canthus hull is geometric support, not a measured conjunctival surface.
+
+All nine views in each of observed, bilateral blink and oral-gaze were directly inspected: 27 views for this person, under AMD hardware rendering with an independently specified 10-mm calibration cube (45 expected pixels, 44 measured). The open-eye curvature and glints improve, but the inferior-lid band/shadow remains more pronounced than baseline and the superior orbital hollow is excessive. The smile retains regular crowns and a thick vermilion band. Both profiles retain the angular nose and neck; the rear groom exposes a central separation and small crown gaps. These are unresolved form observations, not changes attributed to the eye controls. In full blink the optical apertures are covered; that sampled closure does not validate natural blink motion. The optical improvement is adopted while the coupled tissue work continues; **whole-face likeness remains unaccepted**.
+
+Current document SHA-256: `648b3eef6daa7b3a641faee821c759224aa5305662f52749ff79fa3aa9dadf86`; model: `708cf683b51486200118b908f2c3c66044edd02159f4c5fd68537604e4c7ad75`; GLB: `54217ed710e7ad001901227f64ea9643ea5b4e5081a12ed94c2a5a762e4d7e91`. Current full-view capture directory: `.shots/human-2469/investigation-2498/optical-adoption-views/generated-black-girl-01`. The close baseline comparisons remain under `ocular-fit/generated-black-girl-01`, and the complete per-state input/model/GLB receipts remain there. The table below identifies the directly inspected observed images. Left/right filenames use camera yaw: negative yaw sees the anatomical right side, positive yaw the anatomical left.
+
+| Current observed view | PNG SHA-256 |
+| --- | --- |
+| front | `9c751e47ad4407d91f8c846e604d9fce641e3f9e9c4479f1557526c2071eefa8` |
+| left-oblique | `a6dcdfafaf04210a20cd0ee412a20e3e0a7d54544c7d10d00e540addf4dd233d` |
+| right-oblique | `ccc82ed107ecca01d27972512c20b1d0d84aef6b7b804b4280ae3d24a76acbb8` |
+| left-profile | `cdc730010823dee19463d0c15e88c95b502d09ce75a2cf21c84f79bcf4e48766` |
+| right-profile | `810181d335ade9eeb86afbe1d6b99cf4bb8cc09bdb17d6ad3cce36a20a9a443d` |
+| back | `cb67ea9a2d5ba532ba977d0b93141d271a4a8805c732085b5cb05f9fb5020d55` |
+| clay | `e5e9606369a0f09fa36bdb4d432e7811665a5fd3cfb75e80a461f86565eb602c` |
+| clay-oblique | `2f1e61485249bc4de16556bc5574cd82d917768be31848b741d38ed9d10c2b59` |
+| reference | `311ecca5e3bc902ef83337bacad155cacc525961da150b0d3992194c4ae2075c` |
+
+The following entries preserve preceding revisions and their own artifact identities; their use of “current” refers to those earlier checkpoints.
+
 Direct comparison of all nine initial views with the original: eyelid margins are too widely separated, brow fibres read as a solid ribbon, upper dental exposure is too regular and the tip projects too strongly. Hidden rear shape remains inferred.
 
 The final front/reference retain the selected smile and dark optical palette. Both obliques reveal the simplified lid roll and lip band; the dental row remains too uniform. Both profiles keep the pinnae against the head silhouette, while back and clay reveal the shared inferred posterior head and neck lobes. The source hair is not reproduced by this face-only editor.
@@ -147,6 +167,26 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## generated-korean-boy-01 {#generated-korean-boy-01}
 
 [Replay document](generated-korean-boy-01.json) · [Original selection and quality](inputs.md#input-generated-korean-boy-01). Selected original: `generated-korean-boy-01_age-15_front-smile.png`.
+
+2026-09-16 optical partial adoption: the current document sets `sphereFit: observation-ray`, `opticalFrame: radial`, `canthalSupport: tangent` and `surfaceRadius: 12`. All other authored values, source identity and observed expression remain exact. Two independent complete builds reproduce the retained candidate's model and GLB exactly. The spherical radius is an authored approximation at human-eye scale, not person-specific biometry. [Adult CT measurements](https://pmc.ncbi.nlm.nih.gov/articles/PMC4238270/) describe varying, unequal axes; [juvenile longitudinal biometry](https://pubmed.ncbi.nlm.nih.gov/23575156/) measures axial growth. Neither establishes a universal 12-mm spherical radius or a radius recoverable from this photograph. The fixed-canthus hull is geometric support, not a measured conjunctival surface.
+
+All nine views in each of observed, bilateral blink and oral-gaze were directly inspected: 27 views for this person, under AMD hardware rendering with an independently specified 10-mm calibration cube (45 expected pixels, 44 measured). The open-eye globes read as curved reflective volumes. The lower-lid band is more apparent than baseline, while the broad upper lid and medial orbital depth remain unlike the reference. Both profiles show the inferred shallow jaw-to-neck transition; rear hair remains a regular cap. Block-like incisors and the lip band persist in observed and open-mouth views. In full blink the optical apertures are covered; that sampled closure does not validate natural blink motion. The optical improvement is adopted while the coupled tissue work continues; **whole-face likeness remains unaccepted**.
+
+Current document SHA-256: `c921c38f6904a38a1bebc35134ee8b0888d72c2b45c6efd8ea7592cc537882c3`; model: `dcac32b998e5f561c72b16e4acdccd5b4090dedd4d0b6f1e7771e9996ff65325`; GLB: `8f218457466b62233442c87926f717139e78673684024c9102f9377c1cfdf347`. Current full-view capture directory: `.shots/human-2469/investigation-2498/optical-adoption-views/generated-korean-boy-01`. The close baseline comparisons remain under `ocular-fit/generated-korean-boy-01`, and the complete per-state input/model/GLB receipts remain there. The table below identifies the directly inspected observed images. Left/right filenames use camera yaw: negative yaw sees the anatomical right side, positive yaw the anatomical left.
+
+| Current observed view | PNG SHA-256 |
+| --- | --- |
+| front | `b2f75d22b34dac7a2fc36ee5482cc7093e1429f89e3e3f76d4608311169322af` |
+| left-oblique | `6c54b4bf64e54880fd0b349d6d4c04f317b10544e1b6473da1458d08b0eddbb3` |
+| right-oblique | `a4e2c4c19c37fcfc619708822b05c50970686939115566c98a962c57f61e3823` |
+| left-profile | `e32fc94a0c8dd56d83ded7a76c8f383d1371a80f23dafefd82ac8a05815d7018` |
+| right-profile | `059bbc945cc6f801df0d69c259ec566a14ecc5baf2396a91cc452d07a4ba1167` |
+| back | `921564f1428021d6f9a377d8582734650f2bde87b8a33ad57be93987aead3427` |
+| clay | `6fdedd2031053fb637d2b87eb52440d48e7c2a95087fef0963476fbf5f2c67a1` |
+| clay-oblique | `c4e79a6687349a58feecb90d4cdb16cfccce91c30d6c5f6f18f63641394844de` |
+| reference | `42fc88bde92910b4b666b95498da05031b1c3cfa513a9ec5e00f45ac50b9e5c2` |
+
+The following entries preserve preceding revisions and their own artifact identities; their use of “current” refers to those earlier checkpoints.
 
 The original has less white-eye exposure, lighter tapered brows, a thinner lower vermilion and rounded incisal tips. Adjust those profiles without changing the observation's pose or ethnicity.
 
@@ -380,6 +420,26 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## yoo-seung-ho {#yoo-seung-ho}
 
 [Replay document](yoo-seung-ho.json) · [Original selection and quality](inputs.md#input-yoo-seung-ho). Selected original: `yoo-seung-ho_age-22_the-magician.png`.
+
+2026-09-16 optical partial adoption: the current document sets `sphereFit: observation-ray`, `opticalFrame: radial`, `canthalSupport: tangent` and `surfaceRadius: 12`. All other authored values, source identity and observed expression remain exact. Two independent complete builds reproduce the retained candidate's model and GLB exactly. The spherical radius is an authored approximation at human-eye scale, not person-specific biometry. [Adult CT measurements](https://pmc.ncbi.nlm.nih.gov/articles/PMC4238270/) describe varying, unequal axes; [juvenile longitudinal biometry](https://pubmed.ncbi.nlm.nih.gov/23575156/) measures axial growth. Neither establishes a universal 12-mm spherical radius or a radius recoverable from this photograph. The fixed-canthus hull is geometric support, not a measured conjunctival surface.
+
+All nine views in each of observed, bilateral blink and oral-gaze were directly inspected: 27 views for this person, under AMD hardware rendering with an independently specified 10-mm calibration cube (45 expected pixels, 44 measured). The open-eye reflection and rounded globe are clearer than the baseline's flatter optics. Lower-lid protrusion and shadow remain more prominent, and the superior orbital body is excessive. The profiles retain angular nasal, jaw and cervical planes; the rear groom remains a regular cap. The open-mouth diagnostic retains an overly regular upper row and sparse interior. In full blink the optical apertures are covered; that sampled closure does not validate natural blink motion. The optical improvement is adopted while the coupled tissue work continues; **whole-face likeness remains unaccepted**.
+
+Current document SHA-256: `16db8bcb61396716e4a36008469bfd0441df484f93f741b85573d6d05ea732e5`; model: `eaee249193c4bf34d623bec4990ec3143f1f57d4118da09cae370325a78a7942`; GLB: `97cfbbe47f89bb1bc80674d70a98a9ea66d144070c7dc30b8a0b89cb2ca0e97e`. Current full-view capture directory: `.shots/human-2469/investigation-2498/optical-adoption-views/yoo-seung-ho`. The close baseline comparisons remain under `ocular-fit/yoo-seung-ho`, and the complete per-state input/model/GLB receipts remain there. The table below identifies the directly inspected observed images. Left/right filenames use camera yaw: negative yaw sees the anatomical right side, positive yaw the anatomical left.
+
+| Current observed view | PNG SHA-256 |
+| --- | --- |
+| front | `e1470c2ca81afcab6a8c8ee8033707d2b981164fc09de64fec10ee0323b05324` |
+| left-oblique | `b4a17548b6bff6c31cf9f448a19ffb6de2e8fe80d8c5f5ef53555b1f7d3dc6fe` |
+| right-oblique | `889b1cf999b1f70b518164434aace26b9dec07eed425fab79f72abf9c76e39a3` |
+| left-profile | `bd696f666c4485597bb95a2cf24ab399773a32d7030e447fdb187d6a62554331` |
+| right-profile | `5d126daec8ed93aba745d04bd237cc91629d2ccefada73c8f481fa69b6f54c5d` |
+| back | `082dcbeef1e44f4f799df187e944c6eb27bee13fab85f306a755399003c91686` |
+| clay | `e0cbf36eaa16d264785b0a4862367e43e37d13cbf425253f8a74e9f925182105` |
+| clay-oblique | `1a90f6a75bf9f1012b7d1fef2f268ff66472fc7ce16ecb21a76c80881d09bed7` |
+| reference | `da8ebafa0c0edc568c427958e2b0f02b8a13b586cbd25c8beb5e78a85c902a6e` |
+
+The following entries preserve preceding revisions and their own artifact identities; their use of “current” refers to those earlier checkpoints.
 
 2026-09-15 fringe revision: the final 96 hair-card guides and their transverse frames now sweep laterally toward hand-observed fringe endpoints. The other 312 cards, every non-hair part, all materials including generated hair textures, identity basis, reference and expression remain exact. Two independent complete source builds and GLB exports are byte-identical. The adopted GLB is 7,217,076 bytes, SHA-256 `d145d95049dd7d4f4f93644aa9ebbce470f831ca40ee754dd9e5ecb9677af7c6`. The other eighteen subject documents remain byte-identical across this adoption.
 
@@ -674,6 +734,26 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## miriam-margolyes {#miriam-margolyes}
 
 [Replay document](miriam-margolyes.json) · [Original selection and quality](inputs.md#input-miriam-margolyes). Selected original: `miriam-margolyes_age-71_portrait.jpg`.
+
+2026-09-16 optical partial adoption: the current document sets `sphereFit: observation-ray`, `opticalFrame: radial`, `canthalSupport: tangent` and `surfaceRadius: 12`. All other authored values, source identity and observed expression remain exact. Two independent complete builds reproduce the retained candidate's model and GLB exactly. The spherical radius is an authored approximation at human-eye scale, not person-specific biometry. [Adult CT measurements](https://pmc.ncbi.nlm.nih.gov/articles/PMC4238270/) describe varying, unequal axes; [juvenile longitudinal biometry](https://pubmed.ncbi.nlm.nih.gov/23575156/) measures axial growth. Neither establishes a universal 12-mm spherical radius or a radius recoverable from this photograph. The fixed-canthus hull is geometric support, not a measured conjunctival surface.
+
+All nine views in each of observed, bilateral blink and oral-gaze were directly inspected: 27 views for this person, under AMD hardware rendering with an independently specified 10-mm calibration cube (45 expected pixels, 44 measured). The visible right optical aperture gains curved reflection and the canthal transition avoids the preceding depth-only trial's deep pit. The asymmetric observed squint remains. Excess superior hood, narrow neck, angular nasal base and insufficient aged tissue persist. Both profiles and back retain the cap-like white groom and patterned shadows. The oral-gaze diagnostic hides the previously visible dental row; this is an unresolved oral-state issue, not evidence of an optical repair. In full blink the optical apertures are covered; that sampled closure does not validate natural blink motion. The optical improvement is adopted while the coupled tissue work continues; **whole-face likeness remains unaccepted**.
+
+Current document SHA-256: `f3d42c6ba126198dbeac8f102cb1d90d014d09c9f402caf7476d1bd5fcc77f3b`; model: `a9b9764ec40d81c3272a9052e68ebe9ef82eb8933332338b135a6262a027b6e1`; GLB: `e9fec4501e2b624febab0fc48ee2a498dd88124482073f00ddfad05b79539eef`. Current full-view capture directory: `.shots/human-2469/investigation-2498/optical-adoption-views/miriam-margolyes`. The close baseline comparisons remain under `ocular-fit/miriam-margolyes`, and the complete per-state input/model/GLB receipts remain there. The table below identifies the directly inspected observed images. Left/right filenames use camera yaw: negative yaw sees the anatomical right side, positive yaw the anatomical left.
+
+| Current observed view | PNG SHA-256 |
+| --- | --- |
+| front | `5b451d2a9b0fb5a0af5ad63a1462011e2ab48e4ab27f93d9370f9f2ba023236b` |
+| left-oblique | `fdd8497022f3093a23142adb2c543d42eb459ae589ad1fc4bfb814f5529e9047` |
+| right-oblique | `28896f66731683240be665d0f1fc6c735f327345462b8a53aca386cfea3fe79f` |
+| left-profile | `5c7ff88ffdc14a45a6bcf9cd4191df88d232ddfd61884bfa66141e6aa772b005` |
+| right-profile | `32485d8c0970ac1cd2309e91fa7143ae538dfa430326fb7c928b9d8db190630a` |
+| back | `25623891530bc1ada40207379e0282c4dcfc32f1ee2645da14bf980ded8b492d` |
+| clay | `44fb5c1fa7bd2ef003d6b7a91ce34a2cb30dc745360dd9b62f37aaa79feda761` |
+| clay-oblique | `77d1b0dc4835d96a4c9242462c9c50802ba965d08bf47918bacdc2331c667acd` |
+| reference | `66d3572f733e73a02be39b4145bb6caa29c393ca9a8c3e530c34d1fd2a080b52` |
+
+The following entries preserve preceding revisions and their own artifact identities; their use of “current” refers to those earlier checkpoints.
 
 2026-09-15 layered-hair partial adoption: retain the colour/brow document below and replace only its hair profiles and resident hair finishes with independently authored inner and outer layers (1,024 and 640 cards). Every non-hair part and its material, the source basis/reference, neck and expression remain exact. The other eighteen working documents are byte-identical. Two complete source builds reproduce the same model and 12,007,388-byte GLB. These numerical cards use procedural textures, not pixels from the source photograph.
 

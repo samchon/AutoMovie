@@ -5759,6 +5759,10 @@
   "controls": {},
   "detail": {
     "eye": {
+      "sphereFit": "observation-ray",
+      "opticalFrame": "radial",
+      "canthalSupport": "tangent",
+      "surfaceRadius": 12,
       "openingScale": 0.97,
       "browFibres": 650,
       "browProfile": {

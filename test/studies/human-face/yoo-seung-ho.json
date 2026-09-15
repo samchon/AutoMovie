@@ -5768,6 +5768,10 @@
       }
     },
     "eye": {
+      "sphereFit": "observation-ray",
+      "opticalFrame": "radial",
+      "canthalSupport": "tangent",
+      "surfaceRadius": 12,
       "browFibres": 900,
       "browProfile": {
         "radius": 0.048,
