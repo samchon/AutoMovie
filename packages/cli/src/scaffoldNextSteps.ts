@@ -10,6 +10,6 @@ export const renderAutoMovieScaffoldNextSteps = (directory: string): string =>
   `  2. Run npm install.\n` +
   `  3. Select film, brief, or library and its active branches in src/lint.config.ts; run npm run sync.\n` +
   `  4. Author and review the required docs, then their TypeScript source under src.\n` +
-  `  5. Run npm run lint, then npm run viewer to inspect the source preview.\n\n` +
+  `  5. Run npm run lint to check source and authored evidence.\n\n` +
   `A blank project contains no production content. Author the selected shape with the public AutoMovie package APIs.\n` +
-  `npm run viewer opens the local viewer at http://127.0.0.1:5173; opening it is not proof that production content exists.\n`;
+  `Add project-specific source under src and browser assets under public only when the requested work needs them.\n`;

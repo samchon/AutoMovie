@@ -11,9 +11,7 @@
   "compilerOptions": {
     "target": "esnext",
     "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
+      "ESNext"
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -24,8 +22,7 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "types": [
-      "node",
-      "vite/client"
+      "node"
     ],
     "rootDir": ".",
     "noEmitOnError": true,
@@ -44,8 +41,7 @@
   "scripts": {
     "lint": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p package.json",
     "format": "ttsc format --cache-dir node_modules/.cache/ttsc -p package.json",
-    "sync": "automovie sync",
-    "viewer": "vite --config src/vite.config.ts --host 127.0.0.1"
+    "sync": "automovie sync"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",
@@ -55,18 +51,14 @@
     "@automovie/ingest": "{{version:ingest}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/production": "{{version:production}}",
-    "@automovie/render": "{{version:render}}",
-    "@automovie/viewer": "{{version:viewer}}",
-    "three": "{{version:three}}"
+    "@automovie/render": "{{version:render}}"
   },
   "devDependencies": {
     "@automovie/evidence": "{{version:evidence}}",
     "@automovie/template": "{{version:template}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
-    "@types/three": "{{version:threeTypes}}",
     "ttsc": "{{version:ttsc}}",
-    "typescript": "{{version:typescript}}",
-    "vite": "{{version:vite}}"
+    "typescript": "{{version:typescript}}"
   }
 }

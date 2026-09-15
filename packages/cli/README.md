@@ -38,7 +38,7 @@ npm install
 npm run lint
 ```
 
-The blank scaffold provides source lint and a source preview. It ships no authored production and no persisted project-state workflow.
+The blank scaffold provides source lint and authoring documents. It ships no authored production, viewer stub, optional tooling payload, or persisted project-state workflow. A coding agent adds the project's actual source and requested viewing or rendering integration when that work is needed.
 
 ## API
 
