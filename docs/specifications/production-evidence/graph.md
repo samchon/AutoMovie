@@ -60,7 +60,7 @@ Source host는 공통 branch glob과 typed additive claim의 root·files·symbol
 
 작품 고유 저술 의무 선언은 평면 계약 문서 하나, 소유 construction layer와 populationScope, 선택적 종합 증언을 쓸 account 주소를 묶는다. 공통 builder는 선언된 account와 layer·scope가 유도한 전체 authored H2를 host로 하고, 계약 H2를 ordinary coverage target으로 선택한다. 자연스러움 pass의 obligation을 거부한다. 같은 construction 계층과 계약 문서에 대한 obligation 중복 선언, account 주소 중복과 공통 예약 주소 충돌을 거부한다. 활성 계약 target은 존재하며 H2를 가져야 한다.
 
-작품 고유 naturalness principle은 `screenplays` layer, `naturalness` pass, final host selector와 그 stage를 함께 선언한다. AutoMovie binding을 가진 principle의 native host root는 `docs`이며, 정규화된 selector는 해당 construction layer 또는 `final/screenplays` 안의 양의 모집단을 포함해야 한다. 다른 pass·layer·root를 선택하는 metadata 불일치를 거부한다. AutoMovie binding이 없는 독립 native claim은 이 소유권 검증을 받지 않는다.
+작품 고유 naturalness principle은 `screenplays` layer, `naturalness` pass, final host selector와 그 stage를 함께 선언한다. AutoMovie binding을 가진 principle의 native host root는 `docs`이며, 정규화된 selector는 해당 construction layer 또는 `final/screenplays` 안의 양의 모집단을 포함해야 한다. 다른 pass·layer·root를 선택하는 metadata 불일치를 거부한다. Principle의 native 정책은 공개 factory로 재생성하여 claim severity, H2/H3/H4 host, 중복 없는 flat contract reference 목록, H2 target, checklist, no-exclusion과 소유 stage의 review를 보존한다. 비어 있거나 다른 종류를 섞은 reference와 canonical 정책 override는 거부하되 scalar reference와 한 요소 배열은 같은 의미로 읽는다. AutoMovie binding이 없는 독립 native claim은 이 소유권 검증을 받지 않는다.
 
 `autoMovieBinding.account`를 가진 claim은 실제 native host와 obligation reference가 typed 선언에서 재생성한 값과 일치해야 한다. Manifest의 `localBindings`와 pilot-only `localAudits`는 eligible host, 계약 `targets`, authored `population`, `distributed-coverage` 관계, 단계와 범위를 투영한다. `readAutoMovieContractRules`의 structured metadata는 평면 계약 H2가 소유한다.
 

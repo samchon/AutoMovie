@@ -9,19 +9,19 @@ import type { IAutoMovieEvidenceConfigProps } from "./createAutoMovieEvidenceCon
 import {
   type AutoMovieProductionContractClaim,
   createAutoMovieProductionObligationClaim,
-  validateAutoMovieProductionContractHosts,
+  createAutoMovieProductionPrincipleClaim,
 } from "./createAutoMovieProductionContractClaim";
 
 /**
  * Refuses a local binding whose native claim disagrees with its typed owner.
  *
- * Account references and claim severity are reconstructed through the public
- * factory so a caller cannot retain admission metadata while narrowing or
- * disabling its duty, including through native claim-level severity.
+ * Principle and account policy are reconstructed through their public factories
+ * so a caller cannot retain admission metadata while narrowing or disabling its
+ * duty, including through native claim-level severity.
  * Native claims with no AutoMovie binding remain additive native claims.
  *
- * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Preserves the local extension boundary without allowing an account declaration to weaken its generated relationship.
- * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Checks exact account references and metadata against the owning layer, stage, population scope, and disposition.
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Preserves native extensions while keeping AutoMovie-bound principles and accounts at their declared strength.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Reconstructs canonical principle and account policy from the owning layer, stage, population scope, and disposition.
  */
 export function validateAutoMovieLocalContractClaims(
   graph: IAutoMovieEvidenceConfigProps,
@@ -60,20 +60,37 @@ export function validateAutoMovieLocalContractClaims(
       ? raw.reference
       : [raw.reference];
     if (binding.account === undefined) {
-      validateAutoMovieProductionContractHosts({
-        root: raw.root,
+      const first = references[0];
+      if (first?.type !== "markdown")
+        throw new Error(
+          `Production-local principle ${JSON.stringify(raw.name)} requires a nonempty Markdown contract reference inventory.`,
+        );
+      const documents = references.map((reference) => {
+        if (reference.type !== "markdown" || reference.files.length !== 1)
+          throw new Error(
+            `Production-local principle ${JSON.stringify(raw.name)} requires one contract document per Markdown reference.`,
+          );
+        return reference.files[0]!;
+      });
+      const expected = createAutoMovieProductionPrincipleClaim({
+        name: raw.name ?? "",
+        document: documents,
+        documentRoot: first.root,
         files: raw.files,
+        symbol: raw.symbol,
         layer: binding.layer,
         pass: binding.pass,
+        stage: binding.stage,
+        populationScope: binding.populationScope,
+        inapplicable: binding.disposition === "inapplicable",
       });
       if (
-        references.some(
-          (reference) =>
-            reference.type === "markdown" && reference.checklist !== true,
-        )
+        raw.severity !== expected.severity ||
+        raw.root !== expected.root ||
+        !isDeepStrictEqual(references, expected.reference)
       )
         throw new Error(
-          `Production-local claim ${JSON.stringify(raw.name)} requires an obligation declaration for distributed coverage.`,
+          `Production-local principle ${JSON.stringify(raw.name)} must retain its canonical claim severity, authored heading hosts, and complete no-exclusion H2 checklist references with owning-stage review.`,
         );
       continue;
     }

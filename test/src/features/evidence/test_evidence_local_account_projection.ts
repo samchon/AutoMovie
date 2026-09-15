@@ -229,7 +229,17 @@ export const test_evidence_local_account_projection = (): void => {
       },
     ],
   };
-  validateAutoMovieLocalContractClaims({ ...graph, claims: [mixedReferences] });
+  TestValidator.predicate(
+    "typed principle cannot mix independently configured native references",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({
+        ...graph,
+        claims: [mixedReferences],
+      }),
+    ),
+  );
+  const { autoMovieBinding: _binding, ...mixedNative } = mixedReferences;
+  validateAutoMovieLocalContractClaims({ ...graph, claims: [mixedNative] });
   TestValidator.equals(
     "non-Markdown references do not become local contract targets",
     projectAutoMovieLocalContractClaims([mixedReferences]).localBindings[0]!
