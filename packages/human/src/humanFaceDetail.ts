@@ -1,5 +1,9 @@
 import type { IAutoMovieHumanFaceDocument } from "./IAutoMovieHumanFaceDocument";
+import { portraitEyelashParameters } from "./components/eyelashes";
+import { portraitSkinParameters } from "./components/skinShape";
+import { portraitTongueParameters } from "./components/tongueShape";
 import { humanFaceRegionValue, humanFaceRegions } from "./humanFaceRegion";
+import { mergeHumanFaceSettings } from "./mergeHumanFaceSettings";
 
 /**
  * A numerical anatomical channel. Identity neutral is the versioned basis
@@ -38,7 +42,10 @@ export interface IAutoMovieHumanFaceDetailChannel {
 }
 
 const channel = (
-  region: IAutoMovieHumanFaceDetailChannel["region"],
+  region: Exclude<
+    IAutoMovieHumanFaceDetailChannel["region"],
+    "hairLayers" | "skinColour"
+  >,
   path: string,
   meaning: string,
   unit: string,
@@ -59,12 +66,15 @@ const channel = (
   effect,
   paired: region === "eye" || region === "cheek" || region === "ear",
   attachment: {
+    skin: "live bilateral eye/brow and oral attachments on the shared skin",
     hair: "authored scalp-root guides in head millimetres",
     frame:
       "basis.host: nasion, gonial, gnathion, pogonion, frontal and temporal supports; basis.bindings.eyes: bilateral brow foundation",
     eye: "basis.bindings.eyes: shared skin margin and identity optical centre",
     nose: "basis.bindings.nose: exterior support and shared cavity rims",
     mouth: "basis.bindings.mouth: common vermilion and oral margins",
+    tongue:
+      "basis.bindings.mouth.lower and jawHinge: observed oral frame with posterior anchoring",
     cheek: "basis.bindings.cheeks: malar, medial, buccal and modiolus anchors",
     cranium:
       "basis.host facial oval: shared forehead, temple and mandibular boundary",
@@ -90,6 +100,92 @@ const channel = (
 export const humanFaceDetailChannels: readonly IAutoMovieHumanFaceDetailChannel[] =
   [
     channel(
+      "neck",
+      "submentalProjection",
+      "Submental anterior fullness",
+      "mm",
+      0,
+      40,
+      0.5,
+      "Increasing projects the anterior collar-to-neck transition without changing its endpoint positions or tangents",
+    ),
+    channel(
+      "mouth",
+      "cavityWall",
+      "Oral straight-wall depth fraction",
+      "ratio",
+      0,
+      0.95,
+      0.05,
+      "Increasing keeps the opening cross-section deeper before closing; selecting zero still adds a rim-connected lining",
+    ),
+    channel(
+      "mouth",
+      "cavityChamber.horizontalExpansion",
+      "Oral chamber transverse expansion",
+      "mm",
+      0,
+      30,
+      0.1,
+      "Adds internal half-width beyond the vestibule without widening the lip aperture",
+    ),
+    channel(
+      "mouth",
+      "cavityChamber.verticalExpansion",
+      "Oral chamber vertical expansion",
+      "mm",
+      0,
+      30,
+      0.1,
+      "Adds internal half-height beyond the vestibule without opening the lips",
+    ),
+    channel(
+      "mouth",
+      "cavityChamber.transitionDepth",
+      "Oral vestibule transition depth",
+      "mm",
+      0.1,
+      60,
+      0.1,
+      "Sets the depth at which the chamber expansion reaches full weight before the posterior taper",
+    ),
+    ...portraitTongueParameters.map((p) =>
+      channel(
+        "tongue",
+        p.id,
+        p.meaning,
+        "mm",
+        p.minimum,
+        p.maximum,
+        0.1,
+        p.effect,
+      ),
+    ),
+    ...portraitEyelashParameters.map((p) =>
+      channel(
+        "eye",
+        `upperLashProfile.${p.id}`,
+        p.meaning,
+        p.unit,
+        p.minimum,
+        p.maximum,
+        p.step,
+        p.effect,
+      ),
+    ),
+    ...portraitSkinParameters.map((p) =>
+      channel(
+        "skin",
+        p.id,
+        p.meaning,
+        p.unit,
+        p.minimum,
+        p.maximum,
+        p.step,
+        p.effect,
+      ),
+    ),
+    channel(
       "hair",
       "widthScale",
       "Hair lock width multiplier",
@@ -111,6 +207,16 @@ export const humanFaceDetailChannels: readonly IAutoMovieHumanFaceDetailChannel[
     ),
     channel(
       "hair",
+      "taperStart",
+      "Hair lock taper start",
+      "ratio",
+      0,
+      0.95,
+      0.05,
+      "Positive retains the full lock width farther from the root before narrowing to the same tip",
+    ),
+    channel(
+      "hair",
       "coverage",
       "Painted fibre coverage",
       "ratio",
@@ -121,6 +227,16 @@ export const humanFaceDetailChannels: readonly IAutoMovieHumanFaceDetailChannel[
     ),
     channel(
       "hair",
+      "fibreShadeStrength",
+      "Painted fibre shade strength",
+      "ratio",
+      0,
+      1,
+      0.05,
+      "Zero leaves pigment to the base finish; one retains the original RGB variation without changing alpha, normals or geometry",
+    ),
+    channel(
+      "hair",
       "fibreNormalScale",
       "Painted fibre normal strength",
       "ratio",
@@ -128,6 +244,36 @@ export const humanFaceDetailChannels: readonly IAutoMovieHumanFaceDetailChannel[
       1,
       0.05,
       "Positive strengthens fibre relief without changing silhouettes or triangles; zero retains the base finish's normal binding",
+    ),
+    channel(
+      "hair",
+      "fibreCurl.amplitude",
+      "Painted curl transverse excursion",
+      "UV fraction",
+      0,
+      0.5,
+      0.01,
+      "Positive bends painted fibres farther across the same card; geometry is unchanged",
+    ),
+    channel(
+      "hair",
+      "fibreCurl.cycles",
+      "Painted curl turns along the card",
+      "turns",
+      0,
+      16,
+      0.1,
+      "Positive increases the wave frequency without adding mesh fibres",
+    ),
+    channel(
+      "hair",
+      "fibreCurl.aspectRatio",
+      "Curl normal nominal card width/length",
+      "ratio",
+      0.01,
+      100,
+      0.01,
+      "Positive turns the transverse normal farther along the wave tangent; alpha is unchanged",
     ),
     channel(
       "hair",
@@ -786,6 +932,8 @@ export function humanFaceDetailValue(
  * profile into explicit values. Subsequent trait edits retain every other edit.
  * Removal never creates a missing path. Empty ancestors of the removed leaf
  * return to omission, so an inherited optional component stays optional.
+ * Shared authored objects are detached along the edited path, so neither a
+ * write nor removal can alter another owner through a caller-supplied alias.
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement Separates one user detail from inherited settings and independent sides.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls Preserves override intent rather than serializing a derived combined profile.
@@ -797,14 +945,7 @@ export function setHumanFaceDetail(
   side?: "right" | "left",
 ): IAutoMovieHumanFaceDocument {
   const definition = definitionOf(id);
-  if (
-    value !== undefined &&
-    (!Number.isFinite(value) ||
-      value < definition.minimum ||
-      value > definition.maximum ||
-      (definition.unit === "count" && !Number.isInteger(value)))
-  )
-    throw new Error(`Invalid numerical detail: ${id}.`);
+  assertDetailValue(definition, value);
   if (
     side !== undefined &&
     (!definition.paired || (side !== "right" && side !== "left"))
@@ -816,12 +957,73 @@ export function setHumanFaceDetail(
     definition.region,
     ...definition.path,
   ];
+  return writeDetail(next, path, value);
+}
+
+/**
+ * Edit one named additional hair layer with the existing hair scalar vocabulary.
+ * The selected authored population becomes a whole-array override, preserving
+ * every other layer and the separate legacy hair owner. Clearing one scalar is
+ * deliberately absent: inheritance resets the entire additional-layer region.
+ *
+ * @evidence requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement Edits a named layer's numeric profile without requiring its guide array to be re-entered.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls Uses the same hair channel bounds and units while retaining complete-array replacement semantics.
+ */
+export function setHumanFaceHairLayerDetail(
+  document: IAutoMovieHumanFaceDocument,
+  layerId: string,
+  id: string,
+  value: number,
+): IAutoMovieHumanFaceDocument {
+  const definition = definitionOf(id);
+  if (definition.region !== "hair")
+    throw new Error("A hair layer accepts only hair detail channels.");
+  assertDetailValue(definition, value);
+  const layers = mergeHumanFaceSettings(
+    document.basis.recipe.hairLayers,
+    document.detail?.hairLayers,
+  );
+  const index = layers?.findIndex((layer) => layer.id === layerId) ?? -1;
+  if (index < 0) throw new Error("The selected hair layer does not exist.");
+  const next = structuredClone(document);
+  (next.detail ??= {}).hairLayers = layers;
+  return writeDetail(
+    next,
+    ["detail", "hairLayers", String(index), "profile", ...definition.path],
+    value,
+  );
+}
+
+function assertDetailValue(
+  definition: IAutoMovieHumanFaceDetailChannel,
+  value: number | undefined,
+): void {
+  if (
+    value !== undefined &&
+    (!Number.isFinite(value) ||
+      value < definition.minimum ||
+      value > definition.maximum ||
+      (definition.unit === "count" && !Number.isInteger(value)))
+  )
+    throw new Error(`Invalid numerical detail: ${definition.id}.`);
+}
+
+function writeDetail(
+  next: IAutoMovieHumanFaceDocument,
+  path: readonly string[],
+  value: number | undefined,
+): IAutoMovieHumanFaceDocument {
   let object = next as unknown as Record<string, unknown>;
   const ancestors: { object: Record<string, unknown>; key: string }[] = [];
   for (const key of path.slice(0, -1)) {
     if (object[key] === undefined) {
       if (value === undefined) return next;
       object[key] = {};
+    } else {
+      // structuredClone preserves aliases. Detach only the containers on this
+      // path so a selected side/layer cannot also edit its basis or sibling.
+      const child = object[key] as Record<string, unknown> | unknown[];
+      object[key] = Array.isArray(child) ? [...child] : { ...child };
     }
     ancestors.push({ object, key });
     object = object[key] as Record<string, unknown>;

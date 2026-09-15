@@ -242,6 +242,15 @@ export function portraitDocument(model: IAutoMovieModel): Document {
           .setArray(packed.normals)
           .setBuffer(buffer),
       );
+    if (mesh.colors !== undefined)
+      primitive.setAttribute(
+        "COLOR_0",
+        document
+          .createAccessor()
+          .setType("VEC3")
+          .setArray(new Float32Array(mesh.colors))
+          .setBuffer(buffer),
+      );
     if (mesh.uvs !== null) {
       const uvs = new Float32Array(mesh.uvs);
       if (

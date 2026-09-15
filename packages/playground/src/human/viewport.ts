@@ -29,6 +29,7 @@ export function createHumanViewport(props: {
   canvas: { getBoundingClientRect: () => Pick<DOMRect, "width" | "height"> };
   pixelRatio: number;
   renderer: {
+    capabilities: Pick<THREE.WebGLCapabilities, "getMaxAnisotropy">;
     setPixelRatio: (ratio: number) => void;
     outputColorSpace: string;
     toneMapping: THREE.ToneMapping;
@@ -114,7 +115,12 @@ export function createHumanViewport(props: {
           result.glb.byteOffset + result.glb.byteLength,
         ),
       );
-      prepareHumanPreview(group);
+      try {
+        prepareHumanPreview(group, renderer.capabilities.getMaxAnisotropy());
+      } catch (error) {
+        disposeHumanPreview(group);
+        throw error;
+      }
       return { ...result, group };
     },
     dispose: (model) => dispose(model.group),

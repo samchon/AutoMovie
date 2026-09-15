@@ -4,6 +4,10 @@ import type { IControlMesh } from "../geometry/subdivideControlMesh";
 import type { IPortraitNasalBodyShape } from "./nasalBody";
 import { createPortraitNasalBodySurface } from "./nasalBodySurface";
 import {
+  type IPortraitNasalEnvelope,
+  createPortraitNasalEnvelope,
+} from "./nasalEnvelope";
+import {
   type IPortraitNasalLobule,
   createPortraitNasalLobules,
 } from "./nasalLobule";
@@ -65,7 +69,8 @@ export interface IPortraitNoseShape {
    * Optional projection ratio relative to the socket's common skin support
    * plane. Omission/one is identity. Positive smaller values reduce the entire
    * nose's inferred depth, including the samples used by rim fitting. This is
-   * a basis replacement and cannot combine with another section/body basis.
+   * a basis replacement and cannot combine with another complete section/body
+   * basis. Local final-body lobules may use the scaled datums.
    */
   depthScale?: number;
   /** Optional local tip/alar sections after support scaling; empty/omitted is identity. */
@@ -96,6 +101,14 @@ export interface IPortraitNoseShape {
   rimRefinement?: "surface" | "curve";
   /** Optional exterior skin band; omission retains direct skin-to-lining attachment. */
   rimSection?: IPortraitNasalRimSection;
+  /**
+   * Optional complete envelope per opening, in socket.nostrils order. Empty or
+   * omitted retains legacy construction. Each envelope supplies independent
+   * circumferential sections after subdivision. It replaces rimSection and
+   * surface/curve refinement of the aperture, and cannot stack a final body
+   * deformation that would invalidate its shared skin-to-vestibule jets.
+   */
+  envelopes?: readonly IPortraitNasalEnvelope[];
   /** Cavity floor offset in host XYZ millimetres, rotated with the nostril tilt. */
   cavityOffset: number[];
   /** Reach of adjacent skin adaptation along the original mesh, in mm. */
@@ -108,9 +121,18 @@ export interface IPortraitNoseShape {
    * fitted aperture and its first derivative. joinWidth/depthReach are positive
    * millimetre distances. A pre-fit section cannot also be selected: each is a
    * complete alternative basis, and stacking them would silently compound form.
+   * The local lobule alternative instead binds to the same pre-fit scaled
+   * datums as ordinary lobules and evaluates after subdivision. It may retain
+   * depthScale but cannot stack pre-fit lobules or a complete section. Its depth
+   * support is full through half depthReach and fades to zero at depthReach;
+   * all alternatives preserve the actual rim and lining. Arrays replace the
+   * complete local section population, and an empty population is identity.
    */
   body?: {
-    shape: IPortraitNasalBodyShape | { section: IPortraitNasalSection };
+    shape:
+      | IPortraitNasalBodyShape
+      | { section: IPortraitNasalSection }
+      | { lobules: readonly IPortraitNasalLobule[] };
     joinWidth: number;
     depthReach: number;
   };
@@ -226,6 +248,17 @@ export function createPortraitNoseComponent(
     inputShape.rimSection === undefined
       ? undefined
       : { ...inputShape.rimSection };
+  const envelopes = structuredClone(inputShape.envelopes ?? []);
+  if (
+    envelopes.length !== 0 &&
+    (envelopes.length !== socket.nostrils.length ||
+      rimSection !== undefined ||
+      inputShape.body !== undefined ||
+      inputShape.rimRefinement === "curve")
+  )
+    throw new Error(
+      "Complete nasal envelopes need one profile per opening and cannot stack legacy rim or final-body construction.",
+    );
   if (
     (shape.rimRefinement ?? "surface") !== "surface" &&
     shape.rimRefinement !== "curve"
@@ -248,7 +281,8 @@ export function createPortraitNoseComponent(
     );
   if (
     (shape.depthScale ?? 1) !== 1 &&
-    (inputShape.section !== undefined || body !== undefined)
+    (inputShape.section !== undefined ||
+      (body !== undefined && !("lobules" in body.shape)))
   )
     throw new Error("Choose one nasal depth-scale or section/body basis.");
   if (!Number.isFinite(shape.depthScale ?? 1) || (shape.depthScale ?? 1) <= 0)
@@ -325,13 +359,12 @@ export function createPortraitNoseComponent(
         support(point) +
         portraitNoseDepth(point, socket, shape) +
         (section === undefined ? 0 : section(point, datum!));
-      const lobules = bindLobules(
-        host.positions.map((point) => [
-          point[0],
-          point[1],
-          point[2] + baseDepth(point),
-        ]),
-      );
+      const sculptedDatums = host.positions.map((point) => [
+        point[0],
+        point[1],
+        point[2] + baseDepth(point),
+      ]);
+      const lobules = bindLobules(sculptedDatums);
       const depth = (point: number[]): number => {
         const base = baseDepth(point);
         return base + lobules([point[0], point[1], point[2] + base]);
@@ -352,7 +385,7 @@ export function createPortraitNoseComponent(
       // moves its cut vertices. Capture that basis once for every rim section.
       const nasalCuts = new Set(socket.nostrils.flat());
       const skinNormals =
-        rimSection === undefined
+        rimSection === undefined && envelopes.length === 0
           ? undefined
           : portraitNormals(
               host.positions.flatMap((point, id) => targets.get(id) ?? point),
@@ -416,6 +449,18 @@ export function createPortraitNoseComponent(
               ids.forEach((id, i) => targets.set(id, section.outer[i]));
               return { ids, section };
             });
+      const fittedEnvelopes = envelopes.map((profile, index) => {
+        const ids = portraitCutBoundary(openings[index]).map((edge) => edge.a);
+        const envelope = createPortraitNasalEnvelope(
+          ids.map((id) => targets.get(id)!),
+          ids.map((id) => skinNormals!.slice(id * 3, id * 3 + 3)),
+          profile,
+          cavityOffset(shape),
+          shape.cavityContraction,
+        );
+        ids.forEach((id, i) => targets.set(id, envelope.outer[i]));
+        return { ids, envelope };
+      });
       return {
         constraints: [...targets].map(([vertex, target]) => ({
           vertex,
@@ -425,6 +470,32 @@ export function createPortraitNoseComponent(
         cutFaces: socket.nostrils.flat(),
         attach: (cage, _adapted, region) => {
           const liningGroup = region("nostril-interiors", "nasal-interior");
+          if (fittedEnvelopes.length !== 0) {
+            const skinGroup = region("nasal-rims", "skin");
+            const replacements = fittedEnvelopes.map(
+              ({ ids, envelope }, index) => {
+                const group = region(
+                  "nasal-envelope-reserved-" + index,
+                  "skin",
+                );
+                // Refine against the same complete section, not a fan to the
+                // floor: that fan pulls the outer attachment across the rim.
+                envelope.append(cage, ids, ids, group, group);
+                return {
+                  group,
+                  append: (mesh: IControlMesh, boundary: readonly number[]) =>
+                    envelope.append(
+                      mesh,
+                      boundary,
+                      ids,
+                      skinGroup,
+                      liningGroup,
+                    ),
+                };
+              },
+            );
+            return { openings: [], replacements, finish: () => [] };
+          }
           const bandGroup =
             rimBands === undefined ? undefined : region("nasal-rims", "skin");
           const innerLoops =
@@ -462,6 +533,7 @@ export function createPortraitNoseComponent(
                     host.viewRay,
                     body.joinWidth,
                     body.depthReach,
+                    sculptedDatums,
                   ),
             finish: () => [],
           };
@@ -485,14 +557,7 @@ export function appendPortraitNostrils(
   group: number,
 ): void {
   const { positions, indices, groups } = cage;
-  const angle = (shape.nostrilTilt * Math.PI) / 180;
-  const offset = [
-    shape.cavityOffset[0],
-    shape.cavityOffset[1] * Math.cos(angle) -
-      shape.cavityOffset[2] * Math.sin(angle),
-    shape.cavityOffset[1] * Math.sin(angle) +
-      shape.cavityOffset[2] * Math.cos(angle),
-  ];
+  const offset = cavityOffset(shape);
   for (const faces of nostrilFaces) {
     const boundary = portraitCutBoundary(faces);
     const ids = [...new Set(boundary.flatMap((edge) => [edge.a, edge.b]))];
@@ -538,4 +603,15 @@ export function appendPortraitNostrils(
       groups.push(group);
     }
   }
+}
+
+function cavityOffset(shape: IPortraitNoseShape): number[] {
+  const angle = (shape.nostrilTilt * Math.PI) / 180;
+  return [
+    shape.cavityOffset[0],
+    shape.cavityOffset[1] * Math.cos(angle) -
+      shape.cavityOffset[2] * Math.sin(angle),
+    shape.cavityOffset[1] * Math.sin(angle) +
+      shape.cavityOffset[2] * Math.cos(angle),
+  ];
 }

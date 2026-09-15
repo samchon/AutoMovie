@@ -58,21 +58,31 @@ export function blendPortraitSkin(
       constraint.reach,
     );
   }
-  // Max-remaining-distance propagation is multi-source Dijkstra. The small
-  // control cage is scanned deterministically; no runtime mesh cache is involved.
+  // Max-remaining-distance propagation is multi-source Dijkstra. Scan only
+  // the active frontier rather than every resident vertex at each step. Ties
+  // still select the lowest vertex ID, independent of constraint insertion.
   const visited = new Set<number>();
+  const frontier = new Set(
+    reach.flatMap((remaining, id) => (remaining > 0 ? [id] : [])),
+  );
   for (;;) {
     let next = -1,
       remaining = 0;
-    for (let i = 0; i < reach.length; i++)
-      if (!visited.has(i) && reach[i] > remaining) {
+    for (const i of frontier)
+      if (reach[i] > remaining || (reach[i] === remaining && i < next)) {
         next = i;
         remaining = reach[i];
       }
     if (next === -1) break;
+    frontier.delete(next);
     visited.add(next);
-    for (const [near, distance] of neighbours[next])
-      reach[near] = Math.max(reach[near], remaining - distance);
+    for (const [near, distance] of neighbours[next]) {
+      const proposed = remaining - distance;
+      if (!visited.has(near) && proposed > reach[near]) {
+        reach[near] = proposed;
+        frontier.add(near);
+      }
+    }
   }
   const delta = positions.map((point, id) => {
     const target = fixed.get(id);

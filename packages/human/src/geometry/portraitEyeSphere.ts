@@ -23,20 +23,22 @@ const mean = (points: IAutoMovieVector3[]): IAutoMovieVector3 =>
   );
 
 /**
- * Fit one spherical cap in the aperture's own plane. Its orientation comes from
- * the canthal chord and separation of the upper/lower lids, never from gaze.
- * The mean rim residual chooses depth; camera-ray projection then preserves
- * observed image positions while placing each lid contact on the same sphere.
+ * Fit a spherical cap with an explicit depth-fitting direction. The default
+ * uses the canthal plane. Observation-ray fitting retains the rim mean's image
+ * position instead of letting uncertain rim depth tilt the centre away from it.
+ * Both use the mean rim residual for depth and never consult current gaze.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Fits the globe from the lid aperture without making gaze the anatomical orientation.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Uses the canthal plane and mean rim residual to choose one sphere, refusing a radius that cannot span every rim sample.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Selects the canthal-plane or recorded-ray fitting direction, preserves default arithmetic and refuses insufficient spherical support.
  */
 export function fitPortraitEyeSphere(
   upper: IAutoMovieVector3[],
   lower: IAutoMovieVector3[],
   viewRay: IAutoMovieVector3,
   radius: number,
+  alignment: "aperture-plane" | "observation-ray" = "aperture-plane",
 ): IPortraitEyeSphere {
   if (
+    (alignment !== "aperture-plane" && alignment !== "observation-ray") ||
     upper.length < 3 ||
     lower.length < 3 ||
     !Number.isFinite(radius) ||
@@ -59,6 +61,7 @@ export function fitPortraitEyeSphere(
   );
   if (Vector3.length(normal) === 0)
     throw new Error("An eye aperture needs a nondegenerate fitting plane.");
+  if (alignment === "observation-ray") normal = Vector3.normalize(viewRay);
   if (Vector3.dot(normal, viewRay) < 0) normal = Vector3.scale(normal, -1);
   let depth = 0;
   for (const point of rim) {

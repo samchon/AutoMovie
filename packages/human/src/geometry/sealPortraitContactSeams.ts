@@ -17,7 +17,7 @@ import type { IControlMesh } from "./subdivideControlMesh";
 export function sealPortraitContactSeams(
   mesh: IControlMesh,
   seeds: readonly number[],
-): IControlMesh {
+): IControlMesh & { cornerColors?: number[][] } {
   if (seeds.length === 0) return mesh;
   const edges = new Map<string, { a: number; b: number; count: number }>();
   for (let i = 0; i < mesh.indices.length; i += 3)
@@ -75,6 +75,8 @@ export function sealPortraitContactSeams(
       );
   }
   const triangles: (number[] | null)[] = [];
+  const sourceColors =
+    mesh.colors === undefined ? undefined : ([] as number[][][]);
   const groups: number[] = [];
   const occupied = new Map<
     string,
@@ -111,17 +113,20 @@ export function sealPortraitContactSeams(
       });
     }
     triangles.push(ids);
+    sourceColors?.push(source.map((id) => [...mesh.colors![id]]));
     groups.push(mesh.groups[i / 3]);
   }
-  const output: IControlMesh = {
-    positions: mesh.positions,
+  const output: IControlMesh & { cornerColors?: number[][] } = {
+    ...mesh,
     indices: [],
     groups: [],
+    ...(sourceColors === undefined ? {} : { cornerColors: [] }),
   };
   triangles.forEach((triangle, i) => {
     if (triangle !== null) {
       output.indices.push(...triangle);
       output.groups.push(groups[i]);
+      output.cornerColors?.push(...sourceColors![i]);
     }
   });
   // A declaration of closure is stronger than finding at least one pair.

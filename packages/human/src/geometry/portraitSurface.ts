@@ -6,6 +6,7 @@ import {
 import type { IAutoMovieMeshDeformationField } from "@automovie/interface";
 
 import { portraitNormals, portraitPart } from "./geometry";
+import { refinePortraitSurfaceSampling } from "./refinePortraitSurfaceSampling";
 import type { IControlMesh } from "./subdivideControlMesh";
 
 /**
@@ -38,6 +39,8 @@ export interface IPortraitSurfaceHost {
 export interface IPortraitSurfaceLayer {
   /** Unique stable identity, used for deterministic composition order. */
   id: string;
+  /** Optional maximum edge length in millimetres around this layer's fields. Omission preserves sampling. */
+  sampleSpacing?: number;
   /** Derive metric fields from this instance's actual surface attachments. */
   fields: (host: IPortraitSurfaceHost) => IAutoMovieMeshDeformationField[];
 }
@@ -55,8 +58,9 @@ export interface IPortraitSurfaceLayer {
  * back to the original millimetre coordinates. Zero influence remains exact.
  *
  * Every layer reads the same host; stable ID sorting fixes summation order.
- * The host has already passed topology validation. This helper preserves its
- * triangles and material groups, and the caller recomputes shared normals after
+ * The host has already passed topology validation. Optional layer sampling
+ * inserts shared midpoints without moving the basis; omission preserves its
+ * triangles. Material groups survive, and the caller recomputes normals after
  * the boundary fade, whose spatial gradient also changes the surface slope.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement Applies composed skin movement while preserving open attachment rims, original material groups and caller-owned coordinates.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls Fixes field summation by layer ID and passes the geodesic fade with its differential into the engine's final deformation checks.
@@ -82,10 +86,21 @@ export function applyPortraitSurfaceLayers(
     indices: mesh.indices,
     normals: portraitNormals(packed, mesh.indices),
   };
-  const fields = [...layers]
+  const plans = [...layers]
     .sort((a, b) => compareCodeUnits(a.id, b.id))
-    .flatMap((layer) => layer.fields(host));
+    .map((layer) => ({ layer, fields: layer.fields(host) }));
+  const fields = plans.flatMap((plan) => plan.fields);
   if (fields.length === 0) return mesh;
+  const deform = createAutoMovieMeshDeformer(fields);
+  for (const plan of plans)
+    if (plan.layer.sampleSpacing !== undefined && plan.fields.length !== 0)
+      mesh = refinePortraitSurfaceSampling(
+        mesh,
+        plan.fields,
+        plan.layer.sampleSpacing,
+      );
+  packed.length = 0;
+  for (const point of mesh.positions) packed.push(...point);
   const metric = portraitPart(
     "surface-basis",
     {
@@ -216,7 +231,7 @@ export function applyPortraitSurfaceLayers(
           );
     return { weight, gradient };
   });
-  const changed = createAutoMovieMeshDeformer(fields)(metric, influence);
+  const changed = deform(metric, influence);
   return {
     ...mesh,
     positions: mesh.positions.map((point, id) => {

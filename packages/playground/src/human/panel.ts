@@ -1,5 +1,6 @@
 import {
   type IAutoMovieHumanFaceDocument,
+  type IPortraitHairLayer,
   createHumanFaceEditor,
   createPortraitMaterials,
   humanFaceControlDefinitions,
@@ -9,9 +10,11 @@ import {
   humanFaceRegions,
   parseHumanFaceDocument,
   replaceHumanFaceRegion,
+  resolveHumanFaceDocument,
   resolveHumanFaceExpression,
   serializeHumanFaceDocument,
   setHumanFaceDetail,
+  setHumanFaceHairLayerDetail,
 } from "@automovie/human";
 import type { JSONDocument } from "@gltf-transform/core";
 
@@ -35,6 +38,8 @@ type PreviewAsset = {
  * @evidenceExclude requirements/actors/facial-authoring/README.md#face-requirements The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement detailed facial authoring across document, editor and study review.
  * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-document The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement the standalone human-face recipe, basis and version interpreter.
  * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement named craniofacial components, cavities and attached tissues.
+ * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-skin-condition The panel exposes shared numerical controls but delegates persistent and expression-driven tissue fields to the human builder; it does not model skin morphology.
+ * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-skin-colour The browser adapter submits numerical documents to the human builder; it does not evaluate pigmentation fields or assemble corresponding skin cages.
  * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement anatomical detail overrides and side-specific part replacement.
  * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-expression The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement observed-relative eyelid, oral, dental and gaze performance.
  * @evidenceExclude requirements/actors/facial-authoring/contract.md#actor-face-export The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement validated anatomical face GLTF/GLB serialization.
@@ -43,6 +48,8 @@ type PreviewAsset = {
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/README.md#face-specifications The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement the complete face construction, application and review boundary.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-document The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement human-face version admission and photo-independent basis interpretation.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement cranial, cervical, ocular, nasal, oral and auricular surface assembly.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-skin-condition The panel delegates skin field synthesis and conforming local tessellation to the human builder; it does not implement either numerical operation.
+ * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-skin-colour The browser adapter submits numerical documents to the human builder; it does not evaluate pigmentation fields or assemble corresponding skin cages.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement ordered face defaults, trait offsets, array replacement and asymmetric detail.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-attachments The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement face-part cut ownership and final-surface attachment correspondence.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression The panel delegates model construction and serialization to its preview adapter and records no study verdict; it does not implement the neutral/observed/current face solve and fixed optical identity.
@@ -99,6 +106,7 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
 <div class="toolbar"><button id="face-undo">Undo</button><button id="face-redo">Redo</button><button id="face-reset">Reset subject</button></div>
 <div class="toolbar"><button id="face-save">Save document</button><button id="face-load">Load document</button><button id="face-glb">Export GLB</button><button id="face-gltf">Export glTF + buffers</button><input id="face-file" type="file" accept=".json,application/json" hidden></div>
 <h2>Region</h2><div class="inline"><select id="face-region" aria-label="Region"></select><select id="face-side" aria-label="Side"><option value="">Common</option><option value="right">Right</option><option value="left">Left</option></select></div>
+<select id="face-hair-layer" aria-label="Hair layer" hidden></select>
 <h2>Intermediate controls</h2><p class="hint">Offsets from the basis. Exact detailed overrides take precedence.</p><div id="intermediate-controls"></div>
 <h2>Detailed anatomy</h2><p class="hint">Values below are the applied profile. ↶ removes only that detailed override.</p><div id="detail-controls"></div>
 <details><summary>Complete region profile / replacement</summary><p class="hint">Arrays replace their entire population. This edits the selected region only; unknown fields and invalid combinations refuse.</p><textarea id="region-json" aria-label="Complete region profile"></textarea><div class="toolbar"><button id="region-apply">Replace region</button><button id="region-inherit">Inherit region</button></div></details>
@@ -115,10 +123,14 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
   let subjectRevision = 0;
   let selectedRegion: Region = "eye";
   let selectedSide: Side | undefined;
+  let selectedHairLayer: string | undefined;
   const setStatus = (message: string, state = "ready"): void => {
     const target = element("face-status");
     target.textContent = message;
     target.dataset.state = state;
+    if (state === "ready" || state === "error")
+      element<HTMLSelectElement>("face-subject").value =
+        editor?.snapshot().document.id ?? "";
   };
   const withdraw = (): number => {
     const revision = ++subjectRevision;
@@ -268,6 +280,27 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
       selectedRegion,
       selectedSide,
     );
+    const layerSelect = element<HTMLSelectElement>("face-hair-layer");
+    layerSelect.hidden = selectedRegion !== "hairLayers";
+    layerSelect.replaceChildren();
+    const hairLayers =
+      selectedRegion === "hairLayers"
+        ? ((regionProfile as readonly IPortraitHairLayer[] | undefined) ?? [])
+        : [];
+    for (const layer of hairLayers) {
+      const option = document.createElement("option");
+      option.value = layer.id;
+      option.textContent = layer.id;
+      layerSelect.append(option);
+    }
+    const activeLayer =
+      hairLayers.find((layer) => layer.id === selectedHairLayer) ??
+      hairLayers[0];
+    selectedHairLayer = activeLayer?.id;
+    layerSelect.value = selectedHairLayer ?? "";
+    layerSelect.disabled = hairLayers.length === 0;
+    const detailProfile =
+      selectedRegion === "hairLayers" ? activeLayer?.profile : regionProfile;
     for (const definition of humanFaceControlDefinitions.filter(
       (item) => item.region === regions[selectedRegion],
     ))
@@ -284,9 +317,11 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
           })),
       });
     for (const definition of humanFaceDetailChannels.filter(
-      (item) => item.region === selectedRegion,
+      (item) =>
+        item.region ===
+        (selectedRegion === "hairLayers" ? "hair" : selectedRegion),
     )) {
-      let field: unknown = regionProfile;
+      let field: unknown = detailProfile;
       for (const key of definition.path)
         field = (field as Record<string, unknown> | undefined)?.[key];
       if (field === undefined) continue;
@@ -294,17 +329,33 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
       numberRow(details, {
         ...definition,
         id: `detail-${definition.id.replaceAll(".", "-")}`,
-        label: definition.meaning,
+        label: activeLayer
+          ? `${activeLayer.id}: ${definition.meaning}`
+          : definition.meaning,
         value,
         hint: `${definition.unit}. ${definition.effect}`,
         change: (value) =>
           attempt(() =>
-            setHumanFaceDetail(draft!, definition.id, value, selectedSide),
+            activeLayer
+              ? setHumanFaceHairLayerDetail(
+                  draft!,
+                  activeLayer.id,
+                  definition.id,
+                  value,
+                )
+              : setHumanFaceDetail(draft!, definition.id, value, selectedSide),
           ),
-        inherit: () =>
-          attempt(() =>
-            setHumanFaceDetail(draft!, definition.id, undefined, selectedSide),
-          ),
+        inherit: activeLayer
+          ? undefined
+          : () =>
+              attempt(() =>
+                setHumanFaceDetail(
+                  draft!,
+                  definition.id,
+                  undefined,
+                  selectedSide,
+                ),
+              ),
       });
     }
     element<HTMLTextAreaElement>("region-json").value = JSON.stringify(
@@ -345,11 +396,15 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
         });
       }
     }
-    const hairMaterial = humanFaceRegionValue(face, "hair")?.material;
+    const hairRecipe = resolveHumanFaceDocument(face).recipe;
+    const hairMaterials = new Set([
+      hairRecipe.hair?.material,
+      ...(hairRecipe.hairLayers ?? []).map((layer) => layer.profile.material),
+    ]);
     for (const material of face.appearance ?? createPortraitMaterials()) {
       if (
         !["skin", "lips", "brows", "teeth"].includes(material.id) &&
-        material.id !== hairMaterial
+        !hairMaterials.has(material.id)
       )
         continue;
       for (const component of ["r", "g", "b"] as const)
@@ -470,6 +525,10 @@ textarea{width:100%;height:250px;padding:8px;font:11px/1.4 ui-monospace,monospac
   element<HTMLSelectElement>("face-side").onchange = (event) => {
     selectedSide =
       ((event.currentTarget as HTMLSelectElement).value as Side) || undefined;
+    refresh();
+  };
+  element<HTMLSelectElement>("face-hair-layer").onchange = (event) => {
+    selectedHairLayer = (event.currentTarget as HTMLSelectElement).value;
     refresh();
   };
   for (const action of ["undo", "redo", "reset"] as const)

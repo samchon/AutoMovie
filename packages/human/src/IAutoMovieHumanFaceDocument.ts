@@ -15,6 +15,7 @@ import type { IPortraitEarShape } from "./components/ears";
 import type { IPortraitEyeShape, IPortraitEyeSocket } from "./components/eyes";
 import type { IPortraitFacialFrameShape } from "./components/facialFrame";
 import type { IPortraitHairShape } from "./components/hairCards";
+import type { IPortraitHairLayer } from "./components/hairLayers";
 import type {
   IPortraitMouthShape,
   IPortraitMouthSocket,
@@ -24,6 +25,9 @@ import type {
   IPortraitNoseSocket,
 } from "./components/nose";
 import type { IPortraitOrbitalSupportShape } from "./components/orbitalSupport";
+import type { IPortraitSkinColourRegion } from "./components/skinColour";
+import type { IPortraitSkinShape } from "./components/skinShape";
+import type { IPortraitTongueShape } from "./components/tongueShape";
 import type { IPortraitComponentHost } from "./geometry/portraitComponents";
 import type {
   IPortraitReliefCurve,
@@ -53,8 +57,14 @@ export type AutoMovieHumanFaceOverride<T> = T extends readonly unknown[]
  * @author Samchon
  */
 export interface IAutoMovieHumanFaceRecipe {
+  /** Skin laxity, regional folds and tissue descent; omitted settings retain the unchanged surface. */
+  skin?: IPortraitSkinShape;
+  /** Named reference-attached linear skin-colour regions; [] clears the inherited population. */
+  skinColour?: readonly IPortraitSkinColourRegion[];
   /** Optional surface-based scalp locks, authored in head millimetres. Omission adds no hairstyle. */
   hair?: IPortraitHairShape;
+  /** Up to eight additional independent scalp populations; arrays replace completely and [] removes only these layers. */
+  hairLayers?: readonly IPortraitHairLayer[];
   /** Shared craniofacial proportions and named jaw/chin/forehead/temple supports; omission is identity. */
   frame?: IPortraitFacialFrameShape;
   /** Common optical, eyelid and brow profile before side-specific overrides. */
@@ -63,6 +73,8 @@ export interface IAutoMovieHumanFaceRecipe {
   nose: IPortraitNoseShape;
   /** Lip and oral-cavity profile. Separate dentition requires an empty legacy crowns array. */
   mouth: IPortraitMouthShape;
+  /** Optional closed tongue with an observed lower-oral attachment; requires an explicit jaw hinge and named resident material. */
+  tongue?: IPortraitTongueShape;
   /** Common malar, medial, buccal and modiolus supports; omission adds no cheek layer. */
   cheek?: IPortraitCheekShape;
   /** Complete right and left upper-orbit section groups; omission adds no orbital layer. */
@@ -183,6 +195,10 @@ export interface IAutoMovieHumanFaceExpression {
   lipPart?: number;
   /** Lip protrusion in [0,4] mm with coupled transverse narrowing. */
   pucker?: number;
+  /** Dorsal tongue centreline elevation in [-8,8] mm; zero is neutral and a selected tongue profile is required for nonzero values. */
+  tongueRaise?: number;
+  /** Anterior tongue displacement in [-8,8] mm, fading to a fixed posterior endpoint; zero is neutral and nonzero values require a tongue profile. */
+  tongueAdvance?: number;
   /** Paired vertical gaze angles in [-20,20] degrees; positive looks up. */
   gazePitch?: { right?: number; left?: number };
   /** Paired horizontal gaze angles in [-25,25] degrees; positive looks towards anatomical left. */

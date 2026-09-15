@@ -2,6 +2,7 @@ import {
   Vector3,
   createAutoMovieMeshDepthSampler,
   mergeAutoMovieMeshes,
+  transformAutoMovieMesh,
 } from "@automovie/engine";
 import type {
   IAutoMovieModelPart,
@@ -34,6 +35,7 @@ import {
   portraitEyeSphereHeight,
   portraitEyeSphereIntersection,
 } from "../geometry/portraitEyeSphere";
+import { createPortraitOpticalFrame } from "../geometry/portraitOpticalFrame";
 import { refinePortraitSkinBridge } from "../geometry/refinePortraitSkinBridge";
 import {
   portraitSkinAnnulus,
@@ -53,6 +55,11 @@ import {
   buildPortraitEyebrow,
   portraitEyebrowProfile,
 } from "./eyebrows";
+import {
+  type IPortraitEyelashProfile,
+  assertPortraitEyelashProfile,
+  buildPortraitEyelash,
+} from "./eyelashes";
 import {
   type IPortraitIrisPigment,
   createPortraitIrisMaterials,
@@ -194,6 +201,22 @@ export interface IPortraitEyeShape {
   lidThickness: number;
   /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
   surfaceRadius: number;
+  /**
+   * Depth-fitting direction for the spherical cap. Omission/aperture-plane
+   * preserves the canthal-plane fit. Observation-ray keeps the reference rim
+   * mean's image position when fitting centre depth; it does not recover an
+   * anatomical globe centre. Current gaze and blink do not choose this mode.
+   * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Selects an explicit ocular placement basis without changing current expression or forcing a new fit onto existing documents.
+   * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries the optional canthal-plane or recorded-ray depth fitting choice to the spherical support builder.
+   */
+  sphereFit?: "aperture-plane" | "observation-ray";
+  /**
+   * Iris/cornea frame. Omission or head-plane preserves the original XY height
+   * field. Radial authors both layers around the globe-to-iris axis, with
+   * unchanged local radii and thickness. Requires full limbus and corneal
+   * contact, and keeps a complete globe even without expression performance.
+   */
+  opticalFrame?: "head-plane" | "radial";
   /** Corneal curvature radius in mm; greater than iris radius and no greater than globe radius. */
   cornealRadius: number;
   /** Positive axial thickness of the closed anterior optical shell, in mm. */
@@ -231,6 +254,8 @@ export interface IPortraitEyeShape {
   browProfile?: IPortraitEyebrowProfile;
   /** Number of upper lashes. */
   upperLashes: number;
+  /** Optional upper-lash arc, launch and cross-section profile; omission preserves the original short-lash formula. */
+  upperLashProfile?: IPortraitEyelashProfile;
   /** Tessellation controls, separate from the anatomical shape. */
   sampling: {
     eyeColumns: number;
@@ -477,6 +502,17 @@ export function createPortraitEyeComponent(
 ): IPortraitComponent {
   const performance =
     inputPerformance === undefined ? undefined : { ...inputPerformance };
+  if (
+    (inputShape.opticalFrame !== undefined &&
+      inputShape.opticalFrame !== "head-plane" &&
+      inputShape.opticalFrame !== "radial") ||
+    (inputShape.opticalFrame === "radial" &&
+      (inputShape.cornealBoundary !== "limbus" ||
+        inputShape.lidContact !== "cornea"))
+  )
+    throw new Error(
+      "Radial optics require full limbus and corneal contact; the frame must be head-plane or radial.",
+    );
   if (performance !== undefined) {
     assertPortraitEyePerformance(performance);
     if (
@@ -499,6 +535,10 @@ export function createPortraitEyeComponent(
   const shape = {
     ...inputShape,
     sampling: { ...inputShape.sampling },
+    upperLashProfile:
+      inputShape.upperLashProfile === undefined
+        ? undefined
+        : { ...inputShape.upperLashProfile },
     browProfile: structuredClone(
       inputShape.browProfile ?? portraitEyebrowProfile,
     ),
@@ -528,8 +568,10 @@ export function createPortraitEyeComponent(
   const upperProfile =
     inputShape.upperLidProfile === undefined
       ? undefined
-      : createPortraitUpperLidProfile(inputShape.upperLidProfile);
+      : createPortraitUpperLidProfile(inputShape.upperLidProfile, performance);
   assertPortraitEyebrowProfile(shape.browProfile, shape.browFibres);
+  if (shape.upperLashProfile !== undefined)
+    assertPortraitEyelashProfile(shape.upperLashProfile);
   if (
     shape.aegyoSal !== undefined &&
     (![
@@ -608,6 +650,9 @@ export function createPortraitEyeComponent(
     counts.some((v) => !Number.isInteger(v) || v < 1) ||
     !Number.isFinite(shape.socketLift) ||
     (shape.globeLift !== undefined && !Number.isFinite(shape.globeLift)) ||
+    (shape.sphereFit !== undefined &&
+      shape.sphereFit !== "aperture-plane" &&
+      shape.sphereFit !== "observation-ray") ||
     !Number.isFinite(shape.outerCornerLift) ||
     shape.pupilRadius >= shape.irisRadius ||
     shape.cornealRadius <= shape.irisRadius ||
@@ -681,6 +726,7 @@ export function createPortraitEyeComponent(
         socket.bottom.map(pointAt),
         direction,
         shape.surfaceRadius,
+        shape.sphereFit,
       );
       // The host seam belongs to the fitted socket, not to optical prominence.
       // Keep its reference sphere while moving the complete optical body along
@@ -700,6 +746,17 @@ export function createPortraitEyeComponent(
         performance === undefined
           ? undefined
           : aperture.map((point) => [...point]);
+      // Transport from the observed aperture on this same optical sphere.
+      // Contact/refinement still owns the final root; neither gaze nor a second
+      // assembled reference face is needed to carry the strand's direction.
+      const lashReference =
+        shape.upperLashProfile === undefined ||
+        performance === undefined ||
+        performance.blink === performance.observedBlink
+          ? undefined
+          : socket.top.map((id) =>
+              portraitEyeSphereIntersection(sphere, pointAt(id), direction),
+            );
       if (performance !== undefined) {
         const posed = posePortraitLidCurves(
           socket.top.map(pointAt),
@@ -712,6 +769,12 @@ export function createPortraitEyeComponent(
             aperture[id] = [point.x, point.y, point.z];
           });
       }
+      const lashCurrent =
+        lashReference === undefined
+          ? undefined
+          : socket.top.map((id) =>
+              portraitEyeSphereIntersection(sphere, pointAt(id), direction),
+            );
       // The lid section starts at its actual ocular contact, not at a lower
       // globe surface that will later be pushed through a raised cornea. A
       // post-refinement collision correction alone leaves a local platform:
@@ -932,7 +995,8 @@ export function createPortraitEyeComponent(
                     for (let i = 0; i < final.groups.length; i++)
                       if (
                         final.groups[i] === lidGroup ||
-                        (performance !== undefined &&
+                        ((performance !== undefined ||
+                          shape.opticalFrame === "radial") &&
                           final.indices
                             .slice(3 * i, 3 * i + 3)
                             .some(
@@ -1022,6 +1086,18 @@ export function createPortraitEyeComponent(
                 sphere,
                 tissues,
                 performance,
+                lashReference === undefined
+                  ? undefined
+                  : (at) => ({
+                      from: Vector3.subtract(
+                        interpolate(lashReference, at),
+                        sphere.center,
+                      ),
+                      to: Vector3.subtract(
+                        interpolate(lashCurrent!, at),
+                        sphere.center,
+                      ),
+                    }),
               ),
           };
         },
@@ -1098,6 +1174,8 @@ export function appendPortraitEyeMargins(
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Constructs resident sclera, iris, pupil, cornea, wet tissues, lashes and brows against a refined eyelid.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Uses the shared globe and view-ray intersection for optics, fixed-sphere performance, deterministic pigment bands and final-surface brow attachment.
+ * @evidence requirements/actors/facial-authoring/contract.md#actor-face-expression Attaches profiled lashes at the final margin and carries their supplied observed-relative orientation.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression Keeps strand transport separate from fixed optical identity and gaze.
  */
 export function buildPortraitEye(
   source: number[][],
@@ -1109,6 +1187,7 @@ export function buildPortraitEye(
   sphere: IPortraitEyeSphere,
   tissues?: ReturnType<typeof createPortraitOcularTissues>,
   performance?: IPortraitEyePerformance,
+  lashMotion?: (at: number) => Parameters<typeof buildPortraitEyelash>[5],
 ): IAutoMovieModelPart[] {
   const parts: IAutoMovieModelPart[] = [];
   const add = (
@@ -1166,7 +1245,7 @@ export function buildPortraitEye(
     const eyeZ = (x: number, y: number): number =>
       portraitEyeSphereHeight(sphere, x, y);
     const sclera =
-      performance === undefined
+      performance === undefined && shape.opticalFrame !== "radial"
         ? patch(
             (u, v) => {
               const top = interpolate(upper, u),
@@ -1201,6 +1280,11 @@ export function buildPortraitEye(
       landmark(eye.iris),
       p(viewRay[0], viewRay[1], viewRay[2]),
     );
+    const radial =
+      shape.opticalFrame === "radial"
+        ? createPortraitOpticalFrame(sphere, center)
+        : undefined;
+    const opticalCenter = radial === undefined ? center : radial.sphere.center;
     const support = portraitPart(
       "ocular-tissue-support",
       mergeAutoMovieMeshes([
@@ -1269,7 +1353,7 @@ export function buildPortraitEye(
       const extents = Array.from(
         { length: shape.sampling.irisColumns + 1 },
         (_, column) => {
-          if (performance !== undefined) return radius;
+          if (performance !== undefined || radial !== undefined) return radius;
           const angle = tau * (column / shape.sampling.irisColumns);
           const inside = (r: number): boolean => {
             const x = center.x + r * Math.cos(angle),
@@ -1296,13 +1380,23 @@ export function buildPortraitEye(
         (u, v) => {
           const angle = tau * u;
           const extent = extents[Math.round(u * shape.sampling.irisColumns)];
-          const x = center.x + extent * (0.0001 + 0.9999 * v) * Math.cos(angle),
-            y = center.y - extent * (0.0001 + 0.9999 * v) * Math.sin(angle);
-          return p(x, y, eyeZ(x, y) + (name === "pupil" ? 0.09 : 0.055));
+          const x =
+              opticalCenter.x +
+              extent * (0.0001 + 0.9999 * v) * Math.cos(angle),
+            y =
+              opticalCenter.y -
+              extent * (0.0001 + 0.9999 * v) * Math.sin(angle);
+          const z =
+            radial === undefined
+              ? eyeZ(x, y)
+              : portraitEyeSphereHeight(radial.sphere, x, y);
+          return p(x, y, z + (name === "pupil" ? 0.09 : 0.055));
         },
         shape.sampling.irisColumns,
         shape.sampling.irisRows,
       );
+      if (radial !== undefined)
+        mesh = transformAutoMovieMesh(mesh, radial.transform);
       if (performance !== undefined)
         mesh = posePortraitOpticalMesh(mesh, sphere.center, performance);
       if (name === "pupil") add(`${eye.name}-pupil`, mesh, pupil);
@@ -1365,16 +1459,25 @@ export function buildPortraitEye(
       const length = 0.5 + (eye.name === "left" ? u : 1 - u);
       add(
         `${eye.name}-upper-lash-${i}`,
-        tube(
-          (t) =>
-            p(
-              origin.x + outward * 0.25 * length * t,
-              origin.y + 0.45 * length * t * t,
-              origin.z + 0.05 + length * t,
+        shape.upperLashProfile === undefined
+          ? tube(
+              (t) =>
+                p(
+                  origin.x + outward * 0.25 * length * t,
+                  origin.y + 0.45 * length * t * t,
+                  origin.z + 0.05 + length * t,
+                ),
+              (t) => 0.055 * (1 - 0.9 * t),
+              6,
+            )
+          : buildPortraitEyelash(
+              p(origin.x, origin.y, origin.z + 0.05),
+              shape.upperLashProfile,
+              eye.name,
+              eye.name === "left" ? u : 1 - u,
+              i,
+              lashMotion?.(u),
             ),
-          (t) => 0.055 * (1 - 0.9 * t),
-          6,
-        ),
         brow,
       );
     }
@@ -1400,8 +1503,13 @@ function eyeCornea(
   extents: number[],
   performance?: IPortraitEyePerformance,
 ) {
-  const mesh = buildPortraitCornea({
-    center,
+  const radial =
+    shape.opticalFrame === "radial"
+      ? createPortraitOpticalFrame(sphere, center)
+      : undefined;
+  const support = radial?.sphere ?? sphere;
+  let mesh = buildPortraitCornea({
+    center: radial === undefined ? center : support.center,
     radius: shape.irisRadius,
     curvature: shape.cornealRadius,
     globeRadius: shape.surfaceRadius,
@@ -1412,8 +1520,10 @@ function eyeCornea(
         ? new Array(shape.sampling.irisColumns).fill(shape.irisRadius)
         : extents,
     radialSamples: shape.sampling.irisRows,
-    surface: (x, y) => portraitEyeSphereHeight(sphere, x, y),
+    surface: (x, y) => portraitEyeSphereHeight(support, x, y),
   });
+  if (radial !== undefined)
+    mesh = transformAutoMovieMesh(mesh, radial.transform);
   return performance === undefined
     ? mesh
     : posePortraitOpticalMesh(mesh, sphere.center, performance);
@@ -1431,7 +1541,7 @@ function eyeContactBasis(
   performance?: IPortraitEyePerformance,
 ) {
   const cornea = eyeCornea(center, sphere, shape, extents, performance);
-  return performance === undefined
+  return performance === undefined && shape.opticalFrame !== "radial"
     ? cornea
     : mergeAutoMovieMeshes([
         buildPortraitPerformanceGlobe(

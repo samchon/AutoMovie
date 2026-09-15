@@ -7,6 +7,7 @@ import {
   portraitPoint,
   portraitSpline,
 } from "../geometry/geometry";
+import { assertPortraitHairFibreCurl } from "./hairTexture";
 
 /**
  * One authored lock represented by a curved strip, not individual hair tubes.
@@ -46,6 +47,12 @@ export interface IPortraitHairShape {
   widthScale: number;
   /** Tip/root width ratio in [0.05,1]; positive tips avoid collapsed triangles. */
   tipWidth: number;
+  /**
+   * Root-to-tip fraction in [0,0.95] where width starts narrowing. Omission is
+   * zero, preserving the original full-length taper. A later start retains
+   * scalp coverage and the body of a long lock without widening its root.
+   */
+  taperStart?: number;
   /** Deterministic texture seed, an unsigned 32-bit integer. */
   seed: number;
   /** Number of painted fibres per lock, from 1 through 32. These are not meshes. */
@@ -53,12 +60,32 @@ export interface IPortraitHairShape {
   /** Fractional fibre coverage in [0.1,1]; larger fills gaps between painted fibres. */
   coverage: number;
   /**
+   * Procedural RGB modulation strength in [0,1]. Omission or one retains the
+   * original shaded fibres; zero uses white RGB so only the base finish sets
+   * pigment. Intermediate values interpolate encoded texture RGB towards white.
+   * Alpha, normals and geometry are independent of this raster control.
+   */
+  fibreShadeStrength?: number;
+  /**
    * Generated fibre-normal strength in [0,1]. Omission or zero leaves the base
    * finish's normal binding unchanged. Positive values replace that binding
    * on the owned card finish, never on other users of the base material.
    * One uses the full circular fibre cross-section, not a physical diameter.
    */
   fibreNormalScale?: number;
+  /**
+   * Optional complete curled-fibre pattern. It changes the resident alpha and
+   * normal maps, not the guide geometry. Omission preserves the legacy mask.
+   * These normalized pattern controls do not measure biological hair diameter.
+   */
+  fibreCurl?: {
+    /** Maximum transverse excursion as a fraction of card UV width, in [0,0.5]. */
+    amplitude: number;
+    /** Nominal turns along UV length, in [0,16], with seeded 20 percent variation. */
+    cycles: number;
+    /** Nominal card width/length ratio in [0.01,100], used for the curl-normal direction. */
+    aspectRatio: number;
+  };
 }
 
 /**
@@ -72,6 +99,8 @@ export interface IPortraitHairShape {
 export function buildPortraitHairCards(
   shape: IPortraitHairShape,
 ): IAutoMovieModelPart[] {
+  if (shape.fibreCurl !== undefined)
+    assertPortraitHairFibreCurl(shape.fibreCurl);
   if (
     shape.material.trim().length === 0 ||
     shape.cards.length > 1024 ||
@@ -84,6 +113,10 @@ export function buildPortraitHairCards(
     !Number.isFinite(shape.tipWidth) ||
     shape.tipWidth < 0.05 ||
     shape.tipWidth > 1 ||
+    (shape.taperStart !== undefined &&
+      (!Number.isFinite(shape.taperStart) ||
+        shape.taperStart < 0 ||
+        shape.taperStart > 0.95)) ||
     !Number.isInteger(shape.seed) ||
     shape.seed < 0 ||
     shape.seed > 0xffffffff ||
@@ -93,6 +126,10 @@ export function buildPortraitHairCards(
     !Number.isFinite(shape.coverage) ||
     shape.coverage < 0.1 ||
     shape.coverage > 1 ||
+    (shape.fibreShadeStrength !== undefined &&
+      (!Number.isFinite(shape.fibreShadeStrength) ||
+        shape.fibreShadeStrength < 0 ||
+        shape.fibreShadeStrength > 1)) ||
     (shape.fibreNormalScale !== undefined &&
       (!Number.isFinite(shape.fibreNormalScale) ||
         shape.fibreNormalScale < 0 ||
@@ -102,6 +139,7 @@ export function buildPortraitHairCards(
       "Hair cards need bounded finite widths, sampling, coverage and an unsigned seed.",
     );
   const meshes: IAutoMovieMesh[] = [];
+  const taperStart = shape.taperStart ?? 0;
   for (const card of shape.cards) {
     if (
       card.guide.length < 2 ||
@@ -139,7 +177,12 @@ export function buildPortraitHairCards(
           "Hair width frames must remain finite and nonzero between stations.",
         );
       const radius =
-        (card.width * shape.widthScale * (1 - t * (1 - shape.tipWidth))) / 2;
+        (card.width *
+          shape.widthScale *
+          (1 -
+            (Math.max(0, t - taperStart) / (1 - taperStart)) *
+              (1 - shape.tipWidth))) /
+        2;
       for (const side of [-1, 1]) {
         const point = Vector3.add(
           center,

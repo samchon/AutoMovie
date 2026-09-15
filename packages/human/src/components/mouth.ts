@@ -31,6 +31,11 @@ import {
   type IPortraitMouthPerformance,
   createPortraitMouthPerformance,
 } from "./mouthPerformance";
+import {
+  type IPortraitOralChamber,
+  assertPortraitOralLining,
+  buildPortraitOralLining,
+} from "./oralLining";
 
 type Point = IAutoMovieVector3;
 const pi = Math.PI;
@@ -107,6 +112,15 @@ export interface IPortraitMouthShape {
   blendReach: number;
   /** Recession of the oral cavity behind the actual refined opening. */
   cavityDepth: number;
+  /**
+   * Optional straight-wall fraction [0,0.95] before the posterior cosine taper.
+   * Selecting a fraction joins the actual refined oral rim to an enclosure at
+   * 1.8 cavityDepth in head -Z. Zero starts tapering at the rim; omission keeps
+   * the legacy detached backdrop. This does not set tongue or dental placement.
+   */
+  cavityWall?: number;
+  /** Optional internal room beyond the vestibule. Requires explicit cavityWall; never moves teeth or the lip rim. */
+  cavityChamber?: IPortraitOralChamber;
   /** Signed distance of the dental row along the arch from the lip midpoint. */
   dentalOffset: number;
   /** Recession of crown centres behind the upper inner lip. */
@@ -184,10 +198,12 @@ export function portraitLipTriangles(
 }
 
 /**
- * Fit the lips, adapt adjacent skin and finish a dental row at the refined rim.
+ * Fit the lips, adapt adjacent skin and finish the selected oral interior at
+ * the refined rim. A connected lining receives only the final lip triangles,
+ * retaining every refined boundary vertex without scanning the whole head.
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Fits shared lips and adjacent skin, with separate maxillary teeth required during oral performance.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Copies oral settings, applies curved-band thickness and observed-relative motion, and carries lip material/rim ownership into refined interior construction.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Copies oral settings, applies curved-band thickness and observed-relative motion, and passes final lip-group connectivity to a selected oral lining.
  */
 export function createPortraitMouthComponent(
   inputSocket: IPortraitMouthSocket,
@@ -211,6 +227,10 @@ export function createPortraitMouthComponent(
   const shape = {
     ...inputShape,
     crowns: structuredClone(inputShape.crowns),
+    cavityChamber:
+      inputShape.cavityChamber === undefined
+        ? undefined
+        : structuredClone(inputShape.cavityChamber),
   };
   const seamProjection =
     shape.seamProjection === undefined ? 0 : shape.seamProjection;
@@ -220,6 +240,12 @@ export function createPortraitMouthComponent(
       : createPortraitLipSection(inputShape.section);
   const upperBand = createPortraitLipBandScale(inputShape.band?.upper);
   const lowerBand = createPortraitLipBandScale(inputShape.band?.lower);
+  if (shape.cavityWall !== undefined || shape.cavityChamber !== undefined)
+    assertPortraitOralLining(
+      shape.cavityDepth,
+      shape.cavityWall!,
+      shape.cavityChamber,
+    );
   if (
     shape.borderRefinement !== undefined &&
     shape.borderRefinement !== "surface" &&
@@ -371,7 +397,18 @@ export function createPortraitMouthComponent(
             curves:
               shape.borderRefinement === "curve" ? [socket.outer] : undefined,
             finish: (refined) =>
-              buildPortraitMouth(refined.positions, socket, shape, performance),
+              buildPortraitMouth(
+                refined.positions,
+                socket,
+                shape,
+                performance,
+                shape.cavityWall === undefined
+                  ? undefined
+                  : refined.indices.filter(
+                      (_vertex, i) =>
+                        refined.groups[Math.floor(i / 3)] === group,
+                    ),
+              ),
           };
         },
       };
@@ -385,15 +422,24 @@ export function createPortraitMouthComponent(
  * are wider and taller; side crowns turn with the arch to remain behind the
  * mouth corners. Widths are authored estimates, in millimetres, not dental data.
  * Lips themselves remain in the shared facial mesh, preserving their skin join.
+ * Selecting cavityWall requires final skin indices and replaces the detached
+ * backdrop with an enclosure joined to every actual refined oral-rim vertex.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Constructs a recessed oral interior and optional individually sized upper crowns behind the refined opening.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Reads final lip curves, omits a fully closed performed cavity and rotates each legacy crown and its normals along the common arch.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Selects the legacy backdrop or actual-rim enclosure, omits a fully closed performed cavity and rotates each legacy crown and its normals along the common arch.
  */
 export function buildPortraitMouth(
   source: number[][],
   socket: IPortraitMouthSocket,
   shape: IPortraitMouthShape,
   performance?: IPortraitMouthPerformance,
+  skinIndices?: readonly number[],
 ): IAutoMovieModelPart[] {
+  if (shape.cavityWall !== undefined || shape.cavityChamber !== undefined)
+    assertPortraitOralLining(
+      shape.cavityDepth,
+      shape.cavityWall!,
+      shape.cavityChamber,
+    );
   const parts: IAutoMovieModelPart[] = [];
   const add = (
     id: string,
@@ -416,25 +462,36 @@ export function buildPortraitMouth(
         point.y !== mouthLower[i].y ||
         point.z !== mouthLower[i].z,
     )
-  )
+  ) {
+    if (shape.cavityWall !== undefined && skinIndices === undefined)
+      throw new Error("Oral lining requires the actual refined lip triangles.");
     add(
       "oral-cavity",
-      patch(
-        (u, v) => {
-          const top = interpolate(mouthUpper, u),
-            bottom = interpolate(mouthLower, u);
-          return p(
-            mix(bottom.x, top.x, v),
-            mix(bottom.y, top.y, v),
-            mix(bottom.z, top.z, v) -
-              shape.cavityDepth * (1 + 0.8 * Math.sin(pi * v)),
-          );
-        },
-        100,
-        30,
-      ),
+      shape.cavityWall !== undefined
+        ? buildPortraitOralLining(
+            { positions: source, indices: skinIndices! },
+            socket.upper[0],
+            shape.cavityDepth,
+            shape.cavityWall,
+            shape.cavityChamber,
+          )
+        : patch(
+            (u, v) => {
+              const top = interpolate(mouthUpper, u),
+                bottom = interpolate(mouthLower, u);
+              return p(
+                mix(bottom.x, top.x, v),
+                mix(bottom.y, top.y, v),
+                mix(bottom.z, top.z, v) -
+                  shape.cavityDepth * (1 + 0.8 * Math.sin(pi * v)),
+              );
+            },
+            100,
+            30,
+          ),
       cavity,
     );
+  }
   if (shape.crowns.length === 0) return parts;
   // Width is enamel size, not a pitch on the head's X axis. Walk the arch in
   // millimetres so rotating the side teeth cannot create artificial diastemata.

@@ -64,5 +64,10 @@ export const test_subject_human_panel_subject_races =
       f.panel.snapshot()!.model.id,
       "latest",
     );
+    TestValidator.equals(
+      "failed subject selection returns to displayed document",
+      f.element<HTMLSelectElement>("face-subject").value,
+      "first",
+    );
     f.dom.window.close();
   };

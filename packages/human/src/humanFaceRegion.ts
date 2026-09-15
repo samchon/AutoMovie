@@ -13,11 +13,15 @@ import { resolveHumanFaceDocument } from "./resolveHumanFaceDocument";
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-controls Keeps region selection on actual profile owners.
  */
 export const humanFaceRegions = [
+  "skin",
+  "skinColour",
   "hair",
+  "hairLayers",
   "frame",
   "eye",
   "nose",
   "mouth",
+  "tongue",
   "cheek",
   "cranium",
   "ear",

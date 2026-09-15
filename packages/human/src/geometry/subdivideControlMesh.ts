@@ -12,6 +12,10 @@ export interface IControlMesh {
   indices: number[];
   /** One opaque material-region label per triangle, inherited by all children. */
   groups: number[];
+  /** Optional reference XYZ carried by the same subdivision masks as positions. */
+  reference?: number[][];
+  /** Optional linear RGB on the final shared vertices, before contact welding. */
+  colors?: number[][];
 }
 
 /**
@@ -119,43 +123,47 @@ export function subdivideControlMesh(
         ]);
         curveEdges.add(key(a, b));
       }
-    const positions = mesh.positions.map((point, i) => {
-      if (boundary[i].size !== 0)
+    const refine = (values: number[][]): number[][] => {
+      const positions = values.map((point, i) => {
+        if (boundary[i].size !== 0)
+          return point.map(
+            (value, axis) =>
+              0.75 * value +
+              0.125 *
+                [...boundary[i]].reduce(
+                  (sum, next) => sum + values[next][axis],
+                  0,
+                ),
+          );
+        const count = neighbours[i].size;
+        if (count === 0) return [...point];
+        const beta = count === 3 ? 3 / 16 : 3 / (8 * count);
         return point.map(
           (value, axis) =>
-            0.75 * value +
-            0.125 *
-              [...boundary[i]].reduce(
-                (sum, next) => sum + mesh.positions[next][axis],
+            (1 - count * beta) * value +
+            beta *
+              [...neighbours[i]].reduce(
+                (sum, next) => sum + values[next][axis],
                 0,
               ),
         );
-      const count = neighbours[i].size;
-      if (count === 0) return [...point];
-      const beta = count === 3 ? 3 / 16 : 3 / (8 * count);
-      return point.map(
-        (value, axis) =>
-          (1 - count * beta) * value +
-          beta *
-            [...neighbours[i]].reduce(
-              (sum, next) => sum + mesh.positions[next][axis],
-              0,
-            ),
-      );
-    });
-    for (const edge of edges.values())
-      positions.push(
-        mesh.positions[edge.a].map((a, axis) =>
-          edge.opposite.length === 1 || curveEdges.has(key(edge.a, edge.b))
-            ? (a + mesh.positions[edge.b][axis]) / 2
-            : (a + mesh.positions[edge.b][axis]) * 0.375 +
-              edge.opposite.reduce(
-                (sum, next) => sum + mesh.positions[next][axis],
-                0,
-              ) *
-                0.125,
-        ),
-      );
+      });
+      for (const edge of edges.values())
+        positions.push(
+          values[edge.a].map((a, axis) =>
+            edge.opposite.length === 1 || curveEdges.has(key(edge.a, edge.b))
+              ? (a + values[edge.b][axis]) / 2
+              : (a + values[edge.b][axis]) * 0.375 +
+                edge.opposite.reduce(
+                  (sum, next) => sum + values[next][axis],
+                  0,
+                ) *
+                  0.125,
+          ),
+        );
+      return positions;
+    };
+    const positions = refine(mesh.positions);
     const indices: number[] = [];
     const groups: number[] = [];
     for (let i = 0; i < mesh.indices.length; i += 3) {
@@ -175,7 +183,15 @@ export function subdivideControlMesh(
         edges.get(key(a, curve[(i + 1) % curve.length]))!.index,
       ]),
     );
-    mesh = { positions, indices, groups };
+    mesh = {
+      positions,
+      indices,
+      groups,
+      ...(mesh.reference === undefined
+        ? {}
+        : { reference: refine(mesh.reference) }),
+      ...(mesh.colors === undefined ? {} : { colors: refine(mesh.colors) }),
+    };
   }
   return mesh;
 }

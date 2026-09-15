@@ -98,7 +98,7 @@ export const test_subject_dental_row = (): void => {
       "invalid frame refuses",
       throwsError(
         () => attachPortraitDentalRow(row, { ...frame, ...patch }),
-        "Dental attachment",
+        "Oral attachment",
       ),
     );
   TestValidator.predicate(

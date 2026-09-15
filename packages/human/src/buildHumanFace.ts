@@ -7,13 +7,16 @@ import { createPortraitDentalComponent } from "./components/dentalComponent";
 import { buildPortraitEars } from "./components/ears";
 import { createPortraitEyeComponent } from "./components/eyes";
 import { createPortraitFacePerformanceComponent } from "./components/facePerformance";
-import { buildPortraitHairCards } from "./components/hairCards";
-import { createPortraitHairMaterial } from "./components/hairMaterial";
+import { buildPortraitHairGroom } from "./components/hairLayers";
 import { buildPortraitHead } from "./components/head";
+import { createPortraitJawContinuation } from "./components/jawContinuation";
 import { createPortraitMandibularDentition } from "./components/mandibularDentition";
 import { createPortraitMouthComponent } from "./components/mouth";
 import { createPortraitNoseComponent } from "./components/nose";
 import { createPortraitOrbitalSupport } from "./components/orbitalSupport";
+import { createPortraitSkinLayer } from "./components/skin";
+import { createPortraitSkinColour } from "./components/skinColour";
+import { createPortraitTongueComponent } from "./components/tongue";
 import { portraitPart } from "./geometry/geometry";
 import {
   createPortraitReliefCurveLayer,
@@ -39,6 +42,8 @@ import { resolveHumanFaceDocument } from "./resolveHumanFaceDocument";
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-expression Applies independent observed-relative facial performance without moving maxillary teeth with the lip.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Connects numerical part profiles to actual geometry rather than metadata-only controls.
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression Builds posed shared tissue with fixed optical identity and explicit mandibular attachments.
+ * @evidence requirements/actors/facial-authoring/contract.md#actor-face-skin-colour Builds optional regional skin colour on reference tissue independently of current performance.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-skin-colour Pairs observed/current component cages, transports reference coordinates and emits linear RGB on head and pinna surfaces.
  * @evidenceExclude requirements/actors/facial-authoring/README.md#face-requirements This domain index also covers application controls and subjective study review; the numerical library owns face construction and export, not the complete authoring workflow.
  * @evidenceExclude specifications/asset-and-representation/facial-authoring/README.md#face-specifications This index joins replay, UI and inspection boundaries; this builder does not own the browser adapter or human review process.
  */
@@ -48,27 +53,12 @@ export function buildHumanFace(
 ): IAutoMovieModel {
   const face = resolveHumanFaceDocument(document);
   const { host, bindings, recipe, expression, observation } = face;
-  const hair =
-    recipe.hair === undefined ? [] : buildPortraitHairCards(recipe.hair);
-  const materials = [...face.materials];
-  if (hair.length !== 0) {
-    const finish = materials.find(
-      (material) => material.id === recipe.hair!.material,
-    );
-    if (finish === undefined)
-      throw new Error("Hair cards require their named resident finish.");
-    // The card material is independent: a shared base finish can still colour
-    // untextured eyelashes or other geometry without giving them a missing UV.
-    const material = createPortraitHairMaterial(finish, recipe.hair!);
-    const { id } = material;
-    if (materials.some((material) => material.id === id))
-      throw new Error(
-        "Generated hair finish identity collides with a resident material.",
-      );
-    materials.push(material);
-    for (const part of hair) part.material = id;
-  }
-  const components = [
+  const { parts: hair, materials } = buildPortraitHairGroom({
+    hair: recipe.hair,
+    layers: recipe.hairLayers,
+    materials: face.materials,
+  });
+  const makeComponents = (expression: typeof face.expression) => [
     ...(["right", "left"] as const).map((side) =>
       createPortraitEyeComponent(bindings.eyes[side], face[side].eye, {
         blink: expression.blink[side],
@@ -96,6 +86,24 @@ export function buildHumanFace(
       pucker: { current: expression.pucker, observed: observation.pucker },
     }),
     createPortraitFacePerformanceComponent(bindings, observation, expression),
+    ...(recipe.tongue === undefined
+      ? []
+      : [
+          createPortraitTongueComponent(
+            {
+              rightCorner: bindings.mouth.lower[0],
+              leftCorner: bindings.mouth.lower[bindings.mouth.lower.length - 1],
+              lowerLipMiddle:
+                bindings.mouth.lower[
+                  Math.floor(bindings.mouth.lower.length / 2)
+                ],
+            },
+            recipe.tongue,
+            bindings.jawHinge!,
+            observation,
+            expression,
+          ),
+        ]),
     ...(recipe.dentition === undefined
       ? []
       : [
@@ -128,7 +136,13 @@ export function buildHumanFace(
           ),
         ]),
   ];
+  const components = makeComponents(expression);
+  const colour =
+    recipe.skinColour === undefined || recipe.skinColour.length === 0
+      ? undefined
+      : createPortraitSkinColour(host, recipe.skinColour);
   const layers = [
+    createPortraitSkinLayer(bindings, recipe.skin!, expression),
     ...(["right", "left"] as const).flatMap((side) =>
       face[side].cheek === undefined
         ? []
@@ -149,6 +163,28 @@ export function buildHumanFace(
   const head = buildPortraitHead(host, components, subdivisionRounds, layers, {
     cranium: recipe.cranium,
     neck: recipe.neck,
+    performance: createPortraitJawContinuation(
+      host,
+      bindings,
+      observation,
+      expression,
+      recipe.neck!,
+    ),
+    appearance:
+      colour === undefined
+        ? undefined
+        : {
+            host,
+            components: makeComponents(observation),
+            performance: createPortraitJawContinuation(
+              host,
+              bindings,
+              observation,
+              observation,
+              recipe.neck!,
+            ),
+            sample: colour,
+          },
   });
   const skin = portraitPart(
     "temporal-attachment",
@@ -161,16 +197,40 @@ export function buildHumanFace(
     },
     "skin",
   ).geometry.mesh;
+  const referenceSkin =
+    colour === undefined
+      ? undefined
+      : portraitPart(
+          "reference-temporal-attachment",
+          {
+            positions: head.refined.reference!.flat(),
+            indices: head.refined.indices,
+            normals: null,
+            uvs: null,
+            skin: null,
+          },
+          "skin",
+        ).geometry.mesh;
+  const ears = (["right", "left"] as const).flatMap((side) => {
+    const parts = buildPortraitEars(skin, face[side].ear, side);
+    if (referenceSkin !== undefined) {
+      const originals = buildPortraitEars(referenceSkin, face[side].ear, side);
+      parts.forEach((part, index) => {
+        const positions = originals[index].geometry.mesh.positions;
+        part.geometry.mesh.colors = [];
+        for (let i = 0; i < positions.length; i += 3)
+          part.geometry.mesh.colors.push(
+            ...colour!(positions.slice(i, i + 3).map((v) => v * 1000)),
+          );
+      });
+    }
+    return parts;
+  });
   const model: IAutoMovieModel = {
     id: face.document.id,
     name: face.document.name,
     origin: "generated",
-    parts: [
-      ...head.parts,
-      ...hair,
-      ...buildPortraitEars(skin, face.right.ear, "right"),
-      ...buildPortraitEars(skin, face.left.ear, "left"),
-    ],
+    parts: [...head.parts, ...hair, ...ears],
     materials: [
       ...materials,
       ...components.flatMap((component) => component.materials ?? []),
