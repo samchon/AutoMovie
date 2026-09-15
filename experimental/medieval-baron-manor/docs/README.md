@@ -24,6 +24,6 @@ The [contract-target procedure](../.agents/skills/evidence-graph/contract-target
 | `screenplays` | Film screenplay delivery units. |
 | `briefs` | Direct-brief delivery, shot, and observation units. |
 
-Reviewed delivery configuration is emitted from governed source into the production design record rather than authored as another document tree. `repaintSelectionReviews.ts` is the one tracked observation file outside `docs` and `src`; it records candidate observations, not production decisions.
+Reviewed delivery configuration is emitted from governed source into the production design record rather than authored as another document tree. `src/repaintSelectionReviews.ts` records candidate observations separately from production decisions.
 
 This README is a tracked snapshot created with the scaffold. Follow [Static-document updates](../README.md#static-document-updates) before expecting an installed package upgrade, instruction sync, or contract migration to replace it.

@@ -1,5 +1,5 @@
-import type { IAutoMovieSourcePreview } from "./src/sourcePreview";
-import { createTexturedManorScene } from "../src/instances/manor-textured.js";
+import type { IAutoMovieSourcePreview } from "../viewer/src/sourcePreview";
+import { createTexturedManorScene } from "./instances/manor-textured.js";
 
 /** Production destinations consumed by the common source-preview navigator. */
 export const createPreview = async (): Promise<IAutoMovieSourcePreview> => {

@@ -1,6 +1,6 @@
 import type { IAutoMovieRepaintSequenceObservation } from "@automovie/interface";
 
-import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/productionConfiguration";
+import type { IAutoMovieProductionRepaintSelectionReview } from "../scripts/productionConfiguration";
 
 /**
  * Post-generation observations keyed by authored shot id.
@@ -8,9 +8,7 @@ import type { IAutoMovieProductionRepaintSelectionReview } from "./scripts/produ
  * A repaint request resolves its selection review to null until candidate bytes
  * exist. Add the reviewed candidate here under its authored shot id, and the
  * repaint runtime joins it to that shot's request on the production design
- * record. This control-plane file is typechecked but deliberately excluded from
- * deterministic compiler content: reviewing derived appearance must not
- * invalidate the source render and candidate being reviewed.
+ * record. The observations remain separate from authored repaint requests.
  */
 export const repaintSelectionReviews: Readonly<
   Record<string, IAutoMovieProductionRepaintSelectionReview>

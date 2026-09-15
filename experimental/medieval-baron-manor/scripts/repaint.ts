@@ -2,7 +2,7 @@ import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import { AutoMovieProductionProject } from "@automovie/production";
 
 import { productionEvidence } from "../lint.config";
-import { repaintSelectionReviews } from "../repaintSelectionReviews";
+import { repaintSelectionReviews } from "../src/repaintSelectionReviews";
 import { createProductionFrameCaptureRuntime } from "./capture";
 import { createProductionCaptureDialogueRuntime } from "./captureDialogueRuntime";
 import { productionRepaintInput } from "./productionConfiguration";
