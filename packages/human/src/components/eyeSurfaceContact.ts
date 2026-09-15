@@ -1,4 +1,13 @@
-import type { IAutoMovieVector3 } from "@automovie/interface";
+/**
+ * Final skin-contact provider used by the eye component after shared refinement.
+ * Rebuild the same fixed optical/canthal support used for drawing, measure
+ * complete triangle deficits along the observation ray in engine metres, then
+ * return head-millimetre proposals without mutating the supplied final mesh.
+ * Geodesic skin propagation follows the conservative triangle targets. Closed
+ * rim correspondences share the foremost result before proposals are returned.
+ * This establishes directional clearance, not anatomical section shape.
+ */
+import type { IAutoMovieMesh, IAutoMovieVector3 } from "@automovie/interface";
 
 import { blendPortraitSkin } from "../geometry/blendPortraitSkin";
 import { portraitPoint as p, portraitPart } from "../geometry/geometry";
@@ -26,6 +35,7 @@ export function createPortraitEyeSurfaceContact({
   direction,
   lidGroup,
   performance,
+  canthal,
 }: {
   iris: number;
   sphere: IPortraitEyeSphere;
@@ -33,6 +43,7 @@ export function createPortraitEyeSurfaceContact({
   direction: IAutoMovieVector3;
   lidGroup: number;
   performance?: IPortraitEyePerformance;
+  canthal?: IAutoMovieMesh;
 }): IPortraitFinalSurface {
   return (final) => {
     const gaze = final.positions[iris];
@@ -43,7 +54,14 @@ export function createPortraitEyeSurfaceContact({
     );
     const optical = portraitPart(
       "corneal-contact-basis",
-      buildPortraitEyeContactBasis(center, sphere, shape, [], performance),
+      buildPortraitEyeContactBasis(
+        center,
+        sphere,
+        shape,
+        [],
+        performance,
+        canthal,
+      ),
       "skin",
     ).geometry.mesh;
     const indices: number[] = [];

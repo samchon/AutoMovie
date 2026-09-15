@@ -1,8 +1,19 @@
+/**
+ * Shared resident optical construction for the eye's fit, final contact and
+ * drawing consumers. Inputs/meshes use head millimetres. Cornea construction
+ * precedes gaze rotation; the same dimensions, frame and sampling reach every
+ * consumer. Contact combines that cornea with the resident globe or supplied
+ * fixed canthal hull. Inputs are read-only and each result is an owned mesh.
+ * This module supplies the support surface; the skin owner decides clearance.
+ */
 import {
   mergeAutoMovieMeshes,
   transformAutoMovieMesh,
 } from "@automovie/engine";
-import type { IAutoMovieVector3 as Point } from "@automovie/interface";
+import type {
+  IAutoMovieMesh,
+  IAutoMovieVector3 as Point,
+} from "@automovie/interface";
 
 import { buildPortraitCornea } from "../geometry/portraitCornea";
 import {
@@ -73,6 +84,7 @@ export function buildPortraitEyeContactBasis(
   shape: IPortraitEyeShape,
   extents: number[],
   performance?: IPortraitEyePerformance,
+  canthal?: IAutoMovieMesh,
 ) {
   const cornea = buildPortraitEyeCornea(
     center,
@@ -84,11 +96,12 @@ export function buildPortraitEyeContactBasis(
   return performance === undefined && shape.opticalFrame !== "radial"
     ? cornea
     : mergeAutoMovieMeshes([
-        buildPortraitPerformanceGlobe(
-          sphere,
-          Math.max(3, shape.sampling.eyeColumns),
-          Math.max(2, shape.sampling.eyeRows),
-        ),
+        canthal ??
+          buildPortraitPerformanceGlobe(
+            sphere,
+            Math.max(3, shape.sampling.eyeColumns),
+            Math.max(2, shape.sampling.eyeRows),
+          ),
         cornea,
       ]);
 }

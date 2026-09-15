@@ -1,3 +1,13 @@
+/**
+ * Orchestrate the replaceable eye's fit, attachment and refined finish.
+ * Inputs describe an observed aperture in head millimetres (+Z anterior).
+ * Input admission owns copies; eyeSupport fixes optical identity before blink.
+ * Shared lid sections bridge performed inner contact to original host skin.
+ * Attachment mutates only the supplied assembly cage; finalSurface proposes
+ * common skin targets after refinement, then eyeInterior draws the same support.
+ * Gaze cannot refit identity or move the outer attachment. A changed identity
+ * invalidates every downstream contact and interior; no stage certifies likeness.
+ */
 import { Vector3, createAutoMovieMeshDepthSampler } from "@automovie/engine";
 import type { IAutoMovieVector3 as Point } from "@automovie/interface";
 
@@ -11,10 +21,7 @@ import {
   portraitFacesInsideLoop,
 } from "../geometry/portraitComponents";
 import { createPortraitDirectionalContact } from "../geometry/portraitDirectionalContact";
-import {
-  fitPortraitEyeSphere,
-  portraitEyeSphereIntersection,
-} from "../geometry/portraitEyeSphere";
+import { portraitEyeSphereIntersection } from "../geometry/portraitEyeSphere";
 import { refinePortraitSkinBridge } from "../geometry/refinePortraitSkinBridge";
 import {
   portraitSkinAnnulus,
@@ -30,6 +37,7 @@ import {
   posePortraitLidCurves,
 } from "./eyePerformance";
 import type { IPortraitEyeShape, IPortraitEyeSocket } from "./eyeShape";
+import { createPortraitEyeSupport } from "./eyeSupport";
 import { createPortraitEyeSurfaceContact } from "./eyeSurfaceContact";
 import { createPortraitIrisMaterials } from "./irisPigment";
 
@@ -112,27 +120,17 @@ export function createPortraitEyeComponent(
       const direction = p(host.viewRay[0], host.viewRay[1], host.viewRay[2]);
       const pointAt = (id: number): Point =>
         p(aperture[id][0], aperture[id][1], aperture[id][2]);
-      const fittedSphere = fitPortraitEyeSphere(
-        socket.top.map(pointAt),
-        socket.bottom.map(pointAt),
-        direction,
-        shape.surfaceRadius,
-        shape.sphereFit,
-      );
+      const { sphere, fittedSphere, shifted, canthal, intersect } =
+        createPortraitEyeSupport(
+          socket.top.map(pointAt),
+          socket.bottom.map(pointAt),
+          direction,
+          shape,
+        );
       // The host seam belongs to the fitted socket, not to optical prominence.
       // Keep its reference sphere while moving the complete optical body along
       // the observation ray. This preserves image coordinates without lifting
       // the brow-side attachment by the same amount.
-      const shifted = shape.globeLift !== undefined && shape.globeLift !== 0;
-      const sphere = shifted
-        ? {
-            ...fittedSphere,
-            center: Vector3.add(
-              fittedSphere.center,
-              Vector3.scale(Vector3.normalize(direction), shape.globeLift!),
-            ),
-          }
-        : fittedSphere;
       const identityGuide =
         performance === undefined
           ? undefined
@@ -145,9 +143,7 @@ export function createPortraitEyeComponent(
         performance === undefined ||
         performance.blink === performance.observedBlink
           ? undefined
-          : socket.top.map((id) =>
-              portraitEyeSphereIntersection(sphere, pointAt(id), direction),
-            );
+          : socket.top.map((id) => intersect(pointAt(id)));
       if (performance !== undefined) {
         const posed = posePortraitLidCurves(
           socket.top.map(pointAt),
@@ -163,9 +159,7 @@ export function createPortraitEyeComponent(
       const lashCurrent =
         lashReference === undefined
           ? undefined
-          : socket.top.map((id) =>
-              portraitEyeSphereIntersection(sphere, pointAt(id), direction),
-            );
+          : socket.top.map((id) => intersect(pointAt(id)));
       // The lid section starts at its actual ocular contact, not at a lower
       // globe surface that will later be pushed through a raised cornea. A
       // post-refinement collision correction alone leaves a local platform:
@@ -189,40 +183,49 @@ export function createPortraitEyeComponent(
                   shape,
                   [],
                   performance,
+                  canthal?.surface,
                 ),
                 "skin",
               ).geometry.mesh,
               direction,
             );
       // Corneal contact must not redefine the gaze-independent outer seam.
-      // Retain the sphere-projected aperture as its planar guide, then fade
-      // inner contact's XY movement to zero across the tissue bridge.
+      // Legacy support uses its reference sphere projection; separate canthal
+      // support retains the observed anchors. Fade performed inner movement
+      // to zero across either identity's tissue bridge.
       const apertureGuide =
         identityGuide ??
+        (canthal === undefined
+          ? undefined
+          : aperture.map((point) => [...point])) ??
         (contactBoundary === undefined && !shifted
           ? undefined
           : aperture.map((point) => [...point]));
       for (const id of loop) {
-        const contact = portraitEyeSphereIntersection(
-          sphere,
-          pointAt(id),
-          direction,
-        );
+        const contact = intersect(pointAt(id));
         if (apertureGuide !== undefined) {
           const guideContact =
-            identityGuide === undefined && !shifted
-              ? contact
-              : portraitEyeSphereIntersection(
-                  fittedSphere,
-                  p(
-                    ...((identityGuide ?? aperture)[id] as [
-                      number,
-                      number,
-                      number,
-                    ]),
-                  ),
-                  direction,
-                );
+            canthal !== undefined
+              ? p(
+                  ...((identityGuide ?? aperture)[id] as [
+                    number,
+                    number,
+                    number,
+                  ]),
+                )
+              : identityGuide === undefined && !shifted
+                ? contact
+                : portraitEyeSphereIntersection(
+                    fittedSphere,
+                    p(
+                      ...((identityGuide ?? aperture)[id] as [
+                        number,
+                        number,
+                        number,
+                      ]),
+                    ),
+                    direction,
+                  );
           apertureGuide[id] = [guideContact.x, guideContact.y, guideContact.z];
         }
         if (contactBoundary === undefined)
@@ -377,6 +380,7 @@ export function createPortraitEyeComponent(
                     direction,
                     lidGroup,
                     performance,
+                    canthal: canthal?.surface,
                   }),
             finish: (refined) =>
               buildPortraitEye(
@@ -401,6 +405,7 @@ export function createPortraitEyeComponent(
                         sphere.center,
                       ),
                     }),
+                canthal,
               ),
           };
         },

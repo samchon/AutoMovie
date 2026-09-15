@@ -1,3 +1,13 @@
+/**
+ * Finish an attached eye after common skin refinement and optical contact.
+ * The eye component supplies head-millimetre lid vertices, fixed identity and
+ * optional canthal hull. This module reads those inputs and owns emitted parts.
+ * Exact canthal endpoints bound the interpolated wet tissue; sclera and the
+ * connective region partition one external hull. Iris/pupil/cornea use the
+ * optical sphere and rotate together with gaze, independently of that lining.
+ * Only portraitPart crosses to model metres. Changing support or a refined
+ * margin invalidates tissue, optics, lashes and brow attachment together.
+ */
 import {
   createAutoMovieMeshDepthSampler,
   mergeAutoMovieMeshes,
@@ -18,6 +28,7 @@ import {
   portraitRegion,
   portraitTube as tube,
 } from "../geometry/geometry";
+import type { buildPortraitCanthalMesh } from "../geometry/portraitCanthalMesh";
 import { portraitDirectionalSurfaceTargets } from "../geometry/portraitDirectionalContact";
 import {
   type IPortraitEyeSphere,
@@ -59,6 +70,7 @@ export function buildPortraitEye(
   tissues?: ReturnType<typeof createPortraitOcularTissues>,
   performance?: IPortraitEyePerformance,
   lashMotion?: (at: number) => Parameters<typeof buildPortraitEyelash>[5],
+  canthal?: ReturnType<typeof buildPortraitCanthalMesh>,
 ): IAutoMovieModelPart[] {
   const parts: IAutoMovieModelPart[] = [];
   const add = (
@@ -83,6 +95,11 @@ export function buildPortraitEye(
       lower = eye.bottom.map(margin);
     const lidSamples = [lower, upper].map((points) =>
       Array.from({ length: 257 }, (_, i) => {
+        // The closed interval already supplies exact endpoint roots. A finite
+        // bisection midpoint would pair endpoint X with an interior Y/Z and
+        // leave a canthal apex's support, even though the actual rim meets it.
+        if (i === 0 || i === 256)
+          return { ...points[i === 0 ? 0 : points.length - 1] };
         const x = mix(points[0].x, points[points.length - 1].x, i / 256);
         let low = 0,
           high = 1;
@@ -113,10 +130,27 @@ export function buildPortraitEye(
     };
     // Spherical curvature is independent of aperture height and gaze. The
     // fitted lid alone determines how much of that surface remains visible.
-    const eyeZ = (x: number, y: number): number =>
-      portraitEyeSphereHeight(sphere, x, y);
+    const canthalDepth =
+      canthal === undefined
+        ? undefined
+        : createAutoMovieMeshDepthSampler(
+            portraitPart("canthal-height", canthal.surface, white).geometry
+              .mesh,
+            "z",
+          );
+    const eyeZ = (x: number, y: number): number => {
+      if (canthalDepth === undefined)
+        return portraitEyeSphereHeight(sphere, x, y);
+      const hit = canthalDepth(x * 0.001, y * 0.001);
+      if (hit === null)
+        throw new Error(
+          `Ocular tissue at (${x}, ${y}) must stay on its canthal support.`,
+        );
+      return hit.maximum * 1000;
+    };
     const sclera =
-      performance === undefined && shape.opticalFrame !== "radial"
+      canthal?.exposed ??
+      (performance === undefined && shape.opticalFrame !== "radial"
         ? patch(
             (u, v) => {
               const top = interpolate(upper, u),
@@ -132,17 +166,23 @@ export function buildPortraitEye(
             sphere,
             Math.max(3, shape.sampling.eyeColumns),
             Math.max(2, shape.sampling.eyeRows),
-          );
+          ));
     // The sclera owns an exact spherical surface: grad(|p-c|^2-r^2)
     // points along p-c, and |p-c|=r. Divide construction millimetres by
     // radius millimetres to obtain dimensionless outward unit normals. This
     // remains defined at a collapsed canthal row where triangle-area averaging
     // has no direction, and avoids a sampling-dependent optical normal field.
     const sphereCenter = [sphere.center.x, sphere.center.y, sphere.center.z];
-    sclera.normals = sclera.positions.map(
-      (value, index) => (value - sphereCenter[index % 3]) / sphere.radius,
-    );
+    if (canthal === undefined)
+      sclera.normals = sclera.positions.map(
+        (value, index) => (value - sphereCenter[index % 3]) / sphere.radius,
+      );
     add(`${eye.name}-sclera`, sclera, white);
+    // The exposed connective support shares the optical boundary vertices.
+    // Existing medial tissue still owns its pink caruncle; the remaining
+    // conjunctival lining uses the light ocular finish of this blocking model.
+    if (canthal !== undefined && canthal.extension.indices!.length !== 0)
+      add(`${eye.name}-canthal-conjunctiva`, canthal.extension, white);
     // One gaze centre feeds drawing and tissue support. Full-limbus contact
     // includes the actual optical shell, whose anterior surface is above the
     // basic globe; following the latter buried the wet margin in the cornea.
@@ -160,6 +200,7 @@ export function buildPortraitEye(
       "ocular-tissue-support",
       mergeAutoMovieMeshes([
         sclera,
+        ...(canthal === undefined ? [] : [canthal.extension]),
         ...(shape.lidContact === "cornea"
           ? [buildPortraitEyeCornea(center, sphere, shape, [], performance)]
           : []),

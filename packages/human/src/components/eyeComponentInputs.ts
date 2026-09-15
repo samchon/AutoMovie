@@ -1,3 +1,12 @@
+/**
+ * Admit and detach numerical inputs before createPortraitEyeComponent fits a
+ * host. Dimensions use construction millimetres, sampling values are counts,
+ * and performance uses bounded closure fractions and degrees. Optical modes
+ * are checked together before copying profiles and creating tissue samplers.
+ * The returned shape/socket/performance belong to this component instance;
+ * later caller edits cannot change its fit. Host topology and combined surface
+ * feasibility belong to the fit/attachment consumers, after this local gate.
+ */
 import {
   type IPortraitEyePerformance,
   assertPortraitEyePerformance,
@@ -46,6 +55,15 @@ export function resolvePortraitEyeInputs(
         "Eye performance requires a resident full-limbus optical surface and corneal contact.",
       );
   }
+  if (
+    inputShape.canthalSupport !== undefined &&
+    (inputShape.canthalSupport !== "tangent" ||
+      inputShape.sphereFit !== "observation-ray" ||
+      inputShape.opticalFrame !== "radial")
+  )
+    throw new Error(
+      "Tangent canthal support requires observation-ray fitting and radial optics.",
+    );
   // A fitted component owns its inputs. Editing a preset for another instance
   // must not silently mutate an already constructed eye.
   const socket = {

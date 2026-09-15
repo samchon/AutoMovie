@@ -1,3 +1,11 @@
+/**
+ * Public numerical contract for a socket-bound procedural eye. The component
+ * admits these values in eyeComponentInputs, then shares one optical identity
+ * and one tissue-section definition across drawing, attachment and contact.
+ * Lengths are head-frame millimetres; camera-ray translation and transverse
+ * aperture scaling have separate ownership. These inputs describe authored
+ * surfaces, not clinical measurements inferred from a single image.
+ */
 import type { IPortraitEyebrowProfile } from "./eyebrows";
 import type { IPortraitEyelashProfile } from "./eyelashes";
 import type { IPortraitIrisPigment } from "./irisPigment";
@@ -121,17 +129,28 @@ export interface IPortraitEyeShape {
   aegyoSal?: IPortraitAegyoSalShape;
   /** Forward projection of the inner lid margin, in mm. */
   lidThickness: number;
-  /** Spherical surface radius in mm; fitted in the socket plane independently of gaze. */
+  /** Optical globe radius in mm; fitted in the declared basis independently of gaze. */
   surfaceRadius: number;
   /**
    * Depth-fitting direction for the spherical cap. Omission/aperture-plane
    * preserves the canthal-plane fit. Observation-ray keeps the reference rim
-   * mean's image position when fitting centre depth; it does not recover an
-   * anatomical globe centre. Current gaze and blink do not choose this mode.
+   * mean's image position when fitting centre depth. With tangent canthal
+   * support, the fixed canthal midpoint instead anchors that image position.
+   * Neither fit recovers an anatomical globe centre. Current gaze and blink
+   * do not choose this mode.
    * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Selects an explicit ocular placement basis without changing current expression or forcing a new fit onto existing documents.
    * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Carries the optional canthal-plane or recorded-ray depth fitting choice to the spherical support builder.
    */
   sphereFit?: "aperture-plane" | "observation-ray";
+  /**
+   * Optional fixed canthal connective support. Tangent uses the declared
+   * surfaceRadius for the optical globe and joins separately fixed observed
+   * canthi to its sampled convex surface. Its depth fit uses only supported
+   * rim rays and preserves visible canthi; it does not enlarge the globe to
+   * span every canthus. Requires observation-ray fitting and radial optics.
+   * The same identity surface supplies drawing and contact through expression.
+   */
+  canthalSupport?: "tangent";
   /**
    * Iris/cornea frame. Omission or head-plane preserves the original XY height
    * field. Radial authors both layers around the globe-to-iris axis, with
