@@ -14,7 +14,7 @@ A subject-breadth comparison changes only the subject and reports patterns acros
 
 One production is one experimental unit. Do not merge two units, do not silently drop one, and never let a unit discharge an obligation with another unit's evidence.
 
-The packed product tree is part of the harness, so refreshing one unit's packages moves that unit off the harness the others are on. A sandbox pins its tarballs by content digest, which is what makes the drift checkable: compare the pinned digests across units before reading any difference between them as a difference in the work. When a repack is genuinely needed, refresh every unit and record the boundary, because [A Repack Is A Change To The Production](steering.md#a-repack-is-a-change-to-the-production) already invalidates each unit's own comparands.
+The executed product generation is part of the harness. Follow [Create The Sandbox](SKILL.md#create-the-sandbox) for dependency provenance and compare the actual resolved revisions and package bytes across units before attributing a difference to their authored work. A dependency refresh moves the observation basis; update every affected unit and record the boundary under [A Repack Is A Change To The Production](steering.md#a-repack-is-a-change-to-the-production).
 
 ## Keep Judgment Away From Commissioning
 
@@ -68,7 +68,7 @@ Read the signals this harness actually leaves, and say which one you are reading
 
 [steering.md](steering.md#your-own-instruments-fail-plausibly-too) owns those signals and their failure modes, including the three that must agree before a turn is called over, and the finding that process and transcript answer whether the session is alive while only the disk answers whether work is happening.
 
-Do not carry over a signal the harness does not leave. A sandbox under `experimental/` is gitignored and holds no repository of its own, so commit movement is not readable here. What moves instead is the sandbox tree, the compiled revision and input fingerprint, and the receipts a recompile invalidates.
+Do not carry over a signal the harness does not leave. Inspect each unit's actual source changes, session transcript, and requested outputs. A commit is a signal only when that unit has an authorized repository workflow; a compiled fingerprint is a signal only when its actual consumer supplies one. A source-first production supplies no stored revision or receipt ledger to poll. [Create The Sandbox](SKILL.md#create-the-sandbox) owns disposable-content placement and cleanup; do not assume an ignore rule or create state files for observation.
 
 What a comparison run adds is that the observer reads those signals for every unit on one cadence, so a stalled unit is visible against its moving siblings instead of only against itself.
 

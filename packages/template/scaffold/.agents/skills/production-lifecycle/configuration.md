@@ -1,6 +1,6 @@
 # Production delivery decisions
 
-Run `npx --no-install automovie routes <film|brief|library>` before selecting a design field. Its typed matrix names the canonical owner, serializer, runtime/builder consumer, and authoring route for each supported capability, or the exact reason that capability is inapplicable to the selected shape. A field absent from that matrix is not made available by mentioning it in prose.
+Run `npx --no-install automovie routes <film|brief|library>` before selecting a design field. Its typed matrix names the canonical owner, typed input, public consumer, and authoring route for each supported capability, or the exact reason that capability is inapplicable to the selected shape. A field absent from that matrix is not made available by mentioning it in prose.
 
 Delivery tiers, repaint adoption and requests, the dialogue generator and its speaker joins, and live soft-body admission are typed production values. Author each in governed source under its reviewed document owner and pass it directly to the runtime consumer. [Ownership](../../../README.md#ownership) owns the source and file boundary.
 

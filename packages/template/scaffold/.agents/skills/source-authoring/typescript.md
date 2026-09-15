@@ -25,7 +25,7 @@ export const registeredShotId = (source: IAutoMovieShotSource): string =>
   source.id;
 ```
 
-Implement each scaffold placeholder before claiming that its source is complete.
+Author a complete implementation when its source branch becomes active. [Ownership](../../../README.md#ownership) governs the source boundary; no placeholder implementation is supplied to fill in.
 
 Prefer small deterministic functions named for domain decisions: frame conversion, camera placement, event construction, motion selection, formation state, or EDL interval. Validate meaning through engine contracts rather than duplicating math and accepting divergent behavior.
 
