@@ -799,6 +799,26 @@ const validateMesh = (
     );
   }
 
+  if (mesh.colors !== undefined) {
+    validateTupleBuffer(mesh.colors, 3, `${path}.colors`, collector);
+    validateBufferLength(
+      mesh.colors,
+      vertexCount * 3,
+      `${path}.colors`,
+      "colors must contain one linear RGB triple per position vertex",
+      collector,
+    );
+    mesh.colors.forEach((value, index) => {
+      if (value < 0 || value > 1)
+        collector.push(
+          "range",
+          `${path}.colors[${index}]`,
+          "vertex colour components must be in [0, 1]",
+          value,
+        );
+    });
+  }
+
   if (mesh.indices !== null) {
     validateTupleBuffer(mesh.indices, 3, `${path}.indices`, collector);
     mesh.indices.forEach((index, i) => {

@@ -1,5 +1,9 @@
 # `@automovie/viewer`
 
+`buildGeometry` uploads optional `IAutoMovieMesh.colors` as a linear RGB attribute. `buildModel` reuses separate material variants for coloured and uncoloured parts sharing one material identity, so enabling vertex colour never changes a bare neighbour. A caller composing `buildGeometry` and `buildMaterial` directly sets the material's `vertexColors` flag to match the geometry.
+
+Instanced model/object flattening preserves mixed coloured and bare parts. Its owned geometry copies use a common Float32 RGB(A) layout, decoding normalized imported attributes and filling absent RGB or alpha with one; entirely bare models remain buffer-free. Malformed colour cardinality or a non-RGB(A) tuple is refused before merging.
+
 `resolveAutoMovieFilmBeautyComposition` classifies the one or two beauty
 layers the production sampler returns for a film frame as a direct render, a
 fade over black, or a cross-dissolve, and refuses any other cardinality or

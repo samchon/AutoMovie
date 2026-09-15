@@ -23,6 +23,8 @@
 
 기하 입력은 기본 형상 또는 자유 형상의 source facts, 실제 단위의 치수, 좌표계와 원점, 정점·곡선·면 또는 volume의 관계, 방향과 winding, 표면 영역 역할을 포함한다. 서로 다른 좌표계나 단위의 입력을 합칠 때는 각 source frame과 목적 frame, 변환 순서와 결과 오차를 명시한다.
 
+원시 메시의 선택적 정점색은 위치와 같은 정점 순서를 갖는 선형 RGB 세 성분이며 각 값은 유한한 [0,1] 범위다. 재질과 texture의 base colour에 곱하고 알파나 조명은 변경하지 않는다. 생략은 흰색 곱셈이며 별도 버퍼를 요구하지 않는다. 변환과 정점 대응이 유지되는 변형에서는 색이 정점을 따라가고, 결합은 유색 member가 있을 때만 무색 member를 흰색으로 채워 유색 정보를 유지한다. 정적 GLB는 이를 COLOR_0 VEC3 Float32로 보존한다.
+
 ### 조합 연산과 위상 불변식 {#asset-spec-geometry-operations-topology}
 
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations 기하 연산을 재사용 가능한 순서로 조합할 수 있어야 한다. -->

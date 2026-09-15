@@ -370,6 +370,18 @@ export const exportModelToGLB = async (
           .setArray(new Float32Array(t.normals))
           .setBuffer(buffer),
       );
+    if (
+      part.geometry.type === "mesh" &&
+      part.geometry.mesh.colors !== undefined
+    )
+      prim.setAttribute(
+        "COLOR_0",
+        doc
+          .createAccessor()
+          .setType("VEC3")
+          .setArray(new Float32Array(part.geometry.mesh.colors))
+          .setBuffer(buffer),
+      );
     if (t.indices.length !== 0)
       prim.setIndices(
         doc
