@@ -12,8 +12,8 @@ import {
   writeScaffoldFile,
 } from "@automovie/template";
 import * as fs from "node:fs";
-import { createRequire } from "node:module";
 import * as path from "node:path";
+import { require as requireTypeScript } from "tsx/cjs/api";
 
 import { dispatchAutoMovieCommandArguments } from "./commandArguments";
 import {
@@ -574,8 +574,9 @@ export const run = (argv: readonly string[]): number => {
           throw new Error(
             "Instruction sync requires the project's ordinary src/lint.config.ts source.",
           );
-        const loaded = createRequire(path.join(root, "package.json"))(
+        const loaded = requireTypeScript(
           declaration,
+          path.join(root, "package.json"),
         ) as {
           productionEvidence?: IAutoMovieEvidenceConfigProps;
         };
