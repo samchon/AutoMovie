@@ -5,9 +5,6 @@
 .wiki/
 .references/
 
-# Local experiments. Existing tracked production files remain tracked.
-/experimental/
-
 node_modules/
 packages/cli/.cache/
 packages/template/.cache/

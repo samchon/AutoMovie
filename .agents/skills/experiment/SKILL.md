@@ -33,7 +33,7 @@ Creation packs every workspace package, so it runs each package's build and take
 
 Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites the manifest's tarball pins, reinstalls, and synchronizes owned reference-client entries without replacing production content.
 
-The root `.gitignore` excludes untracked content under `experimental/`; existing tracked production files remain tracked without a directory exception. Before creating a disposable sandbox, verify that its intended path is ignored. Delete the sandbox and its temporary scripts, logs, and captures when its question is answered; retain only the findings and verification records needed by the owning workflow. Never commit disposable content or leave it as untracked working-tree clutter.
+Create a disposable sandbox only for an active experiment. Delete the sandbox and its temporary scripts, logs, and captures when its question is answered; retain only the findings and verification records needed by the owning workflow. Never commit disposable content, hide it with a broad `experimental/` ignore rule, or leave it as untracked working-tree clutter after the experiment.
 
 ## What The Generator Wires, And Why It Matters
 
