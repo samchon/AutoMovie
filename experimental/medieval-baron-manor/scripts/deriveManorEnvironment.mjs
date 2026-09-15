@@ -14,7 +14,7 @@ let census;
 const result = generateAutoMovieDerivedArtifact({
   root: process.cwd(),
   generator: 'scripts/deriveManorEnvironment.mjs',
-  inputs: [input, helper, ...sourceFiles, 'package-lock.json'],
+  inputs: [input, helper, ...sourceFiles, 'package.json'],
   output: 'automovie/derived/manor/environment-v24-critical.json',
   encoding: 'utf8',
   generate(inputs) {

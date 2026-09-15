@@ -6,7 +6,7 @@ import {materializeCompiledInstanceSet,productionRuntimeModelId} from '@automovi
 import {createManorScene} from '../src/models/manor.js';
 import {manorInstanceDefinitions} from '../src/instances/manor.js';
 import {Vector3,Quaternion} from 'three';
-const files=['src/models/manor.js','src/models/manor-craft.js','src/models/manor-garden.js','src/materials/manor.js','src/instances/manor.js','package-lock.json'];
+const files=['src/models/manor.js','src/models/manor-craft.js','src/models/manor-garden.js','src/materials/manor.js','src/instances/manor.js','package.json'];
 const initial=Object.fromEntries(files.map(f=>[f,readFileSync(f)]));
 function deriveInventory(){
 const manor=createManorScene({geometryOnly:true}),inventory=manorInstanceDefinitions(manor.entries);

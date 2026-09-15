@@ -6,16 +6,16 @@
       "encoding": "utf8",
       "generator": {
         "path": "scripts/deriveManorEnvironment.mjs",
-        "digest": "sha256:030ab1ea532e9e6628d186370203b5dd3c77f49a37f55e5f0a6b2fa59efd4f6d"
+        "digest": "sha256:2a4900cfd10c2b3a2861bda69839c2884961fabdfef3d84b97af359fa61af0af"
       },
       "inputs": [
         {
           "path": "automovie/derived/manor/instances-v23-critical.json",
-          "digest": "sha256:99c79a16556cbec9cca1aebc1744d997053e2d372287f06655b26293020a07de"
+          "digest": "sha256:c92608b537c7a0b18fc1cecf5802dc0efb41533051b3958bdb80ac1952ae84b1"
         },
         {
-          "path": "package-lock.json",
-          "digest": "sha256:391133cb64c92790af9443863f1e7ecc681bd06ca7e6d61815baac459802cafb"
+          "path": "package.json",
+          "digest": "sha256:da64c7413ae527eb794faf54009a65c7628240d34d1ed73a239b3970f171199d"
         },
         {
           "path": "scripts/manorSpatialState.ts",
@@ -35,23 +35,23 @@
         },
         {
           "path": "src/models/manor.js",
-          "digest": "sha256:2fe4676205527dedfdd5b9c3acc2349d02bf143ad2abb8fecdb28dce8953c394"
+          "digest": "sha256:86d569898b7cea8916f821dd158fc4d85fa06ad42e09768f546b30f11be45c09"
         }
       ],
-      "basisDigest": "sha256:6e993edd6fd96713f31b14444e46ec493e41d60ac613e044e29a9cb50be5f1b1",
-      "outputDigest": "sha256:2318dd9ad3e769b391ce36050b00101f2cbc09332f847e9dadda7ff43bd14609"
+      "basisDigest": "sha256:6b5dca1941c070abfb5c97313022c7a13ff77fefcf87ef02439861ffd3a4ecfd",
+      "outputDigest": "sha256:16a3cf9eab9a796ed93e63d33b27a54b21d30842370863c034bcb791d89d834d"
     },
     {
       "path": "automovie/derived/manor/instances-v23-critical.json",
       "encoding": "utf8",
       "generator": {
         "path": "scripts/deriveManorCritical.mjs",
-        "digest": "sha256:e63ab101f6213be753564cf616cc633fdc2a1fb585c1b46abf4215714ad6d1c9"
+        "digest": "sha256:8418ad00abeedb027db3a3ae3d37941b245266aebe529436157a4f75f46dfc9b"
       },
       "inputs": [
         {
-          "path": "package-lock.json",
-          "digest": "sha256:391133cb64c92790af9443863f1e7ecc681bd06ca7e6d61815baac459802cafb"
+          "path": "package.json",
+          "digest": "sha256:da64c7413ae527eb794faf54009a65c7628240d34d1ed73a239b3970f171199d"
         },
         {
           "path": "src/instances/manor.js",
@@ -71,11 +71,11 @@
         },
         {
           "path": "src/models/manor.js",
-          "digest": "sha256:2fe4676205527dedfdd5b9c3acc2349d02bf143ad2abb8fecdb28dce8953c394"
+          "digest": "sha256:86d569898b7cea8916f821dd158fc4d85fa06ad42e09768f546b30f11be45c09"
         }
       ],
-      "basisDigest": "sha256:1dd9f05a38f45f516e43c9012edcd02814a56814ec728285066386f53f7e3ea2",
-      "outputDigest": "sha256:99c79a16556cbec9cca1aebc1744d997053e2d372287f06655b26293020a07de"
+      "basisDigest": "sha256:eadf9a2a2898fc52a8f00195b6ce08a8d586367302331f913cc7c312e15b50a7",
+      "outputDigest": "sha256:c92608b537c7a0b18fc1cecf5802dc0efb41533051b3958bdb80ac1952ae84b1"
     }
   ]
 }

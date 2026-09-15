@@ -14,14 +14,18 @@ This README and `docs/README.md` are tracked snapshots installed when a new scaf
 
 Client registration is separately synchronized in ignored project-local `.mcp.json` and `.codex/config.toml`; unrelated settings are preserved and ownership conflicts refuse. See [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions) for first-client trust and recovery.
 
-## First run
+## Workspace setup and source regeneration
 
 ```bash
-npm install
-npm run lint:source
+pnpm install
+pnpm --filter medieval-baron-manor lint:source
+pnpm --filter medieval-baron-manor derive:manor
+pnpm --filter medieval-baron-manor build
 ```
 
-The blank scaffold is intentionally incomplete. Select the production kind through the routed lifecycle procedure, author its prerequisites, then use the commands below at the stages their linked procedures name.
+Run these commands from the AutoMovie workspace root. This production is a pnpm workspace member, not a blank standalone npm project. The repository's `pnpm-lock.yaml` owns installation; do not create a second npm lock in this directory. The explicit manor derivation records its project-owned source and `package.json` inputs before the builder consumes its outputs. Repeat derivation after a generator, source, or installed workspace dependency changes. The source-preview website builds directly from authored source and textures; a successful preview does not prove that the separately derived production artifacts are current.
+
+The large `automovie/derived/manor` JSON outputs remain ignored and are regenerated on a fresh checkout; the declared generators and `automovie/derived-artifacts.json` ledger are tracked. The `.cts` tool entrypoints run the existing ESM generators through one synchronous Node module graph, which keeps the workspace's CommonJS packages compatible with Three's ESM-backed entry on Node 22. `tsconfig.manor-tools.json` checks that tool dependency closure without adding unrelated browser JavaScript to the production source-lint population.
 
 ## Canonical command routes
 
@@ -29,19 +33,18 @@ The executable command keys live in `package.json`; this table accounts for ever
 
 | Script | Command route | Purpose or procedure |
 | --- | --- | --- |
-| `build` | `npm run build` | Compatibility alias for the compile route. |
+| `build` | `npm run build` | Compile the current source and explicitly generated manor artifacts; follow [Compilation](.agents/skills/source-authoring/compilation.md). |
 | `building:report` | `npm run building:report` | Building measurements; follow [Measurements](.agents/skills/review-verification/measurements.md). |
-| `book` | `npm run book -- --layer <layer> --title <title>` | Ignored reader edition; follow [Production lifecycle](.agents/skills/production-lifecycle/index.md#working-memory-and-reader-editions). |
+| `book` | `npm run book -- --layer <layer> --pass <construction|final> --title <title>` | Ignored reader edition; follow [Production lifecycle](.agents/skills/production-lifecycle/index.md#working-memory-and-reader-editions). |
 | `capture:doctor` | `npm run capture:doctor` | Verify the installed capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `capture:install` | `npm run capture:install` | Install the project capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `compile` | `npm run compile` | Materialize compiler-owned output; follow [Compilation](.agents/skills/source-authoring/compilation.md). |
 | `contracts:migrate` | `npm run contracts:migrate -- --dry-run` or `npm run contracts:migrate` | Plan the shared-contract baseline change before applying its conflict-free actions. |
 | `derive:example` | `npm run derive:example` | Run the non-production derivation specimen; follow [Ownership](.agents/skills/source-authoring/ownership.md). |
+| `derive:manor` | `npm run derive:manor` | Regenerate the manor instance and environment artifacts from their declared source inputs. |
 | `design` | `npm run design` | Emit reviewed design records; follow [Source authoring](.agents/skills/source-authoring/index.md). |
 | `external:inspect` | `npm run external:inspect -- <project-path> --profile <profile>` | Inspect external model or motion facts; follow [Models and motions](.agents/skills/source-authoring/models-and-motions.md). |
 | `format` | `npm run format` | Apply the configured source formatter. |
 | `inspect` | `npm run inspect -- --shot <id> --subject <kind:id>` | Inspect one compiled subject; follow [Inspection](.agents/skills/review-verification/inspection.md). |
-| `library:review` | `npm run library:review -- <action> [options]` | Use `inspect`, `plan`, or `record`; follow [Production review](.agents/skills/review-verification/review.md). |
 | `lint` | `npm run lint [-- --scope <scope>]` | Run source and graph lint at `design`, `source`, `review`, or `final` scope; follow [Evidence staging](.agents/skills/evidence-graph/staging.md). |
 | `lint:source` | `npm run lint:source` | Type-check governed source and run registered lint contributors. |
 | `preview` | `npm run preview -- --shot <id> --time <seconds> --pass <pass>` | Capture a current shot frame; follow [Capture](.agents/skills/review-verification/capture.md). |
@@ -54,6 +57,7 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate delivery index links; follow [Scripts](.agents/skills/production-lifecycle/scripts.md) and [Screenplays](.agents/skills/production-lifecycle/screenplays.md). |
 | `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `verify` | `npm run verify` | Reopen and verify final generated, render, and delivery evidence; follow [Production review](.agents/skills/review-verification/review.md). |
+| `verify:manor-openings` | `npm run verify:manor-openings` | Compare opening states and placements with current source, including unknown-state and missing-fill refusals. |
 | `viewer` | `npm run viewer` | Keep the compiled viewer open while source changes recompile and reload; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
 | `viewer:preview` | `npm run viewer:preview` | Inspect ttsc-emitted current source through a production-owned preview factory; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
 

@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true
+  },
+  "include": [
+    "scripts/deriveManor.cts",
+    "scripts/verifyManorOpenings.cts",
+    "scripts/deriveManorCritical.mjs",
+    "scripts/deriveManorEnvironment.mjs",
+    "scripts/verifyManorOpeningDerivation.mjs"
+  ]
+}
