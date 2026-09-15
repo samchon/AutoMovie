@@ -16,7 +16,6 @@
   "keywords": [
     "automovie",
     "scaffold",
-    "scaffold/.gitignore",
     "template"
   ],
   "author": "Samchon",
@@ -31,6 +30,7 @@
     "README.md",
     "language-contracts",
     "scaffold",
+    "scaffold/.gitignore",
     "src",
     "package.json",
     "LICENSE"
