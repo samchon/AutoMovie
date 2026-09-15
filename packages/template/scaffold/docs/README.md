@@ -6,7 +6,7 @@ The [contract-target procedure](../.agents/skills/evidence-graph/contract-target
 
 | Path | Physical owner |
 | --- | --- |
-| `discovery`, `upstream`, `principles`, `obligations` | Scaffold-supplied reusable contract targets. |
+| `discovery`, `naturalness`, `upstream`, `principles`, `obligations` | Scaffold-supplied reusable contract targets. Naturalness applies only to dialogue, narration, and audience-read language in final screenplays; mechanical description remains construction text. |
 | `language` | The one creation-selected language contract module. |
 | `contracts` | Flat production-specific targets and the optional no-result index. |
 | `accounts` | Optional aggregate H2 owners for shared and production-local obligations. |
@@ -21,7 +21,8 @@ The [contract-target procedure](../.agents/skills/evidence-graph/contract-target
 | `systems` | Coupled lighting, environment, effects, simulation, sound, services, and other processes. |
 | `treatments` | Film treatment units. |
 | `scripts` | Film script delivery units. |
-| `screenplays` | Film screenplay delivery units. |
+| `screenplays` | Complete film screenplay construction units that settle audience-visible and audible content. |
+| `final/screenplays` | Expression-only final screenplay units, mirroring reviewed construction identity exactly. |
 | `briefs` | Direct-brief delivery, shot, and observation units. |
 
 Reviewed delivery configuration is emitted from governed source into the production design record rather than authored as another document tree. `repaintSelectionReviews.ts` is the one tracked observation file outside `docs` and `src`; it records candidate observations, not production decisions.

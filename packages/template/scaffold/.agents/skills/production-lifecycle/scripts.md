@@ -8,7 +8,7 @@ Settle the complete delivery partition before writing any script body. Writing t
 
 Author a partition map that lists every delivery-group directory and H1 title, every script filename and H1 title beneath it, the ordered H2/H3/H4 identities inside each file, and every treatment H2 each script unit realizes. A treatment event may run across several script units and one script unit may braid several treatment events.
 
-After adding, removing, renaming, or reordering a numbered unit, run `npm run toc` to regenerate the managed links in every script and screenplay index. Run `npm run toc -- --check` before advancing evidence; it compares the same canonical bytes without writing and refuses missing, extra, duplicate, mistargeted, or misordered links.
+After adding, removing, renaming, or reordering a numbered unit, run `npm run toc` to regenerate the managed links in every script, construction-screenplay, and existing final-screenplay index. Run `npm run toc -- --check` before advancing evidence; it compares the same canonical bytes without writing and refuses missing, extra, duplicate, mistargeted, or misordered links.
 
 The map must satisfy four conditions before drafting begins:
 
@@ -25,7 +25,7 @@ A script is a **standalone, execution-ready initial script**. It is neither note
 
 When a script unit reads no more concretely than the treatment unit it refines, it has been restated rather than staged. Find the positions, objects, exchanges, and timings the treatment deliberately left to this layer.
 
-For every H4, enact the exact temporal and spatial conditions at the precision this layer owns. Record entry state, participants or active forces, observation range, immediate objective or organizing process, obstruction where applicable, ordered action and reaction, spatial or informational movement, decisive exchange, knowledge change, and exit state. Where the film deliberately replaces ordinary time or place, state the rule that does so instead of leaving the substitution implicit.
+For every H4, enact the exact temporal and spatial conditions at the precision this layer owns. Record entry state, stable participants or active forces and affected parts, inherited and terminal position or orientation relations, target and path relation, ordered contact, support, transfer, clearance, obstruction or release, physical or environmental response, observation range, immediate objective or organizing process, decisive exchange, knowledge change, and exit state. Use production units or bounded relations when magnitude changes the event. This is mechanically executable story blocking; exact camera coordinates, lenses, renderer calls, reusable interpolation curves, geometry construction, and shot-local implementation values remain downstream unless the story result itself fixes a physical relation.
 
 Write every exchange whose wording, tactic, lie, refusal, interruption, or silence changes a choice, knowledge, power, or relationship as actual speaker-separated dialogue, together with the action and response around it. Summarize only incidental speech that changes none of them. A unit that says such an exchange occurs, buries its decisive line inside explanatory prose, or leaves a maker to invent the executable middle fails the common substantive-completion principle regardless of how well it reads.
 
@@ -39,7 +39,7 @@ Treat every script and caption boundary as an integer frame boundary on the one 
 
 Start at `scripts: "draft"` only after treatments are in `review`. Before `evidence`, enact every H4 in order and test physical possibility, timing, resources, settings capabilities, entry and exit continuity, proportional expansion beyond its actual treatment parents, and every consequential action, exchange, knowledge change, or silence. A summary that merely says these occur is not a script.
 
-For the execution-handoff check, hand only the script to a cold reader and require a followable account of every unit as a physical event. Repair every essential execution question that reader would have to invent.
+For the execution-handoff check, hand only the script to a cold reader and require a followable account of every unit as a physical event, including actor, affected part, relation, path, contact order, response, and result wherever applicable. Repair every essential story-level execution question that reader would have to invent without pulling camera or source implementation into the script.
 
 Run [Author process Self-Review](../review-verification/self-review.md) to its clean round before every stage transition and again after any repair.
 

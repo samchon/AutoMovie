@@ -61,7 +61,7 @@ const compareCodeUnits = (left: string, right: string): number =>
   Number(left > right) - Number(left < right);
 
 /**
- * Plan every delivery index in scripts and screenplays from numbered units.
+ * Plan every delivery index in scripts, construction screenplays, and final screenplays from numbered units.
  *
  * @evidence requirements/story/delivery-index.md#story-delivery-index Keeps both delivery indexes linked to their authoritative unit files.
  * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Applies one canonical renderer across every delivery group.
@@ -75,8 +75,15 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
 } => {
   const output = { ...props.files };
   const diagnostics: string[] = [];
-  const deliveryMembers = new Map<"scripts" | "screenplays", Set<string>>();
-  for (const layer of ["scripts", "screenplays"] as const) {
+  const deliveryMembers = new Map<
+    "final/screenplays" | "screenplays" | "scripts",
+    Set<string>
+  >();
+  for (const layer of [
+    "scripts",
+    "screenplays",
+    "final/screenplays",
+  ] as const) {
     const prefix = `docs/${layer}/`;
     const groups = new Set<string>();
     const validMembers = new Set<string>();
@@ -143,6 +150,15 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
         diagnostics.push(
           `Delivery inventory differs between scripts and screenplays at ${relative}.`,
         );
+  const finalScreenplays = deliveryMembers.get("final/screenplays")!;
+  if (screenplays.size !== 0 && finalScreenplays.size !== 0)
+    for (const relative of [
+      ...new Set([...screenplays, ...finalScreenplays]),
+    ].sort(compareCodeUnits))
+      if (screenplays.has(relative) !== finalScreenplays.has(relative))
+        diagnostics.push(
+          `Delivery inventory differs between screenplays and final/screenplays at ${relative}.`,
+        );
   return Object.freeze({
     diagnostics: Object.freeze(diagnostics),
     files: Object.freeze(output),
@@ -165,7 +181,7 @@ export const planAutoMovieDeliveryTocPublication = (props: {
   for (const [relative, source] of Object.entries(props.planned)) {
     if (source === props.current[relative]) continue;
     if (
-      !/^docs\/(?:scripts|screenplays)\/\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\/index\.md$/u.test(
+      !/^docs\/(?:scripts|screenplays|final\/screenplays)\/\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\/index\.md$/u.test(
         relative,
       )
     )

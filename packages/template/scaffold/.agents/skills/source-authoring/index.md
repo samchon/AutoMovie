@@ -10,6 +10,7 @@ Read each applicable sibling in full before acting:
 
 - [Design branches](design-branches.md) separates map, model, space, material, instance, motion, and system ownership.
 - [Models and motions](models-and-motions.md) covers bounded representation, articulation, and deterministic change.
+- [Geometry](geometry.md) owns operation selection, topology and attribute consequences, deterministic explicit meshes, and geometry verification.
 - [Ownership](ownership.md) separates author-, builder-, and renderer-owned bytes.
 - [TypeScript](typescript.md) defines deterministic module shape and typed registration.
 - [Composition](composition.md) arranges repeated production source as a program that emits shots and records.
@@ -22,7 +23,7 @@ Read only the craft that the current source change reaches:
 - [Cinematography](cinematography.md) for shot size, lens, continuity, camera motion, light, and coverage.
 - [Editing](editing.md) for selection, source-time mapping, rhythm, transitions, and cut review.
 - [Motion](motion.md) for actions, poses, timing, contact, expression, and continuity.
-- [Rigging](rigging.md) for silhouettes, hierarchy, pivots, skeletons, controls, and operable openings.
+- [Rigging](rigging.md) for silhouettes, hierarchy, pivots, skeletons, controls, and operable openings; pair it with [Geometry](geometry.md) when triangles or derived attributes change.
 - [Sound](sound.md) for events, dialogue, ambience, spatialization, and mix hierarchy.
 - [Spatial design](spatial-design.md) for plan, circulation, openings, daylight, proportion, exterior/interior agreement, and distinct plan/section/elevation/perspective/traversal judgments.
 

@@ -2,7 +2,9 @@ import {
   AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS,
   createAutoMovieAuthoredDiscoveryReferences,
   createAutoMovieAuthoredPrincipleReferences,
+  createAutoMovieScreenplayNaturalnessReferences,
   selectAutoMovieAuthoredContractFiles,
+  selectAutoMovieScreenplayNaturalnessContractFiles,
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
@@ -11,7 +13,8 @@ import { TestValidator } from "@nestia/e2e";
  *
  * Scenarios:
  * 1. Every technical layer selects its own contract and the common foundation.
- * 2. Only treatments, scripts, and screenplays select prose and language style.
+ * 2. Construction narrative layers select population language duties, while
+ *    screenplay naturalness selects expression rules independently.
  * 3. Film settings select story subjects; other shapes retain their settings role.
  * 4. Research has source principles and common obligations; derived technical
  *    layers also answer inherited-unit principles.
@@ -43,17 +46,30 @@ export const test_evidence_authored_contract_applicability = (): void => {
           `${kind}/${layer} common ${family}`,
           selected[family].includes(`${family}/core/common.md`),
         );
-        for (const style of [
-          `${family}/core/defaults.md`,
-          `language/${family}/common.md`,
-          `${family}/story/narratives.md`,
-        ])
+        for (const style of [`${family}/story/narratives.md`])
           TestValidator.equals(
             `${kind}/${layer} ${style} applicability`,
             selected[family].includes(style),
             narrative,
           );
       }
+      for (const populationRule of [
+        "obligations/core/defaults.md",
+        "language/obligations/common.md",
+      ])
+        TestValidator.equals(
+          `${kind}/${layer} ${populationRule} applicability`,
+          selected.obligations.includes(populationRule),
+          narrative,
+        );
+      TestValidator.predicate(
+        `${kind}/${layer} has no construction naturalness rule`,
+        selected.principles.every(
+          (file) =>
+            !file.startsWith("naturalness/") &&
+            !file.startsWith("language/naturalness/"),
+        ),
+      );
       const domain =
         layer === "settings" || layer === "research"
           ? "core"
@@ -148,4 +164,25 @@ export const test_evidence_authored_contract_applicability = (): void => {
           repeated.discovery.length > 0,
       );
     }
+
+  const naturalness = selectAutoMovieScreenplayNaturalnessContractFiles();
+  TestValidator.equals("naturalness file selection", naturalness, [
+    "naturalness/core/common.md",
+    "naturalness/story/screenplays.md",
+    "language/naturalness/screenplays.md",
+  ]);
+  for (const review of [false, true])
+    TestValidator.equals(
+      "naturalness reference policy",
+      createAutoMovieScreenplayNaturalnessReferences(review),
+      naturalness.map((file) => ({
+        type: "markdown",
+        root: "docs",
+        files: [file],
+        symbol: "h2",
+        checklist: true,
+        noEvidenceExclude: true,
+        requireReview: review,
+      })),
+    );
 };

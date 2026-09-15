@@ -46,7 +46,7 @@ Sources: [UNC Writing Center on meaning emerging from fictional form and detail]
 
 ## Treatment boundary {#treatment-boundary}
 
-Across the complete treatment population, settle every essential narrative decision needed to produce matching production-capable scripts. A script may determine spatial execution, second-by-second timing, complete dialogue, and physical blocking, but must not have to invent essential participants or forces, stakes or organizing pressure, order, alternatives where applicable, consequence, or audience effect. Treatments do not choose camera grammar or source construction.
+Across the complete treatment population, settle every essential narrative decision needed to produce matching production-capable scripts, including each consequential physical entry state, causal interaction, and observable state delta. A script may determine spatial execution, second-by-second timing, complete dialogue, and physical blocking, but must not have to invent essential participants or forces, affected subjects or objects, story-relevant physical conditions, stakes or organizing pressure, order, alternatives where applicable, consequence, or audience effect. Treatments do not choose the executable path, contact mechanics, camera grammar, or source construction.
 
 Review question: could a script author stage the complete treatment without inventing essential narrative development, and which treatment sentence already chooses a lower-layer presentation decision?
 

@@ -97,6 +97,7 @@ type AutoMovieAuthoringRoute =
   | ".agents/skills/production-lifecycle/settings.md"
   | ".agents/skills/production-lifecycle/configuration.md"
   | ".agents/skills/production-lifecycle/screenplays.md"
+  | ".agents/skills/production-lifecycle/naturalness.md"
   | ".agents/skills/production-lifecycle/briefs.md"
   | ".agents/skills/source-authoring/index.md"
   | ".agents/skills/source-authoring/design-branches.md"
@@ -115,6 +116,7 @@ const ROUTE_REGISTRY = {
   ".agents/skills/production-lifecycle/settings.md": true,
   ".agents/skills/production-lifecycle/configuration.md": true,
   ".agents/skills/production-lifecycle/screenplays.md": true,
+  ".agents/skills/production-lifecycle/naturalness.md": true,
   ".agents/skills/production-lifecycle/briefs.md": true,
   ".agents/skills/source-authoring/index.md": true,
   ".agents/skills/source-authoring/design-branches.md": true,
@@ -419,12 +421,12 @@ const timedRows = (
   kind: "film" | "brief",
 ): IAutoMovieAuthoringReachabilityRow[] => [
   applicable(kind, "film-sources", {
-    owner: kind === "film" ? "docs/screenplays" : "docs/briefs",
+    owner: kind === "film" ? "docs/final/screenplays" : "docs/briefs",
     serializer: "src/shots/**/*.ts and src/film.ts",
     consumer: "AutoMovieProductionBuilder edit assembly",
     route:
       kind === "film"
-        ? ".agents/skills/production-lifecycle/screenplays.md"
+        ? ".agents/skills/production-lifecycle/naturalness.md"
         : ".agents/skills/production-lifecycle/briefs.md",
   }),
   applicable(kind, "acceptance", {

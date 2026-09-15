@@ -1,6 +1,6 @@
 # {{name}}
 
-This is a coding-agent-first AutoMovie production repository. Author production facts, documents, source, assets, and the screenplay index as ordinary tracked files; emit derived design records from reviewed source. AutoMovie owns deterministic generated output, render state, receipts, and review freshness.
+This is a coding-agent-first AutoMovie production repository. Author production facts, construction and final screenplay documents, source, assets, and delivery indexes as ordinary tracked files; emit derived design records from reviewed source. AutoMovie owns deterministic generated output, render state, receipts, and review freshness.
 
 ## Authoring routes
 
@@ -51,7 +51,7 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `routes` | `npm run routes -- <kind>` | Inspect supported capability ownership for `film`, `brief`, or `library`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
 | `sync` | `npm run sync` | Replace generated instructions and synchronize owned local reference-client entries; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
 | `texture:scale` | `npm run texture:scale` | Measure bound texture scale; follow [Measurements](.agents/skills/review-verification/measurements.md). |
-| `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate delivery index links; follow [Scripts](.agents/skills/production-lifecycle/scripts.md) and [Screenplays](.agents/skills/production-lifecycle/screenplays.md). |
+| `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate script, construction-screenplay, and final-screenplay delivery indexes; follow [Scripts](.agents/skills/production-lifecycle/scripts.md), [Screenplays](.agents/skills/production-lifecycle/screenplays.md), and [Naturalness](.agents/skills/production-lifecycle/naturalness.md). |
 | `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `verify` | `npm run verify` | Reopen and verify final generated, render, and delivery evidence; follow [Production review](.agents/skills/review-verification/review.md). |
 | `viewer` | `npm run viewer` | Keep the compiled viewer open while source changes recompile and reload; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |

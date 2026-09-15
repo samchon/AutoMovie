@@ -21,14 +21,14 @@
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry 기본 형상과 자유 형상을 같은 자산 구성 안에서 사용할 수 있어야 한다. -->
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions 실제 치수와 좌표 기준을 명시해야 한다. -->
 
-기하 입력은 기본 형상 또는 자유 형상의 source facts, 실제 단위의 치수, 좌표계와 원점, 정점·곡선·면 또는 volume의 관계, 방향과 winding, 표면 영역 역할을 포함한다. 서로 다른 좌표계나 단위의 입력을 합칠 때는 각 source frame과 목적 frame, 변환 순서와 결과 오차를 명시한다.
+기하 입력은 기본 형상 또는 자유 형상의 source facts, 실제 단위의 치수, 좌표계와 원점, 정점·곡선·면 또는 volume의 관계, 방향과 winding, 표면 영역 역할을 포함한다. 기본 형상은 이름 있는 작은 매개변수 recipe이고, explicit mesh는 외부 입력, engine bake 또는 이름 있는 ordinary source 함수가 검토된 식과 입력에서 결정론적으로 생성한 triangle data다. Agent가 불투명한 대량 배열을 직접 전사한 값은 저작 입력으로 인정하지 않는다. 서로 다른 좌표계나 단위의 입력을 합칠 때는 각 source frame과 목적 frame, 변환 순서와 결과 오차를 명시한다.
 
 ### 조합 연산과 위상 불변식 {#asset-spec-geometry-operations-topology}
 
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations 기하 연산을 재사용 가능한 순서로 조합할 수 있어야 한다. -->
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology 위상과 표면 역할이 후속 편집과 검증에서 유지되어야 한다. -->
 
-생성, 변환, 결합, 분할, 절단, 반복, 변형과 재표본화는 입력 revision과 매개변수 순서를 가진 연산 계보로 기록한다. 연산 출력은 유효한 좌표, 면 연결, 방향, 표면 역할과 필요한 seam을 유지하고, 역할이 합쳐지거나 나뉘면 이전 영역에서 새 영역으로의 대응을 남긴다.
+생성, 변환, 결합, 분할, 절단, 반복, 변형과 재표본화는 입력 revision과 매개변수 순서를 가진 연산 계보로 기록한다. 각 연산 계약은 position·index 수, winding, connected component, 열린·닫힌 경계, non-manifold edge, normal, UV, skin, 안정된 part·material range와 bound를 어떻게 보존·변환·재생성·생략·거부하는지 밝힌다. 연산 출력은 유효한 좌표, 면 연결, 방향, 표면 역할과 필요한 seam을 유지하고, 역할이 합쳐지거나 나뉘면 이전 영역에서 새 영역으로의 대응을 남긴다. 여러 mesh를 이어 붙이는 결합은 Boolean union으로 해석하지 않으며, 교차하는 closed solid의 내부 면을 제거하거나 manifold를 만든다고 주장하지 않는다.
 
 ### 재료와 texture 관계 {#asset-spec-material-texture-relations}
 

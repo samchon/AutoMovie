@@ -10,7 +10,7 @@ Select the production kind and settle complete settings before downstream work. 
 
 Apply this procedure without subject-matter shortcuts. Historical, biographical, familiar, externally documented, or technically standardized material still needs explicit project canon, selected design owners, source realization, and current review. External knowledge supports an owner; it never replaces one.
 
-Do not partition one authored layer into release and non-release populations. Treatments own the complete narrative-event population without delivery groups, scripts own the complete delivery partition, and screenplays preserve it. A library branch likewise owns the complete declared reusable subject. Population narrowing exists only through the explicit pilot mode and its synchronized reset.
+Do not partition one authored layer into release and non-release populations. Treatments own the complete narrative-event population without delivery groups, scripts own the complete delivery partition, construction screenplays preserve it, and final screenplays mirror it without changing content. A library branch likewise owns the complete declared reusable subject. Population narrowing exists only through the explicit pilot mode and its synchronized reset.
 
 Record authorship and assistance truthfully in Git history and durable source provenance where the production contract calls for it. Do not move process history into current canon, attribute generated output as human observation, or treat tool assistance as authority for a production fact.
 
@@ -46,7 +46,7 @@ Read each applicable sibling document in full before acting:
 - [Vertical-slice pilot](pilot.md) proves one truthful film or library slice at full contract strength before expansion.
 - [Research](research.md) owns the optional external-source ledger and its downstream use.
 - [Settings](settings.md) owns delivery, canon, subjects, capabilities, constraints, and shared conventions.
-- [Treatments](treatments.md), [scripts](scripts.md), and [screenplays](screenplays.md) own the film-only refinement ladder.
+- [Treatments](treatments.md), [scripts](scripts.md), and [screenplay construction](screenplays.md) own the film-only content and mechanical-description ladder; [screenplay naturalness](naturalness.md) owns only the final dialogue, narration, and audience-read language pass.
 - [Direct briefs](briefs.md) owns bounded audiovisual delivery that needs no independent narrative ladder.
 - [Production delivery decisions](configuration.md) explains the delivery, repaint, dialogue, and simulation fields of the design record; read it before source authorship.
 - [Upstream revision](upstream-revision.md) repairs the earliest parent exposed by a child and preserves the child until coherent resumption.
@@ -55,7 +55,7 @@ Map, model, space, material, instance, motion, and system design plus TypeScript
 
 ## Ownership and consequence
 
-Research owns external source identity, used portion, authority, uncertainty, and affected production decisions. Settings owns production facts, identities, capabilities, limits, access, units, and delivery conditions. Treatments own detailed narrative development, scripts own executable physical progression and consequential exchange, screenplays own the final visible and audible audience contract, and briefs own one bounded delivery/shot/observation hierarchy.
+Research owns external source identity, used portion, authority, uncertainty, and affected production decisions. Settings owns production facts, identities, capabilities, limits, access, units, and delivery conditions. Treatments own detailed narrative development, scripts own executable physical progression and consequential exchange, construction screenplays own complete visible and audible audience content, final screenplays own expression only, and briefs own one bounded delivery/shot/observation hierarchy.
 
 Correct the earliest owner when a later layer exposes a defect, propagate the consequence, and renew every affected review. Every subject a later layer stages, animates, voices, or observes has a settings owner before that use, including extras, crowds, machines, and institutions. Backcast the literal cast after every downstream draft or revision.
 
@@ -63,7 +63,7 @@ Correct the earliest owner when a later layer exposes a defect, propagate the co
 
 Use the ignored `.wiki/` for local ideas, research, questions, and continuity aids. Nothing there binds the production; promote every retained fact or decision into its canonical `docs` owner and never commit `.wiki`.
 
-Run `npm run book -- --layer <layer> --title <title>` for a deterministic reader-facing Markdown edition. The command writes only beneath ignored `artifacts`, removes evidence comments and citation anchors, preserves visible prose and headings, and never edits authored documents.
+Run `npm run book -- --layer <layer> --pass <construction|final> --title <title>` for a deterministic reader-facing Markdown edition. Screenplays default to `final`; other layers default to `construction`. The command writes only beneath ignored `artifacts`, removes evidence comments and citation anchors, preserves visible prose and headings, and never edits authored documents.
 
 ## Handoff
 

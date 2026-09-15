@@ -61,6 +61,13 @@ export const test_cli_project_maintenance_integration = (): void => {
     state.harness.read("a.md"),
   );
   TestValidator.equals("absence remains explicit", changes[1]!.before, null);
+  TestValidator.equals(
+    "an already absent retired target requires no physical transition",
+    planAutoMoviePhysicalMaintenanceChanges(state.observation, {
+      "new.md": null,
+    }),
+    [],
+  );
   const result = publishAutoMovieProjectMaintenance({
     observation: state.observation,
     kind: "toc",

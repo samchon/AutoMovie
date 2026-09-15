@@ -104,7 +104,13 @@ const sharedTargetIdentities = (assetRoot: string): ReservedTarget[] => {
       }
     }
   };
-  for (const family of ["discovery", "obligations", "principles", "upstream"])
+  for (const family of [
+    "discovery",
+    "naturalness",
+    "obligations",
+    "principles",
+    "upstream",
+  ])
     visit(path.join(docs, family));
   return output;
 };

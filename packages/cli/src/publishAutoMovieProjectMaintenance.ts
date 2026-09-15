@@ -22,29 +22,37 @@ export const planAutoMoviePhysicalMaintenanceChanges = (
   observation: IAutoMovieMaintenanceObservation,
   successors: Readonly<Record<string, string | null>>,
 ): IAutoMovieMaintenanceChange[] =>
-  Object.entries(successors).map(([relative, after]) => {
-    if (!Object.hasOwn(observation.files, relative))
-      throw new Error(`Maintenance target was not observed: ${relative}.`);
-    const snapshot = observation.files[relative]!;
-    const descriptor = observation.descriptors[relative];
-    const source = observation.sources[relative];
-    if (snapshot === null) {
-      if (descriptor !== null || source !== undefined)
+  Object.entries(successors).flatMap<IAutoMovieMaintenanceChange>(
+    ([relative, after]) => {
+      if (!Object.hasOwn(observation.files, relative))
+        throw new Error(`Maintenance target was not observed: ${relative}.`);
+      const snapshot = observation.files[relative]!;
+      const descriptor = observation.descriptors[relative];
+      const source = observation.sources[relative];
+      if (snapshot === null) {
+        if (descriptor !== null || source !== undefined)
+          throw new Error(
+            `Maintenance absence has inconsistent authority: ${relative}.`,
+          );
+        return after === null ? [] : [{ path: relative, before: null, after }];
+      }
+      if (
+        descriptor === null ||
+        descriptor === undefined ||
+        source === undefined
+      )
         throw new Error(
-          `Maintenance absence has inconsistent authority: ${relative}.`,
+          `Maintenance predecessor lacks descriptor bytes: ${relative}.`,
         );
-      return { path: relative, before: null, after };
-    }
-    if (descriptor === null || descriptor === undefined || source === undefined)
-      throw new Error(
-        `Maintenance predecessor lacks descriptor bytes: ${relative}.`,
-      );
-    return {
-      path: relative,
-      before: autoMovieMaintenanceFileFromSnapshot(descriptor, source),
-      after,
-    };
-  });
+      return [
+        {
+          path: relative,
+          before: autoMovieMaintenanceFileFromSnapshot(descriptor, source),
+          after,
+        },
+      ];
+    },
+  );
 
 /**
  * Resume only the explicitly requested maintenance kind, never during dry-run.

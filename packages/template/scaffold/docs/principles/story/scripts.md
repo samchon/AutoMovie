@@ -36,9 +36,11 @@ Sources: [Zacks and colleagues on event boundaries](https://pmc.ncbi.nlm.nih.gov
 
 ## Executable progression {#executable-progression}
 
-Every H2, H3, and H4 orders its complete progression through concrete actions, reactions, movements, and processes whose time and causal relations are legible. An H2 or H3 organizes the actual descendants that perform that progression rather than replacing them with direct summary. Where an objective operates, name who attempts what, the available resistance or limit, and the response. Observation, ritual, montage, environment, and non-human process need no artificial conflict, but still state what changes in what order. Movement, objects, resources, environment, bodily or mechanical limits, and required time obey settings.
+Every H2, H3, and H4 orders its complete progression through concrete actions, reactions, movements, and processes whose time and causal relations are legible. At the resolution required to enact the beat, identify the stable subject and affected part, its inherited and terminal position or orientation relation, the target and path relation, ordered contact, support, transfer, clearance, obstruction or release, the object or environmental response, and the physical result. Use production units or bounded relations when their magnitude changes the event. An H2 or H3 organizes the actual descendants that perform that progression rather than replacing them with direct summary. Where an objective operates, name who attempts what, the available resistance or limit, and the response. Observation, ritual, montage, environment, and non-human process need no artificial conflict, but still state what changes in what order. Movement, objects, resources, environment, bodily or mechanical limits, and required time obey settings.
 
-Review question: could every action in this unit and its descendants be enacted with existing settings capabilities without another physical or production decision?
+This is mechanically executable story blocking, not source implementation. Exact camera coordinates, lenses, renderer calls, reusable interpolation curves, geometry construction, and shot-local values remain with their downstream owners unless the story result itself requires a fixed physical relation.
+
+Review question: could every action in this unit and its descendants be enacted with existing settings capabilities and unambiguous physical actors, parts, relations, contacts, order, and result without another story-level blocking decision?
 
 This item owns action order inside one scene. Narrative unit connection owns relations between scenes, model design owns representation interfaces, and motion design owns reusable interpolation paths.
 

@@ -43,6 +43,7 @@ import {
   createAutoMovieAuthoredDiscoveryReferences,
   createAutoMovieAuthoredFileClaims,
   createAutoMovieAuthoredPrincipleReferences,
+  createAutoMovieScreenplayNaturalnessReferences,
   selectAutoMovieAuthoredContractFiles,
 } from "./selectAutoMovieAuthoredContractFiles";
 import {
@@ -79,6 +80,22 @@ export type AutoMovieEvidenceStage =
 
 type ProductionKind = AutoMovieProductionKind;
 type Stage = AutoMovieEvidenceStage;
+
+/**
+ * Independent audience-language revision stages for a finished film script.
+ *
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes final screenplay revision visible independently from construction.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed screenplay naturalness stage map.
+ */
+export interface IAutoMovieNaturalnessStages {
+  /**
+   * Final-screenplay revision under `docs/final/screenplays`.
+   *
+   * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Exposes the final screenplay stage in the sole project declaration.
+   * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Supplies the stage that gates final screenplay claims and shot authorship.
+   */
+  screenplays: Stage;
+}
 
 /**
  * One generated project's complete evidence-graph declaration.
@@ -119,8 +136,10 @@ export interface IAutoMovieEvidenceConfigProps {
   treatments: Stage;
   /** Film-only physical scene-progression script stage. */
   scripts: Stage;
-  /** Film-only final audiovisual screenplay stage. */
+  /** Film-only complete audiovisual screenplay construction stage. */
   screenplays: Stage;
+  /** Film-only expression revision, independent from screenplay construction. */
+  naturalness: IAutoMovieNaturalnessStages;
   /** Brief-only bounded audiovisual contract stage. */
   briefs: Stage;
   /** TypeScript model construction-source stage. */
@@ -151,9 +170,15 @@ type IProductionGraph = IAutoMovieEvidenceConfigProps;
 
 type MarkdownLayer = AutoMovieAuthoredDocumentLayer;
 type SourceLayer = AutoMovieSourceRealizationBranch;
-type EvidenceBranch = MarkdownLayer | SourceLayer;
+type RevisionLayer = "screenplayNaturalness";
+type EvidenceBranch = MarkdownLayer | RevisionLayer | SourceLayer;
 type ContractDomain = "core" | "delivery" | "design" | "story";
-type ContractFamily = "discovery" | "obligations" | "principles" | "upstream";
+type ContractFamily =
+  | "discovery"
+  | "naturalness"
+  | "obligations"
+  | "principles"
+  | "upstream";
 type ContractRelationship =
   | "checklist"
   | "distributed-coverage"
@@ -259,7 +284,7 @@ const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
 /**
  * Where the shared contracts actually live.
  *
- * `@automovie/template` ships discovery, upstream, obligation, and principle
+ * `@automovie/template` ships discovery, naturalness, upstream, obligation, and principle
  * contracts under their physical `family/domain/file` addresses inside the
  * generated project. The scaffold copies the complete inventory verbatim, so
  * graph lint, instruction sync, and a standalone generated consumer all resolve
@@ -268,6 +293,10 @@ const CONTRACT_INDEX = `${CONTRACTS}/index.md`;
  * missing or locally divergent file is therefore a concrete graph failure.
  */
 const sharedDocsRoot = (_location: string): string => DOCS;
+const revisionStage = (graph: IProductionGraph): Stage =>
+  graph.naturalness?.screenplays;
+const stageOf = (graph: IProductionGraph, branch: EvidenceBranch): Stage =>
+  branch === "screenplayNaturalness" ? revisionStage(graph) : graph[branch];
 const MARKDOWN: Record<MarkdownLayer, IMarkdownPopulation> = {
   settings: { headings: [2], obligation: true },
   research: { headings: [2], obligation: true },
@@ -676,17 +705,6 @@ const EXPECTED_CONTRACTS = [
   },
   {
     domain: "core",
-    file: "principles/core/defaults.md",
-    anchors: [
-      "purposeful-enumeration",
-      "earned-significance",
-      "responsive-qualification",
-      "functional-formatting",
-      "contrastive-definition",
-    ],
-  },
-  {
-    domain: "core",
     file: "principles/core/source-units.md",
     anchors: ["source-scope-preservation", "source-substantive-completion"],
   },
@@ -849,6 +867,7 @@ const EXPECTED_CONTRACTS = [
     anchors: [
       "screenplay-blocks",
       "filmable-expression",
+      "mechanical-audiovisual-description",
       "audiovisual-voice",
       "block-continuity",
       "audience-access",
@@ -1039,6 +1058,19 @@ const EXPECTED_CONTRACTS = [
     file: "upstream/story/treatments.md",
     anchors: ["settings-revision-from-treatment-work"],
   },
+  {
+    domain: "core",
+    file: "naturalness/core/common.md",
+    anchors: ["naturalness-earned-element", "naturalness-performed-whole"],
+  },
+  {
+    domain: "story",
+    file: "naturalness/story/screenplays.md",
+    anchors: [
+      "naturalness-scene-pressure",
+      "naturalness-spoken-narrated-yield",
+    ],
+  },
 ] as const;
 
 type ExpectedContract = (typeof EXPECTED_CONTRACTS)[number];
@@ -1181,6 +1213,7 @@ const isUnrenderedScaffoldDeclaration = (graph: IProductionGraph): boolean =>
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
     ...(Object.keys(SOURCES) as SourceLayer[]),
   ].every((name) => graph[name] === "disabled") &&
+  revisionStage(graph) === "disabled" &&
   !fs.existsSync(path.join(graph.location, DOCS, "language"));
 
 const validateDeclaration = (graph: IProductionGraph): void => {
@@ -1213,6 +1246,14 @@ const validateDeclaration = (graph: IProductionGraph): void => {
       `Unsupported production language ${describeDeclarationValue(graph.language)}.`,
     );
   validatePopulationScope(graph);
+  if (
+    graph.naturalness === null ||
+    typeof graph.naturalness !== "object" ||
+    Array.isArray(graph.naturalness)
+  )
+    throw new Error(
+      `Production evidence naturalness must be an explicit stage map; received ${describeDeclarationValue(graph.naturalness)}.`,
+    );
   for (const name of [
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
     ...(Object.keys(SOURCES) as SourceLayer[]),
@@ -1223,6 +1264,10 @@ const validateDeclaration = (graph: IProductionGraph): void => {
         `${name} has unsupported evidence stage ${describeDeclarationValue(stage)}.`,
       );
   }
+  if (!EVIDENCE_STAGES.includes(revisionStage(graph)))
+    throw new Error(
+      `screenplayNaturalness has unsupported evidence stage ${describeDeclarationValue(revisionStage(graph))}.`,
+    );
   if (graph.claims !== undefined && !Array.isArray(graph.claims))
     throw new Error(
       "Production evidence claims must be an array when present.",
@@ -1727,6 +1772,7 @@ const validateContracts = (
   const root = path.resolve(location, sharedDocsRoot(location));
   const actual = [
     ...walkFiles(path.join(root, "discovery"), ".md"),
+    ...walkFiles(path.join(root, "naturalness"), ".md"),
     ...walkFiles(path.join(root, "obligations"), ".md"),
     ...walkFiles(path.join(root, "principles"), ".md"),
     ...walkFiles(path.join(root, "upstream"), ".md"),
@@ -1790,8 +1836,14 @@ const validateContracts = (
 
 /** Validate exact routing metadata for the shared rules whose timing is binding. */
 const validateStructuredSharedRules = (root: string): void => {
+  const naturalness = readAutoMovieContractRules(
+    path.join(root, "naturalness"),
+    {
+      requireEveryH2In: ["core/common.md", "story/screenplays.md"],
+    },
+  );
   const principles = readAutoMovieContractRules(path.join(root, "principles"), {
-    requireEveryH2In: ["core/defaults.md"],
+    requireEveryH2In: [],
   });
   const obligations = readAutoMovieContractRules(
     path.join(root, "obligations"),
@@ -1800,17 +1852,16 @@ const validateStructuredSharedRules = (root: string): void => {
     },
   );
   const expected = new Map<string, string>([
-    ["sh-purposeful-enumeration", "composition-safe"],
-    ["sh-earned-significance", "composition-safe"],
-    ["sh-responsive-qualification", "composition-safe"],
-    ["sh-functional-formatting", "composition-safe"],
-    ["sh-material-contrast", "composition-safe"],
+    ["naturalness-earned-element", "revision-only"],
+    ["naturalness-performed-whole", "revision-only"],
+    ["naturalness-scene-pressure", "revision-only"],
+    ["naturalness-spoken-narrated-yield", "revision-only"],
     ["sh-closing-line-contribution", "composition-safe"],
     ["sh-recurrent-frame-distribution", "post-draft-frequency"],
     ["sh-surface-cadence-distribution", "population-distribution"],
   ]);
   const received = new Map(
-    [...principles, ...obligations].map((rule) => [
+    [...naturalness, ...principles, ...obligations].map((rule) => [
       rule.metadata.id,
       rule.metadata.safeApplication,
     ]),
@@ -1830,8 +1881,8 @@ const validateLanguageContract = (
   const languageRoot = path.join(root, "language");
   const expectedFiles = [
     "discovery/signals.md",
+    "naturalness/screenplays.md",
     "obligations/common.md",
-    "principles/common.md",
   ];
   const actualFiles = walkFiles(languageRoot, ".md")
     .map((file) => posix(path.relative(languageRoot, file)))
@@ -1854,9 +1905,9 @@ const validateLanguageContract = (
       language === "english"
         ? "english-idiomatic-relation"
         : `${language}-contextual-relation`,
-      "composition-safe",
+      "revision-only",
     ],
-    [`${language}-register-ownership`, "composition-safe"],
+    [`${language}-register-ownership`, "revision-only"],
   ] as const;
   const rules = readAutoMovieContractRules(languageRoot, {
     requireEveryH2In: expectedFiles,
@@ -2055,9 +2106,11 @@ const validateProductionTargets = (
     "accounts",
     "discovery",
     "language",
+    "naturalness",
     "obligations",
     "principles",
     "upstream",
+    "final",
     ...Object.keys(MARKDOWN),
   ]);
   const targets = walkProjectFiles(graph, root, ".md")
@@ -2247,6 +2300,7 @@ const requireReviewedFoundations = (graph: IProductionGraph): void => {
 const validateStages = (graph: IProductionGraph): void => {
   const stages = [
     ...Object.keys(MARKDOWN).map((name) => graph[name as MarkdownLayer]),
+    revisionStage(graph),
     ...Object.keys(SOURCES).map((name) => graph[name as SourceLayer]),
   ];
   if (graph.kind === null) {
@@ -2265,6 +2319,10 @@ const validateStages = (graph: IProductionGraph): void => {
     )
       throw new Error(
         "A film complete-production-reset requires treatments, scripts, and screenplays to reset together to draft.",
+      );
+    if (graph.kind === "film" && revisionStage(graph) !== "disabled")
+      throw new Error(
+        "A film complete-production-reset disables screenplay naturalness and removes its final hosts until construction is reviewed again.",
       );
     if (graph.kind === "library") {
       const hasResetPair = (Object.keys(SOURCES) as SourceLayer[]).some(
@@ -2291,10 +2349,15 @@ const validateStages = (graph: IProductionGraph): void => {
     throw new Error("A film cannot activate the direct-brief layer.");
   if (
     graph.kind === "brief" &&
-    [graph.treatments, graph.scripts, graph.screenplays].some(isActive)
+    [
+      graph.treatments,
+      graph.scripts,
+      graph.screenplays,
+      revisionStage(graph),
+    ].some(isActive)
   )
     throw new Error(
-      "A brief cannot activate treatments, scripts, or screenplays; choose film when narrative refinement is required.",
+      "A brief cannot activate treatments, scripts, screenplays, or screenplay naturalness; choose film when narrative refinement is required.",
     );
   if (
     graph.kind === "library" &&
@@ -2302,13 +2365,14 @@ const validateStages = (graph: IProductionGraph): void => {
       graph.treatments,
       graph.scripts,
       graph.screenplays,
+      revisionStage(graph),
       graph.briefs,
       graph.shots,
       graph.filmSources,
     ].some(isActive)
   )
     throw new Error(
-      "A library cannot activate narrative, brief, shot, or film-source layers.",
+      "A library cannot activate narrative, screenplay-naturalness, brief, shot, or film-source layers.",
     );
 
   if (isActive(graph.research))
@@ -2346,6 +2410,12 @@ const validateStages = (graph: IProductionGraph): void => {
       graph.scripts,
     );
   }
+  requireReviewedParent(
+    "screenplay naturalness",
+    revisionStage(graph),
+    "screenplays",
+    graph.screenplays,
+  );
 
   for (const name of Object.keys(SOURCES) as SourceLayer[]) {
     const design = SOURCES[name].design;
@@ -2367,8 +2437,14 @@ const validateStages = (graph: IProductionGraph): void => {
     graph.settings,
   );
   if (isActive(graph.shots)) {
-    const parent = graph.kind === "film" ? "screenplays" : "briefs";
-    requireReviewedParent("shots", graph.shots, parent, graph[parent]);
+    if (graph.kind === "film")
+      requireReviewedParent(
+        "shots",
+        graph.shots,
+        "screenplay naturalness",
+        revisionStage(graph),
+      );
+    else requireReviewedParent("shots", graph.shots, "briefs", graph.briefs);
     for (const name of Object.keys(SOURCES) as SourceLayer[]) {
       const design = SOURCES[name].design;
       if (design !== null && isActive(graph[design]))
@@ -2433,6 +2509,18 @@ const markdownPopulationFiles = (
         ".md",
       )
     : walkProjectFiles(graph, path.join(graph.location, DOCS, layer), ".md");
+
+/** Final screenplay selectors preserve the construction delivery inventory. */
+const finalScreenplayPopulationFiles = (graph: IProductionGraph): string[] =>
+  authoredPopulationFiles(graph, "screenplays").map((file) => `final/${file}`);
+
+/** Physical final screenplay files in the selected delivery population. */
+const finalScreenplayFiles = (graph: IProductionGraph): string[] =>
+  populationFiles(
+    graph,
+    finalScreenplayPopulationFiles(graph).map((file) => `${DOCS}/${file}`),
+    ".md",
+  );
 
 /**
  * Checks the declared shared and local account population through supplied reads.
@@ -2538,8 +2626,14 @@ const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
       `Treatments are flat numbered event files and may have no group, index, or nested host; received ${invalidTreatments.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
     );
 
-  for (const layer of ["scripts", "screenplays"] as const) {
-    const directory = path.join(graph.location, DOCS, layer);
+  for (const [layer, directory] of [
+    ["scripts", path.join(graph.location, DOCS, "scripts")],
+    ["screenplays", path.join(graph.location, DOCS, "screenplays")],
+    [
+      "final/screenplays",
+      path.join(graph.location, DOCS, "final", "screenplays"),
+    ],
+  ] as const) {
     const residents = walkProjectFiles(graph, directory, ".md");
     const invalid = residents.filter((file) => {
       const parts = posix(path.relative(directory, file)).split("/");
@@ -2594,6 +2688,7 @@ const acceptsResetEvidenceTags = (
   if (graph.populationScope.mode !== "complete-production-reset") return false;
   if (graph.kind === "film")
     return ["treatments", "scripts", "screenplays"].includes(layer);
+  if (layer === "screenplayNaturalness") return false;
   if ((DESIGN_LAYERS as readonly string[]).includes(layer))
     return (Object.keys(SOURCES) as SourceLayer[]).some(
       (source) =>
@@ -2601,9 +2696,10 @@ const acceptsResetEvidenceTags = (
         graph[layer] === "draft" &&
         graph[source] === "draft",
     );
-  const design = SOURCES[layer as SourceLayer].design;
+  const source = layer as SourceLayer;
+  const design = SOURCES[source].design;
   return (
-    design !== null && graph[layer] === "draft" && graph[design] === "draft"
+    design !== null && graph[source] === "draft" && graph[design] === "draft"
   );
 };
 
@@ -2719,6 +2815,86 @@ const validateHosts = (graph: IProductionGraph): void => {
       }
     identities.set(name, layer);
     titles.set(name, layerTitles);
+  }
+
+  const finalStage = revisionStage(graph);
+  const finalRoot = path.join(graph.location, DOCS, "final", "screenplays");
+  const finalResidents = walkProjectFiles(graph, finalRoot, ".md");
+  const selectedFinalFiles = finalScreenplayFiles(graph);
+  if (!isActive(finalStage) && finalResidents.length !== 0)
+    throw new Error(
+      `screenplayNaturalness is disabled but governed hosts remain: ${finalResidents.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
+    );
+  if (isActive(finalStage) && selectedFinalFiles.length === 0)
+    throw new Error(
+      `screenplayNaturalness cannot enter ${finalStage} without a final screenplay host.`,
+    );
+  if (isActive(finalStage)) {
+    const draftIdentities = identities.get("screenplays")!;
+    const draftTitles = titles.get("screenplays")!;
+    const finalRelative = selectedFinalFiles.map((file) =>
+      posix(path.relative(finalRoot, file)),
+    );
+    const draftRelative = [...draftIdentities.keys()];
+    if (
+      finalRelative.length !== draftRelative.length ||
+      finalRelative.some((file, index) => file !== draftRelative[index])
+    )
+      throw new Error(
+        `final screenplay filenames must exactly preserve construction screenplays; received [${finalRelative.join(", ")}], expected [${draftRelative.join(", ")}].`,
+      );
+    const seen = new Set<string>();
+    for (const file of selectedFinalFiles) {
+      const relative = posix(path.relative(finalRoot, file));
+      const source = fs.readFileSync(file, "utf8");
+      if (
+        finalStage === "draft" &&
+        parseAutoMovieEvidenceSyntax({
+          path: posix(path.relative(graph.location, file)),
+          source,
+        }).length !== 0
+      )
+        throw new Error(
+          `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
+        );
+      if (narrativeH1(file) !== draftTitles.get(relative))
+        throw new Error(
+          `final/screenplays/${relative} must exactly preserve the construction screenplay H1 title.`,
+        );
+      const received = markdownIdentities(file, MARKDOWN.screenplays.headings);
+      const expected = draftIdentities.get(relative)!;
+      const signature = (items: readonly IHeadingIdentity[]): string[] =>
+        items.map((item) => `H${item.depth}:${item.lineage}`);
+      const receivedSignature = signature(received);
+      const expectedSignature = signature(expected);
+      if (
+        receivedSignature.length !== expectedSignature.length ||
+        receivedSignature.some(
+          (identity, index) => identity !== expectedSignature[index],
+        )
+      )
+        throw new Error(
+          `final/screenplays/${relative} must exactly preserve construction screenplay identity, nesting, and order; received [${receivedSignature.join(", ")}], expected [${expectedSignature.join(", ")}].`,
+        );
+      for (const unit of received) {
+        if (seen.has(unit.anchor))
+          throw new Error(
+            `final/screenplays repeats #${unit.anchor}; identities are unique across the final layer.`,
+          );
+        seen.add(unit.anchor);
+      }
+    }
+    const groups = new Set(finalRelative.map((file) => file.split("/")[0]!));
+    for (const group of groups)
+      if (
+        narrativeH1(path.join(finalRoot, group, "index.md")) !==
+        narrativeH1(
+          path.join(graph.location, DOCS, "screenplays", group, "index.md"),
+        )
+      )
+        throw new Error(
+          `final/screenplays/${group}/index.md must exactly preserve the construction screenplay delivery-group H1 title.`,
+        );
   }
 
   assertSourceTreeIsClosed(graph);
@@ -2929,6 +3105,22 @@ const lineage = (
   requireReview: review,
 });
 
+/** Exact construction-screenplay counterpart for one final screenplay unit. */
+const screenplayRevisionLineage = (
+  graph: IProductionGraph,
+  symbol: "file" | "h2" | "h3" | "h4",
+  review: boolean,
+): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: DOCS,
+  files: authoredPopulationFiles(graph, "screenplays"),
+  symbol,
+  noEvidenceExclude: true,
+  uniqueEvidence: true,
+  singleEvidencePerSymbol: true,
+  requireReview: review,
+});
+
 const coverage = (
   graph: IProductionGraph,
   review: boolean,
@@ -3054,6 +3246,44 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
     }),
   );
   return claims;
+};
+
+/** Final screenplay lineage and audience-language checklist claims. */
+const screenplayNaturalnessClaims = (
+  graph: IProductionGraph,
+): IBranchClaim[] => {
+  const stage = revisionStage(graph);
+  const review = requiresReview(stage);
+  const files = finalScreenplayPopulationFiles(graph);
+  return [
+    ...branchClaims("screenplayNaturalness", {
+      name: "final screenplay files preserve their construction screenplay lineage",
+      type: "markdown",
+      root: DOCS,
+      files,
+      symbol: "file",
+      disabled: !requiresEvidence(stage),
+      reference: screenplayRevisionLineage(graph, "file", review),
+    }),
+    ...MARKDOWN.screenplays.headings.flatMap((depth) =>
+      branchClaims("screenplayNaturalness", {
+        name: `final screenplay H${depth} units preserve construction identity and answer naturalness checklists`,
+        type: "markdown",
+        root: DOCS,
+        files,
+        symbol: `h${depth}` as "h2" | "h3" | "h4",
+        disabled: !requiresEvidence(stage),
+        reference: [
+          screenplayRevisionLineage(
+            graph,
+            `h${depth}` as "h2" | "h3" | "h4",
+            review,
+          ),
+          ...createAutoMovieScreenplayNaturalnessReferences(review),
+        ],
+      }),
+    ),
+  ];
 };
 
 const sourceObligations = (
@@ -3206,7 +3436,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
           root: DOCS,
           files:
             graph.kind === "film"
-              ? ["screenplays/**/*.md"]
+              ? ["final/screenplays/**/*.md"]
               : ["briefs/**/*.md"],
           symbol: "h3",
           noEvidenceExclude: true,
@@ -3278,7 +3508,7 @@ const sourceClaims = (graph: IProductionGraph): IBranchClaim[] => {
             root: DOCS,
             files:
               graph.kind === "film"
-                ? ["screenplays/**/*.md"]
+                ? ["final/screenplays/**/*.md"]
                 : ["briefs/**/*.md"],
             symbol: "h2",
             noEvidenceExclude: true,
@@ -3305,7 +3535,7 @@ const contractForReference = (
   const file = reference.files[0];
   if (
     file === undefined ||
-    /^language\/(?:discovery|obligations|principles)\/[a-z0-9-]+\.md$/u.test(
+    /^language\/(?:discovery|naturalness|obligations|principles)\/[a-z0-9-]+\.md$/u.test(
       file,
     ) === false
   )
@@ -3326,7 +3556,9 @@ const relationshipOf = (
   contract: ContractReference | undefined,
 ): ContractRelationship => {
   if (contract !== undefined)
-    return ["principles", "upstream"].includes(contractFamily(contract))
+    return ["naturalness", "principles", "upstream"].includes(
+      contractFamily(contract),
+    )
       ? "checklist"
       : "distributed-coverage";
   if (
@@ -3360,8 +3592,9 @@ const validateProductionGraph = (
     const stages = Object.fromEntries(
       [
         ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
+        "screenplayNaturalness" as const,
         ...(Object.keys(SOURCES) as SourceLayer[]),
-      ].map((branch) => [branch, graph[branch]]),
+      ].map((branch) => [branch, stageOf(graph, branch)]),
     );
     validateAutoMoviePopulationTransition({
       kind: graph.kind as "film" | "library",
@@ -3380,6 +3613,7 @@ const validateProductionGraph = (
 
 const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
   ...authoredClaims(graph),
+  ...screenplayNaturalnessClaims(graph),
   ...sourceClaims(graph),
 ];
 
@@ -3498,10 +3732,11 @@ export const createAutoMovieContractBindingManifest = (
   validateProductionGraph(graph);
   const branches = [
     ...(Object.keys(MARKDOWN) as MarkdownLayer[]),
+    "screenplayNaturalness" as const,
     ...(Object.keys(SOURCES) as SourceLayer[]),
   ]
-    .filter((branch) => isActive(graph[branch]))
-    .map((name) => ({ name, stage: graph[name] }));
+    .filter((branch) => isActive(stageOf(graph, branch)))
+    .map((name) => ({ name, stage: stageOf(graph, name) }));
   const active = new Set<EvidenceBranch>(branches.map((branch) => branch.name));
   const bindings: IAutoMovieContractBindingManifest["bindings"][number][] = [];
   for (const binding of sharedClaimBindings(graph)) {
@@ -3525,7 +3760,7 @@ export const createAutoMovieContractBindingManifest = (
         continue;
       bindings.push({
         branch: binding.branch,
-        stage: graph[binding.branch],
+        stage: stageOf(graph, binding.branch),
         enforced: binding.claim.disabled !== true,
         claim: binding.claim.name!,
         relationship: relationshipOf(binding, reference, contract),

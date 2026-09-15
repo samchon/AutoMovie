@@ -2,7 +2,7 @@
 
 **Coding-agent-native deterministic filmmaking.**
 
-AutoMovie lets a user scaffold a production repository and direct a coding agent in natural language. The agent writes screenplay prose, typed design records, TypeScript performances, tests, and assets. AutoMovie compiles and renders those tracked inputs deterministically, then binds visual review and delivery to the exact bytes that were produced.
+AutoMovie lets a user scaffold a production repository and direct a coding agent in natural language. The agent writes settings, treatments, executable scripts, construction and final screenplay prose, typed design records, TypeScript performances, tests, and assets. AutoMovie compiles and renders those tracked inputs deterministically, then binds visual review and delivery to the exact bytes that were produced.
 
 The result is a cheap, controllable, and reproducible alternative to asking a diffusion model to invent an entire video. A fixed asset is performed by agent-authored code and rendered by a deterministic engine, so the same inputs produce the same motion, staging, timing, camera, and media.
 
@@ -12,7 +12,7 @@ See it at [samchon.github.io/AutoMovie](https://samchon.github.io/AutoMovie/): t
 
 AutoMovie is built around one evidence chain:
 
-1. Treatment and screenplay establish stable scenes and dramatic promises.
+1. Settings, treatments, and scripts establish mechanically precise canon, physical state changes, and executable scene action; construction screenplays fix the exact audiovisual realization, while a separate naturalness pass revises only dialogue, narration, and audience-read language.
 2. Typed production, world, model, formation, shot, and acceptance records state the machine-checkable contract.
 3. Agent-owned TypeScript realizes shots with the same public engine that the compiler validates.
 4. Compilation measures geometry, continuity, film grammar, physics advice, and source ownership instead of trusting echoed ids.

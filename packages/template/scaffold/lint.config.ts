@@ -13,12 +13,26 @@ import { fileURLToPath } from "node:url";
  * contract declaration consumed by graph lint, instruction sync, and final
  * production review.
  *
- * Select the production shape, then advance one layer at a time through
- * `draft -> evidence -> review`. A film follows settings, treatments, scripts,
- * screenplays, shots, and film sources; a brief follows settings, briefs,
- * shots, and film sources; a library selects settings and only its delivered
- * design/source pairs. Film and brief also require reviewed productionSources
- * as the parallel serialized input to filmSources.
+ * Select the production shape, then advance one construction layer at a time
+ * through `draft -> evidence -> review`. A film constructs settings,
+ * treatments, scripts, and `docs/screenplays`, then independently revises the
+ * frozen screenplay into `docs/final/screenplays` through the naturalness
+ * stage. Shots and film sources consume only that reviewed final tree. A brief
+ * follows settings, briefs, shots, and film sources. A library selects settings
+ * and any coherent set of delivered design/source pairs.
+ *
+ * The layer list is a responsibility map, not a folder menu. Add, split, merge,
+ * or omit settings files and activate design branches from the production's
+ * actual change owners: a film, one model, a building, and an interior may need
+ * very different populations. Keep each independent requirement in one H2;
+ * use `docs/contracts` only when a work-specific rule recurs across owners.
+ * Never create a branch merely because the scaffold names it.
+ *
+ * Naturalness changes expression only. Missing or wrong story, action,
+ * identity, timing, audiovisual content, or design returns to its construction
+ * owner and propagates forward before a new final revision begins. Film and
+ * brief also require reviewed productionSources as the parallel serialized
+ * input to filmSources.
  */
 export const productionEvidence = {
   ...createBlankAutoMovieProductionEvidence(

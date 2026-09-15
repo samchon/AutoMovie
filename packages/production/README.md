@@ -29,6 +29,10 @@ const status = inspectAutoMovieProduction(
 
 `projectRoot` is a seed rather than an answer. Every entry point walks upward once to the nearest directory carrying both `package.json` and `lint.config.ts`, which is what a generated project already has, and fixes that workspace for the call. Requiring both is what keeps a seed inside an ordinary Node package from resolving to that package; the legacy `automovie/manifest.json` is no longer a marker, because import input is not a shape a current project is asked to carry, and `automovie.config.ts` is no longer one because the delivery decisions it carried moved onto the production design record. `productionId` selects which production inside it; capture also names its production explicitly, so one process can serve two sibling productions without cache pollution.
 
+## Reader editions
+
+`AutoMovieProductionBinder` derives one deterministic Markdown edition from an authored document layer without changing its source. Construction remains the default API pass for compatibility. A final screenplay edition explicitly selects `pass: "final"`, reads `docs/final/screenplays`, and names the output with `final-screenplays`; no other authored layer accepts that pass. The scaffold's `book` command defaults screenplay editions to final while retaining `--pass construction` for diagnosis and comparison.
+
 ## Evidence provenance
 
 Frame capture resolves only ids present in the current builder-owned `manifests/compile.json`, delegates the actual pixels to an `AutoMovieProductionFrameCapture` the project supplies, decodes the PNG, verifies dimensions and visible variance, and atomically commits a content-addressed render bundle and receipt. A turntable runs that same path once per view of the set an asset owes and answers with a per-view ledger, so the views a contract requires and the views that exist cannot drift apart.

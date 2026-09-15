@@ -1,8 +1,8 @@
 # Contract targets
 
-The four shared contract directories and the selected `docs/language` module form the scaffold-owned inventory. Treatments, scripts, and screenplays select language discovery, prose defaults, language style, and narrative principles and obligations. Settings, research, design, and brief layers select their common foundations and specialist contracts. The generated binding inventory reports each layer's exact selection.
+The five shared contract directories and the selected `docs/language` module form the scaffold-owned inventory. Treatment, script, and screenplay construction select language discovery plus their construction principles and obligations. Final screenplays separately select shared and language naturalness. Settings, research, design, and brief layers select their common foundations and specialist contracts. The generated binding inventory reports each pass's exact selection.
 
-`docs/discovery` defines open production-specific searches, `docs/upstream` records what each inheriting unit learned by testing its actual parents, and `docs/principles` defines the no-exclusion checklist every selected authored H2, H3, or H4 answers for itself. `docs/obligations` defines roles fulfilled collectively by relevant authored H2 or source-export owners, with optional aggregate accounts for shared conclusions. [Production-specific contract](work-specific.md) owns additional production rules, and [Evidence staging](staging.md) owns their graph and annotation mechanics.
+`docs/discovery` defines open production-specific searches, `docs/naturalness` defines expression-only final-screenplay checklists, `docs/upstream` records what each inheriting construction unit learned by testing its actual parents, and `docs/principles` defines the no-exclusion checklist every selected construction H2, H3, or H4 answers for itself. `docs/obligations` defines roles fulfilled collectively by relevant construction H2 or source-export owners, with optional aggregate accounts for shared conclusions. [Production-specific contract](work-specific.md) owns additional production rules, and [Evidence staging](staging.md) owns their graph and annotation mechanics.
 
 The production design record is builder-owned JSON, not an evidence-document host. A reviewed settings, research, or design H2 owns each delivery, repaint, dialogue, or simulation decision, the governed source that `scripts/emitDesign.ts` reads is where that decision is written, and `scripts/productionConfiguration.ts` refuses runtime drift, hidden fields, and inconsistent compiled consumers in the emitted record. Do not move ownership into a JSDoc beside the emitted field or add a design record to a Markdown claim population.
 
@@ -19,6 +19,14 @@ Reusable targets must be independent of one production's subject, genre, charact
 Each authored layer selects its common and specialist discovery files. Treatments, scripts, and screenplays also select `language/discovery/signals.md` from the production's chosen language module.
 
 Each discovery H2 owns an open production-specific search whose result cannot be enumerated from the reusable inventory alone. [Production-specific contract](work-specific.md) owns how the author conducts that search and records a retained rule or truthful no-result; [Evidence staging](staging.md) owns the claim population, activation stage, and annotation placement. A discovery target defines the question and does not become a second copy of either procedure.
+
+## Naturalness
+
+Each final screenplay H2, H3, and H4 answers every selected `naturalness/core/common.md`, `naturalness/story/screenplays.md`, and `language/naturalness/screenplays.md` H2 as a no-exclusion checklist. These targets open only after the complete construction screenplay is reviewed and frozen. They judge expression in context and never authorize a new content decision.
+
+Construction principles own semantic and structural adequacy from the first draft. Naturalness owns post-construction wording, cadence, dialogue and sound realization, and performed coherence while preserving content. Population recurrence remains an obligation answered across construction owners. A naturalness finding that requires new story, action, timing, identity, or audiovisual content is routed upstream rather than repaired in final.
+
+One final file and each final unit cite exactly one construction counterpart. The graph and physical validator enforce identical filenames, H1 titles, anchored H2/H3/H4 identities, nesting, and order. Final carries no copied construction checklist, discovery, obligation, or upstream annotation.
 
 ## Upstream revision
 

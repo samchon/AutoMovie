@@ -28,6 +28,8 @@ Before drafting a file, inventory candidate owners and apply `docs/obligations/c
 
 For each resulting owner, settle the applicable boundary, status, operating conditions, authority or access, resources, dependencies, costs, limits, exceptions, present state, and downstream consequences. Those are completion questions rather than mandatory field labels.
 
+For every subject, place, or background the delivery must recognize, apply `principles/core/settings.md#observable-identity` with production-specific visual precision. Describe form, proportions, component relationships, silhouette, surfaces, colors, wear, scale cues, neutral or reference state, multi-angle invariants, and allowed variations deeply enough that model, space, material, motion, and shot authors do not privately invent what the owner looks like. Where reproduction depends on precision, use units or bounded ranges, landmark relations in the production coordinate convention, surface-zone boundaries, change limits, and the applicable front, profile, rear, overhead, or underside evidence. Settings appearance is deliberately mechanical canon rather than literary description. Settings owns recognizable appearance, not polygon topology, construction layers, material response, rig controls, camera, or lighting; route those implementations to their design owners.
+
 State each fact's supported, invented, inherited, derived, or unresolved basis at its owning H2. Cite the direct sources for externally checkable claims there, with the scope and uncertainty needed by the consumer.
 
 ## Subject canon

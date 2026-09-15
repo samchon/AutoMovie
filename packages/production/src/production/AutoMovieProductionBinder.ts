@@ -26,6 +26,14 @@ const GROUPED_DOCUMENT_LAYERS: ReadonlySet<AutoMovieAuthoredDocumentLayer> =
 export type AutoMovieAuthoredDocumentLayer = EvidenceAuthoredDocumentLayer;
 
 /**
+ * Physical authored pass selected for a reader edition.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Distinguishes the construction source from an expression-only final screenplay deliverable.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Keeps the bound pass explicit in the reader-edition request.
+ */
+export type AutoMovieProductionDocumentPass = "construction" | "final";
+
+/**
  * Input to one authored-layer reader edition.
  *
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Declares the deliverable's source, title, format-owning output directory, and selected authored family.
@@ -40,6 +48,14 @@ export interface IAutoMovieProductionBindRequest {
 
   /** Authored Markdown layer to bind. */
   layer: AutoMovieAuthoredDocumentLayer;
+
+  /**
+   * Construction tree or the expression-only final screenplay tree.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Selects the authored source of the reader-facing deliverable.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Prevents a final edition from silently binding construction bytes.
+   */
+  pass?: AutoMovieProductionDocumentPass;
 
   /**
    * Directory the edition is written beneath.
@@ -90,6 +106,30 @@ export class AutoMovieProductionBinder {
   /** Authored layer this binder reads. */
   public readonly layer: AutoMovieAuthoredDocumentLayer;
 
+  /**
+   * Physical authored pass this binder reads.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Exposes the selected reader-edition source pass.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Retains the normalized construction or final choice.
+   */
+  public readonly pass: AutoMovieProductionDocumentPass;
+
+  /**
+   * Absolute physical authored tree selected by {@link pass}.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Exposes the exact source behind the selected reader-facing view.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Prevents construction and final screenplay trees from sharing an implicit source identity.
+   */
+  public readonly source: string;
+
+  /**
+   * Stable filename used when the derived edition is published.
+   *
+   * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables Gives the derived human-readable view a deterministic output identity.
+   * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-deliverable-authority-gaps Keeps final and construction editions distinguishable at publication.
+   */
+  public readonly filename: string;
+
   /** Absolute directory the derived Markdown file is written beneath. */
   public readonly output: string;
 
@@ -98,6 +138,7 @@ export class AutoMovieProductionBinder {
     this.root = path.resolve(request.root);
     this.title = request.title.trim();
     this.layer = request.layer;
+    this.pass = request.pass ?? "construction";
     this.output = path.resolve(
       request.output ?? path.join(this.root, "artifacts"),
     );
@@ -108,6 +149,18 @@ export class AutoMovieProductionBinder {
       throw new Error("A reader-facing production title must be one line.");
     if (!LAYERS.has(this.layer))
       throw new Error(`Unknown authored document layer: ${String(this.layer)}`);
+    if (this.pass !== "construction" && this.pass !== "final")
+      throw new Error(`Unknown authored document pass: ${String(this.pass)}`);
+    if (this.pass === "final" && this.layer !== "screenplays")
+      throw new Error(
+        "Only screenplays have an expression-only final authored pass.",
+      );
+
+    this.source =
+      this.pass === "final"
+        ? path.join(this.root, "docs", "final", this.layer)
+        : path.join(this.root, "docs", this.layer);
+    this.filename = `${stem(this.title)}-${this.pass === "final" ? "final-" : ""}${this.layer}.md`;
 
     assertOutputSeparatedFromDocs(this.output, path.join(this.root, "docs"));
   }
@@ -117,8 +170,7 @@ export class AutoMovieProductionBinder {
     const parts: string[] = [`# ${this.title}`];
     if (GROUPED_DOCUMENT_LAYERS.has(this.layer)) {
       const groups: IAuthoredDocumentGroup[] = await readGroupedLayer(
-        this.root,
-        this.layer,
+        this.source,
       );
       for (const group of groups) {
         parts.push(`## ${group.title}`);
@@ -129,10 +181,7 @@ export class AutoMovieProductionBinder {
         }
       }
     } else {
-      const documents: IAuthoredDocument[] = await readFlatLayer(
-        this.root,
-        this.layer,
-      );
+      const documents: IAuthoredDocument[] = await readFlatLayer(this.source);
       for (const document of documents) {
         parts.push(`## ${document.title}`);
         const body: string = rebaseHeadings(document.body, 1).trim();
@@ -145,10 +194,7 @@ export class AutoMovieProductionBinder {
   /** Writes the integrated edition and returns its absolute stable path. */
   public async bind(): Promise<string> {
     const markdown: string = await this.markdown();
-    const target: string = path.join(
-      this.output,
-      `${stem(this.title)}-${this.layer}.md`,
-    );
+    const target: string = path.join(this.output, this.filename);
     const physicalDocs = await fs.realpath(path.join(this.root, "docs"));
     assertOutputSeparatedFromDocs(
       await prospectiveRealpath(this.output),
@@ -241,20 +287,18 @@ async function prospectiveRealpath(target: string): Promise<string> {
 }
 
 /** Reads one flat layer's Markdown documents in relative-path order. */
-async function readFlatLayer(
-  root: string,
-  layer: AutoMovieAuthoredDocumentLayer,
-): Promise<IAuthoredDocument[]> {
-  const layerRoot: string = path.join(root, "docs", layer);
+async function readFlatLayer(layerRoot: string): Promise<IAuthoredDocument[]> {
   const files: string[] = await listMarkdownFiles(layerRoot).catch(
     (error: unknown) => {
       if (error instanceof Error && error.message.startsWith(layerRoot))
         throw error;
-      throw new Error(`${layerRoot}: the production has no authored ${layer}.`);
+      throw new Error(
+        `${layerRoot}: the production has no authored documents.`,
+      );
     },
   );
   if (files.length === 0)
-    throw new Error(`${layerRoot}: the production has no authored ${layer}.`);
+    throw new Error(`${layerRoot}: the production has no authored documents.`);
 
   const documents: IAuthoredDocument[] = [];
   for (const file of files) {
@@ -285,10 +329,8 @@ const UNIT_PATTERN: RegExp = /^([0-9]{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u;
 
 /** Reads scripts or screenplays through their shared grouped delivery topology. */
 async function readGroupedLayer(
-  root: string,
-  layer: AutoMovieAuthoredDocumentLayer,
+  layerRoot: string,
 ): Promise<IAuthoredDocumentGroup[]> {
-  const layerRoot: string = path.join(root, "docs", layer);
   const docsRoot: string = path.dirname(layerRoot);
   const docsStatus = await fs.lstat(docsRoot).catch(() => undefined);
   if (
@@ -302,7 +344,7 @@ async function readGroupedLayer(
   const entries = await physicalEntries(layerRoot).catch((error: unknown) => {
     if (error instanceof Error && error.message.startsWith(layerRoot))
       throw error;
-    throw new Error(`${layerRoot}: the production has no authored ${layer}.`);
+    throw new Error(`${layerRoot}: the production has no authored groups.`);
   });
   const names: string[] = entries
     .filter((entry) => entry.isDirectory() && GROUP_PATTERN.test(entry.name))

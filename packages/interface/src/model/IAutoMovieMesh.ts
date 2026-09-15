@@ -1,17 +1,18 @@
 import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
 
 /**
- * Raw triangle-mesh geometry: the **imported / baked** path.
+ * Explicit triangle-mesh geometry: imported, baked, or deterministically generated.
  *
- * Unlike a {@link AutoMoviePrimitiveShape} (a few LLM-emittable dimensions), a
- * mesh is bulk vertex data: it is produced by the ingest package when a user
- * imports a glTF/VRM/FBX, or baked by the engine, and consumed by the renderer.
- * A language model never authors these arrays; they live in the interface so
- * imported geometry has a typed home, the same way bone rest transforms do.
+ * Unlike a {@link AutoMoviePrimitiveShape} with compact named dimensions, a
+ * mesh carries explicit bulk vertex data. Ingest may decode it from a
+ * glTF/VRM/FBX, an engine may bake it, or ordinary production TypeScript may
+ * generate it deterministically from reviewed equations and inputs. An
+ * authoring agent does not hand-transcribe opaque bulk arrays; it authors the
+ * named generator and lets that program produce the data.
  *
  * Attributes follow the glTF convention of parallel flat arrays indexed by
  * vertex: `positions` is `[x0,y0,z0, x1,y1,z1, ...]`, so `positions.length` is
- * `3 × vertexCount`. `normals` and `uvs` (when present) align to the same
+ * `3 * vertexCount`. `normals` and `uvs` (when present) align to the same
  * vertex order. `skin` binds vertices to skeleton bones for deformation.
  *
  * Reference: glTF 2.0 mesh primitive attributes.
@@ -22,7 +23,7 @@ import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
  */
 export interface IAutoMovieMesh {
   /**
-   * Flat vertex positions `[x,y,z,...]` in meters. Length is `3 × vertexCount`.
+   * Flat vertex positions `[x,y,z,...]` in meters. Length is `3 * vertexCount`.
    *
    * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Exposes `positions` as the portable data boundary for the asset primitive freeform geometry requirement.
    * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Types `positions` for the asset spec geometry inputs system contract.

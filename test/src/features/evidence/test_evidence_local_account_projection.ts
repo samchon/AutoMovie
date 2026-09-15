@@ -70,6 +70,7 @@ export const test_evidence_local_account_projection = (): void => {
   TestValidator.equals("account projection", projected.localBindings[0], {
     claim: props.name,
     layer: "models",
+    pass: "construction",
     stage: "review",
     enforced: true,
     populationScope: blank.populationScope,
@@ -98,6 +99,69 @@ export const test_evidence_local_account_projection = (): void => {
     "principle has no compared population",
     projected.localBindings[1]!.population,
     undefined,
+  );
+  const naturalness = createAutoMovieProductionPrincipleClaim({
+    name: "local screenplay naturalness",
+    document: "contracts/naturalness-screenplays.md",
+    files: ["final/screenplays/*/???-*.md"],
+    layer: "screenplays",
+    pass: "naturalness",
+    stage: "review",
+    populationScope: blank.populationScope,
+    symbol: ["h2", "h3", "h4"],
+  });
+  const naturalnessGraph = {
+    ...blank,
+    naturalness: { screenplays: "review" as const },
+    claims: [naturalness],
+  };
+  validateAutoMovieLocalContractClaims(naturalnessGraph);
+  TestValidator.equals(
+    "naturalness projection retains its pass",
+    projectAutoMovieLocalContractClaims([naturalness]).localBindings[0],
+    {
+      claim: "local screenplay naturalness",
+      layer: "screenplays",
+      pass: "naturalness",
+      stage: "review",
+      enforced: true,
+      populationScope: blank.populationScope,
+      relationship: "checklist",
+      host: {
+        root: "docs",
+        files: ["final/screenplays/*/???-*.md"],
+        symbols: ["h2", "h3", "h4"],
+      },
+      targets: [
+        {
+          root: "docs",
+          files: ["contracts/naturalness-screenplays.md"],
+          symbols: ["h2"],
+        },
+      ],
+    },
+  );
+  TestValidator.error("naturalness obligation refused", () =>
+    createAutoMovieProductionObligationClaim({
+      ...props,
+      layer: "screenplays",
+      pass: "naturalness",
+    }),
+  );
+  TestValidator.error("naturalness host restricted to screenplays", () =>
+    createAutoMovieProductionPrincipleClaim({
+      ...props,
+      files: ["final/screenplays/*/???-*.md"],
+      layer: "models",
+      pass: "naturalness",
+      symbol: "h2",
+    }),
+  );
+  TestValidator.error("naturalness stage must match declaration", () =>
+    validateAutoMovieLocalContractClaims({
+      ...naturalnessGraph,
+      naturalness: { screenplays: "evidence" },
+    }),
   );
   TestValidator.equals(
     "positive bindings do not create audits",
@@ -249,6 +313,7 @@ export const test_evidence_local_account_projection = (): void => {
     {
       claim: "",
       layer: "models",
+      pass: "construction",
       stage: "review",
       enforced: true,
       populationScope: blank.populationScope,

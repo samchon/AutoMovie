@@ -1,6 +1,6 @@
 ---
 name: production-lifecycle
-description: Defines this project's production lifecycle and authored narrative shapes. Use before selecting film, brief, or library, researching or changing settings, running a pilot, or authoring treatments, scripts, screenplays, and briefs. Do not use it for evidence-graph structure, TypeScript or geometry implementation, or rendered review; those have separate skills.
+description: Defines this project's production lifecycle and authored narrative shapes. Use before selecting film, brief, or library, researching or changing settings, running a pilot, authoring treatments, scripts, screenplays, and briefs, or revising a construction screenplay for final naturalness. Do not use it for evidence-graph structure, TypeScript or geometry implementation, or rendered review; those have separate skills.
 ---
 
 # Production lifecycle

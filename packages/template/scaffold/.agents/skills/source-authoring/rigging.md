@@ -94,12 +94,6 @@ Check:
 - skin collapse, twist distribution, and volume preservation;
 - deterministic output under repeated sampling.
 
-## Review recipe
+## Review handoff
 
-`npm run turntable -- --asset <id>` is the whole first step. One call commits the set an asset review is judged from: the six canonical faces, two opposing obliques, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
-
-Then frame what a whole-model view cannot resolve. `npm run preview` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
-
-Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
-
-Close by opening every captured view of the object and saying what each one showed in the evidence citation on its design owner. An object read from one flattering angle is not an object anybody looked at.
+Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available merely because a mesh visually suggests it. [Geometry verification](geometry.md#verification) owns topology, attribute, bounds, whole-model, and targeted-part checks; [Review verification](../review-verification/SKILL.md) owns the current capture and observation procedure. Record what every required view showed against its design owner.

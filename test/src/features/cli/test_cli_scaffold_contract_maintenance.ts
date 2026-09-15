@@ -28,7 +28,7 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   const sources = autoMovieContractTargetSources({
     "docs/contracts/local.md": "# Local\n",
     "docs/discovery/core/common.md": "# Discovery\n",
-    "docs/language/principles/common.md": "# Language\n",
+    "docs/language/naturalness/screenplays.md": "# Language\n",
     "docs/obligations/core/common.md": "# Obligation\n",
     "docs/principles/core/common.md": "# Principle\n",
     "docs/upstream/story/scripts.md": "# Upstream\n",
@@ -55,7 +55,7 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
       language: "english",
       paths: [
         "docs/discovery/core/common.md",
-        "docs/language/principles/common.md",
+        "docs/language/naturalness/screenplays.md",
         "docs/obligations/core/common.md",
         "docs/principles/core/common.md",
         "docs/upstream/story/scripts.md",
@@ -258,6 +258,8 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
     "docs/scripts/001-act/001-opening.md": "# Opening\n",
     "docs/screenplays/001-act/index.md": "# Act\n",
     "docs/screenplays/001-act/001-opening.md": "# Opening\n",
+    "docs/final/screenplays/001-act/index.md": "# Act\n",
+    "docs/final/screenplays/001-act/001-opening.md": "# Opening\n",
   };
   const generated = planAutoMovieProjectDeliveryTocs({ files: validFiles });
   const checked = planAutoMovieProjectDeliveryTocs({
@@ -270,11 +272,14 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
       diagnostics: checked.diagnostics,
       script: checked.files["docs/scripts/001-act/index.md"],
       screenplay: checked.files["docs/screenplays/001-act/index.md"],
+      finalScreenplay: checked.files["docs/final/screenplays/001-act/index.md"],
     },
     {
       diagnostics: [],
       script: generated.files["docs/scripts/001-act/index.md"],
       screenplay: generated.files["docs/screenplays/001-act/index.md"],
+      finalScreenplay:
+        generated.files["docs/final/screenplays/001-act/index.md"],
     },
   );
   const reversed = planAutoMovieProjectDeliveryTocs({
@@ -287,6 +292,10 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
       "docs/scripts/002-close/index.md": "# Close\n",
       "docs/scripts/001-act/001-opening.md": "# Opening\n",
       "docs/scripts/001-act/index.md": "# Act\n",
+      "docs/final/screenplays/002-close/001-final.md": "# Final\n",
+      "docs/final/screenplays/002-close/index.md": "# Close\n",
+      "docs/final/screenplays/001-act/001-opening.md": "# Opening\n",
+      "docs/final/screenplays/001-act/index.md": "# Act\n",
     },
   });
   TestValidator.equals(
@@ -294,14 +303,18 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
     {
       diagnostics: reversed.diagnostics,
       act: reversed.files["docs/scripts/001-act/index.md"],
-      mirrored:
+      constructionMirrored:
         reversed.files["docs/scripts/002-close/index.md"] ===
         reversed.files["docs/screenplays/002-close/index.md"],
+      finalMirrored:
+        reversed.files["docs/screenplays/002-close/index.md"] ===
+        reversed.files["docs/final/screenplays/002-close/index.md"],
     },
     {
       diagnostics: [],
       act: generated.files["docs/scripts/001-act/index.md"],
-      mirrored: true,
+      constructionMirrored: true,
+      finalMirrored: true,
     },
   );
   const tocWrites = planAutoMovieDeliveryTocPublication({
@@ -312,7 +325,11 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   TestValidator.equals(
     "TOC publication contains only the complete stale index candidate",
     Object.keys(tocWrites),
-    ["docs/scripts/001-act/index.md", "docs/screenplays/001-act/index.md"],
+    [
+      "docs/scripts/001-act/index.md",
+      "docs/screenplays/001-act/index.md",
+      "docs/final/screenplays/001-act/index.md",
+    ],
   );
   TestValidator.predicate(
     "TOC publication refuses an index edited after planning",
@@ -365,5 +382,20 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
   TestValidator.predicate(
     "script and screenplay delivery inventories must remain mirrored",
     mismatched.diagnostics.some((message) => message.includes("differs")),
+  );
+  const mismatchedFinal = planAutoMovieProjectDeliveryTocs({
+    check: true,
+    files: {
+      "docs/screenplays/001-act/index.md": "# Act\n",
+      "docs/screenplays/001-act/001-opening.md": "# Opening\n",
+      "docs/final/screenplays/001-act/index.md": "# Act\n",
+      "docs/final/screenplays/001-act/002-renamed.md": "# Opening\n",
+    },
+  });
+  TestValidator.predicate(
+    "construction and final screenplay inventories must remain mirrored",
+    mismatchedFinal.diagnostics.some((message) =>
+      message.includes("screenplays and final/screenplays"),
+    ),
   );
 };

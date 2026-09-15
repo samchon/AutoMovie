@@ -6,7 +6,7 @@ Every layer begins `disabled` with no governed hosts. For a layer forbidden by t
 
 ## Film
 
-A film makes a narrative claim through the exact `settings -> treatments -> scripts -> screenplays -> shots -> filmSources` ladder. Reviewed `productionSources` is a parallel assembly input before `filmSources`; map, model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
+A film makes a narrative claim through the exact `settings -> treatments -> scripts -> screenplay construction -> screenplay naturalness -> shots -> filmSources` ladder. Construction lives in `docs/screenplays`; expression-only final revision lives in `docs/final/screenplays`. Reviewed `productionSources` is a parallel assembly input before `filmSources`; map, model, space, material, instance, motion, and system branches apply when the film authors them. Use film for any narrative production, including a short film. Briefs are disabled.
 
 ## Brief
 
@@ -26,7 +26,7 @@ Do not keep an inapplicable or not-yet-started layer active and empty. Keep it `
 | --- | --- | --- | --- |
 | Scale owner | Settings declares the complete film scale and treatment event scope. | The one bounded delivery owns its complete shot and observation scale. | Settings declares the reusable delivery scope; each selected design owner defines its own bounded unit. |
 | Unit map | Treatment event map, then a separately designed script delivery partition. | One delivery, shot, and observation address map. | One owner map per active design and matching source branch. |
-| Pilot | One truthful first delivery-group slice may run through the full film ladder. | The brief is already the smallest bounded delivery; record why no smaller slice tests another boundary. | One independently reviewable design owner may run through its real source and observation branch. |
+| Pilot | One truthful first delivery-group slice may run through construction, naturalness, and realization. | The brief is already the smallest bounded delivery; record why no smaller slice tests another boundary. | One independently reviewable design owner may run through its real source and observation branch. |
 | Program | Scripts own audience-facing delivery partition and executable progression. | The brief owns the complete delivery question directly. | No timed program exists; selected design and source branches are the delivery. |
 
 A familiar subject or small runtime does not change this matrix. Choose from the authored structure and the independently reviewable decisions the work actually needs.

@@ -4,9 +4,9 @@
 
 ### 고정된 공통 계약 목록 {#agent-production-evidence-shared-contract}
 
-모든 생성 프로젝트는 같은 공통 원칙·의무·상위 수정·작품별 발견 문서 목록과 각 문서의 명시적 H2 대상을 사용해야 한다. 목록과 실제 문서가 어긋나거나 대상이 누락·중복·충돌하면 그래프를 만들 수 없어야 한다.
+모든 생성 프로젝트는 같은 공통 원칙·의무·상위 수정·작품별 발견·자연스러움 문서 목록과 각 문서의 명시적 H2 대상을 사용해야 한다. 목록과 실제 문서가 어긋나거나 대상이 누락·중복·충돌하면 그래프를 만들 수 없어야 한다.
 
-원칙은 선택된 모든 저술 H2/H3/H4 단위가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 의무는 같은 계층의 관련 H2들이 공동으로 충족하는 무배제 coverage다. 실제 담당 H2 또는 모집단 결론을 소유한 account H2에서 해당 의무를 증언하며, 기여자가 여럿이면 필요한 소유자가 함께 답한다. Source 의무도 선택된 public export 모집단의 같은 coverage를 따른다.
+원칙은 선택된 모든 구성 H2/H3/H4 단위가 각 항목을 자기 자신에 대해 답하는 무배제 checklist다. 의무는 같은 구성 계층의 관련 H2들이 공동으로 충족하는 무배제 coverage다. 실제 담당 H2 또는 모집단 결론을 소유한 account H2에서 해당 의무를 증언하며, 기여자가 여럿이면 필요한 소유자가 함께 답한다. Source 의무도 선택된 public export 모집단의 같은 coverage를 따른다. 자연스러움은 reviewed construction screenplay를 동결한 뒤 final screenplay H2/H3/H4가 표현만을 두고 답하는 별도 무배제 checklist다. 구성의 내용·identity·timing을 바꾸어 답하거나 모집단 의무를 final에 옮겨서는 안 된다.
 
 설정과 디자인 foundation은 provider, consumer, 적용 상태와 구체적 사유를 한 topology account 행렬로 보여야 한다. 선택된 edge의 누락, 실제 foundation이 아닌 provider, 비활성 분기에 남은 positive edge, 선행 순서를 어긴 edge를 거부하고, provider 또는 consumer가 실제 선택 밖일 때만 구체적인 `inapplicable` 행을 허용해야 한다. Unit-local foundation evidence는 각 단위가 실제 사용한 부모를 계속 설명하며 topology account를 대신하지 않는다. 기술 디자인의 foundation 관계는 실제 소비하는 H2에서 진술한다. 서사와 brief의 문서 단위 parentage는 해당 파일에서 진술한다.
 
@@ -16,7 +16,7 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 서로 다른 host에서 인용·경로·수치만 바뀐 review frame이 반복되거나 review 이유가 target의 Review question을 그대로 포함하면 그 위치와 반복 수를 결정적인 Self-Review alarm으로 보여야 한다. 이 alarm은 새로운 검토를 지시하되 corpus에 맞춘 자동 거부나 의미 판정이 되어서는 안 되며, target 모집단을 실제로 읽었는지도 결과에 밝혀야 한다.
 
-계약의 적용은 저술 역할로 결정한다. 언어 탐색, 문체 기본값과 선택 언어의 문체 원칙·의무, 서사 원칙·의무는 treatments, scripts, screenplays가 선택한다. Settings, research와 기술 design은 공통 기반과 자기 전문 계약을 선택하며 film, brief, library에서 같은 경계를 유지한다. 공통 의무와 작품 고유 의무는 관련 저술 H2와 선언된 선택적 account를 통해 충족한다.
+계약의 적용은 저술 역할과 pass로 결정한다. 언어 탐색과 서사 구성 원칙·의무는 treatments, scripts, construction screenplays가 선택한다. 공통·screenplay·선택 언어 자연스러움은 final screenplays만 선택한다. Settings, research와 기술 design은 공통 기반과 자기 전문 계약을 선택하며 film, brief, library에서 같은 경계를 유지한다. 공통 의무와 작품 고유 의무는 관련 구성 H2와 선언된 선택적 account를 통해 충족한다.
 
 ### 작품별 발견의 증명 {#agent-production-evidence-discovery}
 
@@ -28,13 +28,13 @@ Review 문장은 acknowledgement를 독립적으로 다시 읽은 결과를 기�
 
 ### 제작 종류와 단계 {#agent-production-evidence-shape-stage}
 
-그래프는 `film`, `brief`, `library`를 상호 배타적인 제작 종류로 다루고, 각 저작 분기를 `disabled -> draft -> evidence -> review` 순서와 부모 단계 선행 조건에 따라 전진시켜야 한다. 같은 선언에서 settings와 design foundation topology를 투영하여 stage 선택과 account 행렬이 모순되지 않게 해야 한다. 간단한 영상에는 장편 서사 단계를 강요하지 않고, 재사용 자산에는 촬영·편집 단계를 강요하지 않아야 한다.
+그래프는 `film`, `brief`, `library`를 상호 배타적인 제작 종류로 다루고, 각 구성 분기와 선택된 자연스러움 pass를 `disabled -> draft -> evidence -> review` 순서와 부모 단계 선행 조건에 따라 전진시켜야 한다. Film 자연스러움은 construction screenplay review 뒤에만 열리고 shots는 final naturalness review 뒤에만 열려야 한다. Brief와 library는 자연스러움을 활성화할 수 없다. 같은 선언에서 settings와 design foundation topology를 투영하여 stage 선택과 account 행렬이 모순되지 않게 해야 한다. 간단한 영상에는 장편 서사 단계를 강요하지 않고, 재사용 자산에는 촬영·편집 단계를 강요하지 않아야 한다.
 
 렌더된 실현을 확인하는 source 관계는 구조와 관찰 의무를 분리해야 한다. 미관찰·stale 시각 review는 첫 compile과 capture를 허용하는 warning이되, 대상 coverage·소유·cardinality, 저술 및 비시각 source review는 error를 유지해야 한다. Warning만 남았다는 사실은 관찰 완료나 final 수용이 아니며, 실제 다각도·시간·전달 개체군의 current physical evidence가 독립적으로 충족되어야 한다.
 
 ### 실제 대상과 계보의 무결성 {#agent-production-evidence-physical-integrity}
 
-활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 그래프가 모집단으로 열거하는 각 입력 파일은 symlink가 아닌 regular file이고 정확히 하나의 directory entry만 가져야 하며, 같은 inode를 여러 경로가 독립 계약이나 source처럼 소유하게 해서는 안 된다. 프로젝트 identity manifest는 모집단으로 열거되지 않고 고정된 한 경로에서 한 번만 읽으므로, symlink가 아닌 regular file이어야 하지만 directory entry 수를 identity 속성으로 요구해서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다.
+활성 분기는 목적에 맞는 실제 문서 또는 source host를 하나 이상 가져야 하고, 비활성 분기는 지배 대상을 남겨서는 안 된다. 그래프가 모집단으로 열거하는 각 입력 파일은 symlink가 아닌 regular file이고 정확히 하나의 directory entry만 가져야 하며, 같은 inode를 여러 경로가 독립 계약이나 source처럼 소유하게 해서는 안 된다. 프로젝트 identity manifest는 모집단으로 열거되지 않고 고정된 한 경로에서 한 번만 읽으므로, symlink가 아닌 regular file이어야 하지만 directory entry 수를 identity 속성으로 요구해서는 안 된다. 파일·제목·export identity, 단일 소유자, 관계 cardinality, 각 상속 단위의 실제 부모와 단계 간 계보는 추정한 목록이 아니라 현재 파일 트리에서 검증되어야 한다. Final screenplay는 construction screenplay의 delivery group, index H1, unit 파일과 H1, H2/H3/H4 anchor·깊이·순서를 정확히 보존하고 각 file과 unit이 같은 construction counterpart 하나에만 연결되어야 한다.
 
 계약·TOC 유지보수가 중단된 트리는 일부 successor가 존재하더라도 완전한 계약 generation으로 받아들이지 않아야 한다. Pending recovery marker의 잘못된 형식이나 읽을 수 없는 entry도 부재로 해석하지 않는다.
 

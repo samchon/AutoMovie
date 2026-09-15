@@ -36,7 +36,11 @@ export function validateAutoMovieLocalContractClaims(
       !(AUTOMOVIE_AUTHORED_DOCUMENT_LAYERS as readonly unknown[]).includes(
         binding.layer,
       ) ||
-      binding.stage !== graph[binding.layer] ||
+      (binding.pass !== "construction" && binding.pass !== "naturalness") ||
+      binding.stage !==
+        (binding.pass === "naturalness"
+          ? graph.naturalness.screenplays
+          : graph[binding.layer]) ||
       !isDeepStrictEqual(binding.populationScope, graph.populationScope) ||
       (binding.disposition !== "binding" &&
         binding.disposition !== "inapplicable") ||
@@ -45,7 +49,8 @@ export function validateAutoMovieLocalContractClaims(
           binding.stage === "draft" ||
           binding.disposition === "inapplicable") ||
       (binding.disposition === "inapplicable" &&
-        binding.populationScope?.mode !== "first-pilot")
+        binding.populationScope?.mode !== "first-pilot") ||
+      (binding.pass === "naturalness" && binding.layer !== "screenplays")
     )
       throw new Error(
         `Production-local claim ${JSON.stringify(raw.name)} does not match its declared layer, stage, population scope, or disposition.`,
@@ -77,6 +82,7 @@ export function validateAutoMovieLocalContractClaims(
       documentRoot: obligation.root,
       layer: binding.layer,
       stage: binding.stage,
+      pass: binding.pass,
       populationScope: binding.populationScope,
       inapplicable: binding.disposition === "inapplicable",
     });
@@ -139,6 +145,7 @@ export function projectAutoMovieLocalContractClaims(
     const projection: IAutoMovieLocalContractProjection = {
       claim: raw.name ?? "",
       layer: binding.layer,
+      pass: binding.pass,
       stage: binding.stage,
       enforced: raw.disabled !== true,
       populationScope: binding.populationScope,
@@ -171,6 +178,8 @@ export interface IAutoMovieLocalContractProjection {
   claim: string;
   /** Authored branch whose declared stage and population govern this binding. */
   layer: AutoMovieProductionContractClaim["autoMovieBinding"]["layer"];
+  /** Construction or final-screenplay naturalness host pass. */
+  pass: AutoMovieProductionContractClaim["autoMovieBinding"]["pass"];
   /** Owning branch's current lifecycle stage, including inactive declarations. */
   stage: AutoMovieProductionContractClaim["autoMovieBinding"]["stage"];
   /** Whether the claim is not explicitly disabled, not an evidence verdict. */

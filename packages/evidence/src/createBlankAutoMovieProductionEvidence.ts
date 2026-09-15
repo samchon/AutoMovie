@@ -41,6 +41,7 @@ export const createBlankAutoMovieProductionEvidence = (
   treatments: DISABLED,
   scripts: DISABLED,
   screenplays: DISABLED,
+  naturalness: { screenplays: DISABLED },
   briefs: DISABLED,
   mapSources: DISABLED,
   modelSources: DISABLED,
