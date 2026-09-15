@@ -3,12 +3,19 @@ import {
   type IAutoMovieMaintenanceObservationIO,
   assertAutoMovieMaintenanceGeneration,
   assertAutoMovieMaintenanceObservation,
-  autoMovieMaintenanceFileFromSnapshot,
   observeAutoMovieMaintenanceFiles,
 } from "automovie";
 import * as path from "node:path";
 
-import { contractMaintenanceFailure } from "../internal/contractMaintenanceHarness";
+/** Preserve exception identity while observing a typed input boundary. */
+const contractMaintenanceFailure = (task: () => unknown): unknown => {
+  try {
+    task();
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+};
 
 /**
  * Maintenance observes every physical ancestor of source and target paths,
@@ -19,8 +26,8 @@ import { contractMaintenanceFailure } from "../internal/contractMaintenanceHarne
  *    absent intermediate directory produce a closed, byte-exact inventory.
  * 2. Linked ancestors, physical escapes, changed root or parent and file
  *    generation changes refuse without granting any mutation authority.
- * 3. Invalid UTF-8 is refused, a UTF-8 BOM is retained, and native versions
- *    omit only change time while retaining identity, size and modification.
+ * 3. Invalid UTF-8 is refused and a UTF-8 BOM is retained while an own-open
+ *    change-time drift preserves the admitted file's identity and bytes.
  */
 export const test_cli_contract_maintenance_observation = (): void => {
   const root = path.resolve("maintenance-observation");
@@ -128,20 +135,18 @@ export const test_cli_contract_maintenance_observation = (): void => {
     ),
     ["Z.md", "a.md", "z.md", "é.md"],
   );
-  TestValidator.equals(
-    "native token omits only ctime",
-    autoMovieMaintenanceFileFromSnapshot(
-      { identity: "4:9", version: "4:9:12:50:70" },
-      "body",
-    ),
-    { identity: "4:9", source: "body", version: "4:9:12:50" },
-  );
   const extended = observeAutoMovieMaintenanceFiles({
     root,
     paths: [...Object.keys(observed.files), "new.md"],
     io,
   });
-  assertAutoMovieMaintenanceGeneration(observed, extended);
+  TestValidator.equals(
+    "a current population extension is accepted",
+    contractMaintenanceFailure(() =>
+      assertAutoMovieMaintenanceGeneration(observed, extended),
+    ),
+    undefined,
+  );
   for (const altered of [
     { ...observed, descriptors: {} },
     {

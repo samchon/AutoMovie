@@ -14,12 +14,6 @@ type CommandPlan =
       language: "chinese" | "english" | "japanese" | "korean";
     }
   | {
-      command: "migrate";
-      directory: string;
-      mode: "apply" | "dry-run" | "rollback";
-    }
-  | { command: "contracts"; action: "migrate"; dryRun: boolean }
-  | {
       command: "inspect-external";
       path: string;
       profile: string;
@@ -52,11 +46,6 @@ const refuses = (args: readonly string[], fragment: string): boolean => {
 /** The root CLI consumes one complete command before dispatching any work. */
 export const test_cli_command_arguments = (): void => {
   const start = read("start", "--force", "film", "--language", "english");
-  const migrate = [
-    read("migrate", "film"),
-    read("migrate", "--dry-run", "film"),
-    read("migrate", "film", "--rollback"),
-  ];
   const render = read(
     "render",
     "all",
@@ -114,12 +103,17 @@ export const test_cli_command_arguments = (): void => {
             }),
       ],
       [
-        "migrateResolvesExactlyOneMode",
+        "retiredStateCommandsAreUnknown",
         () =>
-          migrate.every((plan) => plan.command === "migrate") &&
-          migrate
-            .map((plan) => (plan.command === "migrate" ? plan.mode : ""))
-            .join(",") === "apply,dry-run,rollback",
+          [
+            ["migrate"],
+            ["migrate", "film"],
+            ["migrate", "--dry-run", "film"],
+            ["migrate", "film", "--rollback"],
+            ["contracts"],
+            ["contracts", "migrate"],
+            ["contracts", "migrate", "--dry-run"],
+          ].every((args) => refuses(args, "Unknown command")),
       ],
       [
         "zeroArgumentCommandsConsumeNothingElse",
@@ -132,16 +126,8 @@ export const test_cli_command_arguments = (): void => {
       [
         "maintenanceCommandsConsumeOneClosedMode",
         () =>
-          JSON.stringify(read("contracts", "migrate", "--dry-run")) ===
-            JSON.stringify({
-              command: "contracts",
-              action: "migrate",
-              dryRun: true,
-            }) &&
           JSON.stringify(read("toc", "--check")) ===
             JSON.stringify({ command: "toc", check: true }) &&
-          refuses(["contracts"], "migrate") &&
-          refuses(["contracts", "migrate", "--check"], "--dry-run") &&
           refuses(["toc", "--check", "--check"], "at most once"),
       ],
       [
@@ -254,11 +240,7 @@ export const test_cli_command_arguments = (): void => {
           refuses(
             ["start", "film", "--language", "english", "other"],
             "received 2",
-          ) &&
-          refuses(["migrate", "film", "--force"], "migrate option") &&
-          refuses(["migrate", "film", "--dry-run", "--dry-run"], "only once") &&
-          refuses(["migrate", "film", "--dry-run", "--rollback"], "only one") &&
-          refuses(["migrate", "film", "other"], "received 2"),
+          ),
       ],
       [
         "missingAndBlankDirectoriesAreRefused",
@@ -270,11 +252,7 @@ export const test_cli_command_arguments = (): void => {
             ["start", "film", "--language", "french"],
             "requires --language",
           ) &&
-          refuses(
-            ["start", "  ", "--language", "english"],
-            "non-blank target",
-          ) &&
-          refuses(["migrate"], "non-blank target"),
+          refuses(["start", "  ", "--language", "english"], "non-blank target"),
       ],
       [
         "renderRejectsEveryMalformedTokenClass",
@@ -314,7 +292,7 @@ export const test_cli_command_arguments = (): void => {
     {
       helpAndVersionAreSingletonRequests: true,
       startConsumesItsDirectoryAndOptionalFlag: true,
-      migrateResolvesExactlyOneMode: true,
+      retiredStateCommandsAreUnknown: true,
       zeroArgumentCommandsConsumeNothingElse: true,
       maintenanceCommandsConsumeOneClosedMode: true,
       externalInspectionRequiresOnePathAndExplicitProfile: true,
