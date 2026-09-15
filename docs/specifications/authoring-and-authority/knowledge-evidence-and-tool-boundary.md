@@ -16,7 +16,7 @@ Knowledge-and-evidence host는 coding agent가 올바른 contract와 기법을 �
 
 ### 선택 surface 발견 {#spec-authoring-tool-choice-discovery}
 
-Production-kind route query는 각 capability의 canonical owner, serializer, consumer와 생성 project skill path를 typed row로 반환한다. 지원되는 row의 필드가 비어 있거나 한 kind/capability가 중복되면 진단하며, 적용 불가 row는 route와 reason을 동시에 주장하지 않는다.
+Production-kind route query는 각 capability의 canonical owner, 직접 전달할 값을 설명하는 `input`, 실제 공개 API인 `consumer`와 생성 project skill path를 typed row로 반환한다. 이 row는 source 값의 사용 가능성을 설명하며 별도 직렬화 단계나 기본 실행 파일의 존재를 보장하지 않는다. 지원되는 row의 필드가 비어 있거나 한 kind/capability가 중복되면 진단하며, 적용 불가 row는 route와 reason을 동시에 주장하지 않는다.
 
 <!-- @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery 이 절이 지원되는 저작 경로의 선행 조건, 차이와 failure를 비교 가능하게 한다. -->
 <!-- @evidence requirements/product/authorability.md#product-discoverable-control 이 절이 구현됐지만 찾거나 검증할 수 없는 경로를 capability로 주장하지 못하게 한다. -->
