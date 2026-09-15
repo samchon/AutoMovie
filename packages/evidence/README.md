@@ -24,7 +24,7 @@ The generated graph rule remains `error`. Map, model, space, material, instance,
 
 ## Production-local obligations
 
-Use the owning branch's values from the single `productionEvidence` declaration in `lint.config.ts`:
+Use the owning branch's values from the single `productionEvidence` declaration in `src/lint.config.ts`:
 
 ```ts
 createAutoMovieProductionObligationClaim({
@@ -45,7 +45,7 @@ Disabled and draft claims remain declared but inactive. Evidence requires a pres
 
 The manifest exposes eligible owners in `localBindings[].host`, contract `targets`, authored `population`, the explicit construction or naturalness `pass`, and the `distributed-coverage` relationship. Pilot-only inapplicable declarations appear in `localAudits`. Local obligations remain construction-only; a local naturalness principle must select the screenplay layer, the final screenplay host, and the naturalness stage. `readAutoMovieContractRules` reads structured metadata from contract H2s.
 
-For an existing production, reread the obligation at its actual contributors and retain valid evidence there. Remove retired contract citations and superseded account-to-population annotations. Review changed relationships from their current content, then synchronize generated instructions. The [staging procedure](../template/scaffold/.agents/skills/evidence-graph/staging.md#production-specific-claims) owns migration.
+For an existing production, reread the obligation at its actual contributors and retain valid evidence there. Remove retired contract citations and superseded account-to-population annotations. Review and commit changed relationships with their declaration and any affected project instructions. The [staging procedure](../template/scaffold/.agents/skills/evidence-graph/staging.md#production-specific-claims) owns migration.
 
 ## Public surface
 
@@ -65,4 +65,4 @@ For an existing production, reread the obligation at its actual contributors and
 | `inspectAutoMovieEvidenceReviewAlarms` | Report repeated review frames and pasted target questions for substantive rereading. |
 | `evidence` | Re-export the native lint plugin for the project's typed configuration. |
 
-The factory, instruction synchronization, and production readers consume the same exported declaration. Additive claims extend the shared graph without replacing its populations, cardinality, topology, or physical-input guards. All shared targets live in the generated project's scaffold-local `docs` inventory, and all production-specific targets remain in its flat `docs/contracts` directory.
+The factory and production readers consume the same exported declaration. Additive claims extend the shared graph without replacing its populations, cardinality, topology, or physical-input guards. All shared targets live in the project's installed `docs` inventory, and all production-specific targets remain in its flat `docs/contracts` directory.

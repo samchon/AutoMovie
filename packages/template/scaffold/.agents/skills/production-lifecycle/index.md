@@ -4,7 +4,7 @@ You are authoring one production: this project. Read `AGENTS.md`, `src/lint.conf
 
 ## Ordered procedure
 
-Before first-version drafting while a layer is disabled, read the exact contract inventory routed by `AGENTS.md` and `src/lint.config.ts`. Apply unit-level principles from the beginning, but defer population-distribution and post-draft questions until their complete selected population exists. A contract annotation records work already done and never substitutes for authorship.
+Before first-version drafting while a layer is disabled, follow the contract skill from `AGENTS.md` and read the exact inventory selected by `src/lint.config.ts`. Apply unit-level principles from the beginning, but defer population-distribution and post-draft questions until their complete selected population exists. A contract annotation records work already done and never substitutes for authorship.
 
 Select the production kind and settle complete settings before downstream work. Activate only the next applicable layer whose direct parents are reviewed, author one coherent version, stage its evidence, review it, and only then open its child. A later finding returns to the earliest semantic owner, propagates through every affected descendant, and renews their evidence and review.
 
@@ -16,13 +16,13 @@ Record authorship and assistance truthfully in Git history and durable source pr
 
 Choose exactly one shape in `src/lint.config.ts`. [Production kinds](production-kinds.md) is the sole semantic owner of the film, brief, and library ladders, their parallel inputs, and their refusals. This lifecycle index routes to that decision and does not restate it.
 
-## Generated instructions
+## Project instructions
 
-`npm run sync` updates `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` from the installed template, then renders the root router from `package.json`, `src/lint.config.ts`, active authored owners, and `docs/contracts`. Follow the [static-document update policy](../../../README.md#static-document-updates) for their version control. Change production facts in their canonical owners before synchronization; shared doctrine improvements belong in the upstream template.
+Follow the [static-document update policy](../../../README.md#static-document-updates) when editing installed instructions or adopting upstream changes. Production facts remain in `src/lint.config.ts` and their canonical document and source owners; changing a fact does not require rebuilding an instruction file or a parallel inventory.
 
-Start the coding-agent session from this project root after sync. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
+Start the coding-agent session from this project root. Codex loads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`.
 
-Instruction synchronization owns only instructions. Follow [Ownership](../../../README.md#ownership) for the project source and file boundary; client registration is not a production step.
+Follow [Ownership](../../../README.md#ownership) for the project source and file boundary; client registration is not a production step.
 
 ### Read-only authored reference
 

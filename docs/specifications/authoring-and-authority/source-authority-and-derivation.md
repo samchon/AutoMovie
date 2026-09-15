@@ -10,6 +10,8 @@
 
 사용자가 읽고 수정할 수 있는 project source와 명시적으로 채택한 bytes가 작품 사실의 정본이다. Compile, render, 분석, review와 delivery artifact는 정본을 소비하는 파생 결과이며 독립적으로 작품 사실을 변경할 수 없다.
 
+최초 scaffold 설치가 제공한 agent 진입 문서, skills, 계약과 설정은 이 project-owned 입력에 포함한다. 설치 이후에는 일반 파일 편집과 version control로 변경하며, 패키지 갱신이 지침이나 현재 사실 목록을 다시 생성하여 프로젝트 파일을 덮어쓰는 경로는 제공하지 않는다. 저작 단계와 계약 선택은 typed 선언과 실제 문서에서 읽는다.
+
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-editable-source-authority 이 상태가 editable source보다 cache나 remote state에 높은 권위를 부여하지 못하게 한다. -->
 
 Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파생 결과는 `current`, `stale`, `missing`, `refused` 중 하나이며, 결과가 참조한 snapshot과 현재 snapshot이 동일하고 자체 검증이 성공한 경우에만 `current`다.

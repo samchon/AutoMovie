@@ -4,15 +4,15 @@ This is a coding-agent-first AutoMovie production repository. Author production 
 
 ## Authoring routes
 
-The generated `AGENTS.md` reports the current production kind, active branches, owners, and selected contract bindings. It routes contract lookup through the [contract skill](.agents/skills/contract/SKILL.md), production work through [production lifecycle](.agents/skills/production-lifecycle/SKILL.md), graph changes through [evidence graph](.agents/skills/evidence-graph/SKILL.md), implementation through [source authoring](.agents/skills/source-authoring/SKILL.md), and observation or completion through [review verification](.agents/skills/review-verification/SKILL.md).
+`AGENTS.md` is the shared coding-agent entry point. It routes contract lookup through the [contract skill](.agents/skills/contract/SKILL.md), production work through [production lifecycle](.agents/skills/production-lifecycle/SKILL.md), graph changes through [evidence graph](.agents/skills/evidence-graph/SKILL.md), implementation through [source authoring](.agents/skills/source-authoring/SKILL.md), and observation or completion through [review verification](.agents/skills/review-verification/SKILL.md). Read the current production selection and claims from `src/lint.config.ts` and their actual owners from `docs`; the entry point is not a generated facts inventory.
 
 Use [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) before selecting `kind` in `src/lint.config.ts`. Use [Production documents](docs/README.md) for physical document ownership, [Contract targets](.agents/skills/evidence-graph/contract-targets.md) for shared and language target forms, [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) for local discovery results, and [Evidence staging](.agents/skills/evidence-graph/staging.md) before changing a branch stage or evidence annotation. Those routes own their semantics; this README only makes them reachable.
 
 ## Static-document updates
 
-This README and `docs/README.md` are tracked snapshots installed when a new scaffold is created. `AGENTS.md`, `CLAUDE.md`, and `.agents/skills` are also version-controlled project files. Instruction synchronization replaces that instruction surface; inspect and commit its changes together with the production declaration that caused them. Compare and adopt other scaffold revisions explicitly under source control, preserving production-owned documents, source, and assets.
+Scaffold installation is one-way. After creation, `AGENTS.md`, `CLAUDE.md`, `.agents/skills`, contracts, READMEs, configuration, and source are project-owned tracked files. The coding agent maintains them through ordinary reviewed edits and commits; package upgrades do not regenerate or overwrite them. Adopt an upstream instruction or contract change only as an explicit project change, preserving authored content and reconciling its affected callers, claims, and reviews.
 
-Use ordinary coding-agent tools for authoring. Scaffold creation and instruction synchronization do not register an MCP client or write client configuration.
+Use ordinary coding-agent tools for authoring. Scaffold creation does not register an MCP client or write client configuration.
 
 ## First run
 
@@ -31,7 +31,6 @@ Use the commands declared in `package.json`:
 | --- | --- |
 | `npm run lint` | Check the complete TypeScript program and active authored evidence. |
 | `npm run format` | Format source with the configured compiler formatter. |
-| `npm run sync` | Replace generated instructions from tracked production facts. |
 
 The scaffold provides instructions, contracts, and source lint, not prewritten production or viewer code. Author only the concrete source the requested work needs through the packages' public APIs. It supplies no film build, capture, render, or publication command.
 

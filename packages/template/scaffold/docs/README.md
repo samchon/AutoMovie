@@ -1,10 +1,10 @@
 # Production documents
 
-This directory is the production's self-contained evidence root. The generated [contract skill](../.agents/skills/contract/SKILL.md) routes to the exact live bindings, while this file owns only the physical document map.
+This directory is the production's self-contained evidence root. The installed [contract skill](../.agents/skills/contract/SKILL.md) routes to the declaration and its selected targets, while this file owns only the physical document map.
 
 The [contract-target procedure](../.agents/skills/evidence-graph/contract-targets.md) owns shared and language target forms. [Production-specific contract](../.agents/skills/evidence-graph/work-specific.md) owns local contract discovery and placement, [Evidence staging](../.agents/skills/evidence-graph/staging.md) owns annotations and branch stages, and [Production kinds](../.agents/skills/production-lifecycle/production-kinds.md) decides which authored rows are active. Read those owners instead of inferring semantics from directory names.
 
-The table maps document roles; it does not require empty directories for inactive work. Create each authored directory when it receives real content at its applicable lifecycle stage. Shared contract targets remain scaffold-owned files.
+The table maps document roles; it does not require empty directories for inactive work. Create each authored directory when it receives real content at its applicable lifecycle stage. Shared contract targets are installed as project-owned files under the [static-document policy](../README.md#static-document-updates).
 
 | Path | Physical owner |
 | --- | --- |
@@ -29,4 +29,4 @@ The table maps document roles; it does not require empty directories for inactiv
 
 Reviewed delivery decisions are implemented as typed source values. Record observations at the authored owner that claims the result; [Ownership](../README.md#ownership) owns source placement and the project file boundary.
 
-This README is a tracked snapshot created with the scaffold. Follow [Static-document updates](../README.md#static-document-updates) before expecting an installed package upgrade or instruction sync to replace it.
+Maintain this README with the project under [Static-document updates](../README.md#static-document-updates).

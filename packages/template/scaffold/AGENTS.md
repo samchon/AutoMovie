@@ -58,7 +58,7 @@ Write instructions for both people and agents. Give each paragraph one job, pres
 
 This is the shared entry point for Codex and Claude Code. Codex reads `AGENTS.md`; Claude Code follows `CLAUDE.md -> @AGENTS.md`. Keep its H2 sections to `Attitude`, `Skills`, and `Maintenance`, with global behavioral rules only in `Attitude`.
 
-Update this entry point when a skill scope, route, or production-wide rule changes. Follow [instruction updates](.agents/skills/production-lifecycle/index.md#generated-instructions) when the production declaration or installed doctrine changes; [static-document updates](README.md#static-document-updates) governs its version control.
+Update this entry point when a skill scope, route, or production-wide rule changes. [Static-document updates](README.md#static-document-updates) owns the installed files and their version control; [Project instructions](.agents/skills/production-lifecycle/index.md#project-instructions) owns loading this project's entry point while authoring.
 
 ### Skills
 
