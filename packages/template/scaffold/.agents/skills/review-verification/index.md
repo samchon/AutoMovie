@@ -9,14 +9,14 @@ Read the applicable sibling in full before acting:
 - [Author process Self-Review](self-review.md) closes each complete contract, authorship, evidence-repair, review-verification, and stage-transition process.
 - [Independent semantic review](semantic-review.md) owns the prose-before-fingerprint transaction, literal host-target pass, completing-population audit, and post-edit invalidation.
 - [Production review](review.md) owns evidence review and final whole-production review.
-- [Capture](capture.md) owns exact targets, passes, receipts, and refusal recovery.
+- [Capture](capture.md) owns exact targets, passes, observation identity, and refusal recovery.
 - [Inspection](inspection.md) owns render-free structural descriptions of compiled subjects, parts, instances, and spaces.
-- [Live viewing](live-viewing.md) owns the persistent compiled viewer and the separate source preview while authoring.
+- [Live viewing](live-viewing.md) owns creating and running a source view when visual authoring needs one.
 - [Offline measurements](measurements.md) owns current-state building drawings, placement and storage measurements, and texture-scale census.
 - [Debugging](debugging.md) owns diagnostics-first correction across ownership, derived artifacts, compile, inspection, capture, and render.
 - [Recording authored work](recording-work.md) owns coherent staging, commit boundaries, messages, and strict text checks; read it before committing production work.
 
-Run `capture:install` and `capture:doctor` before the first preview or render. Use `npm run preview` for a shot frame, `npm run turntable` for an asset's complete judged view set, subject inspection for structural questions, and building reports or texture measurements only for the questions they actually answer.
+Use engine queries for structural questions. When the task needs a visual observation, follow [Live viewing](live-viewing.md) before creating a view or capture path. Source and presentation tooling are authored for that task rather than supplied as scaffold stubs.
 
 ## Review discipline
 

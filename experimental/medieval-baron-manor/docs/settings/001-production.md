@@ -16,7 +16,7 @@
 @evidence principles/core/settings.md#fact-status 제작 규모와 검증 범위를 채택한 결정으로 표시한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 약 265㎡는 목표이고 실제 3D와 현재 관찰은 제출 의무다. 이 범위의 확정은 형상의 관찰 완료도 물리 시험의 성공 결과도 아니라는 지위를 본문이 구별한다.
 @evidence principles/core/settings.md#observable-identity 원본의 외형·실내 구성·가구·재료를 가진 한 본채를 납품 정체성으로 둔다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 이름만 붙인 빈 외피나 홀 한 장은 모든 실·생활 물품·정원을 가진 두 층 본채라는 관찰 대상을 충족하지 못한다. 관찰할 특징을 정하며 여기서 메시나 렌더 수치를 발명하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 본문은 2층 본채·모든 실과 물품·중앙정원을 납품 대상으로 정하고 실제 형상 기준은 건축 언어·생활 조건·공간 조건 소유자에 둔다. 이 범위 H2 자체를 새 외형 설계로 읽지 않았으며 홀 한 장이나 빈 외피를 전체 대상의 동일성 증거로 인정하지 않았다.
 @evidence principles/core/settings.md#source-support 원본 다섯 장은 시각 참조이며 면적과 검증 범위는 제작 결정이다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 연결한 원본은 형태·가구·재료의 시각 관계를 뒷받침한다. 이를 실제 중세 건축의 치수·사용성 인증으로 인용하지 않고 제작 값을 보존한다고 한정한다.
 -->
@@ -51,7 +51,7 @@
 @evidence principles/core/settings.md#fact-status 거주 연결의 우선순위는 채택한 제작 해석이며 실제 가족의 생활 만족도나 완성 모델의 검증 결과가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a production invention과 사용자 지시의 제작상 해석이라는 Status는 이 목적을 선택한 지위를 나타낸다. 본문의 읽혀야 한다와 택한다는 달성 요구와 결정 규칙이며, 현재 모델에서 모든 생활 관계가 이미 읽힌다는 관찰 보고가 아니다. 작은 남작 기사 가족도 이 제작의 주체로 등장할 뿐 실존 가구의 조사 결과로 제시되지 않는다.
 @evidence principles/core/settings.md#observable-identity 거주용 본채는 식사·업무·세척·수면의 관계가 외부와 내부에서 같은 집의 구조로 읽혀야 한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 남작의 집이라는 이름만 붙이고 서로 연결되지 않은 실이나 외부로 떨어진 침실을 보여 주면 이 목적이 요구한 같은 집의 거주 관계를 읽을 수 없다. 본문은 가족의 외모를 지정하지 않고 식사·일·씻기·수면이 공유할 구조를 구별할 특징으로 둔다. 따라서 외관의 크기만 보고 거주 목적이 식별된다고 판정할 수 없으며 구체적인 메시·재료 구성은 후속 소유자에게 남는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 식사·업무·세척·수면이 외부와 내부의 같은 한 건물에 속한다는 관찰 관계를 읽었다. 웅장함을 위해 별채나 추가 계단으로 바꾸면 이 목적의 공간 정체성이 달라지며, 목적문에서 가족 얼굴이나 가구 메시를 새로 발명할 이유는 없다.
 @evidence principles/core/settings.md#source-support 가족 생활을 보존하는 우선순위를 제작 결정으로 쓰며 역사적 남작 주거의 보편 규칙으로 주장하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 작은 남작 기사 가족이라는 표현은 이 제작의 생활 주체를 가리키며 특정 시대의 가구 구성이나 계단 배치가 보편적으로 이랬다는 외부 사실은 본문에 없다. 외관을 위해 계단을 늘리지 않는 규칙도 채택한 고정 구조와 거주 목적의 선택이다. 이 문장에 역사 통계나 건축 안전 기준의 직접 근거가 있는 것처럼 권위를 붙일 이유가 없다.
 -->
@@ -76,7 +76,7 @@
 @evidence principles/core/settings.md#fact-status 한국어 제작의 사용자 확정과 문체·용어·표기 규칙의 제작 선택을 명시하며 공간이나 독자의 실제 검증 결과와 구별한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 production invention 안에서 한국어 제작은 사용자 확정이라고 범위를 밝힌다. 둘째 문단도 이 제작에서 사용할 용어를 정의할 뿐 모든 건축물의 회랑·복도가 그런 층에 있다는 외부 사실을 선언하지 않는다. 독자의 교육을 전제하지 않는다는 문장은 작성 조건이며 모든 독자가 현재 문서를 이해했다는 접근성 평가 결과가 아니다.
 @evidence principles/core/settings.md#observable-identity 회랑과 복도를 층·정원 방향·지붕·실내·형태로 구별하고 절개를 외피를 숨긴 검사 관찰로 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 둘째 문단의 회랑은 1층 정원 쪽 지붕 아래 통로이고 복도는 2층 실내의 짧은 일자 통로여서 두 이름만 다른 같은 빈 구획으로 제시할 수 없다. 절개도 벽·지붕을 숨긴 검사 관찰이라는 상태가 드러나야 정상 외관과 혼동하지 않는다. 이 정의는 공간을 구별할 특징과 관찰의 의미를 남기며 메시 구성이나 카메라 설정 자체를 정하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 회랑은 1층 정원 쪽 지붕 아래 통로, 복도는 2층의 짧은 실내 일자로 구별되고 절개는 숨김을 사용한 검사 상태다. 이 단위는 명칭의 지시 대상을 고정하므로 후속 묘사의 기계적 용어를 자연스럽게 보이게 하려고 동의어로 바꾸는 권한을 주지 않는다.
 @evidence principles/core/settings.md#source-support 회랑·복도·절개의 정의를 프로젝트 용례로 한정하고 외부 사전이나 역사적 언어의 보편 규칙으로 인용하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 1층 회랑과 2층 복도는 이 제작의 ground-access와 upper-access가 가진 공간 관계에 맞춘 용례다. 본문은 이 제작에서라고 한정해 그 층수와 모양을 일반 사전 정의로 주장하지 않는다. 현대 표준 한국어 평서체도 사용할 문체의 선택이며 특정 시대 인물의 실제 언어를 고증했다는 외부 주장이 아니므로, 언어 선택에 출처 없는 역사 권위를 덧붙이지 않는다.
 -->
@@ -105,7 +105,7 @@
 @evidence principles/core/settings.md#fact-status 관찰 기능은 채택한 제작 결정이며 구현 완료 보고가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status가 운영 범위를 production invention으로 두고 실제 뷰어가 지금 모든 기능을 제공한다는 측정 결과를 적지 않는다.
 @evidence principles/core/settings.md#observable-identity 실제 위치의 본채와 중립 배경의 개별 사물을 각각 읽는 관찰을 둔다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 실내 배치와 개별 회전 관찰이 서로 다른 보이는 맥락을 가지므로 주소 목록만 있는 화면으로 이 운영 대상을 대신할 수 없다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 전체 건물의 실제 배치 관찰과 단독 사물 회전, 외피 숨김과 정상 외관, 선언된 문 상태를 본문에서 각각 구별했다. 카메라 이동이나 UI 주소 목록을 실제 형상·통행 가능성으로 오인하지 않으며 대상의 형태 자체는 해당 canon을 따른다.
 @evidence principles/core/settings.md#source-support 소프트웨어의 제공 범위를 제작 결정으로 제시한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 이 H2는 실건물 접근성 연구나 보조기기 인증을 인용하지 않으며 화면 조작의 선택을 외부 사용성 사실로 포장하지 않는다.
 -->
@@ -136,7 +136,7 @@
 @evidence principles/core/settings.md#fact-status 접근성 제품의 지원 상태를 이 제작의 채택으로 표시한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a production invention은 이 산출물의 지원 분류를 뜻하며 실제 사용자 집단의 검증 완료나 접근성 인증 결과가 아니다.
 @evidence principles/core/settings.md#observable-identity 텍스트로 제공할 공간 관계와 시각적으로 판단할 재료·조명을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 이 단위는 새 건물 외형을 정하지 않고 어떤 관찰 정보를 독자에게 전달하는지 정하며 보조 제품의 이름만으로 시각적 동일성을 보증하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 이 H2는 독자가 받을 공간 설명·관찰 텍스트와 미지원 범위를 정한다. 색만으로 소유를 구별하지 않는다는 조건과 재료·조명의 시각적 동일성 판정 한계를 함께 읽었으며 새로운 인물·건물 외형을 정의하는 단위로 취급하지 않았다.
 @evidence principles/core/settings.md#source-support 제공 정보의 범위를 이 납품 안에서 한정한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 시각을 사용할 수 없는 사람의 일반 능력이나 기술 표준 준수율을 단정하지 않고 이 문서·이미지가 제공하는 근거의 범위만 진술한다.
 -->
@@ -167,7 +167,7 @@
 @evidence principles/core/settings.md#fact-status 채택한 두 높이와 그 차이의 derived 지위를 구별한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 0.45와 3.33은 제작 기준점이고 2.88은 직접 뺄셈한 값이므로 이미지 실측이나 외부 건축 규격으로 주장되지 않는다.
 @evidence principles/core/settings.md#observable-identity 남쪽으로 열린 ㄷ자와 두 층의 높이를 일관된 공간 기준에 놓는다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 +Z 남쪽과 두 마감면은 본채의 방향·층을 다른 뷰에서도 같은 대상으로 식별하게 하며 가구 메시의 형식을 대신 정하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 오른손 Y-up, +X 동쪽·+Z 남쪽, Y=0 지면과 Y=0.45·3.33 마감면이 모든 시점에서 같은 본채 방향·층 관계를 고정한다. 단위와 원점이 명시되어 이미지에 맞춰 건물을 옮기는 임의 보정은 허용되지 않으며 물품의 세부 형상은 별도 canon이 소유한다.
 @evidence principles/core/settings.md#source-support 좌표와 치수를 제작 규약으로 제시하고 계산을 본문에 공개한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 층간값을 검산할 식이 있고 기준점의 채택을 명시하므로 실제 중세 건물에서 실측했다는 외부 근거를 꾸미지 않는다.
 -->
@@ -198,7 +198,7 @@
 @evidence principles/core/settings.md#fact-status 다섯 이미지의 참조 용도와 적용 우선순위는 사용자 확정의 제작 선택이며 이미지의 실측·역사적 사실성을 주장하지 않는다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 production invention과 사용자 확정을 함께 밝혀 원본의 역할을 제작 규칙으로 둔다. 표의 반목조 비례나 사적 분위기는 채택할 관찰 질문이며 실제 저택의 치수·연대·생활사를 입증하는 외부 사실로 분류되지 않는다. 치수 도면이 아니며 픽셀 역산을 금지한다는 문장이 그 지위의 경계를 유지한다.
 @evidence principles/core/settings.md#observable-identity ㄷ자 외피·반목조, 층별 생활, 회랑과 정원, 홀과 사적층의 관찰 관계로 참조 대상을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 원본을 단순히 중세 저택 이미지라고 부르지 않고 외피 비례, 회랑·나무·연못의 근접, 식사·난방·주방 접점 등 다시 찾을 특징을 지정한다. 상층도 계단참·침실·공동 세척의 관계로 식별하며 같은 질문을 외관 한 장에서 찾았다고 대체할 수 없다. 이 특징의 재현은 실제 3D 소스가 소유하고 원본 그림을 붙이는 것으로 충족하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 다섯 원본 각각의 외피·층 관계·정원·홀·상층 질문과 고정 그래프의 우선권을 확인했다. 이미지는 치수 도면이 아니고 원본을 붙이는 재현도 금지되므로 사진만 전달한 채 정밀 관계를 하위 저작자가 추측하게 하는 근거로 쓸 수 없다.
 @evidence principles/core/settings.md#source-support 현재 원본 경로와 다섯 파일을 직접 열 수 있게 지정하고 각 이미지가 뒷받침할 관찰 범위만 참조한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 지정 디렉터리의 다섯 PNG를 직접 열어 외피·절개·정원·홀·상층의 표에 적힌 관계를 확인했다. 원본은 그 시각 관계의 출처이며 치수 도면이나 실재 건물의 역사 기록으로 쓰지 않는다. 단일 꺾임계단은 원본에서 입증하려 하지 않고 사용자 고정 그래프를 우선한다고 명시해 출처의 범위를 넘기지 않는다.
 -->
@@ -237,7 +237,7 @@
 @evidence principles/core/settings.md#fact-status 이미지에서 채택한 색·재료·비례·초가을은 production invention이며 현재 렌더의 달성 결과나 역사적 건축 사실이 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 제공 이미지의 건축 언어를 채택한 제작 결정이라고 밝힌다. 석재 기초·목구조의 조합이나 초가을을 실제 저택의 연대·기후 기록으로 주장하지 않는다. 모든 구획이 이 표현을 이미 달성했다는 판정도 본문에서 나오지 않으며 현재 중립 관찰에서 따로 확인해야 한다.
 @evidence principles/core/settings.md#observable-identity 갈색 목구조와 회벽·작은 지붕재·깊은 처마·분할 창, 쓰임이 보이는 실내 물품과 잎이 남은 정원으로 집을 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 중립 관찰에서 골조와 채움, 기초·지붕·개구부의 재료와 비례가 구별되어야 이 집의 건축 언어가 드러난다. 목재 마모·접합부와 화구·직물·도기의 용도 읽힘도 일반적인 갈색 상자만으로 대신할 수 없다. 본문은 그 관찰 특징과 전역 계절을 정하며 특정 메시·조명·카메라 설정으로 정체성을 대체하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 외피의 기둥·층보·버팀과 충전면, 기단 띠, 양 날개의 박공과 연결 지붕, 처마 하면·회랑의 빈 곳을 재현 관계로 읽었다. 앞·뒤·옆·높은 시점의 동일성과 문·창의 닫힘/열림 불변 요소, 재료 색 대비가 명시되어 중세풍이라는 인상만 남기지 않는다. 규모·층 수치는 그 소유자에서 소비하며 메시나 조명으로 canon을 대신하지 않는다.
 @evidence principles/core/settings.md#source-support 지정 원본에서 읽은 건축·생활 단서를 제작에 채택하며 역사적 공법이나 재료 성능의 외부 권위를 덧붙이지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 reference-priority가 지정한 원본을 직접 열어 외피의 목구조·충전벽·작은 지붕재와 홀·상층의 화구·직물·도기를 확인했다. 이것은 채택할 시각 언어의 출처이며 실제 건축 재료의 성능이나 특정 시대의 보편 공법을 뒷받침하는 기록으로 쓰지 않는다. 초가을의 전역 일치도 제작 선택으로 남아 원본의 촬영 날짜를 주장하지 않는다.
 -->
@@ -245,6 +245,10 @@
 **Status:** production invention, 제공 이미지의 건축 언어를 채택한 제작 결정.
 
 석재 기초 위의 짙은 갈색 목구조와 따뜻한 회백색 충전벽, 경사가 큰 지붕과 그 위의 작은 갈색 지붕재, 깊은 처마, 작은 분할 창, 손으로 짠 듯한 목제 가구가 집 전체를 연결한다.
+
+외피의 수직 기둥·수평 층보·대각 버팀은 짙은 갈색 선형 부재이고, 그 사이 회벽은 별개의 밝은 면으로 읽힌다. 석재는 지면과 목구조 사이 낮은 기단을 이루고 개별 돌의 경계가 수평 띠 안에서 구별된다. 양 날개의 남쪽 끝은 삼각 박공이며 후면 몸채와 지붕이 연결된 한 ㄷ자 지붕군이다. 처마 아래에는 두께 있는 끝단과 서까래·지지 관계가 있고, 지붕재는 처마와 나란한 여러 겹의 작은 판으로 겹친다. 정원 쪽 1층 회랑의 기둥 사이에는 벽 대신 실제 빈 공간이 남는다. 남측 정면뿐 아니라 후면·측면·높은 시점에서도 같은 골조·충전면·기단·지붕 경계를 유지한다.
+
+창은 세로가 긴 작은 개구부 안에서 어두운 창틀과 가는 분할선으로 나뉘며, 문은 세로 판재 면과 가로 또는 대각 보강재·어두운 철물을 구별한다. 문과 창의 닫힌 기준 상태에서는 고정 프레임과 가동 판의 경계가 남고, 열린 상태에서는 같은 판과 철물이 사라지거나 다른 재료로 바뀌지 않는다. 재료별 색 관계는 목구조가 회벽보다 어둡고, 지붕은 적갈색, 기단은 회갈색으로 고정한다. 광원의 색으로 이 구분을 대신하지 않는다. 본채 규모와 층 기준은 [면적 예산](003-spatial-basis.md#area-budget)과 [좌표 기준](#coordinate-datum)을 따르며 여기서 중복 수치를 정하지 않는다.
 
 나뭇결 방향은 실제 부재의 긴 방향을 따른다. 목재는 모서리 마모와 접합부가 보이되 썩어 붕괴하는 집으로 표현하지 않는다.
 
@@ -268,7 +272,7 @@
 @evidence principles/core/settings.md#fact-status 표현 수준은 채택한 제작 기준이며 현재 형상의 통과 결과가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 production invention이고 초기 상태의 허용을 최종 완료와 구별하므로 지침이 존재한다는 사실을 관찰 완료로 쓰지 않는다.
 @evidence principles/core/settings.md#observable-identity 가구·소품이 실제 시점과 회전 관찰에서 형체와 재료로 읽혀야 한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 목구조와 가구의 입체·가림·재질·생활 관계를 명명하여 단순히 중세라는 이름을 붙인 상자로 표현 정체성을 대신하지 못하게 한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 실제 입체와 가림·재질을 다각도에서 읽고 가구를 최종까지 상자로 남기지 않는다는 본문을 확인했다. 초기 저세부 허용은 최종 형태의 면제가 아니며 이 H2는 표현 수준을 정할 뿐 구체적 물품 형상이나 실물 안전을 재정의하지 않는다.
 @evidence principles/core/settings.md#source-support 원본 비교와 실물 측정 정확도 주장을 구별한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 레퍼런스는 시각 비교 자료로 쓰고 이미지의 측정 정확도나 실물 구조 인증을 주장하지 않아 제공되지 않은 외부 정밀 근거를 덧붙이지 않는다.
 -->
@@ -301,7 +305,7 @@
 @evidence principles/core/settings.md#constraint-sufficiency 실내 높이는 각 마감면에서 재고 화각의 수평 방향을 명시하며 좁은 방과 외관의 프레이밍 조건을 정한다.
 @evidenceReview principles/core/settings.md#constraint-sufficiency #20cf612 모든 층에서 세계 Y=1.60을 쓰는 선택은 해당 마감면 위라는 기준에 맞지 않고, 세로 화각을 60도로만 두는 선택도 수평 규격의 증명이 아니다. 좁은 방은 눈높이를 유지하면서 시점 수를 늘려야 하므로 렌즈를 넓혀 가림을 감추는 선택은 거부된다. 외관 거리에는 정해진 미터값 대신 대상 전체와 대지 접촉이 화면에 들어오는 결정 조건이 있어, 실제 크기를 아는 공간 설계가 그 거리를 선택할 수 있다.
 @evidence principles/core/settings.md#observable-identity 이 이미지 규격은 이미 정한 건축과 생활 물품의 특성을 관찰할 조건이며 그 대상의 외형 정체성을 새로 정의하지 않는다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 중립 주광과 불필요한 흐림의 배제는 visual-grammar의 목구조·충전벽·생활 도기를 읽을 관찰 조건으로 작동한다. 외관 전체와 대지 접촉, 추가 근접 관찰도 그 특성을 볼 표면을 마련하며 별개의 건축 양식을 허가하지 않는다. 1536×1024의 PNG라는 형식만 갖췄다고 목재 접합이나 작은 분할 창이 알아볼 수 있게 제작됐다는 결론은 이 본문에서 나오지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 중립 주광·불필요한 안개와 심도 흐림 없음, 마감면 위1.60m 눈높이·수평60도·1536×1024와 좁은 방의 추가 시점을 확인했다. 이는 외형을 비교할 재현 조건이지 새 물품 형태나 렌즈 왜곡으로 공간 크기를 바꿀 권한이 아니며 필수 관찰 집합은 별도 소유자가 정한다.
 -->
 
 **Status:** production invention, 같은 대상의 공간과 표면을 비교하기 위한 중립 관찰 규격.
@@ -330,7 +334,7 @@
 @evidence principles/core/settings.md#fact-status 관찰 집합을 정하는 채택 조건과 실제 관찰 실행을 구별한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 모집단 추적의 제작 조건이며 현재 소유자에서 시점을 정해야 한다는 규정이 캡처·열람이 이미 끝났다는 결과로 제시되지 않는다.
 @evidence principles/core/settings.md#observable-identity 원본의 외피·절개·정원·홀·사적층과 모든 방·물품의 읽힘을 관찰 대상으로 둔다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 UI 이름이 아닌 외관·각 층·배치 물품의 형체와 재료가 실제 화면에서 읽혀야 하므로 뷰 목록만 생성한 상태로 관찰을 대신하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 외관·각 층·모든 방·배치 물품의 현재 면과 연결에서 필수 관찰을 정하고 수정 영향에 따라 다시 캡처한다. 목록 수나 촬영 파일 존재는 읽힌 형상을 증명하지 않으며 회전·근접 관찰은 실제 배치에서 가려지는 모습을 확인하는 별도 역할이다.
 @evidence principles/core/settings.md#source-support 시점 모집단을 현재 저작 소유자와 제공 이미지의 질문에서 도출한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 원본 다섯 장은 서로 다른 시각 관계를 제공하며 외부 검사 표준이나 실건물 사용성 규정이 관찰 수의 근거로 추가되지 않는다.
 -->
@@ -361,7 +365,7 @@
 @evidence principles/core/settings.md#constraint-sufficiency 평가 세션을 실행할 운영자, 이를 추가할 수 없는 저작자와 내부 문서 단계의 진행 조건을 고정한다.
 @evidenceReview principles/core/settings.md#constraint-sufficiency #20cf612 저작자가 자체 검토를 더 맡기겠다며 별도 검토 에이전트를 재호출하는 선택은 셋째 문단에서 거부된다. 반대로 독립 평가자가 아직 응답하지 않았다는 이유로 모든 내부 설정·설계 검토를 멈추는 선택도 마지막 문단의 배포된 자체 검토·증거 절차와 맞지 않는다. 이 두 경계는 평가 세션의 실행 주체를 운영자로 지정한 상태에서 적용되므로, 독립성의 뜻이나 호출 허가를 후속 저작자가 추측할 필요가 없다.
 @evidence principles/core/settings.md#observable-identity 제작 참여자의 책임을 구분하며 저택에 나타날 인물의 외형이나 소리를 새로 정의하지 않는다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 저작자·관찰자·독립 평가자는 둘째 문단의 업무로 구별되는 제작 참여자다. 이들을 PNG 안에 등장시킬 대상이나 음성 화자로 지정한 본문은 없고, 직접 PNG를 연다는 문장은 이들이 수행할 검사다. 따라서 역할 이름 세 개의 존재를 인물 자산의 식별 가능성으로 제출할 수 없으며, 판정자 외형이나 목소리를 이 H2에서 만들어야 할 이유도 없다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 저작자·관찰자·독립 평가자는 제작 절차의 역할이며 렌더에 등장할 인물 자산이나 음성 화자가 아니다. PNG를 직접 읽는 행위와 대상의 외형 묘사를 구별했고 이 역할 H2에 얼굴·체형을 만드는 불필요한 조건을 추가하지 않았다.
 -->
 
 **Status:** inherited, 사용자 확정 절차의 저작·관찰·독립 판정 역할을 현재 제작에 적용.
@@ -390,7 +394,7 @@
 @evidence principles/core/settings.md#fact-status 종료 기준은 채택한 조건이며 현재 납품의 완료 결과가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 최종 상태를 정의하면서 현재 캡처 없는 대상을 보고하도록 하므로 이 H2의 작성 자체를 제작이 통과했다는 결과로 제출하지 않는다.
 @evidence principles/core/settings.md#observable-identity 외형·고정 공간·방별 가구와 물품·재료가 현재 렌더에서 읽혀야 한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 형태 누락이나 렌더 실패는 비교할 결과 자체를 없애는 반례이며 문서 주소와 컴파일 성공만으로 시각적 완성을 대신하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 완료는 현재 전체 대상의 시각적 형상·물품·재료와 실제 관찰에 묶인다. 주소와 컴파일만으로 완성을 선언할 수 없다는 본문을 읽었으며 실건물 적합성을 비요구로 둔 사실을 형상 누락의 면제로 확장하지 않았다.
 @evidence principles/core/settings.md#source-support 원본과 현재 렌더를 시각 판단의 근거로 두고 실건물 인증을 요구하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 제공 이미지와 실제 출력이 직접 비교 자료이며 접합·지지·가동의 수치 증명이나 외부 안전 기준을 종료 근거로 추가하지 않는다.
 -->
@@ -427,7 +431,7 @@
 @evidence principles/core/settings.md#fact-status 홀·회랑의 우선순위는 사용자 범위 안의 제작 결정이며 전체 납품 완료를 보고하는 상태가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status는 사용자 요청 안에서 저작자가 선택한 우선순위를 production invention으로 분류한다. 둘째의 complete-production은 본채 전체를 선택한 모집단 상태이며 검사 완료의 결과값이 아니다. 마지막 문단이 여전히 실제 미완료와 공식 필수 관찰을 남기므로 홀을 먼저 고른 사실을 전체 제작이 이미 통과했다는 관찰로 바꾸지 않는다.
 @evidence principles/core/settings.md#observable-identity 생활 홀과 정원 회랑 접점은 난로·식탁·벤치·식기와 문턱·창이 함께 보이는 실제 구획으로 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 우선 볼 곳은 1층 서측의 생활 홀과 정원을 향한 회랑 접점이고, 문턱·창·벽난로·식탁·벤치·식기 배치가 그 장소에서 함께 시험될 특성이다. 홀이라는 이름만 붙인 빈 방으로 바꾸면 식사·난방과 통로의 관계가 사라져 이 선택을 식별할 수 없다. 메시 생성식이나 카메라를 정하지 않고도 어떤 장소를 먼저 보아야 하는지 이 특징으로 구별된다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 서측 생활 홀과 정원 회랑 접점, 문턱·창·화구·식탁·벤치·식기를 함께 읽는다는 위치와 물품 집합을 확인했다. 이는 새 외형 소유자가 아니라 전체 납품 안의 관찰 우선순위이며 홀을 보았다는 이유로 다른 방을 완료로 세지 않는다.
 @evidence principles/core/settings.md#source-support 우선 구획 선택을 역사적 남작 주거의 통계나 외부 실증 규칙으로 주장하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 홀을 먼저 보는 이유는 같은 구획에 모인 제작 대상의 관계이며 역사적 주거 통계나 검사 정확도의 외부 수치가 아니다. 본채 전체 환경이라는 경계는 현재 src/spaces/manor.ts의 manorSpaceSource가 가리키는 환경과 공간 설계의 지상층·상층 목록에서 확인된다. 이 내부 소유 관계를 외부 문화 자료로 보증하지 않으며, 우선 진단의 선택 자체에 전문기관의 인증을 붙일 주장도 본문에 없다.
 -->
@@ -456,7 +460,7 @@
 @evidence principles/core/settings.md#fact-status 지도는 현재 모집단의 파생 분류이며 각 링크 대상의 사실 지위를 대신하지 않는다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a derived라는 표시는 주소 분류에만 적용되고 사용자 확정·제작 선택·계산값은 각 대상 본문에서 읽게 하므로 모든 설정을 외부 사실로 일괄 분류하지 않는다.
 @evidence principles/core/settings.md#observable-identity 건축·생활·정원 대상의 정체성을 실제 설정 주소에 연결한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 지도는 나무·침실의 형체를 새로 정하지 않고 정원·침실 소유자를 열게 하므로 표의 이름을 실제 모델 관찰 결과로 제출하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 각 사실의 권한과 내용은 표가 연결한 H2에 있고 지도는 재정의하지 않는다. 외피는 건축 언어, 생활 물품은 해당 방, 규모와 층 관계는 공간 조건으로 찾아가므로 표의 명칭 자체를 정밀 형상 기술이나 완료 관찰로 제출하지 않는다.
 @evidence principles/core/settings.md#source-support 주소 분류의 근거는 현재 설정이며 역사적 정밀 수치를 주장하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 표의 링크는 직접 확인할 제작 내부 근거이고 지역·연대의 미채택을 명시하므로 보편 중세 주택 분류라는 외부 권위를 빌리지 않는다.
 -->
@@ -495,7 +499,7 @@
 @evidence principles/core/settings.md#fact-status 대상 목록은 파생 분류이며 실현·관찰 완료의 보고가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 도입에서 소유 주소와 형상 완성을 구별하므로 현재 목록이 채워졌다는 사실만으로 방·가구·정원의 시각 검토를 닫지 않는다.
 @evidence principles/core/settings.md#observable-identity 본채·생활 가구·도기·직물·정원의 실제 볼 대상을 소유자에 연결한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 침대 행의 매트리스·담요·베개와 정원 행의 가지·수면·돌은 실제 형체·재료로 구별할 대상이며 이름이나 prototype 개수만으로 그 읽힘을 대신하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 사람은 설계상 배경이고 본채·가구·수목·물과 문 상태는 실제 관찰 대상이라는 구분을 읽었다. 침구·도기·가지·돌 등 표의 각 유형은 연결된 모습 소유자로 가며 prototype 수나 주소 존재가 형체의 동일성을 대신하지 않는다.
 @evidence principles/core/settings.md#source-support 대상 분류는 현재 설정과 원본의 역할을 직접 인용한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 원본 다섯 장은 시각 근거로만 분류되고 아직 채택하지 않은 외부 자산을 추가하지 않는다고 명시해 출처가 없는 자산을 목록에 정당화하지 않는다.
 -->

@@ -40,7 +40,7 @@ Use Git history to preserve earlier observations, candidate comparisons, selecti
 
 ## Evidence review
 
-Follow [Rendered realization review](../evidence-graph/staging.md#rendered-realization-review) for the source relationships that require current pixels or playback. Their configured warning leaves an observation unpaid while permitting its first source compile and capture. Structural and nonvisual relationships still block on errors; a warning is neither a reviewed output nor final acceptance. Open the exact required views or intervals before writing their review, then satisfy the independent physical `review` and `final` gates.
+Follow [Rendered realization review](../evidence-graph/staging.md#rendered-realization-review) for the source relationships that require current pixels or playback. Their configured warning leaves an observation unpaid while permitting its first source compile and capture. Structural and nonvisual relationships still block on errors; a warning is neither a reviewed output nor final acceptance. Open the exact required views or intervals before writing their review, then complete the observations and final review required by the declared work.
 
 Start a layer's evidence review only after that layer is in `review`. Missing or stale review diagnostics are the worklist, not permission to bulk-fill fingerprints. Complete [Independent semantic review](semantic-review.md) for every acknowledgement, exclusion, review, and population account. It owns the prose-before-fingerprint transaction, literal target and host pass, both population axes, repair, and post-edit invalidation.
 
@@ -54,14 +54,24 @@ Apply the same obligation review to shared and production-local targets. The liv
 
 At the start and end of an evidence Self-Review, read `readAutoMovieProductionEvidence(...).reviewAlarms`. A repeated reason frame is a prompt to exchange the sentences across sibling hosts and reread each relationship; a literal target Review question in a reason requires replacing that paste with the host-specific comparison result. These alarms are observations, not corpus-tuned rejection thresholds or automatic verdicts. Confirm `questionPasteChecked` is true so a missing target population cannot masquerade as a clean question-paste pass, resolve every sound finding, and restart the complete review round after any edit.
 
-Trace direct treatment coverage at every script and screenplay file, H2, H3, and H4 host. Then verify exact script-file lineage and same-depth script-to-screenplay lineage; a parent citation cannot stand in for a missing child relationship, and a generated index cannot stand in for the authored unit that owns it.
+Trace direct treatment coverage at every script and construction-screenplay file, H2, H3, and H4 host. Then verify exact script-file lineage and same-depth script-to-construction-screenplay lineage. For each selected naturalness pass, compare the complete final population with construction and verify exact file and same-depth unit lineage, frozen content, naturalness answers, and audience-language performance. A parent citation cannot stand in for a missing child relationship, and a generated index cannot stand in for the authored unit that owns it.
 
 For an exclusion, read the target and complete claim population, find the actual owner or concrete scope fact that makes the target absent, and remove the exclusion when the production owes missing work. “Checked,” “confirmed,” and “not applicable” do not record a review.
 
 A fingerprint covers its selected target and descendants, excluding evidence comments. Child changes expire ancestor reviews. Never invent, copy, or mechanically refresh a fingerprint.
 
-What a fingerprint proves is narrow, and knowing its limit is what keeps a review honest: it proves a separately addressed statement exists and was written against the cited content as it now stands. It does not prove anyone looked at anything. So for a visual unit the other half is mechanical and the builder asks it. `review-evidence-missing` refuses a review-scope compile in two cases. A shot must hold every frame-and-pass pair its own contract's `reviewFrames` declare. A model this production actually stages must hold the whole turntable set an asset review is judged from (the six canonical faces, two opposing obliques, the steep outline overhead, and a rigged model's extreme-range pose), because an object read from one flattering angle is an object whose other side nobody looked at. Both are read at the target's current fingerprint, so a previous version's frames are still on disk and do not count. That is the point: the evidence a verdict rests on has to be evidence of the thing being judged.
+A fingerprint establishes only which cited text a recorded statement addresses. It does not prove an observation occurred. Read every exact required image, interval, subject view, and complete-population result against the current source basis before accepting a visual relationship.
 
-For a film or brief, a model nothing stages owes nothing here. The gate stays on what that delivery actually consumes, so an unused recipe is not review work.
+For a film or brief, judge the models the actual delivery consumes. Unused source cannot substitute for missing delivered content.
 
 For a library, inspect the actual authored model, map, or building through views and measurements that answer its design claims. Record what was examined, what was observed, and what was corrected in the source evidence.
+
+## Final whole-production review
+
+Declare one complete production surface and inspect it alone from the current source revision. The surface includes the user's requested delivery, all active authored branches and source owners, the complete selected evidence relationships, and the actual visual or audible output. A library is judged as its declared reusable work, without inventing a film.
+
+Read the whole declared surface before correcting any finding. Compare every promise with its actual source realization and the observation that can falsify it. For a film, play the complete ordered work, then inspect its required frames, intervals, dialogue, sound, captions, continuity, and delivery conditions. For a library, examine every governed subject and the complete design review set.
+
+Record all findings and their consequences together, repair the earliest owners, and restart the complete round after any edit. Finish only after two consecutive complete rounds find nothing and make no edit. Missing implementation, unobserved output, unsupported delivery, a failed check, or an unresolved directive prevents completion; neither elapsed time nor a source preview substitutes for it.
+
+Report the exact reviewed revision, complete population, actual observations, check results, final clean rounds, and any remaining limitation. [Author process Self-Review](self-review.md) owns intermediate authoring boundaries and does not replace this final review.

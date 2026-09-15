@@ -4,26 +4,6 @@ import * as path from "node:path";
 import { publishNativeScaffoldFile } from "./nativeScaffoldPublication";
 import type { ScaffoldFilePublicationOutcome } from "./scaffoldPublication";
 
-let fileSystem: typeof fs = fs;
-
-/**
- * @internal Run one synchronous scaffold operation against an injected
- * filesystem, so descriptor-level failures the host cannot be asked to produce
- * on demand (a refused reopen, a failing close, a generation that moves under
- * a held descriptor) are still exercised by semantic unit tests.
- */
-export const scaffoldFileSnapshotForTesting = {
-  withFileSystem: <T>(injected: typeof fs, task: () => T): T => {
-    const previous = fileSystem;
-    fileSystem = injected;
-    try {
-      return task();
-    } finally {
-      fileSystem = previous;
-    }
-  },
-};
-
 /**
  * Closed input passed to a platform adapter for one parent-bound new slot.
  *
@@ -266,7 +246,7 @@ export const ensureScaffoldBaseDirectory = (
   }
   for (const target of missing) {
     assertScaffoldPhysicalDirectory(ownership);
-    fileSystem.mkdirSync(target);
+    fs.mkdirSync(target);
     assertScaffoldPhysicalDirectory(ownership);
     ownership = captureEmptyScaffoldPhysicalDirectory(target);
   }
@@ -284,7 +264,7 @@ export const captureScaffoldPhysicalDirectory = (
   directory: string,
 ): IScaffoldPhysicalDirectory => {
   const absolute = path.resolve(directory);
-  const status = fileSystem.lstatSync(absolute, { bigint: true });
+  const status = fs.lstatSync(absolute, { bigint: true });
   if (status.isSymbolicLink() || status.isDirectory() === false)
     throw new Error(
       `scaffold directory is not one ordinary directory: ${absolute}`,
@@ -292,7 +272,7 @@ export const captureScaffoldPhysicalDirectory = (
   return {
     identity: physicalDirectoryIdentity(absolute, status),
     path: absolute,
-    real: path.resolve(fileSystem.realpathSync.native(absolute)),
+    real: path.resolve(fs.realpathSync.native(absolute)),
   };
 };
 
@@ -311,19 +291,16 @@ const physicalDirectoryIdentity = (
   absolute: string,
   status: fs.BigIntStats,
 ): string => {
-  const descriptor = fileSystem.openSync(
-    absolute,
-    fileSystem.constants.O_RDONLY,
-  );
+  const descriptor = fs.openSync(absolute, fs.constants.O_RDONLY);
   try {
-    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
+    const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isDirectory() === false || opened.ino !== status.ino)
       throw new Error(
         `scaffold directory changed while its identity was captured: ${absolute}`,
       );
     return physicalIdentity(opened);
   } finally {
-    fileSystem.closeSync(descriptor);
+    fs.closeSync(descriptor);
   }
 };
 
@@ -348,11 +325,11 @@ const captureEmptyScaffoldPhysicalDirectory = (
   directory: string,
 ): IScaffoldPhysicalDirectory => {
   const ownership = captureScaffoldPhysicalDirectory(directory);
-  const before = fileSystem.lstatSync(ownership.path, { bigint: true });
+  const before = fs.lstatSync(ownership.path, { bigint: true });
   if (physicalDirectoryIdentity(ownership.path, before) !== ownership.identity)
     throw new Error(`scaffold directory changed generation: ${ownership.path}`);
-  const entries = fileSystem.readdirSync(ownership.path);
-  const after = fileSystem.lstatSync(ownership.path, { bigint: true });
+  const entries = fs.readdirSync(ownership.path);
+  const after = fs.lstatSync(ownership.path, { bigint: true });
   if (
     physicalDirectoryIdentity(ownership.path, after) !== ownership.identity ||
     physicalVersion(after) !== physicalVersion(before)
@@ -401,7 +378,7 @@ export const ensureScaffoldFileDirectory = (props: {
         if (missingPath(error) === false) throw error;
         assertScaffoldPhysicalDirectory(props.base);
         assertScaffoldPhysicalDirectory(current);
-        fileSystem.mkdirSync(target);
+        fs.mkdirSync(target);
         assertScaffoldPhysicalDirectory(props.base);
         assertScaffoldPhysicalDirectory(current);
         child = captureEmptyScaffoldPhysicalDirectory(target);
@@ -423,8 +400,8 @@ export const ensureScaffoldFileDirectory = (props: {
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Refuses an existing file unless the caller explicitly authorizes exact-target replacement.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Resolves a repeated file write without creating a second logical target.
- * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Rewrites the resident inode only while one entry names it, and otherwise replaces the entry so another pathname keeps the bytes it had.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Chooses between the two admitted methods from the entry count observed on the descriptor it writes through, and reports a post-removal failure as partial.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Refuses replacement when another directory entry names the resident inode, preserving the unrequested path's bytes.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Admits in-place replacement only after the write descriptor proves that exactly one entry names its file.
  */
 export const writeScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -433,13 +410,6 @@ export const writeScaffoldFile = (props: {
   capability?: IScaffoldParentPublicationCapability;
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
-  /**
-   * Permit replacing the target's directory entry when another entry names it.
-   *
-   * Absent, a target with a second entry is refused exactly as before, so a
-   * caller that means in-place replacement keeps its stricter contract.
-   */
-  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   const absolute = path.resolve(props.target);
@@ -475,22 +445,17 @@ export const writeScaffoldFile = (props: {
 };
 
 /**
- * Replace one existing scaffold file by the method its directory entries permit.
+ * Replace one existing ordinary single-link scaffold file in place.
  *
  * The entry count is read from the descriptor this operation writes through
  * rather than from a pathname stat, so the decision and the write cannot be
  * looking at different files. Rewriting the resident inode is admissible only
  * while exactly one entry names it, because that write is precisely what every
- * other pathname naming it would observe. When another entry exists and the
- * caller holds the aliased-entry authority, the directory entry is replaced
- * instead, which leaves any peer pointing at the untouched old inode.
+ * other pathname naming it would observe. Another entry causes refusal.
  *
  * A window remains between this stat and the truncation on the in-place branch:
  * a link created inside it is not seen, and the rewrite would then reach the new
  * peer. That window exists today, and this branch neither widens nor narrows it.
- * The replacement branch has no such window, because it never rewrites the
- * resident inode, so a link appearing at any instant still leaves the peer's
- * bytes unchanged.
  */
 const overwriteScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -498,12 +463,11 @@ const overwriteScaffoldFile = (props: {
   capability?: IScaffoldParentPublicationCapability;
   existing: IScaffoldFileSnapshot;
   parent: IScaffoldPhysicalDirectory;
-  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   let descriptor: number;
   try {
-    descriptor = fileSystem.openSync(props.target, "r+");
+    descriptor = fs.openSync(props.target, "r+");
   } catch (error) {
     return Object.freeze({
       error,
@@ -517,14 +481,8 @@ const overwriteScaffoldFile = (props: {
   let completedIdentity: string | undefined;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
-    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
-    if (props.replaceAliasedEntries === true)
-      assertOrdinaryScaffoldFile(opened, props.target);
-    else assertOrdinarySingleLinkFile(opened, props.target);
-    if (opened.nlink !== 1n) {
-      fileSystem.closeSync(descriptor);
-      return replaceScaffoldFileEntry(props);
-    }
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    assertOrdinarySingleLinkFile(opened, props.target);
     assertScaffoldFileDescriptor(
       props.existing,
       descriptor,
@@ -532,10 +490,10 @@ const overwriteScaffoldFile = (props: {
       assertOrdinarySingleLinkFile,
     );
     assertScaffoldOwnership(props.base, props.parent);
-    fileSystem.ftruncateSync(descriptor, 0);
+    fs.ftruncateSync(descriptor, 0);
     mutated = true;
     writeScaffoldDescriptor(descriptor, props.target, props.bytes, progress);
-    const completed = fileSystem.fstatSync(descriptor, { bigint: true });
+    const completed = fs.fstatSync(descriptor, { bigint: true });
     completedIdentity = physicalIdentity(completed);
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
@@ -546,7 +504,7 @@ const overwriteScaffoldFile = (props: {
       assertOrdinarySingleLinkFile,
     );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
-    const finalStatus = fileSystem.fstatSync(descriptor, { bigint: true });
+    const finalStatus = fs.fstatSync(descriptor, { bigint: true });
     if (writtenVersion(finalStatus) !== writtenVersion(completed))
       throw new Error(
         `scaffold file changed after final readback: ${props.target}`,
@@ -564,7 +522,7 @@ const overwriteScaffoldFile = (props: {
     failure = error;
   }
   try {
-    fileSystem.closeSync(descriptor);
+    fs.closeSync(descriptor);
   } catch (closeError) {
     failure = combineScaffoldFailures(
       failure,
@@ -597,68 +555,6 @@ const overwriteScaffoldFile = (props: {
         parentIdentity: props.parent.identity,
         status: "partial",
       });
-};
-
-/**
- * Replace the target's own directory entry, leaving every peer entry alone.
- *
- * Removing one entry does not touch the inode, so a pathname that shares it
- * keeps the bytes it already had; the successor is then created exclusively at
- * the same name through the ordinary new-file boundary, which owns the write,
- * the sync, the readback and the resident verification.
- *
- * This surface needs no durable journal. `AGENTS.md`, `CLAUDE.md` and
- * `.agents/skills` are ignored generated instructions regenerated from tracked
- * owners (`package.json`, `lint.config.ts`, authored documents, source and
- * `docs/contracts`), so an interrupted attempt is a rerun rather than a
- * recovery, and the next run creates the absent name through the same exclusive
- * path. A contract target would need the journal, because its predecessor bytes
- * are tracked and cannot be regenerated.
- *
- * A publication that refuses after the entry is gone is reported as partial
- * rather than refused: the predecessor no longer exists, so claiming that
- * nothing happened would be untrue.
- *
- * The predecessor is rechecked without its change time, because the caller has
- * already opened this pathname to read the entry count and a Windows host moves
- * change time when any handle opens a path. Comparing it here would refuse the
- * replacement on the strength of this operation's own open. Physical identity,
- * size and modification time are still compared, so a substituted or rewritten
- * predecessor is still refused before its name is detached.
- */
-const replaceScaffoldFileEntry = (props: {
-  base: IScaffoldPhysicalDirectory;
-  bytes: Uint8Array;
-  capability?: IScaffoldParentPublicationCapability;
-  existing: IScaffoldFileSnapshot;
-  parent: IScaffoldPhysicalDirectory;
-  target: string;
-}): ScaffoldFilePublicationOutcome => {
-  try {
-    assertOpenedScaffoldFileSnapshot(props.existing);
-    assertScaffoldOwnership(props.base, props.parent);
-    fileSystem.unlinkSync(props.target);
-  } catch (error) {
-    return Object.freeze({
-      error,
-      reason: "create-failed" as const,
-      status: "refused" as const,
-    });
-  }
-  const outcome = publishScaffoldFileToCapturedParent({
-    bytes: Array.from(props.bytes),
-    capability: props.capability ?? { publish: publishNativeScaffoldFile },
-    parent: props.parent,
-    target: props.target,
-  });
-  return outcome.status === "refused"
-    ? Object.freeze({
-        bytesWritten: 0,
-        error: outcome.error,
-        parentIdentity: props.parent.identity,
-        status: "partial" as const,
-      })
-    : outcome;
 };
 
 /**
@@ -701,7 +597,7 @@ const captureAdmittedScaffoldFile = (
   admission: (status: fs.BigIntStats, file: string) => void,
 ): IScaffoldFileSnapshot => {
   const absolute = path.resolve(file);
-  const status = fileSystem.lstatSync(absolute, { bigint: true });
+  const status = fs.lstatSync(absolute, { bigint: true });
   admission(status, absolute);
   return {
     identity: physicalIdentity(status),
@@ -724,7 +620,7 @@ const assertScaffoldFileDescriptor = (
   admission: (status: fs.BigIntStats, file: string) => void,
 ): void => {
   assertOpenedScaffoldFileSnapshot(snapshot);
-  const opened = fileSystem.fstatSync(descriptor, { bigint: true });
+  const opened = fs.fstatSync(descriptor, { bigint: true });
   admission(opened, snapshot.path);
   if (
     withoutChangeTime(physicalVersion(opened)) !==
@@ -733,10 +629,10 @@ const assertScaffoldFileDescriptor = (
     throw new Error(
       `scaffold file descriptor changed generation: ${snapshot.path}`,
     );
-  const residentDescriptor = fileSystem.openSync(snapshot.path, "r");
+  const residentDescriptor = fs.openSync(snapshot.path, "r");
   let failure: IScaffoldDescriptorFailure | undefined;
   try {
-    const resident = fileSystem.fstatSync(residentDescriptor, { bigint: true });
+    const resident = fs.fstatSync(residentDescriptor, { bigint: true });
     admission(resident, snapshot.path);
     if (writtenVersion(resident) !== writtenVersion(opened))
       throw new Error(
@@ -840,7 +736,7 @@ const readAdmittedScaffoldFileSnapshot = (
   version: string;
 } => {
   const snapshot = captureAdmittedScaffoldFile(file, admission);
-  const descriptor = fileSystem.openSync(snapshot.path, "r");
+  const descriptor = fs.openSync(snapshot.path, "r");
   let failure: IScaffoldDescriptorFailure | undefined;
   let result: {
     snapshot: IScaffoldFileSnapshot;
@@ -849,10 +745,10 @@ const readAdmittedScaffoldFileSnapshot = (
     version: string;
   };
   try {
-    const opened = fileSystem.fstatSync(descriptor, { bigint: true });
+    const opened = fs.fstatSync(descriptor, { bigint: true });
     const version = physicalVersion(opened);
     assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
-    const bytes = fileSystem.readFileSync(descriptor);
+    const bytes = fs.readFileSync(descriptor);
     assertScaffoldFileDescriptor(snapshot, descriptor, version, admission);
     result = { snapshot, bytes, identity: physicalIdentity(opened), version };
   } catch (error) {
@@ -920,7 +816,7 @@ const writeScaffoldDescriptor = (
   const source = Buffer.from(bytes);
   let offset = 0;
   while (offset < source.length) {
-    const written = fileSystem.writeSync(
+    const written = fs.writeSync(
       descriptor,
       source,
       offset,
@@ -932,7 +828,7 @@ const writeScaffoldDescriptor = (
     offset += written;
     if (progress !== undefined) progress.bytesWritten = offset;
   }
-  fileSystem.fsyncSync(descriptor);
+  fs.fsyncSync(descriptor);
   assertScaffoldDescriptorBytes(descriptor, target, source);
 };
 
@@ -957,7 +853,7 @@ const assertScaffoldDescriptorBytes = (
   const readback = Buffer.alloc(source.length);
   let offset = 0;
   while (offset < readback.length) {
-    const read = fileSystem.readSync(
+    const read = fs.readSync(
       descriptor,
       readback,
       offset,
@@ -978,7 +874,7 @@ const closeScaffoldDescriptor = (
   resource: string,
 ): void => {
   try {
-    fileSystem.closeSync(descriptor);
+    fs.closeSync(descriptor);
   } catch (closeFailure) {
     if (failure === undefined) throw closeFailure;
     throw new ScaffoldDescriptorCleanupError(

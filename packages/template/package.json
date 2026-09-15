@@ -1,6 +1,6 @@
 {
   "name": "@automovie/template",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "The self-contained scaffold every AutoMovie production is created from and the library that materializes it.",
   "main": "src/index.ts",
   "exports": {
@@ -30,6 +30,7 @@
     "README.md",
     "language-contracts",
     "scaffold",
+    "scaffold/.gitignore",
     "src",
     "package.json",
     "LICENSE"
@@ -48,6 +49,7 @@
   },
   "dependencies": {
     "@automovie/evidence": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "koffi": "^3.2.1",
     "yaml": "^2.9.0"
   },
@@ -55,7 +57,6 @@
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
     "@automovie/human": "workspace:^",
-    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/mcp": "workspace:^",
     "@automovie/production": "workspace:^",

@@ -1,15 +1,9 @@
 import {
-  type AutoMovieAuthoredDocumentLayer,
   AutoMovieProductionBinder,
+  parseAutoMovieProductionBookCommand,
 } from "@automovie/production";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-interface IBookCommand {
-  layer: AutoMovieAuthoredDocumentLayer;
-  output: string | undefined;
-  title: string;
-}
 
 /**
  * Bind one authored layer into a deterministic reader-facing Markdown edition.
@@ -26,39 +20,14 @@ export const bindProductionBook = async (
   args: readonly string[],
   root: string = process.cwd(),
 ): Promise<string> => {
-  const command = parseBookCommand(args);
+  const command = parseAutoMovieProductionBookCommand(args);
   return new AutoMovieProductionBinder({
     root,
     title: command.title,
     layer: command.layer,
+    pass: command.pass,
     output: command.output,
   }).bind();
-};
-
-/** Parse valued book options without maintaining a second authored-layer list. */
-const parseBookCommand = (args: readonly string[]): IBookCommand => {
-  const values = new Map<string, string>();
-  for (let index = 0; index < args.length; index += 1) {
-    const option = args[index]!;
-    if (option !== "--layer" && option !== "--output" && option !== "--title")
-      throw new Error(`Unknown book option: ${option}`);
-    if (values.has(option))
-      throw new Error(`Book option ${option} was provided more than once.`);
-    const value = args[index + 1];
-    if (value === undefined || value.startsWith("--"))
-      throw new Error(`Book option ${option} requires a value.`);
-    values.set(option, value);
-    index += 1;
-  }
-  const title = values.get("--title");
-  if (title === undefined)
-    throw new Error("Book binding requires an explicit --title.");
-  return {
-    title,
-    layer: (values.get("--layer") ??
-      "screenplays") as AutoMovieAuthoredDocumentLayer,
-    output: values.get("--output"),
-  };
 };
 
 if (

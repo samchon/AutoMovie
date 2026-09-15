@@ -9,6 +9,8 @@ import {
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Local account metadata is a checked declaration, and its manifest keeps
  * contract addresses distinct from the authored population being compared.
@@ -70,6 +72,7 @@ export const test_evidence_local_account_projection = (): void => {
   TestValidator.equals("account projection", projected.localBindings[0], {
     claim: props.name,
     layer: "models",
+    pass: "construction",
     stage: "review",
     enforced: true,
     populationScope: blank.populationScope,
@@ -98,6 +101,78 @@ export const test_evidence_local_account_projection = (): void => {
     "principle has no compared population",
     projected.localBindings[1]!.population,
     undefined,
+  );
+  const naturalness = createAutoMovieProductionPrincipleClaim({
+    name: "local screenplay naturalness",
+    document: "contracts/naturalness-screenplays.md",
+    files: ["final/screenplays/*/???-*.md"],
+    layer: "screenplays",
+    pass: "naturalness",
+    stage: "review",
+    populationScope: blank.populationScope,
+    symbol: ["h2", "h3", "h4"],
+  });
+  const naturalnessGraph = {
+    ...blank,
+    naturalness: { screenplays: "review" as const },
+    claims: [naturalness],
+  };
+  validateAutoMovieLocalContractClaims(naturalnessGraph);
+  TestValidator.equals(
+    "naturalness projection retains its pass",
+    projectAutoMovieLocalContractClaims([naturalness]).localBindings[0],
+    {
+      claim: "local screenplay naturalness",
+      layer: "screenplays",
+      pass: "naturalness",
+      stage: "review",
+      enforced: true,
+      populationScope: blank.populationScope,
+      relationship: "checklist",
+      host: {
+        root: "docs",
+        files: ["final/screenplays/*/???-*.md"],
+        symbols: ["h2", "h3", "h4"],
+      },
+      targets: [
+        {
+          root: "docs",
+          files: ["contracts/naturalness-screenplays.md"],
+          symbols: ["h2"],
+        },
+      ],
+    },
+  );
+  TestValidator.predicate(
+    "naturalness obligation refused",
+    throwsError(() =>
+      createAutoMovieProductionObligationClaim({
+        ...props,
+        layer: "screenplays",
+        pass: "naturalness",
+      }),
+    ),
+  );
+  TestValidator.predicate(
+    "naturalness host restricted to screenplays",
+    throwsError(() =>
+      createAutoMovieProductionPrincipleClaim({
+        ...props,
+        files: ["final/screenplays/*/???-*.md"],
+        layer: "models",
+        pass: "naturalness",
+        symbol: "h2",
+      }),
+    ),
+  );
+  TestValidator.predicate(
+    "naturalness stage must match declaration",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({
+        ...naturalnessGraph,
+        naturalness: { screenplays: "evidence" },
+      }),
+    ),
   );
   TestValidator.equals(
     "positive bindings do not create audits",
@@ -154,7 +229,17 @@ export const test_evidence_local_account_projection = (): void => {
       },
     ],
   };
-  validateAutoMovieLocalContractClaims({ ...graph, claims: [mixedReferences] });
+  TestValidator.predicate(
+    "typed principle cannot mix independently configured native references",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({
+        ...graph,
+        claims: [mixedReferences],
+      }),
+    ),
+  );
+  const { autoMovieBinding: _binding, ...mixedNative } = mixedReferences;
+  validateAutoMovieLocalContractClaims({ ...graph, claims: [mixedNative] });
   TestValidator.equals(
     "non-Markdown references do not become local contract targets",
     projectAutoMovieLocalContractClaims([mixedReferences]).localBindings[0]!
@@ -224,11 +309,14 @@ export const test_evidence_local_account_projection = (): void => {
       autoMovieBinding: { ...account.autoMovieBinding, account: undefined },
     },
   ])
-    TestValidator.error("detached or weakened account", () =>
-      validateAutoMovieLocalContractClaims({
-        ...graph,
-        claims: [broken as AutoMovieProductionContractClaim],
-      }),
+    TestValidator.predicate(
+      "detached or weakened account",
+      throwsError(() =>
+        validateAutoMovieLocalContractClaims({
+          ...graph,
+          claims: [broken as AutoMovieProductionContractClaim],
+        }),
+      ),
     );
   const scalar = {
     ...principle,
@@ -242,13 +330,19 @@ export const test_evidence_local_account_projection = (): void => {
       symbol: undefined,
     },
   };
-  validateAutoMovieLocalContractClaims({ ...graph, claims: [scalar] });
+  TestValidator.predicate(
+    "projection defaults do not grant binding admission",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({ ...graph, claims: [scalar] }),
+    ),
+  );
   TestValidator.equals(
     "native defaults remain explicit in projection",
     projectAutoMovieLocalContractClaims([scalar]).localBindings[0],
     {
       claim: "",
       layer: "models",
+      pass: "construction",
       stage: "review",
       enforced: true,
       populationScope: blank.populationScope,

@@ -6,13 +6,9 @@
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./docs --filter=./packages/** -r build",
-    "build:tgz": "ttsx -P config/tsconfig.json --no-plugins --types node build/tgz.ts",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
-    "experimental": "ttsx -P config/tsconfig.json --no-plugins --types node build/experimental.ts --",
-    "benchmark:turn": "ttsx -P config/tsconfig.json --no-plugins --types node build/benchmark-cli.ts",
     "format": "prettier --write \"**/*.{ts,cts,mts}\"",
-    "format:check": "prettier --check \"**/*.{ts,cts,mts}\"",
-    "lint:voice": "ttsx -P config/tsconfig.json --no-plugins --types node build/proseVoice-cli.ts"
+    "format:check": "prettier --check \"**/*.{ts,cts,mts}\""
   },
   "keywords": [
     "coding-agent",

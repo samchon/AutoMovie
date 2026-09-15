@@ -80,4 +80,4 @@ Plain and direct. State the fact and stop.
 - No AI-cliche phrasing: "not only X but also Y", "whether you're X or Y", "it's worth noting", "let's dive in", and reflexive hedging.
 - No wrap-up sentence that just restates the paragraph.
 
-`pnpm lint:voice` enforces these punctuation rules over repository instructions, package READMEs, and scaffold Markdown and TypeScript comments. It excludes Markdown code spans and fences, TypeScript literals, fixtures, and dated experiment baselines.
+Check these rules directly while reviewing repository instructions, package READMEs, scaffold Markdown, and TypeScript comments. Code syntax, literal values, and quoted historical evidence keep their original meaning; they are not prose to rewrite for voice. The [instruction-diff review](#instruction-authority) owns the review gate.

@@ -1,28 +1,14 @@
-import {
-  type AutoMovieProductionLanguage,
-  createBlankAutoMovieProductionEvidence,
-} from "@automovie/evidence";
+import type { AutoMovieProductionLanguage } from "@automovie/evidence";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import {
-  AUTO_MOVIE_CONTRACT_BASELINE_PATH,
-  renderAutoMovieContractBaseline,
-} from "./productionMaintenance";
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
-import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
-
-/**
- * Files renamed as the scaffold is rendered. npm strips real `.gitignore` and
- * `.npmrc` files from a published package, so the assets ship without dots and
- * the rendered keys restore them.
- */
-const RENAME = new Map<string, string>([
-  ["gitignore", ".gitignore"],
-  ["npmrc", ".npmrc"],
-]);
+import {
+  validateAutoMovieInstructionDocumentLinks,
+  validateAutoMovieSkillRouterLinks,
+} from "./validateAutoMovieSkillRouters";
 
 /**
  * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
@@ -97,7 +83,7 @@ const renderKey = (
   variables: Readonly<Record<string, string>>,
 ): string => {
   const dir = path.dirname(relative);
-  const base = RENAME.get(path.basename(relative)) ?? path.basename(relative);
+  const base = path.basename(relative);
   return renderTemplate(
     toPosix(dir === "." ? base : path.join(dir, base)),
     variables,
@@ -116,32 +102,14 @@ const renderKey = (
 const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
 
 /**
- * Compiler-output shapes excluded unless an exact authored runtime owns them.
+ * Compiler outputs are never authored scaffold inputs.
  *
- * Most authored sources are Markdown, TypeScript, JSON and HTML. The source
- * preview also owns a Node worker and a browser diagnostic shell that must run
- * before the authored TypeScript can compile. Their exact JavaScript paths are
- * declared below; every other builder-output shape remains unshipped.
- *
- * The reason to name the class rather than the two directories alone is that
- * this one is invisible where it happens. Running the type-checker without
- * `--noEmit` drops `.js`, `.js.map` and `.d.ts` beside every source, and the
- * repository `.gitignore` covers exactly those paths under `scaffold/src`,
- * `scaffold/scripts` and the scaffold root, so `git status` stays quiet while
- * this walk reads them straight off the disk. Measured on this tree: planting
- * `scripts/__emitted.js`, `scripts/__emitted.d.ts` and `.cache/stray.json`
- * took the rendered inventory from 244 keys to 247, so every project generated
- * while they sat there would have installed all three, and a generated
- * project's loader prefers an emitted `.js` to the `.ts` beside it.
+ * All executable scaffold sources are TypeScript under src. A prior local
+ * compilation must not add emitted modules, maps or declarations to the next
+ * generated project. There are no filename-specific JavaScript exceptions.
  */
 const UNSHIPPED_FILES =
   /(?:\.(?:c|m)?js(?:\.map)?|\.d\.(?:c|m)?ts|\.tsbuildinfo)$/u;
-
-/** Executable bootstrap sources, never inferred from files left by a build. */
-const AUTHORED_JAVASCRIPT = new Set([
-  "scripts/compileSourcePreview.mjs",
-  "viewer/src/sourcePreviewClient.js",
-]);
 
 /**
  * Every shipped file under `root`, root-relative, in deterministic sorted
@@ -168,11 +136,7 @@ const listFiles = (root: string): string[] => {
         walk(full);
       } else if (entry.isFile()) {
         const relative = path.relative(root, full);
-        if (
-          UNSHIPPED_FILES.test(entry.name) === false ||
-          AUTHORED_JAVASCRIPT.has(toPosix(relative))
-        )
-          out.push(relative);
+        if (UNSHIPPED_FILES.test(entry.name) === false) out.push(relative);
       }
     }
   };
@@ -243,7 +207,6 @@ export const renderScaffoldEntries = (
  * moving the shipped directory out from under a running test. A guard whose
  * failure sentence has never been produced is a guard nobody has read.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Locates the scaffold whose examples teach reusable authoring techniques instead of supplying finished production content.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the capability-oriented scaffold as the input to deterministic scaffold rendering.
  */
 export const scaffoldAssetDirectory = (
@@ -261,40 +224,39 @@ export const scaffoldAssetDirectory = (
  * catalog-synced `{{version:*}}` tokens, and rename shipped-safe filenames.
  *
  * The map is deliberately not written to disk here (that is {@link writeFiles}'s
- * job): separating the render from the write mirrors the reference scaffolder,
- * so the same output can be asserted in a test, written by the CLI, or handed
- * to another consumer without disk I/O in the middle.
+ * job). Callers can inspect the returned candidate or pass it directly to the
+ * bounded writer without an intermediate file or persisted project state.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Delivers the scaffold examples that explain one reusable technique, its controls, and its verification path.
+ * @evidenceExclude requirements/agent-authoring/capability-discovery.md#agent-technique-example The base scaffold supplies no example production or executable demonstration.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Materializes the generated project's routed documentation corpus and its guide entry points.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Publishes the scaffold's documented authoring choices and declared capability limits together.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-diagnostic-discovery Ships the generated diagnostic commands and their documented recovery paths as ordinary project files.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-diagnostic-discovery Publishes authoring guides that connect diagnostics to the relevant public APIs and source corrections.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Ships the contracts that distinguish missing implementation work from an unavailable product capability.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits examples as reusable authoring guidance while leaving each production's content in project-owned source.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits reusable authoring instructions while leaving each production's content in project-owned source.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Materializes an editable scaffold whose capability additions remain separate from project-owned content.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
- * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and its builder.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Scaffold rendering returns template bytes and does not derive, validate, or publish production artifacts.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Scaffold rendering returns template bytes and does not derive, validate, or publish production artifacts.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Scaffold rendering returns template bytes and does not derive, validate, or publish production artifacts.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Scaffold rendering returns template bytes and does not derive, validate, or publish production artifacts.
+ * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Scaffold rendering returns template bytes and does not derive, validate, or publish production artifacts.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-basis Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits scaffold bytes but does not execute the generated builder that records output lineage.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change or emit its impact report.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change.
- * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable scaffold whose documentation and examples expose reusable authoring capabilities.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization returns template bytes and records no production output lineage.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Scaffold materialization returns template bytes and does not evaluate production source changes or emit an impact report.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Scaffold materialization returns template bytes and does not evaluate production source changes.
+ * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable scaffold whose documentation exposes reusable authoring capabilities.
  * @evidence requirements/product/README.md#제품-계약-요구사항 Materializes reusable AutoMovie capability while leaving production facts in project-owned source.
  * @evidence specifications/authoring-and-authority/README.md#저작과-권한-시스템-명세 Derives editable project source from explicit scaffold identity and pinned inputs.
  * @evidenceExclude requirements/product/authorability.md#product-authoring-choice-space Scaffold materialization does not implement the product authoring choice space requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-authoring-api-refusal Scaffold materialization does not implement the agent mcp authoring api refusal requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Scaffold materialization does not implement the agent mcp content supply refusal requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance Scaffold materialization does not implement the agent mcp contract guidance requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Scaffold materialization does not implement the agent mcp host evidence requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-no-surprise-external-effects Scaffold materialization does not implement the agent mcp no surprise external effects requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-provider-neutrality Scaffold materialization does not implement the agent mcp provider neutrality requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-authoring-api-refusal Scaffold materialization does not implement the agent tool authoring api refusal requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-content-supply-refusal Scaffold materialization does not implement the agent tool content supply refusal requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-contract-guidance Scaffold materialization does not implement the agent tool contract guidance requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-host-evidence Scaffold materialization does not implement the agent tool host evidence requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-no-surprise-external-effects Scaffold materialization does not implement the agent tool no surprise external effects requirement; it only publishes reusable project-owned authoring capability.
+ * @evidenceExclude requirements/agent-authoring/knowledge-boundary.md#agent-provider-neutrality Scaffold materialization does not implement the agent tool provider neutrality requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/agent-authoring/partial-work.md#agent-atomic-compilation Scaffold materialization does not implement the agent atomic compilation requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/agent-authoring/partial-work.md#agent-declared-omission Scaffold materialization does not implement the agent declared omission requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/agent-authoring/partial-work.md#agent-partial-result-control Scaffold materialization does not implement the agent partial result control requirement; it only publishes reusable project-owned authoring capability.
@@ -372,26 +334,26 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary The boundary between reusable capability and one work's facts is drawn by the packages a rendered project depends on, not by the act of rendering the template.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes External image, audio, model, and motion bytes are adopted by an authored project through its asset registry; the template ships none of them.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability Tool replaceability is a property of the rendered project's dependencies and public contracts, which rendering copies rather than decides.
- * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refusing an asset of unclear source, license, or digest is the builder's judgment over an authored production; the template carries no assets to adjudicate.
+ * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal The template carries no authored production assets whose source, license, or digest it could adjudicate.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility The split of system and project responsibility is stated by the contracts the template ships, not performed by rendering them.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Capability state belongs to the packages a project installs; rendering emits the same bytes whatever those packages can currently do.
  * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-not-content-invariant The invariant is held by what the template contains, which is a harness and no production content; rendering copies that set without deciding it.
- * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Distinguishing a missing implementation from an unavailable capability is a diagnosis the generated project's builder makes, not a rendering outcome.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Derivation state lives in the generated project's builder and its tracked output; rendering has no state beyond the bytes it returns.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures are raised where a write or a compile meets an existing tree, which is the writer's and the builder's job rather than the renderer's.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is a single total act with nothing to resume; resumption belongs to the render job and the builder.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Rendering template bytes does not diagnose a production implementation or classify its runtime capability.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Rendering has no production derivation state beyond the scaffold bytes it returns.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Ownership failures belong to an actual source or file publication boundary; this renderer only returns candidate bytes.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is one in-memory operation with no persisted execution to resume.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Scaffold rendering returns bytes and does not own a repository experiment root or approve sandbox packing and installation.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership The build launcher retains its sandbox ancestry and manifest approval across packing and installation; rendering template bytes does not perform those operations.
- * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
- * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-selection Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-source Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
- * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
- * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-isolation Scaffold rendering installs the provider and its guide but does not execute reference reads; @automovie/mcp owns this navigation boundary.
+ * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Copies the authored reference-navigation guidance without registering clients or changing machine-local configuration.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-selection Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-source Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Copies the authored reference-navigation guidance without registering clients or changing machine-local configuration.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
+ * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-isolation Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  */
 export const renderScaffold = (
   props: IAutoMovieScaffoldProps,
@@ -430,45 +392,11 @@ export const renderScaffold = (
     ],
     variables,
   );
-  const manifest = JSON.parse(files["package.json"]!) as {
-    name: string;
-    description: string;
-  };
-  const blank = createBlankAutoMovieProductionEvidence(root, props.language);
-  const instructions = renderAutoMovieProductionInstructionCandidate({
-    evidence: {
-      packageName: manifest.name,
-      description: manifest.description.trim(),
-      manifest: {
-        kind: blank.kind,
-        language: blank.language,
-        populationScope: blank.populationScope,
-        branches: [],
-        bindings: [],
-        localBindings: [],
-        localAudits: [],
-      },
-      designOwners: [],
-      contracts: [],
-    },
-    sources: files,
-  });
-  for (const [relative, content] of Object.entries(instructions))
-    Object.defineProperty(files, relative, {
-      configurable: true,
-      enumerable: true,
-      value: content,
-      writable: true,
-    });
-  Object.defineProperty(files, AUTO_MOVIE_CONTRACT_BASELINE_PATH, {
-    configurable: true,
-    enumerable: true,
-    value: renderAutoMovieContractBaseline({
-      files,
-      language: props.language,
-      version: AUTOMOVIE_TEMPLATE_VERSIONS.template!.replace(/^[~^]/u, ""),
-    }),
-    writable: true,
-  });
+  const instructionSources = Object.entries(files).map(([path, content]) => ({
+    path,
+    content,
+  }));
+  validateAutoMovieSkillRouterLinks(instructionSources);
+  validateAutoMovieInstructionDocumentLinks(instructionSources, "AGENTS.md");
   return files;
 };

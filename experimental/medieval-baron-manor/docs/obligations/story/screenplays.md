@@ -4,11 +4,11 @@ Duties the complete screenplay H2 owner population satisfies across its handoff 
 
 ## Realization-ready contract {#realization-ready-contract}
 
-Across the complete screenplay population, every scene supplies the dramatic and audiovisual requirements that local shot and audience-facing edit tracks must jointly satisfy while leaving engine calls, geometry construction, reusable interpolation, camera and lighting solution, and editorial mapping to their distinct source contracts. A source realizes its assigned portion but does not invent missing story action, caption text, dialogue, sound, or audience effect.
+Across the complete construction screenplay population, allocate every required dramatic and audiovisual result to the scene or coordinated scenes that supply it. Their union must leave no unowned result for shot or edit authors to invent. Per-unit mechanical precision belongs to `principles/story/screenplays.md#mechanical-audiovisual-description`; this obligation owns complete coverage across the handoff, including results realized jointly by several scenes.
 
 Review question: could independent shot and edit implementers build one equivalent blocking pass from the complete screenplay without making different narrative or audience-content decisions?
 
-This obligation owns the handoff from final screenplay to realization. The common substantive-completion principle owns completion of every addressed unit, and shot and film-source obligations own implementation boundaries across their source populations.
+This obligation owns construction's realization coverage. The revision-handoff obligation below carries that coverage through reviewed final to source, and shot and film-source obligations own implementation boundaries across their source populations.
 
 Sources: [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
 
@@ -20,10 +20,10 @@ Review question: which unit passes one completeness dimension while failing the 
 
 Sources: [Academy Nicholl screenplay formatting resources](https://www.oscars.org/nicholl/screenwriting-resources); [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
-## Revision and realization handoff {#screenplay-revision-realization-handoff}
+## Construction lock and revision handoff {#screenplay-revision-realization-handoff}
 
-The complete screenplay population identifies the exact locked revision whose units, headings, content, timing, ancestry, and scene identities were reviewed. Every shot and film-source owner consumes that revision and records the exact scene identities it realizes. Renumbered, split, merged, revised, or retired scenes create a successor revision and invalidate dependent review, shot, edit, and delivery mappings until they are explicitly reconciled; formatting or renumbering never mutates the locked identity in place.
+The complete construction screenplay population identifies the exact locked input whose units, headings, content, timing, ancestry, authority carriers, and scene identities were reviewed. Screenplay naturalness consumes that lock and preserves it exactly; every shot and film-source owner consumes the resulting reviewed final. Renumbered, split, merged, substantively revised, or retired construction scenes create a successor lock and invalidate final lineage, review, shot, edit, and delivery mappings until they are explicitly reconciled. Formatting or renumbering never mutates the locked identity in place.
 
-Review question: which review or downstream mapping survives only because changed screenplay content or identity was treated as the same locked revision?
+Review question: which final revision, review, or downstream mapping survives only because changed construction content or identity was treated as the same lock?
 
 Sources: [Final Draft on scene numbering and revision practice](https://kb.finaldraft.com/hc/en-us/articles/27810301418132-How-do-I-number-scenes); [NASA systems engineering handbook on configuration identity](https://www.nasa.gov/reference/systems-engineering-handbook/)

@@ -28,6 +28,8 @@ Before drafting a file, inventory candidate owners and apply `docs/obligations/c
 
 For each resulting owner, settle the applicable boundary, status, operating conditions, authority or access, resources, dependencies, costs, limits, exceptions, present state, and downstream consequences. Those are completion questions rather than mandatory field labels.
 
+For every subject, place, or background the delivery must recognize, apply [Observable identity](../../../docs/principles/core/settings.md#observable-identity) before handing its canon to design or story authors. That principle owns mechanical appearance precision and its boundary with implementation. Test the handoff by asking independent consumers to identify any appearance decision they would still have to invent.
+
 State each fact's supported, invented, inherited, derived, or unresolved basis at its owning H2. Cite the direct sources for externally checkable claims there, with the scope and uncertainty needed by the consumer.
 
 ## Subject canon

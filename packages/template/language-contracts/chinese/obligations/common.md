@@ -1,5 +1,7 @@
 # 中文义务
 
+比较语言模式时，适用 `obligations/core/defaults.md` 对机械性规格描述的保护边界。本语言模块的总体评估不得改变该边界。
+
 ## 翻译干扰与语域总体账目 {#chinese-population-interference-account}
 
 ```contract-rule

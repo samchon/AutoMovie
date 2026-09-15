@@ -323,9 +323,12 @@ export const test_viewer_planting_instances = (): void => {
       [
         "collapsed",
         () => {
-          const scale = new THREE.Vector3();
-          stub.decompose(new THREE.Vector3(), new THREE.Quaternion(), scale);
-          return scale.y === 0;
+          // A singular matrix has no unique rotation/scale decomposition.
+          // Its Y column directly measures the rendered branch-axis extent.
+          return (
+            Math.hypot(stub.elements[4], stub.elements[5], stub.elements[6]) ===
+            0
+          );
         },
       ],
       [

@@ -1,5 +1,7 @@
 # 日本語の義務
 
+言語パターンの比較には `obligations/core/defaults.md` の機械的仕様の保護境界を適用する。この言語別の母集団評価は、その境界を変更しない。
+
 ## 翻訳干渉とレジスターの母集団勘定 {#japanese-population-interference-account}
 
 ```contract-rule

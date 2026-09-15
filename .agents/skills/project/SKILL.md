@@ -40,7 +40,7 @@ A logic example belongs in a pure unit test; a shipped archetype belongs in `pac
 
 - `packages/interface` (`@automovie/interface`): the type hub, the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Pure types with no runtime dependency; ranges and units live in field JSDoc, enforced by `engine` validators.
 - `packages/engine` (`@automovie/engine`): the deterministic engine. Math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
-- `packages/evidence` (`@automovie/evidence`): the reusable production-authoring evidence graph. It validates film, brief, and library topology and turns one generated project's stages plus additive claims into `@ttsc/evidence` configuration; one typed `lint.config.ts` owns and exports that complete project-local declaration, and every reusable target lives in the generated project's own scaffold-local `docs` inventory.
+- `packages/evidence` (`@automovie/evidence`): the reusable production-authoring evidence graph. It validates film, brief, and library topology and turns one generated project's stages plus additive claims into `@ttsc/evidence` configuration; one typed `src/lint.config.ts` owns and exports that complete project-local declaration, and every reusable target lives in the generated project's own scaffold-local `docs` inventory.
 - `packages/human` (`@automovie/human`): numerical facial anatomy, identity/expression documents, component replacement, editor state and static face export. Named people and photograph-derived documents belong in test studies, never in this capability package. Its [README](../../../packages/human/README.md) owns package use.
 - `packages/archetypes` (`@automovie/archetypes`): the shipped model-archetype catalogue (parameter schemas, bounds, geometry builders and the declarative gait tables) behind one registry the builder is handed rather than one it enumerates. A figure or a prop the engine happens to ship lives here and not in `engine`, so what a production performs stays the production's decision.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
@@ -54,7 +54,6 @@ A logic example belongs in a pure unit test; a shipped archetype belongs in `pac
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`. Every scenario is a pure logic unit test that finishes in under 500 ms.
 - `experimental/medieval-baron-manor` (`medieval-baron-manor`): the finished manor production, kept as a workspace member so the website bundles its authored source and textures. It is the one committed directory under `experimental/`; a disposable sandbox created beside it is never committed (see the experiment skill).
 - `website/` (`@automovie/website`): the Vite static site published to GitHub Pages at `https://samchon.github.io/AutoMovie/` by `.github/workflows/website.yml`: a landing page and the manor viewer, which builds the manor from source in the browser and bakes each entry into one mesh per material for drawing.
-- `build/`: repository entry points for immutable package generations (`tgz.ts`), disposable experiments (`experimental.ts`), and prose lint (`proseVoice-cli.ts`), plus their inventory/logic helpers and TypeScript/lint configuration. Product tests belong in `test/`, not here.
 - `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json` and shared lint policy.
 - `docs/` (`@automovie/docs`): product requirements and package-independent system specifications, checked as an evidence graph during the workspace build.
 - `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). Local to a checkout and often empty; read what it holds at session start and write what it lacks.
@@ -65,8 +64,6 @@ A logic example belongs in a pure unit test; a shipped archetype belongs in `pac
 ```bash
 pnpm install                              # workspace install (native TypeScript 7 / tsgo via ttsc)
 pnpm run build                            # docs evidence lint plus recursive package builds
-pnpm run build:tgz                        # pack the working tree for generated consumers
-pnpm run experimental <name> --language korean # create and install a Korean-language sandbox
 pnpm run format                           # prettier write
 pnpm --filter @automovie/test start       # run the test suite (ttsx, no separate compile step)
 pnpm --filter @automovie/website build    # type-check and bundle the public site into website/dist

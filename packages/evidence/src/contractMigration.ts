@@ -191,6 +191,7 @@ const anchors = (source: string): string[] =>
 const CONTRACT_PATH_PREFIXES = [
   "docs/discovery/",
   "docs/language/",
+  "docs/naturalness/",
   "docs/obligations/",
   "docs/principles/",
   "docs/upstream/",

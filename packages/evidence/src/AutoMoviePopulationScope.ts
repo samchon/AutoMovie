@@ -8,9 +8,11 @@ import type { AutoMoviePopulationTransitionReceipt } from "./AutoMoviePopulation
  * realize, while scripts and screenplays select one delivery group. A library
  * pilot has no invented group selector: it starts before sibling owners exist
  * and takes the first real design/source branch through review. The
- * complete-production reset is an explicit transition state that selects the
- * complete population while preserving reviewed pilot files as inactive draft
- * source material for the rebuild.
+ * complete-production reset is a verified transition checkpoint that selects
+ * the complete population and preserves the exact reviewed construction
+ * predecessor. Rebuilding begins in complete-production mode after that
+ * checkpoint, with recoverable pilot history and unready descendants archived
+ * outside the governed population.
  *
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes complete, pilot, and post-pilot reset populations visible in the generated project's sole declaration.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed population-scope union and its exact pilot group identity.

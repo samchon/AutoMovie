@@ -25,6 +25,7 @@ import { createAutoMovieProductionSourceStatus } from "./createAutoMovieProducti
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import { resolveAutoMovieTimedAuthoringKind } from "./timedAuthoringKind";
 import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign";
 
 /**
@@ -134,6 +135,7 @@ export const openAutoMovieProduction = (props: {
   /** Fresh graph reader used by every atomic currentness confirmation. */
   currentAuthoringEvidence?: () => IAutoMovieProductionEvidence;
 }): IAutoMovieProductionServices => {
+  resolveAutoMovieTimedAuthoringKind(props.authoringEvidence);
   const project = AutoMovieProductionProject.open(
     findAutoMovieProjectRoot(props.projectRoot),
     props.productionId,

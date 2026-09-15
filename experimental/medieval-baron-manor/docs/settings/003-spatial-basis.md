@@ -16,7 +16,7 @@
 @evidence principles/core/settings.md#fact-status The authored single-house unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:31.
 @evidence principles/core/settings.md#observable-identity The authored single-house unit states the manor decision, its source boundary, and its operational consequence.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:35.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 남쪽으로 열린 얕은 ㄷ자 두 층이 한 건물의 바닥·벽·지붕·동선으로 이어지고 정원 쪽 접근 길이 중앙 현관에 닿는다. 앞면만 ㄷ자로 꾸미고 뒤에서 분리된 별채가 되거나 연못을 건너야 들어가는 재현은 이 구조 정체성을 보존하지 못한다.
 @evidence principles/core/settings.md#source-support The authored single-house unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#source-support #430bca9 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:37.
 -->
@@ -42,7 +42,7 @@
 @evidence principles/core/settings.md#fact-status 채택 치수와 계산한 면적을 제작 선택·derived 값으로 구별한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status가 계산 결과의 derived 지위를 밝히고 치수는 이미지 측정값이 아니라고 하므로 사진 실측 사실로 읽히지 않는다.
 @evidence principles/core/settings.md#observable-identity 면적은 본채의 규모 기준이며 방·재료의 시각 정체성을 대신하지 않는다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 266.4㎡ 예산만으로 방과 외형의 완성을 주장하지 않고 같은 본채의 두 층·중앙정원 규모를 설계하는 값으로 한정한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 외곽15.2×11.5m와 비건폐 정원6.5×6.0m의 관계, 두 층 면적에서 개방부5.2㎡를 빼는 모델 규모를 읽었다. 수치는 재현 가능한 외곽·빈 곳의 기준이고 카메라에 맞춘 확대나 실측 유효면적 주장으로 바뀌지 않으며 재료·물품 형상은 해당 소유자에 남는다.
 @evidence principles/core/settings.md#source-support 정밀 면적은 명시한 제작 치수와 산식에서만 도출한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 사진의 픽셀이나 역사 주택 규격을 근거로 들지 않아 외부 자료가 지원하지 않는 실측 정밀도를 주장하지 않는다.
 -->
@@ -71,7 +71,7 @@
 @evidence principles/core/settings.md#fact-status The authored ground-access unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:119.
 @evidence principles/core/settings.md#observable-identity The authored ground-access unit states the manor decision, its source boundary, and its operational consequence.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:123.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 현관·한 계단 하부·연속 ㄷ자 회랑과 서측 홀/후면 서비스/동측 장부실의 방향 관계를 대조했다. 각 필수 실의 직접 문과 끊기지 않는 회랑이 물리적 식별 조건이고 실제 문 좌표는 이 조건을 소비하는 space 설계가 정한다.
 @evidence principles/core/settings.md#source-support The authored ground-access unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#source-support #430bca9 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:125.
 -->
@@ -97,7 +97,7 @@
 @evidence principles/core/settings.md#fact-status 꺾임 형식은 사용자 확정이고 오름 수·높이는 제작 선택이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 0.18m를 역사 규격이나 보행 검사의 결과로 주장하지 않고 채택한 층간 높이를 나누는 모델 값으로 한정한다.
 @evidence principles/core/settings.md#observable-identity 두 구간과 중간참·위 참·난간으로 90도 꺾인 계단을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 직선 계단 모양이면 같은 층간 높이에 닿더라도 중앙 중간참에서 방향이 꺾이는 정체성을 충족하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e Y 높이 차2.88m를 0.18m 오름16개로 나누고 중간참에서90도 꺾이는 두 구간·위 참·난간을 확인했다. 같은 높이에 닿는 직선 계단이나 별도 외부 계단은 이 형식과 다르며 개방부 규모는 area-budget의 동일 값을 소비한다.
 @evidence principles/core/settings.md#source-support 계단 수치는 제작 구성이며 이미지에서 측정한 규격이 아니다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 2.88m와 16개 0.18m의 명시된 분할 외에 역사 건축·인체 보행의 외부 정밀 사실을 도입하지 않는다.
 -->
@@ -123,7 +123,7 @@
 @evidence principles/core/settings.md#fact-status 연결은 사용자 확정이고 문 위치·방 분할은 설계 결정이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 실제 문 위치를 space 설계가 정한다고 밝혀 설정의 고정 그래프를 이미 측정한 방문 좌표로 제시하지 않는다.
 @evidence principles/core/settings.md#observable-identity 한 일자 복도와 직접 난 방문·세척실 가림으로 사적층을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 ㄷ자 회랑을 상층에 복제하면 상층의 짧은 동서 일자 복도 정체성이 사라지며 사생활의 실제 차폐 시험을 추가할 근거는 없다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 중앙 참에서 시작하는 후면의 짧은 동서 일자 복도와 주침실·두 작은 침실·세척실·공용 수납의 직접 문을 읽었다. 상층에 ㄷ자 회랑을 복제하거나 다른 침실을 경유시키면 평면과 관찰 위치에서 다른 집이 되며 사생활 표현이 별도 실물 적합성 검사를 뜻하지 않는다.
 @evidence principles/core/settings.md#source-support 상층의 공간 형식은 확정한 가상 집의 구성이다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 특정 시대의 사생활 규격이나 주택 통행 조건을 사실로 인용하지 않고 이 본채의 방·복도 관계만 채택한다.
 -->
@@ -150,7 +150,7 @@
 @evidence principles/core/settings.md#fact-status The authored surface-responsibility unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:248.
 @evidence principles/core/settings.md#observable-identity The authored surface-responsibility unit states the manor decision, its source boundary, and its operational consequence.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:252.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 바닥·천장·모든 벽과 외피·모서리·지붕 하면·개구부 테두리가 소유된 실제 면이고 공유벽은 같은 경계의 양쪽 면이라는 문장을 확인했다. 정면에서만 붙인 벽이나 보이지 않는 면의 무주인 처리는 반대쪽·하면 관찰의 동일성을 잃으며 마감·부재·배치 책임은 별도로 나뉜다.
 @evidence principles/core/settings.md#source-support The authored surface-responsibility unit states the manor decision, its source boundary, and its operational consequence.
 @evidenceReview principles/core/settings.md#source-support #430bca9 Checked the cited contract requirement against this authored manor decision and its stated basis. Host-specific check at docs/settings/003-spatial-basis.md:254.
 -->

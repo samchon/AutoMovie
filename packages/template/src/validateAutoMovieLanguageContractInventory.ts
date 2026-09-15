@@ -7,17 +7,17 @@ import {
 
 const CONTRACT_FILES = [
   "discovery/signals.md",
+  "naturalness/screenplays.md",
   "obligations/common.md",
-  "principles/common.md",
 ] as const;
 
 const CONTRACT_INVENTORY = [
   { kind: "directory", path: "discovery" },
   { kind: "file", path: "discovery/signals.md" },
+  { kind: "directory", path: "naturalness" },
+  { kind: "file", path: "naturalness/screenplays.md" },
   { kind: "directory", path: "obligations" },
   { kind: "file", path: "obligations/common.md" },
-  { kind: "directory", path: "principles" },
-  { kind: "file", path: "principles/common.md" },
 ] as const;
 
 const TERMINALS: Readonly<
@@ -32,7 +32,8 @@ const TERMINALS: Readonly<
 type RuleApplication =
   | "composition-safe"
   | "observation-only"
-  | "population-distribution";
+  | "population-distribution"
+  | "revision-only";
 
 interface IExpectedRule {
   anchor: string;
@@ -74,17 +75,17 @@ const expectedRules = (
         application: "population-distribution",
       },
     ],
-    "principles/common.md": [
+    "naturalness/screenplays.md": [
       {
         anchor:
           language === "english"
             ? "english-idiomatic-relation"
             : `${language}-contextual-relation`,
-        application: "composition-safe",
+        application: "revision-only",
       },
       {
         anchor: `${language}-register-ownership`,
-        application: "composition-safe",
+        application: "revision-only",
       },
     ],
   }) as const;

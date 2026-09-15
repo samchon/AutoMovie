@@ -3,6 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
+import { throwsError } from "../internal/predicates";
 
 const { resolveAutoMovieTimedAuthoringKind } = loadSourceModule<{
   resolveAutoMovieTimedAuthoringKind: (
@@ -20,7 +21,7 @@ const { resolveAutoMovieTimedAuthoringKind } = loadSourceModule<{
   ),
 );
 
-const evidence = (kind: "brief" | "film" | "library") =>
+const evidence = (kind: "brief" | "film" | "library" | null) =>
   ({ manifest: { kind } }) as IAutoMovieProductionEvidence;
 
 /**
@@ -31,8 +32,13 @@ const evidence = (kind: "brief" | "film" | "library") =>
  * 1. A direct brief uses brief owners without a screenplay prerequisite.
  * 2. A film and the compatible evidence-less path retain screenplay ownership.
  * 3. A library is excluded from the timed builder path.
+ * 4. An explicitly blank declaration refuses instead of falling back to legacy film.
  */
 export const test_production_timed_authoring_kind = (): void => {
+  TestValidator.predicate(
+    "an unselected kind cannot borrow legacy film ownership",
+    throwsError(() => resolveAutoMovieTimedAuthoringKind(evidence(null))),
+  );
   TestValidator.equals(
     "timed authoring ownership is kind-discriminated",
     {

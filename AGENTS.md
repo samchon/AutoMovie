@@ -15,6 +15,7 @@ Follow the literal request; it is the contract, not a hint at what the user "rea
 - **Evidence precedes correction.** Treat issue reports, review proposals, and claims that something is wrong or missing as hypotheses. Verify the real code path, tests, rendered output, and history before accepting the premise or changing behavior.
 - **Trace the consequence surface.** A named file or failing case is the starting point, not the investigation boundary. Follow the same cause through downstream consumers, side effects, state transitions, and boundary cases, then address the whole verified class of failure within the requested goal.
 - **Default over ask.** On an ambiguous detail, pick the sensible default and say what you chose; reserve questions for forks only the user can settle.
+- **Record every user directive.** Immediately preserve each user instruction in the durable `.wiki/` worklog and track its implementation. Keep superseded instructions in the chronology with the instruction that replaces them; a session transition never cancels an unfulfilled request. The documentation skill owns the record's form and location.
 - **Ship each topic as a PR.** Standing instruction (user, 2026-07-06): every topic-unit of work is submitted as its own PR; never commit to `master` directly. Merge only on explicit user request or under a standing autonomous mandate (see the pull-request skill). Green CI remains the normal merge path.
 
 ## Skills
@@ -31,7 +32,7 @@ Work rules, testing, the per-change 100% coverage obligation, validation, conseq
 
 ### Scaffold Authoring
 
-How `packages/template/scaffold`, `packages/template/language-contracts`, and the instruction and contract materializers under `packages/template/src` are maintained as the self-contained harness every generated project inherits: its five trigger-partitioned contract and authoring skills, the reserved `docs/discovery`, domain-partitioned `docs/upstream/{design,story,delivery}`, `docs/obligations`, `docs/principles`, and selected language inventory, and the negative-probe and generated-consumer verification gates, `.agents/skills/scaffold/SKILL.md`. Read before editing any of those sources.
+How `packages/template/scaffold`, `packages/template/language-contracts`, and the instruction and contract materializers under `packages/template/src` are maintained as the self-contained harness every generated project inherits: its five trigger-partitioned contract and authoring skills, reserved shared and selected-language contracts, construction and final authoring populations, and negative-probe and generated-consumer verification gates, `.agents/skills/scaffold/SKILL.md`. Read before editing any of those sources.
 
 The production contract and procedures ship inside the scaffold as `contract`, `production-lifecycle`, `evidence-graph`, `source-authoring`, and `review-verification`, so this repository keeps one trigger-partitioned copy of each concern. Read the applicable shipped skills before interpreting, authoring, or reviewing production content anywhere, including a fixture or an experimental sandbox here.
 

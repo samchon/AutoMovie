@@ -15,45 +15,44 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
 const authoringSurface = ["src/bin.ts", "src/scaffoldNextSteps.ts"];
-const referenceSurface = ["src/synchronizeAutoMovieReferenceClients.ts"];
-
-const inspectionSurface = [
-  "src/loadAutoMovieProjectState.ts",
-  "src/closeAutoMovieProjectState.ts",
-];
 
 /**
  * The operational domain is the residual of the derived population.
  *
  * Writing it as a subtraction rather than a list is what keeps the default
  * inside the graph: a new CLI source answers for the operational contracts
- * until someone deliberately assigns it to the authoring or inspection domain,
+ * until someone deliberately assigns it to the authoring or delivery domain,
  * instead of silently answering for nothing.
  */
 const operationsSurface = [
   ...allSources,
   "!src/scaffoldNextSteps.ts",
-  ...referenceSurface.map((file) => `!${file}`),
-  ...inspectionSurface.map((file) => `!${file}`),
+  "!src/contractMaintenanceFileSystem.ts",
+  "!src/readAutoMovieMaintenanceMarkdownPaths.ts",
+];
+
+const deliverySurface = [
+  "src/contractMaintenanceFileSystem.ts",
+  "src/readAutoMovieMaintenanceMarkdownPaths.ts",
 ];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     ...(
       [
-        "requirements/agent-authoring",
-        "specifications/authoring-and-authority",
+        "requirements/story/delivery-index.md",
+        "specifications/narrative-and-intent/delivery-index.md",
       ] as const
     ).map(
-      (directory): ITtscEvidenceGraphClaim => ({
-        name: `public CLI reference registration implements ${directory}`,
+      (file): ITtscEvidenceGraphClaim => ({
+        name: "CLI delivery index input implements " + file,
         type: "typescript",
-        files: referenceSurface,
+        files: deliverySurface,
         symbol: ["type", "function", "property"],
         reference: {
           type: "markdown",
           root: "../../docs",
-          files: [`${directory}/reference-navigation.md`],
+          files: [file],
           symbol: "h3",
         },
       }),
@@ -149,60 +148,6 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/editorial-render-and-delivery/**/*.md",
             "specifications/execution-and-recovery/**/*.md",
             "specifications/interchange-and-adoption/**/*.md",
-            "!specifications/**/README.md",
-          ],
-          symbol: ["h3"],
-        },
-      ],
-    },
-    {
-      name: "public CLI inspection exports implement requirements",
-      type: "typescript",
-      files: inspectionSurface,
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/diagnostics/**/README.md",
-            "requirements/evidence-and-provenance/**/README.md",
-          ],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/diagnostics/**/*.md",
-            "requirements/evidence-and-provenance/**/*.md",
-            "!requirements/**/README.md",
-          ],
-          symbol: ["h3"],
-        },
-      ],
-    },
-    {
-      name: "public CLI inspection exports implement specifications",
-      type: "typescript",
-      files: inspectionSurface,
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/evidence-and-provenance/**/README.md",
-            "specifications/validation-and-diagnostics/**/README.md",
-          ],
-          symbol: ["h1"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/evidence-and-provenance/**/*.md",
-            "specifications/validation-and-diagnostics/**/*.md",
             "!specifications/**/README.md",
           ],
           symbol: ["h3"],

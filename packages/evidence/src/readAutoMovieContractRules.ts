@@ -21,7 +21,8 @@ export type AutoMovieContractRuleApplication =
   | "composition-safe"
   | "observation-only"
   | "population-distribution"
-  | "post-draft-frequency";
+  | "post-draft-frequency"
+  | "revision-only";
 
 /**
  * Routing metadata attached to one optional structured contract rule.
@@ -120,6 +121,7 @@ export function selectAutoMovieContractRules(
       "observation-only",
       "population-distribution",
       "post-draft-frequency",
+      "revision-only",
     ].includes(application)
   )
     throw new Error(
@@ -227,6 +229,7 @@ function validateMetadata(
       "observation-only",
       "population-distribution",
       "post-draft-frequency",
+      "revision-only",
     ].includes(String(value.safeApplication))
   )
     throw new Error(`${location}: invalid safe application.`);

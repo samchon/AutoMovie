@@ -27,6 +27,14 @@ type MarkdownSymbol = Extract<
 export type AutoMovieProductionContractLayer = AutoMovieAuthoredDocumentLayer;
 
 /**
+ * Authored pass whose units answer a production-local contract.
+ *
+ * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes a local rule's construction or final ownership explicit.
+ * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed local contract pass vocabulary.
+ */
+export type AutoMovieProductionContractPass = "construction" | "naturalness";
+
+/**
  * Additive graph claim retaining its project-specific binding identity.
  *
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Preserves the layer, scope, and positive-or-negative disposition beside the native graph claim.
@@ -37,6 +45,11 @@ export type AutoMovieProductionContractClaim = MarkdownClaim & {
   autoMovieBinding: {
     /** Authored layer that owns the host population. */
     layer: AutoMovieProductionContractLayer;
+    /**
+     * Construction hosts or audience-language final screenplay hosts.
+     *
+     */
+    pass: AutoMovieProductionContractPass;
     /** Exact population in which this declaration was made. */
     populationScope: AutoMoviePopulationScope;
     /** Exact owning layer stage in which this declaration was made. */
@@ -87,6 +100,16 @@ export interface IAutoMovieProductionContractClaimProps {
 
   /** Stage of the authored layer that owns {@link files}. */
   stage: AutoMovieEvidenceStage;
+
+  /**
+   * Pass whose units answer this rule.
+   *
+   * Naturalness is valid only for screenplay hosts under
+   * `final/screenplays`; every other claim defaults to construction.
+   *
+   * @default "construction"
+   */
+  pass?: AutoMovieProductionContractPass;
 
   /** Exact production population to which this local relationship applies. */
   populationScope: AutoMoviePopulationScope;
@@ -163,6 +186,10 @@ export function createAutoMovieProductionPrincipleClaim(
 export function createAutoMovieProductionObligationClaim(
   props: IAutoMovieProductionObligationClaimProps,
 ): AutoMovieProductionContractClaim {
+  if (props.pass === "naturalness")
+    throw new Error(
+      "Production-local obligations belong to construction populations; naturalness accepts per-unit principles only.",
+    );
   if (typeof props.document !== "string")
     throw new Error(
       "A production-local obligation account requires one contract document.",
@@ -204,6 +231,7 @@ function createClaim(
   props: IAutoMovieProductionContractClaimProps,
   checklist: boolean,
 ): AutoMovieProductionContractClaim {
+  const pass = props.pass ?? "construction";
   const name: string = props.name.trim();
   if (name.length === 0)
     throw new Error("A production-local contract claim requires a name.");
@@ -217,8 +245,12 @@ function createClaim(
     );
 
   const files: string[] = [...props.files];
-  requirePositivePopulation(files, "host");
-  for (const file of files) validateHostPattern(props.layer, file);
+  validateAutoMovieProductionContractHosts({
+    root: "docs",
+    files,
+    layer: props.layer,
+    pass,
+  });
 
   const documents: string[] = Array.isArray(props.document)
     ? [...props.document]
@@ -242,6 +274,10 @@ function createClaim(
     throw new Error(
       "A production-local contract claim may be inapplicable only to a first-pilot population.",
     );
+  if (pass === "naturalness" && props.layer !== "screenplays")
+    throw new Error(
+      "Production-local naturalness principles may select only final screenplay hosts.",
+    );
 
   return {
     name,
@@ -255,6 +291,7 @@ function createClaim(
       props.inapplicable === true,
     autoMovieBinding: {
       layer: props.layer,
+      pass,
       populationScope: props.populationScope,
       stage: props.stage,
       disposition: props.inapplicable === true ? "inapplicable" : "binding",
@@ -271,12 +308,38 @@ function createClaim(
   };
 }
 
+/**
+ * Admit native host selectors against their declared local authored pass.
+ *
+ * Constructors and binding admission share this boundary so an edited native
+ * claim cannot retain final metadata while selecting construction hosts.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Keeps an AutoMovie-bound local principle accountable to its declared authored population.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Checks the docs root and normalized positive host selectors against construction or final screenplay ownership.
+ */
+export function validateAutoMovieProductionContractHosts(props: {
+  root: string | undefined;
+  files: readonly string[];
+  layer: AutoMovieProductionContractLayer;
+  pass: AutoMovieProductionContractPass;
+}): void {
+  if (props.root !== "docs")
+    throw new Error(
+      "An AutoMovie-bound local principle requires the docs host root.",
+    );
+  requirePositivePopulation(props.files, "host");
+  for (const file of props.files)
+    validateHostPattern(props.layer, props.pass, file);
+}
+
 /** Keep one host glob normalized and confined to its declared authored layer. */
 function validateHostPattern(
   layer: AutoMovieProductionContractLayer,
+  pass: AutoMovieProductionContractPass,
   pattern: string,
 ): void {
   const file = pattern.replace(/^!/u, "");
+  const prefix = pass === "naturalness" ? "final/screenplays/" : `${layer}/`;
   if (
     file.includes("\\") ||
     file.startsWith("/") ||
@@ -284,10 +347,10 @@ function validateHostPattern(
     file
       .split("/")
       .some((part) => part === "" || part === "." || part === "..") ||
-    !file.startsWith(`${layer}/`)
+    !file.startsWith(prefix)
   )
     throw new Error(
-      `A production-local contract claim for ${layer} contains a host outside that layer.`,
+      `A production-local contract claim for ${pass} ${layer} contains a host outside ${prefix}.`,
     );
 }
 

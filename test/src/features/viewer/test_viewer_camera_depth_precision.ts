@@ -51,7 +51,7 @@ const renderer = (
   return {
     capabilities: {
       logarithmicDepthBuffer: logarithmic,
-      reverseDepthBuffer: reversed,
+      reversedDepthBuffer: reversed,
     },
     getContext: () => ({
       DEPTH_BITS: depthBits,

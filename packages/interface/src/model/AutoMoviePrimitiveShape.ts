@@ -1,12 +1,11 @@
 /**
- * A parametric primitive shape: the **LLM-authored** path to geometry.
+ * A compact parametric primitive shape.
  *
- * Where a raw {@link IAutoMovieMesh} is bulk vertex data (imported, not
- * emittable by a model), a primitive is a handful of named, bounded dimensions
- * an LLM _can_ emit: "a 0.4 m sphere", "a 1.8 m tall capsule". Assembling a
- * character or prop from primitives is how automovie generates geometry inside
- * the dimensionality where structured output is reliable: the same "named
- * scalar" bet the skeleton and expression layers make.
+ * Where an {@link IAutoMovieMesh} carries explicit bulk vertex data, a
+ * primitive is a handful of named, bounded dimensions such as "a 0.4 m sphere"
+ * or "a 1.8 m tall capsule". It is the concise representation when a reviewed
+ * result needs no free-form topology. More complex deterministic source may
+ * generate an explicit mesh instead of pretending primitives can express it.
  *
  * Discriminated on `type`; each variant carries only the dimensions its shape
  * needs. All dimensions are in meters and expected to be strictly positive (the

@@ -8,9 +8,6 @@ packages:
   - experimental/medieval-baron-manor
   - website
 
-overrides:
-  "@huggingface/transformers>sharp": "file:packages/template/scaffold/vendor/sharp-disabled"
-
 catalogs:
   samchon:
     typia: &typia ^13.2.0
@@ -23,7 +20,7 @@ catalogs:
     "@trivago/prettier-plugin-sort-imports": ^5.2.2
     prettier: ^3.5.3
   three:
-    three: &three ^0.169.0
+    three: &three ^0.186.0
     "@types/three": *three
   gltf:
     "@gltf-transform/core": ^4.5.0

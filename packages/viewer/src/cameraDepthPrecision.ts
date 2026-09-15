@@ -70,7 +70,7 @@ export const evaluateAutoMovieViewerCameraDepthPrecision = (props: {
   realized: THREE.PerspectiveCamera;
 }): IAutoMovieViewerCameraDepthPrecisionReport => {
   const logarithmic = props.renderer.capabilities.logarithmicDepthBuffer;
-  const reversed = props.renderer.capabilities.reverseDepthBuffer;
+  const reversed = props.renderer.capabilities.reversedDepthBuffer;
   const projection: IAutoMovieViewerCameraDepthPrecisionReport["projection"] =
     logarithmic
       ? reversed

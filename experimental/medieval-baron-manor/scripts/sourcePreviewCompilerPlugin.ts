@@ -281,7 +281,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         response.setHeader("Cache-Control", "no-store");
         response.end(JSON.stringify(state));
       });
-      changed(path.join(root, "viewer/preview.ts"));
+      changed(path.join(root, "src/createPreview.ts"));
     },
   };
 };

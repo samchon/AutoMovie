@@ -1,6 +1,6 @@
 # Research
 
-Use `docs/research` only when a production decision depends on external evidence whose source identity, uncertainty, and production consequence need a durable review path. A production that needs no such ledger keeps the precreated branch empty and the layer `disabled`; it creates no Markdown host.
+Use `docs/research` only when a production decision depends on external evidence whose source identity, uncertainty, and production consequence need a durable review path. A production that needs no such ledger keeps the layer `disabled` and creates neither its directory nor a Markdown host.
 
 ## Questions before prose
 

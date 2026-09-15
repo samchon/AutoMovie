@@ -10,4 +10,4 @@
 
 Renderer는 H1 다음의 단일 start/end delimiter 사이에 filename 순서의 links를 만들며 delimiter 밖에는 공백 외 authored body나 별도 link authority를 허용하지 않는다. Planner는 missing index/group/unit, duplicate 또는 unmatched delimiter, stale block과 mirrored script/screenplay inventory 차이를 diagnostic으로 반환한다.
 
-Check 결과도 canonical candidate bytes를 반환한다. Write는 check가 읽은 source와 apply 직전 source가 같은 identity인지 확인한 뒤 candidate를 publish하고, competitor 또는 partial failure에서 authored unit과 predecessor index를 덮어쓰지 않는다.
+Check 결과도 canonical candidate bytes를 반환한다. Write는 check가 읽은 source와 apply 직전 source가 같은 identity인지 확인한 뒤 해당 Markdown index만 갱신한다. 경쟁 변경은 쓰기 전에 거부하고, 쓰기 중 실패는 실패한 index와 결과를 보고한다. 별도 baseline, journal 또는 복구 상태 파일을 만들지 않으며 원본 이력과 복구는 Git이 소유한다.

@@ -1,5 +1,7 @@
 # 한국어 의무
 
+언어 패턴을 비교할 때 `obligations/core/defaults.md`의 기계적 명세 보호 경계를 적용한다. 이 언어별 모집단 결산은 그 경계를 변경하지 않는다.
+
 ## 번역 간섭과 레지스터 모집단 장부 {#korean-population-interference-account}
 
 ```contract-rule

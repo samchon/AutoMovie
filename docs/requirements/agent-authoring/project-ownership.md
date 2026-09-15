@@ -8,6 +8,8 @@
 
 사용자가 읽고 수정할 수 있는 project source와 명시적으로 채택한 bytes가 작품 사실의 정본이어야 한다. Cache, prompt transcript, remote workspace, render 또는 생성 결과가 명시적 채택 없이 source를 덮어쓰거나 더 높은 권위를 가져서는 안 된다.
 
+Scaffold는 최초 설치로 파일을 제공한다. 설치된 agent 진입 문서, skills, 계약과 설정은 프로젝트가 소유하고 version control로 관리하며, 코딩 에이전트가 일반 파일 편집으로 유지할 수 있어야 한다. 이후 패키지 변경이 이 파일들을 동기화하거나 재생성하여 덮어써서는 안 된다.
+
 ### 저장소 능력과의 경계 {#agent-repository-project-boundary}
 
 AutoMovie는 여러 작품이 공유하는 일반 표현, 연산, validation과 rendering을 소유하고, project는 작품에 고유한 사실과 조합을 소유한다.

@@ -25,7 +25,7 @@ export const registeredShotId = (source: IAutoMovieShotSource): string =>
   source.id;
 ```
 
-Implement each scaffold placeholder before claiming that its source is complete.
+Author a complete implementation when its source branch becomes active. [Ownership](../../../README.md#ownership) governs the source boundary; no placeholder implementation is supplied to fill in.
 
 Prefer small deterministic functions named for domain decisions: frame conversion, camera placement, event construction, motion selection, formation state, or EDL interval. Validate meaning through engine contracts rather than duplicating math and accepting divergent behavior.
 
@@ -35,7 +35,7 @@ These rules govern any module you write. How a production's source is arranged o
 
 Use the installed package exports through ordinary TypeScript imports. Node and `ttsx` own module loading; AutoMovie does not maintain a second import whitelist. The following examples route common authoring questions to their owners. Consult the package API for other exports.
 
-Browser code, such as a viewer page or `viewer/preview.ts`, runs without Node built-ins. Take its calculations from `@automovie/engine`, `@automovie/viewer`, `@automovie/interface` and the `@automovie/render` root, whose entry points reach no Node module. `@automovie/production`, `@automovie/render/node` and the project scripts serve Node: a browser import of any of them, directly or through a helper module, reaches Node modules the browser does not have, and Vite does not polyfill them. A type-only import is erased and stays safe.
+Browser code runs without Node built-ins. Take its calculations from the public browser-compatible engine, viewer, interface, and render entry points after adding any dependency the requested work needs. Node-only production or render modules cannot enter a browser runtime import graph through a helper. A type-only import is erased and stays safe. [Live viewing](../review-verification/live-viewing.md) owns how to author a view when the work requires one.
 
 - **How do I write a subject and a shot at all?** `AutoMovieSubject` and `AutoMovieSubjectGroup` to extend, `defineShot(` to register, `mergeAutoMovieSubjectContributions(` to fold what several subjects each returned into one contribution.
 - **How do I turn a profile or a region into geometry?** `extrudeAutoMovieProfile(` and `revolveAutoMovieProfile(` and `sweepAutoMovieProfile(` for a hulled profile, `extrudeAutoMovieRegion(` and `triangulateAutoMovieRegion(` for a free-form region with holes, `buildAutoMovieRegionFace(` for one material-owning side of a region, `loftAutoMovieSections(` to interpolate between sections along a path, `buildAutoMoviePolyhedron(` for a stated solid, `buildAutoMovieWall(` for a wall partitioned around its openings, `tessellateSurface(` for the support surface height queries read.
@@ -50,35 +50,19 @@ Browser code, such as a viewer page or `viewer/preview.ts`, runs without Node bu
 - **How do I derive a placed object's world frame from its relation?** `propAnchorFrame(` resolves the exact world position and rotation for one declared prop-to-building relation.
 - **How do I build the site the building stands on?** `worldTerrain(` for a flat terrain primitive over an explicit footprint, `worldRamp(` for a rectangular ramp from a centre line and a rise, `worldBlock(` for a box-proxy wall or building that hands back its primitive recipe, the scene node using it, and the exact volume it occupies, `worldGrid(` and `worldScatter(` and `worldAlongRoute(` for one prototype under a rectangular, seeded-scatter, or route-following layout rule, and `assertWorldPlacements(` to refuse a contradiction between blocks, surfaces, routes, and landmarks before a shot is built. `worldHeightfield` samples an explicit height function to build terrain data.
 - **How high is the ground under this point?** `worldSurfaceHeight(` evaluates one production-world height rule at an XZ point.
-- **Where does one member of a formation or instance set stand, and what is it?** `compiledFormationSlot(` and `instanceSlot(` regenerate one member from the compiled record a build context or a loaded project state carries, with the terrain snapshot and the prototype table the builder compiled; a design record has neither, so do not regenerate a member from it. `materializeCompiledFormation(` and `materializeCompiledInstanceSet(` compile a population outside the builder by the same laws, so the same design and terrain or routes give the builder's chunks and bounds; the member radius, the tier digests and the record digest follow the recipes and radii you pass, so read the compiled record from a loaded project state when a review needs the builder's own.
-- **How far apart are two things, can an actor reach a target, and does a formation stand on its ground in a shot?** `measureAutoMovieGeometry(` answers distance, reach, ground, formation, effect, film-time, pose and camera questions from the records you pass it and nothing else, so pass `state.design`, `state.generated.shots` and `state.generated.film` of a loaded project state you have required current. [Offline measurements](../review-verification/measurements.md#geometry-questions) says how to read each answer.
+- **Where does one member of a formation or instance set stand, and what is it?** `compiledFormationSlot(` and `instanceSlot(` regenerate one member from the compiled record the producer returns, with the terrain snapshot and the prototype table the builder compiled; a design record has neither, so do not regenerate a member from it. `materializeCompiledFormation(` and `materializeCompiledInstanceSet(` compile a population outside the builder by the same laws, so the same design and terrain or routes give the builder's chunks and bounds; the member radius, the tier digests and the record digest follow the recipes and radii you pass, so pass the current producer's compiled record when a review needs its resolved population.
+- **How far apart are two things, can an actor reach a target, and does a formation stand on its ground in a shot?** `measureAutoMovieGeometry(` answers distance, reach, ground, formation, effect, film-time, pose and camera questions from the records you pass it and nothing else, so pass the exact current design, compiled shots, and film values returned by the producer. [Offline measurements](../review-verification/measurements.md#geometry-questions) says how to read each answer.
 - **How does viewer code read a film frame and its film effects?** All from `@automovie/engine`: `sampleProductionRenderFrame(` resolves the shot layers of one film frame, `productionRenderLayersForPass(` selects the layers a pass draws, `productionFilmEffectEditFingerprint(` identifies the edit a compiled effect runtime must match, `verifyProductionFilmEffectPopulation(` refuses a runtime population that is stale or incomplete for that edit, and `sampleProductionFilmEffects(` samples it at a timeline frame. The Node builder computes the same identities with the same functions, so a browser check and a build agree.
 
 For another capability, inspect the relevant package exports and their documented inputs before implementing a helper.
+
+The capability list is navigation, not a geometry recipe. Before using an operation named above, follow [Geometry](geometry.md) to establish its result contract and account for topology, attributes, stable ranges, and bounds. If public exports and this route disagree, stop and repair both surfaces together rather than guessing from an internal symbol.
 
 ## Ownership
 
 Author design and source owners only. Read builder output for diagnostics or offline measurement; never edit it. Renderer output has its own owner, while review observations stay in evidence citations and Git rather than a second project ledger. A source change that should alter runtime but leaves the builder fingerprint unchanged is a boundary defect, not permission to patch generated bytes.
 
-Ordinary project scripts can authenticate current generated state and call pure engine queries:
-
-```ts
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
-import { Vector3 } from "@automovie/engine";
-
-const state = requireCurrentAutoMovieProjectState(
-  loadAutoMovieProjectState({ root: process.cwd() }),
-);
-const originDistance = Vector3.length(
-  state.generated.design.world.landmarks[0]!.position,
-);
-if (!Number.isFinite(originDistance)) throw new Error("invalid distance");
-```
-
-Read generated state after producing it. A shot or film build receives its input context directly.
+Pass typed production results directly to pure engine queries. Use the same source producer and explicit inputs as the viewer and delivery consumer, and record the revision and invocation basis of the measurement. [Compilation](compilation.md) owns execution; [Offline measurements](../review-verification/measurements.md) owns interpretation of query results.
 
 ## Numeric discipline
 

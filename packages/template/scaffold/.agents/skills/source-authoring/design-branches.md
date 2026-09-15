@@ -62,4 +62,4 @@ Read [Geometry questions](../review-verification/measurements.md#geometry-questi
 
 Read the reported census or empty-population state; command availability and exit code alone never complete the review set.
 
-A library-only space branch is drawn by `building:report` from what it materialized, so it needs no shot; never create a dummy one to make the command run. What it does not have is frames, and the report says so in its own tally, which is what a review citing a materialized building has to cite.
+For a library-only space branch, pass its current environment directly through [Building reports](../review-verification/measurements.md#building-reports). That route distinguishes a reusable environment from delivered frames and requires no shot or preinstalled command.

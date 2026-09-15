@@ -12,9 +12,9 @@ Compose at the moment you copy a shot module and change its names. That copy is 
 
 ## Each module has one second
 
-Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which prepare explicit inputs for source execution.
+Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members. Compute shared deterministic inputs once per execution and pass the resulting typed values to each consumer rather than repeating the same derivation inside every shot factory.
 
-When the result of that derivation is what source actually needs, publish it as a derived artifact and read it back from `context.derivedArtifacts`. Freezing the same table into a TypeScript literal moves the bytes out of the clock without moving the obligation: nothing then proves the literal still follows from the inputs it was computed from. [Compilation](compilation.md) owns that path.
+Keep the derivation executable from its declared inputs. A copied result literal can become stale when those inputs change; a source function retains that relationship without an intermediate project store. [Compilation](compilation.md) owns execution and the producer-consumer boundary.
 
 ## Every subject is a class
 
@@ -78,7 +78,7 @@ export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
 }
 ```
 
-`design()` is the wire. A class is an authoring surface; everything the builder stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
+`design()` returns the subject's typed design value for its consumers to validate and use. Equal declared inputs produce equal values; calling the method does not require publishing or reopening a design file.
 
 ## A group of subjects is a subject
 
@@ -86,7 +86,7 @@ A cluster holds figures, a group holds clusters, a building holds wings and stor
 
 Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
-Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the builder stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
+Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the runtime represents them as bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
 
 Buildings use the same rule without pretending they are formations. A building class emits `IAutoMovieBuiltEnvironment`; its element hierarchy carries local full TRS and reusable model ids, while its independent logical-space hierarchy carries rooms, floors, voids, boundaries, openings, and stair/lift/bridge connectivity. One such record may hold several independent building units through its `buildings` root table plus the sky-bridges that couple them, so a keep, its yawed annex, and the bridge between them are one `design()` and one `render()` rather than three subjects that have to agree. Write a repeated storey as a loop over its index: the slab, its logical space, its room, its door, and the stair up to it all derive from the same number, and the looped record must be the same artifact as the hand-expanded one. `render(context)` delegates to `lowerBuiltEnvironment(design())`, and the shot consumes that derived contribution:
 
@@ -94,27 +94,20 @@ Buildings use the same rule without pretending they are formations. A building c
 import {
   AutoMovieSubject,
   type IAutoMovieSubjectContribution,
-  mergeAutoMovieSpaces,
+  mergeAutoMovieSubjectContributions,
 } from "@automovie/engine";
 import type { IAutoMovieShotBuildContext } from "@automovie/interface";
 
-export const stageTower = (
-  tower: AutoMovieSubject<unknown>,
+export const stageSubjects = (
+  subjects: readonly AutoMovieSubject<unknown>[],
   context: IAutoMovieShotBuildContext,
-): IAutoMovieSubjectContribution => {
-  const architecture = tower.render(context);
-  return {
-    models: [...(architecture.models ?? [])],
-    builtEnvironments: [...(architecture.builtEnvironments ?? [])],
-    stage: {
-      // actor/camera/light fields omitted here
-      set: [...(architecture.set ?? [])],
-      space: mergeAutoMovieSpaces("shot-space", architecture.spaces ?? []),
-    },
-    // script, blocking, performance, and eventSamples remain shot-owned
-  } as IAutoMovieSubjectContribution;
-};
+): IAutoMovieSubjectContribution =>
+  mergeAutoMovieSubjectContributions(
+    subjects.map((subject) => subject.render(context)),
+  );
 ```
+
+The contribution keeps `set` and `spaces` alongside `models` and `builtEnvironments`. The shot places the merged `set` in its stage and calls `mergeAutoMovieSpaces` on the merged `spaces` when assembling that stage. Actors, cameras, lights, script, blocking, performance, and event samples remain the shot's assembly responsibility; a subject contribution is not a partial shot program.
 
 The building owns its interior, exterior envelope, roof, facade attachments, exterior stairs, ladders, rails, and helipad. Surrounding ground, parks, sky, and natural water stay in the world subject. Water simulation is its own subject/domain; an interior water feature composes it with a building space instead of making fluid an architecture-only feature.
 
@@ -126,7 +119,7 @@ Project source is linked, so a shot may import other modules under your source r
 
 ## Let the engine carry the repetition
 
-A formation design materializes its members from count, layout, anchor, facing, and seed, and the builder stores bounded chunks rather than scene nodes. A thousand-member unit costs one record. Large non-formation populations use compact instance sets the same way.
+A formation design materializes its members from count, layout, anchor, facing, and seed. Keep its runtime representation in bounded chunks rather than scene nodes. Large non-formation populations use compact instance sets the same way.
 
 Do not expand either into per-member scene nodes or per-member curves. Author the unit's cues and let the runtime regenerate members from index and seed. Promoting a member to a named actor is for a persistent named performer with a close camera or unique prop, not for reaching individual behavior.
 
@@ -138,7 +131,7 @@ A group of identical members placed on exact geometry reads as one object repeat
 
 Take every varying value from the design's own seed and the member's index. Never from a clock, a counter, a call order, or unseeded randomness. A value derived from seed and index needs no storage, survives regeneration, and reproduces on every machine.
 
-State the seed in the design record rather than in source, so the variation is a declared property of the thing rather than an accident of the code that read it.
+Declare the seed in the typed design input, so variation is a property of the subject rather than hidden state in the implementation that consumes it.
 
 ## One factory per recurring kind of shot
 
@@ -148,13 +141,11 @@ Name factories for what the shot _is_, not for what it looks like: a factory nam
 
 Keep the module readable while you are at it. A citation names a symbol, and a reviewer has to hold that symbol's whole scope in mind to say anything true about it; a factory module that grows past what one reading can carry has a tail nobody reviews honestly. Split it along its own seams before that happens.
 
-## Derive the tracked design record from the same table
+## Derive the design value from the same table
 
-`IAutoMovieDefinedShotContract` is exactly the tracked shot contract minus `id` and `source`. The module and the design record are therefore two representations of one fact, and transcribing the second by hand is how they drift apart.
+`IAutoMovieDefinedShotContract` is the shot contract minus `id` and `source`. When a consumer needs the complete `IAutoMovieShotContract`, derive that typed value from the same planning input instead of transcribing its fields into a second authority.
 
-The design record is yours to author, the same as source. Only generated output, renders, production state, and capture state have other owners. Emit the record from an ordinary script under Node, from the same table the modules read.
-
-Store it through the project's own design setters, never by writing a path the script worked out for itself. Which tree an artifact lives in is the project's decision: a model, a world, and a formation are shared across productions while a shot contract and an acceptance scenario are not. A script that computes the path restates that layout in a second place, and a record written beside the one the builder reads is a derivation that proves nothing. Read the stored record back first and skip an identical one, because a design mutation deliberately stales every dependent shot and review, and re-storing an unchanged record would invalidate the production for saying nothing new.
+Keep the plan and derivation in their source owner. Pass the returned value directly to the selected public consumer, and use that same producer for execution and measurements. [Ownership](ownership.md) governs the authored input and output boundary; a record-shaped value is not an instruction to serialize it into a file.
 
 ```ts
 import type {
@@ -170,7 +161,7 @@ export interface IPlannedShot {
   contract: IAutoMovieDefinedShotContract;
 }
 
-/** The tracked design record, derived rather than transcribed. */
+/** The typed design value, derived rather than transcribed. */
 export const plannedShotRecord = (
   planned: IPlannedShot,
 ): IAutoMovieShotContract => ({
@@ -180,7 +171,7 @@ export const plannedShotRecord = (
 });
 ```
 
-A shot's source binding names a module path and a static export, so the exports themselves stay statically written. Generating those modules from the table is ordinary code generation over source you own; keep the emitted files out of the builder's generated root, which has a different owner.
+A shot's source binding names a module path and a static export. Keep those export identities explicit while sharing the pure factory and typed planning table; repeated shots do not require a code-generation script or generated source tree.
 
 ## Assemble the edit from the same table
 
@@ -188,10 +179,8 @@ The film's shot order is data the table already holds. Build the edit by walking
 
 Placement timing, transitions, and edge states still belong to the edit's own rules. Deriving the order does not license deriving a continuity claim: an edge state asserts a measured fact about two specific shots, and a factory cannot know it.
 
-## Read the shipped technique examples
+## Reuse techniques, not content
 
-The scaffold leaves production branches empty and ships reusable technique examples only under `src/examples/`. They demonstrate a building assembled by loops over its storeys, a physically-based finish and the ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Production owners belong under `src/maps`, `src/models`, `src/spaces`, `src/materials`, `src/instances`, `src/motions`, and `src/systems`; examples never become owners merely because they compile.
+Read the public package APIs and the design branch that owns the current problem. Derive repetition, surface allocation, quantities, placement, and phase changes from the production's reviewed inputs. A shared concern has one source owner; a complete visual surface is not split merely to distribute files.
 
-Two more are about the scale this handbook is written for, and a production authored across several passes wants both early. `src/examples/surfaceQuantities.ts` makes a surface publish what it laid, counted from the elements it emitted and split into the categories a frame cannot tell apart, so a wall nobody has clad yet stops reading as a finished one. `src/examples/surfaceOwnership.ts` divides the work by complete visual surface, one owner per surface and never a surface split across two, and gives a concern that genuinely crosses every surface, such as finish binding, its own single owner rather than a decision each surface's file makes for itself.
-
-Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how demonstration furniture ends up in somebody's film.
+Create production modules only when their active branch needs real implementation. A familiar example may suggest a technique, but its dimensions, layout, assets, identities, and content are not production authority.

@@ -1,10 +1,10 @@
 # `@automovie/production`
 
-The deterministic production runtime a generated AutoMovie project runs on: the builder, the tracked project store, frame capture, subject inspection, and the render job. A project's own npm scripts call it. Nothing here listens on a socket, serves a document, or answers a model.
+This package exposes production building, document binding, capture, inspection, and rendering APIs. Its stored-project runtime remains available to compatible callers and persists project state; it is not the execution workflow supplied by the blank scaffold. The scaffold's [ownership boundary](../template/scaffold/README.md#ownership) governs source-first productions and does not authorize that store. Nothing here listens on a socket, serves a document, or answers a model.
 
 That is a deliberate boundary rather than an omission. What an authoring agent knows comes from the skill the project ships and from what this package refuses; a refusal names the invariant it enforces and the correction that owns it, and the agent reads the project to find the rest. A capability an agent cannot reach by reading the project and running its scripts does not exist.
 
-## Compile and inspect
+## Stored-project compile and inspection
 
 ```ts
 import {
@@ -27,7 +27,11 @@ const status = inspectAutoMovieProduction(
 );
 ```
 
-`projectRoot` is a seed rather than an answer. Every entry point walks upward once to the nearest directory carrying both `package.json` and `lint.config.ts`, which is what a generated project already has, and fixes that workspace for the call. Requiring both is what keeps a seed inside an ordinary Node package from resolving to that package; the legacy `automovie/manifest.json` is no longer a marker, because import input is not a shape a current project is asked to carry, and `automovie.config.ts` is no longer one because the delivery decisions it carried moved onto the production design record. `productionId` selects which production inside it; capture also names its production explicitly, so one process can serve two sibling productions without cache pollution.
+For these stored-project entry points, `projectRoot` is a seed rather than an answer. The resolver walks upward to the nearest directory carrying both `package.json` and a root-level `lint.config.ts`. That is a compatibility layout, not the current scaffold's `src/lint.config.ts` layout. Do not add a root configuration or state directory to a source-first project to invoke this example. `productionId` selects the production inside a compatible store; capture also names that production explicitly.
+
+## Reader editions
+
+`AutoMovieProductionBinder` derives one deterministic Markdown edition from an authored document layer without changing its source. Construction remains the default API pass for compatibility. A final screenplay edition explicitly selects `pass: "final"`, reads `docs/final/screenplays`, and names the output with `final-screenplays`; no other authored layer accepts that pass. Call the binder API with the intended pass. The scaffold supplies no `book` command.
 
 ## Evidence provenance
 
@@ -35,10 +39,7 @@ Frame capture resolves only ids present in the current builder-owned `manifests/
 
 Repaint is unavailable unless the caller passes an `AutoMovieProductionShotRepaint`. Accepted MP4 output is parsed and committed with a receipt binding builder, source-render, control, reference, adapter and model, parameter, and output identities. Rerolling replaces the active pointer only; unchanged deterministic truth keeps its own receipts.
 
-Subject inspection is the same shape: without an instrument the call refuses rather than answering, because AutoMovie does not report an observation nobody drew.
-The scaffold ships one at `scripts/inspectSubject.ts`.
-Its versioned plan and observation records bind production, exact target, compile, ordered plan, resolved pose, artifact bytes, actual browser-and-graphics runtime, terminal pass, and the non-delivery boundary.
-Readers reopen those records through duplicate-aware strict UTF-8 JSON admission and count only an exact current join; failed, unsupported, not-run, and runtime-unidentified attempts remain history.
+Stored-project subject inspection likewise refuses without a supplied instrument. Its versioned plan and observation records bind production, exact target, compile, ordered plan, resolved pose, artifact bytes, actual browser-and-graphics runtime, terminal pass, and the non-delivery boundary. Readers reopen those records through duplicate-aware strict UTF-8 JSON admission and count only an exact current join; failed, unsupported, not-run, and runtime-unidentified attempts remain history. The scaffold supplies no inspection instrument; its [inspection procedure](../template/scaffold/.agents/skills/review-verification/inspection.md) owns source-first observation.
 
 ## Film effects
 

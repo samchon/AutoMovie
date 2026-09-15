@@ -25,12 +25,11 @@
     "scripts",
     "vendor/sharp-disabled/index.ts",
     "viewer",
-    "repaintSelectionReviews.ts",
     "vite.config.ts",
     "lint.config.ts"
   ],
   "exclude": [
-    "viewer/preview.ts",
+    "src/createPreview.ts",
     "viewer/src/preview.ts"
   ]
 }

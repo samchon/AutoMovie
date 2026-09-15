@@ -16,7 +16,7 @@
 @evidence principles/core/settings.md#fact-status 가족 구성은 역사 자료가 아닌 가상 제작 조건이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a production invention과 가상 조건이라는 표시는 네 거주자가 실존 남작 가문의 인구 기록이라는 주장을 막는다.
 @evidence principles/core/settings.md#observable-identity 세 침실과 여섯 자리의 가구 구성이 가족 배경을 표현한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 사람 모델이 없어도 부부용 주침실과 자녀용 두 침실·식사 여섯 자리라는 방·가구 구성이 남으며 인물의 외형을 새로 정의할 필요가 없다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 네 거주자와 여섯 식사 자리는 공간·물품 구성의 기준이고 인물 모델과 자율 행동은 명시적으로 납품 밖이다. 따라서 새 얼굴이나 체형을 창작하지 않으면서 부부용 하나·자녀용 둘의 침실과 좌석 구성이 시각적 소비자로 남는다.
 @evidence principles/core/settings.md#source-support 가족 수와 생활 배경을 제작 선택으로 한정한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 특정 역사 지역의 남작 가족 규모나 가사 노동 통계를 인용하지 않고 이 집의 가상 배경으로만 제시한다.
 -->
@@ -47,7 +47,7 @@
 @evidence principles/core/settings.md#fact-status 생활 구성은 제작 적용이고 쟁반 치수는 모델 값이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 마지막 문단이 쟁반 0.55×0.40m를 제작상 값으로 표시하여 이미지에서 측정한 역사 규격이나 운반 합격 수치로 주장하지 않는다.
 @evidence principles/core/settings.md#observable-identity 목제 식탁·벤치·석재 화구·직물·도기의 차이가 실제 렌더에서 읽혀야 한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 생활 홀이라는 이름만으로는 긴 식탁과 양쪽 좌석·난방·수납·도기·깔개의 구성을 대신할 수 없고 마지막 문단이 그 시각적 차이를 요구한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 상판 2.25×0.80m와 두 벤치 2.12×0.31m의 기준, 평행 관계·다리 사이 빈 곳·판 이음·여섯 식기 자리를 확인했다. 열린 화구, 깊이가 구별되는 도기, 얇은 깔개가 앞·위·끝 시점에서 달라 보일 수 있는 미정 형상을 줄인다. 수치는 이미지 실측이 아니라 채택한 제작 기준이다.
 @evidence principles/core/settings.md#source-support 이미지 04의 관계와 제작상 쟁반 치수의 근거를 구별한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 원본은 물품·재료·배치 관계를 뒷받침하고 쟁반 치수는 별도 제작 값이므로 사진을 인체·화재 안전거리의 측정 자료로 사용하지 않는다.
 -->
@@ -59,6 +59,8 @@
 주방은 같은 회랑에서 별도로 진입하며, 홀과 주방의 배식구는 선택 가능한 기능 접점이다. 배식구는 통행문으로 계산하지 않는다.
 
 이미지 04에 따라 식탁과 벤치, 석재 화구, 직물과 도기의 서로 다른 형태·재료 및 생활 관계를 실제 렌더에서 읽을 수 있게 구성한다. 여섯 자리의 가구 구성과 모든 소품을 유지한다. 쟁반의 제작상 평면 치수는 0.55×0.40m이며 물품의 모델 값으로 사용한다.
+
+식탁의 기준 상판은 긴 방향 2.25m, 짧은 방향 0.80m의 직사각형이며 긴 판재 여러 장의 이음과 네 다리·하부 연결재를 구별한다. 양쪽 벤치는 각각 길이 2.12m, 폭 0.31m의 등받이 없는 좁은 판 좌석이고 식탁 긴 변과 평행하다. 정면에서는 다리 사이 빈 곳, 위에서는 판 이음과 여섯 식기 자리, 끝에서는 상판과 낮은 좌판의 높이 차이를 확인할 수 있어야 한다. 화구는 석재 양옆과 상부가 둘러싼 어두운 내부 빈 곳이며 불꽃 이미지를 붙인 막힌 상자로 대체하지 않는다. 식기는 위가 열린 얕은 접시·그릇과 컵·손잡이 주전자로 나뉘고, 깔개는 가구 아래의 얇은 직물 면으로 남는다. 이 치수는 이미지에서 잰 값이 아니라 현재 제작에서 채택한 물품 기준이다.
 
 ## 주방과 식료 보관 {#kitchen-pantry}
 
@@ -76,7 +78,7 @@
 @evidence principles/core/settings.md#fact-status 기능과 물품 구성을 production invention으로 제시한다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 서늘한 저장과 조리 흔적은 이 집의 표현 결정이며 실제 저장 온도·음식 성분·안전성을 측정한 결과가 아니다.
 @evidence principles/core/settings.md#observable-identity 화구·도구가 있는 주방과 자루·뚜껑 용기가 있는 식료실을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 같은 선반만 두고 두 방의 이름을 다르게 붙인 경우 조리 도구·그을음과 식료 자루·통의 차이가 사라져 관찰 정체성을 충족하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 작업대 2.50×0.65m와 선반 높이1.70·깊이0.42·길이2.50m, 솥·국자·칼의 서로 다른 형태와 자루·통·도기 입구를 대조했다. 조리 화구의 그을음과 식료 선반의 빈 칸은 두 방을 이름만 달리한 같은 수납실로 재현하는 경우를 거부한다.
 @evidence principles/core/settings.md#source-support 주방의 생활 표현을 제작 결정으로 한정한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 특정 시대의 식료 저장 기술이나 화학·위생 기준을 사실로 인용하지 않고 현재 가상 집의 물품과 시각 흔적만 채택한다.
 -->
@@ -86,6 +88,8 @@
 주방은 조리 화구, 작업대, 물통, 솥·국자·칼의 거치와 도기 선반을 갖는다. 인접 식료실은 곡물 자루·통, 식료 선반과 뚜껑 용기의 서늘한 저장을 표현한다. 조리대의 열·그을음 표현은 이 장소에 귀속하고 침실에 같은 오염을 복제하지 않는다.
 
 주방과 식료실은 같은 회랑에 각각 직접 문을 두어 식료실을 통과해야 주방에 도착하는 구조를 만들지 않는다. 내부의 보조 연결은 허용하되 필수 회랑 연결을 대신하지 않는다. 개별 용기의 내용물은 식용 화학 조성까지 시뮬레이션하지 않는다.
+
+조리 작업대는 길이 2.50m, 깊이 0.65m의 좁고 긴 상부 작업면과 그 아래 지지·수납 공간을 구별한다. 솥은 어두운 금속 몸체와 열린 입구·매다는 지점을 가지며 화구 내부와 작업대 위 용기를 혼동하지 않는다. 국자는 긴 자루 끝의 오목한 머리, 칼은 손잡이와 납작한 날로 식별한다. 식료 선반은 높이 1.70m, 깊이 0.42m, 긴 방향 2.50m의 개방된 다단 구조를 기준으로 하며, 자루는 묶인 입구와 부푼 직물 몸체, 통은 원주형 몸체와 테두리, 도기는 좁은 목 또는 열린 입구로 구별한다. 위·앞·옆에서 선반의 빈 칸과 물품 윤곽이 남고 그을음은 조리 화구 주변 표면에 국한된다. 수치는 현재 제작에서 채택한 기준이다.
 
 ## 장부실의 사용과 접근 {#ledger-room}
 
@@ -103,7 +107,7 @@
 @evidence principles/core/settings.md#fact-status 업무실과 장부 구성은 사용자 요구를 적용한 제작 결정이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a production invention과 소품으로 제작한다는 문장이 장부의 선·문양을 실존 남작의 문서 기록으로 분류하지 못하게 한다.
 @evidence principles/core/settings.md#observable-identity 펼친 장부·필기 도구·등받이 의자·잠금 함으로 업무실을 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 식탁과 벤치만 복제한 방은 문서 검토의 펼친 장부와 책상 위 면 구별이 없어 장부실이라는 이름의 시각적 근거를 잃는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 1.50×0.75m 책상과 0.50m 정사각 좌판의 등받이, 펼친 장부의 접힘·두 면·두께, 잉크통·깃털 필기구·잠금함을 읽었다. 위의 문서면, 앞의 잠금과 등받이, 옆의 다리 아래 빈 곳이 구별되어 홀의 식탁·긴 벤치를 그대로 복제할 수 없다.
 @evidence principles/core/settings.md#source-support 특정 역사 문서와 개인 기록을 근거 없는 소품 자료로 채택하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 마지막 문장이 실제 기록 복사를 배제하고 문양·선을 자체 제작하므로 특정 역사 장부의 내용이나 제도를 사실로 주장하지 않는다.
 -->
@@ -113,6 +117,8 @@
 서재 겸 장부실은 문서 검토와 소액 물품 보관을 위한 업무실이다. 작업 책상·등받이 의자, 장부를 놓는 선반, 잠금 표현이 있는 수납함, 필기 도구와 펼친 장부를 둔다. 책상 위는 글을 읽는 면과 물품을 놓는 면이 구별되어야 한다.
 
 현관 또는 동일 회랑에서 직접 들어가며 침실 통과를 요구하지 않는다. 방문 업무는 1층에서 끝낼 수 있다. 장부의 문양과 선은 소품으로 제작하며 특정 역사 문서나 실제 개인 기록을 복사하지 않는다.
+
+책상은 1.50×0.75m 직사각형 목제 상판과 네 다리, 좌석은 0.50×0.50m 좌판 위로 기둥·가로살·세로살이 이어지는 등받이로 식탁용 긴 벤치와 구별한다. 펼친 장부는 가운데 접힘을 사이에 둔 두 면과 바깥 표지·페이지 두께가 있고, 검은 잉크통과 밝은 깃털형 필기구는 그 옆에서 별도 윤곽을 갖는다. 수납함은 낮은 직육면체 판재 몸통·상부 뚜껑·앞 중앙 잠금부·뒷 경첩을 구별한다. 위에서는 문서 면과 여백, 앞에서는 잠금부와 등받이, 옆에서는 상판 아래 빈 곳을 확인한다. 수치는 현재 제작에서 채택한 기준이다.
 
 ## 저장과 세척 작업 {#service-room}
 
@@ -130,7 +136,7 @@
 @evidence principles/core/settings.md#fact-status 생활 조건은 채택한 가상 집의 구성이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 석재 바닥과 젖은 물품은 production invention으로 분류되어 실제 내습 성능이나 작업 여유를 측정한 보고로 제시되지 않는다.
 @evidence principles/core/settings.md#observable-identity 석재 바닥·대야·빈 통·건조대·청소 도구로 세척실을 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 수납장 하나뿐인 방은 세척대와 젖은 작업 물품의 구성을 잃으므로 저장이라는 이름만으로 이 방의 용도 읽힘을 대신하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 세척대 받침과 열린 대야의 내외면·입구 두께, 빈 통의 손잡이, 건조대의 빈 곳, 빗자루 솔 묶음을 확인했다. 석재·목재·직물·용기의 표면 경계가 앞·옆에서 유지되어야 하므로 젖은 작업이라는 추상 설명이나 수납장 하나로 대체되지 않는다.
 @evidence principles/core/settings.md#source-support 세척실의 구성은 역사 일반화나 위생 기준 인증으로 주장하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 사용자 요구에 생활 물품을 채택한 범위이고 특정 중세 청소 방식의 보편성·내습 수치를 뒷받침할 외부 근거가 있는 척하지 않는다.
 -->
@@ -140,6 +146,8 @@
 1층 저장·세척실은 외부에서 들어온 흙 묻은 물품, 청소 도구, 빈 통과 세척 대야를 수용한다. 석재 바닥, 낮은 세척대, 통, 건조 거치대와 빗자루로 젖은 작업 장소를 표현하고 같은 회랑에 직접 문을 둔다.
 
 식료 보관과 더러운 세척물을 같은 용기나 선반에 혼합하지 않는다. 세척실에서 위층으로 이어지는 두 번째 계단은 두지 않는다.
+
+세척대의 목제 다리와 상부 받침 위에 둥근 열린 대야를 놓고, 대야의 안쪽 오목한 면·입구 두께·바깥 몸체를 구별한다. 빈 통은 내용물이 채워진 식료 자루와 달리 입구의 빈 곳과 손잡이가 보인다. 건조 거치는 수직 지지와 가로 막대 사이가 열린 구조이고 빗자루는 긴 자루 아래로 넓어지는 솔 묶음을 갖는다. 석재 바닥과 목재 가구, 밝은 직물, 도기·통의 표면 경계가 정면과 측면에서 유지되어야 하며 물기가 있다는 설명만으로 이 구성품을 대체하지 않는다.
 
 ## 침실의 사적 생활 {#bedrooms}
 
@@ -157,7 +165,7 @@
 @evidence principles/core/settings.md#fact-status 실 구성은 사용자 확정, 가구와 분위기는 제작상 적용이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a Status와 이미지 05의 연결은 채택한 표현의 지위를 밝히며 문을 닫으면 실제 사생활이 보장된다는 측정 결과를 주장하지 않는다.
 @evidence principles/core/settings.md#observable-identity 목재 프레임과 침구·수납·물주전자로 세 침실을 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 침대 덩어리 하나만 있는 방은 매트리스·담요·베개와 목재 프레임의 차이가 없어 이 단위가 요구하는 사적 생활 표현을 채우지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 침대 길이2.05m와 부부용1.60m·자녀용0.95m 폭, 높은 머리 쪽과 낮은 발 쪽, 프레임·매트리스·시트·이불·베개의 층을 확인했다. 두 개/한 개 베개와 세 방의 이불 색 구분, 위·옆·발 시점의 빈 곳이 동일성 조건이며 인체 적합성의 실측 주장과 구별된다.
 @evidence principles/core/settings.md#source-support 이미지 05를 분위기와 물품 관계의 근거로 사용한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 원본에서 침구·복도·방문의 관계를 채택하며 실제 역사 주택의 사생활 규격이나 문 틈의 허용 수치를 인용하지 않는다.
 -->
@@ -167,6 +175,8 @@
 주침실은 부부 침대, 두 사람의 의복 수납, 작은 앉을 자리와 야간 물주전자를 갖는다. 작은 침실 둘에는 각각 한 사람의 침대, 수납함, 작은 탁자와 의자를 둔다. 모든 침실은 2층 일자 복도에 직접 문을 내고 다른 침실을 통과하지 않는다.
 
 침대는 매트리스·담요·베개와 목제 프레임이 구별되어야 한다. 이미지 05의 목재 복도·방문·침구·물주전자 관계를 따라 사적층의 분위기를 표현한다.
+
+채택한 침대 외곽은 모두 길이 2.05m이며 부부용 폭은 1.60m, 각 자녀용 폭은 0.95m다. 네 모서리 기둥·긴 측면대·가로 받침 위에 매트리스를 올리고, 머리 쪽 판과 기둥은 발 쪽보다 높다. 매트리스는 두께 있는 별도 덩어리, 시트는 그 위와 옆을 감싸는 얇은 층, 이불은 몸통 쪽을 덮는 별도 층이며 베개는 머리 쪽에서 부부용 두 개·자녀용 한 개가 볼록하게 솟는다. 주침실 이불은 녹슨 적갈색, 서측 작은 침실은 회녹색, 동측 작은 침실은 회갈색 계열로 구별한다. 위·옆·발 쪽 시점에서도 겹침 순서와 프레임 아래 빈 곳이 남고, 등받이 의자·판재 수납함·손잡이 주전자가 침구와 하나의 상자로 합쳐지지 않는다. 치수와 색 구분은 현재 제작에서 채택한 기준이며 실측 인체 적합성을 주장하지 않는다.
 
 ## 공동 세척과 측간 {#upper-washroom}
 
@@ -184,7 +194,7 @@
 @evidence principles/core/settings.md#fact-status 세척·측간 방식은 이 저택의 제작상 생활 표현이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 가상 생활 관행이라는 Status와 보편 역사 주장 아님이라는 문장이 실제 지역의 관행을 검증한 사실로 읽지 못하게 한다.
 @evidence principles/core/settings.md#observable-identity 대야·주전자·수건·뚜껑 용기와 칸막이가 세척·측간실의 성격을 드러낸다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 빈 방에 측간실 이름만 붙인 경우 물대야와 별도 오수 용기·칸막이의 조합이 없어 공동 생활 물품의 읽힘을 충족하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 받침 위 대야의 오목한 내부, 좁은 목·손잡이 주전자, 봉을 넘어 앞뒤로 내려오는 수건, 뚜껑 용기와 칸막이의 차폐를 읽었다. 열린 검사에서도 같은 판·경첩이 유지되며 현대 수도기구를 대신 배치하거나 용기를 막힌 색 상자로 표현할 수 없다.
 @evidence principles/core/settings.md#source-support 특정 역사 지역의 보편 관행을 주장하지 않는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 문·대야·용기의 채택은 사용자 요구 안의 가상 구성으로 한정되고 역사 설비나 위생 성능의 외부 근거를 꾸미지 않는다.
 -->
@@ -194,6 +204,8 @@
 2층 공동 세척·측간실은 가족이 함께 쓰는 단일 공용실로 표현한다. 문과 실내 빗장, 물대야·주전자·수건 거치와 뚜껑 있는 이동식 오수 용기를 갖는다. 내부 칸막이와 문은 씻는 장소의 사적인 성격을 나타낸다.
 
 별도의 현대 수세식 변기나 수도꼭지, 외벽 밖으로 튀어나온 측간탑은 없다. 이 선택은 특정 역사 지역의 보편 관행이라는 주장이 아닌 본 저택의 제작상 생활 방식이다. 깨끗한 생활 직물의 별도 보관은 [2층 공용 수납](#upper-storage)이 소유한다.
+
+대야는 받침 위의 원형 입구와 오목한 내부, 주전자는 둥근 몸체에서 좁아지는 목과 옆 손잡이로 구별한다. 수건은 가로 거치봉을 넘어 앞뒤로 내려오는 두 직물 면이며 벽에 붙인 무두께 색 띠가 아니다. 측간 용기는 뚜껑이 있는 별도 수거 몸체이고, 칸막이는 그 앞·옆을 가리는 판재 면과 틈의 경계를 가진다. 닫힌 기준 상태와 열린 검사 상태에서 동일 뚜껑·경첩·문짝이 유지되어야 한다. 위에서 보는 입구와 옆에서 보는 깊이·차폐가 같은 물품을 설명한다.
 
 ## 2층 공용 수납 {#upper-storage}
 
@@ -209,9 +221,9 @@
 @evidence principles/core/settings.md#constraint-sufficiency 공용 건조 물품과 복도 직접 문·개인 수납 구별로 배치를 제한한다.
 @evidenceReview principles/core/settings.md#constraint-sufficiency #20cf612 세척·측간실을 경유하는 문이나 조리 식료를 섞은 선반은 각각 연결·내용물 경계를 위반한다.
 @evidence principles/core/settings.md#fact-status 구획 용도와 물품은 제작 선택이며 도달 검증 결과가 아니다.
-@evidenceReview principles/core/settings.md#fact-status #93a284a 사용자 요구의 독립 구획에 용도를 채택했다고 표시하고 실제 치수는 설계가 정하므로 선반 높이가 이미 인체 조건을 통과했다는 결과를 적지 않는다.
+@evidenceReview principles/core/settings.md#fact-status #93a284a 사용자 요구의 독립 구획에 건조 직물 보관 용도를 채택하고 선반 치수를 현재 제작의 정체성 기준으로 한정했다. 실제 부재와 배치는 설계가 소비하지만 이 기준 높이가 인체 도달 조건을 통과했다는 측정 결과는 주장하지 않는다.
 @evidence principles/core/settings.md#observable-identity 목제 선반과 뚜껑 함 속 여벌 침구·수건·직물이 공용 수납을 식별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 빈 선반이나 침실 의복만 복제한 방은 깨끗한 공용 생활 직물이라는 내용물 차이를 잃어 이 구획의 관찰 정체성을 충족하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 높이1.60·깊이0.40·길이3.60m의 선반 기준과 낮은 함, 가로판·세로 지지·빈 칸, 접힌 직물의 낮은 적층을 확인했다. 정면과 사선에서 깊이와 접힘을 보존하며 젖은 방의 늘어진 수건이나 침실 개인 의복을 그대로 복제하지 않는다.
 @evidence principles/core/settings.md#source-support 공용 직물 보관을 가상 집의 제작 용도로 제시한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 특정 시대의 수납 관습이나 선반 도달 규격을 인용하지 않고 이 방에 배치할 물품과 설계 책임을 채택한다.
 -->
@@ -220,7 +232,9 @@
 
 2층 수납은 여벌 침구·깨끗한 수건·접은 생활 직물을 보관하는 건조 구획이다. 같은 일자 복도에 직접 문을 두고 벽의 목제 선반과 뚜껑 달린 직물 보관함을 갖춘다. 열린 문과 수납의 선언 상태에서 보관물의 구성을 읽을 수 있게 표현한다. 각 침실의 개인 의복 수납과는 별도다.
 
-세척·측간실을 지나야 접근하는 구조를 만들지 않으며 젖은 수건·오수 용기·조리 식료를 이곳에 혼합하지 않는다. 실제 구획과 선반·보관함의 형태·치수·배치는 공간·모델 설계가 정한다.
+세척·측간실을 지나야 접근하는 구조를 만들지 않으며 젖은 수건·오수 용기·조리 식료를 이곳에 혼합하지 않는다. 실제 구획과 부재 구성·배치는 아래 정체성 기준을 소비하는 공간·모델 설계가 정한다.
+
+수납 정체성의 기준은 높이 1.60m, 깊이 0.40m, 긴 방향 3.60m의 개방된 목제 선반과 낮은 뚜껑 보관함이다. 선반의 가로 판·세로 지지 사이에는 빈 칸이 남고, 접은 직물은 평평한 상면 아래 여러 접힘 가장자리가 보이는 낮은 묶음이다. 젖은 방의 늘어진 수건과 달리 건조한 침구·수건이 수평 적층된다. 정면과 비스듬한 시점에서 선반 깊이·접힌 층·빈 곳을 구별한다. 수치는 현재 제작에서 채택한 정체성 기준이고, 그 기준 안의 부재·메시·배치는 해당 설계가 소유한다.
 
 ## 물과 오수의 표현 {#water-and-waste}
 
@@ -238,7 +252,7 @@
 @evidence principles/core/settings.md#fact-status 물품 표현은 production invention이며 운반·용량 검사의 결과가 아니다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 역사 일반화 없는 생활 표현이라고 표시하고 내부 용량·운반 성공·누수 성능 같은 측정 결과를 채택 사실로 쓰지 않는다.
 @evidence principles/core/settings.md#observable-identity 주전자·대야·뚜껑과 손잡이 있는 오수 용기로 물의 생활 용도를 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 물이라는 이름만 적고 용기의 형체·소속을 생략하면 깨끗한 물과 오수의 생활 표현을 실제 방에서 읽을 수 없다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 수면·입구·용기 외벽의 서로 다른 높이, 닫힌 오수 용기의 가려진 내용물과 손잡이·뚜껑을 읽었다. 방 소속과 물품 형태가 생활 상태를 구별하며 액체 색으로 위생이나 실제 수도 기능을 인증하지 않는다.
 @evidence principles/core/settings.md#source-support 용기와 연못의 역할을 이 가상 집의 제작 선택으로 한정한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 중세 급배수 관행이나 위생·운반 규격의 보편 사실을 주장하지 않고 현재 납품의 정적 물품 구성을 결정한다.
 -->
@@ -248,6 +262,8 @@
 깨끗한 물은 주전자·뚜껑 달린 통과 각 방의 대야로 표현한다. 주방과 1층 세척실, 2층 공동 세척실 및 침실의 용기를 해당 방의 생활 물품으로 배치한다. 오수·측간 용기는 뚜껑과 손잡이를 갖춘 별도 물품으로 구별한다.
 
 정원 연못은 장식·생태 표현이며 식수원·세척수원·오수 배출구로 표현하지 않는다. 상하수도 연결이나 흐르는 물 시뮬레이션은 만들지 않는다.
+
+깨끗한 물과 오수의 차이는 방 소속·용기 종류·뚜껑 상태로 판별하며, 액체 색 하나로 위생 상태를 인증하지 않는다. 물이 드러난 대야에서는 수평 수면과 그 위 입구 테두리·바깥 용기 벽이 서로 다른 높이와 경계를 갖는다. 닫힌 오수 용기의 내용물은 보이지 않으며 뚜껑이 있는 물품을 열린 깨끗한 대야와 같은 모습으로 그리지 않는다.
 
 ## 사과나무와 정원 {#garden}
 
@@ -265,7 +281,7 @@
 @evidence principles/core/settings.md#fact-status 정원은 제작 선택이고 수심은 모델 형상 값이다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 0.35m를 제작상 형상으로 채택한다고 표시하여 중세 연못의 표준 깊이나 실제 안전성 측정 결과로 오해하지 않게 한다.
 @evidence principles/core/settings.md#observable-identity 다갈래 가지·잎의 빈틈·소량 사과와 자연석 연못의 층을 구별한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 구형 수관과 평평한 파란 원판만 놓으면 가지·잎의 빈틈과 얕은 가장자리·어두운 바닥이 없어 이 정원이 요구한 형체를 충족하지 못한다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 지름약2.5m·수심약0.35m 연못의 돌·수면·가장자리·바닥과 굽어 가늘어지는 주간의 다방향 가지·개별 잎·수관 틈·드문 열매를 대조했다. 높은 시점의 경계와 낮은 시점의 두께·반대쪽 가지가 같은 고정 초가을 상태를 유지하므로 구형 수관·파란 평면·카메라 대면 잎은 대체가 아니다.
 @evidence principles/core/settings.md#source-support 크기와 식생 표현을 채택한 가상 정원의 값으로 제시한다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 사용자 구성에 제작 수심을 더한 것이며 특정 시대 조경이나 수목 생장의 정밀 지식을 외부 사실로 주장하지 않는다.
 -->
@@ -275,6 +291,8 @@
 중앙정원에는 중간 크기 사과나무 한 그루, 지름 약 2.5m의 작은 자연석 연못, 약초밭, 자갈길을 둔다. 사과나무는 다갈래 가지와 잎의 빈틈, 소량의 열매가 읽혀야 하며 지붕을 뚫지 않도록 수관 범위를 설계한다. 연못은 불규칙한 자연석 테두리, 수면·얕은 가장자리·어두운 바닥의 깊이가 구별되어야 한다.
 
 길은 회랑 문턱과 정원 관찰 지점을 잇는다. 연못은 약 0.35m 수심의 제작상 형상으로 채택하며 수영·어린이 안전시설을 약속하지 않는다. 나무 뿌리와 돌은 대지에 닿고 약초밭은 길과 회랑을 막지 않아야 한다. 잎과 풀을 카메라를 향한 한 장의 이미지로 대체하지 않는다.
+
+나무는 뿌리 쪽에서 굵고 위로 좁아지는 굽은 주간에서 여러 높이·방향의 가지가 갈라지는 형상이다. 잎은 중간 녹색·회녹색의 납작한 개별 잎들이며 수관 사이로 배경이 보이는 틈을 남긴다. 작은 적갈색 열매는 가지·잎과 별도의 둥근 윤곽으로 드문드문 보인다. 연못은 낮은 불규칙 돌 테두리 안쪽의 수평 수면 아래로 얕은 가장자리와 더 어두운 바닥이 이어진다. 높은 시점에서는 돌·물·길의 경계, 낮은 시점에서는 물의 낮은 위치와 돌 두께, 반대쪽에서는 같은 가지 갈림과 수관의 빈 곳이 읽혀야 한다. 이들은 초가을의 고정 상태이며 관찰 카메라를 돌렸다고 가지나 잎이 재배열되지 않는다.
 
 ## 제작 대상과 책임 {#make-scope}
 
@@ -292,7 +310,7 @@
 @evidence principles/core/settings.md#fact-status 책임 배정은 제작 결정이며 외부 자산 없음은 현재 채택 상태다.
 @evidenceReview principles/core/settings.md#fact-status #93a284a 현재 채택한 외부 자산은 없다는 한정이 미래에도 외부 자산을 쓰지 못한다는 영구 규칙과 구별되고 제공 이미지는 참조 지위로 남는다.
 @evidence principles/core/settings.md#observable-identity 건축·가구·정원 대상의 입체와 표면이 실제 배치까지 이어져야 한다.
-@evidenceReview principles/core/settings.md#observable-identity #1e1fb63 원형만 있고 실제 방의 소유·배치가 없는 사물은 첫 문단의 단일 사물 추적을 충족하지 못하며 이 책임 단위가 별도 시각 스타일을 중복 정의하지 않는다.
+@evidenceReview principles/core/settings.md#observable-identity #4ccb62e 공간·원형·마감·반복 배치의 책임과 실제 방에 놓인 단일 사물의 추적을 읽었다. 이 단위는 독립 외형을 하나 더 정의하지 않고 각 방의 필수 물품 canon을 해당 설계에 배분하며 미채택 외부 자산이나 장식 카탈로그로 그 제작을 대신하지 않는다.
 @evidence principles/core/settings.md#source-support 외부 자산의 근거 문서·확인일·원본 바이트를 실제 채택에 묶는다.
 @evidenceReview principles/core/settings.md#source-support #430bca9 단순 포털 링크로 이용 조건을 대신하지 않고 해당 문서와 날짜·해시를 요구하며 현재는 외부 자산이 없으므로 존재하지 않는 근거를 주장하지 않는다.
 -->

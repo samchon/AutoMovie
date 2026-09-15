@@ -49,38 +49,7 @@ Drift is advisory, never a gate. A hard cut may legitimately jump an actor to a 
 
 Order the beats by the timeline rather than by whatever order the compiled shots happen to enumerate in. A continuity check run over the wrong order reports drift between shots that never touch.
 
-```ts
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
-import { validateFilmContinuity } from "@automovie/engine";
-
-const state = requireCurrentAutoMovieProjectState(
-  loadAutoMovieProjectState({ root: process.cwd() }),
-);
-const film = state.generated.film;
-if (film === null) throw new Error("this production compiles no film timeline");
-const validation = validateFilmContinuity({
-  beats: film.segments.flatMap((segment) => {
-    const compiled = state.generated.shots.get(segment.shot);
-    return compiled === undefined
-      ? []
-      : [
-          {
-            beat: segment.shot,
-            scene: compiled.scene,
-            shot: compiled.shot,
-            motions: compiled.motions,
-          },
-        ];
-  }),
-});
-for (const violation of validation.success
-  ? (validation.warnings ?? [])
-  : validation.violations)
-  console.log(violation.path, violation.expected);
-```
+Pass the current producer's shot results to `validateFilmContinuity` in actual timeline order. Preserve repeated occurrences and their source-time intervals. A missing shot is a missing input to repair, not an empty array to skip. Read warnings as well as failures before recording a continuity observation.
 
 ## Review pass
 
@@ -90,7 +59,7 @@ Watch once without stopping for story and emotion, once with the frame ruler for
 
 An edit is judged across boundaries, so evidence is taken on both sides of each one.
 
-1. `npm run preview` on the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
+1. Capture the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
 2. State what you saw of the local cut logic, and then of the whole assembly, in the evidence citations on the film source that claims the edit is realized.
 
 Sequence review owns the boundary; film review owns the arc. Completing one never completes the other.

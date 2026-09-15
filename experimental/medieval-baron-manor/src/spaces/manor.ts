@@ -7,7 +7,7 @@ import type { IAutoMovieLibraryDerivedSourceOwner } from "@automovie/interface";
  * The refreshed source build succeeded with 1,727 models, 223 elements,
  * 1,823 populations, 9,965 instances, 20 spaces and 41 openings.
  *
- * Current observations are the 39 PNGs under artifacts/finish-20260911.
+ * The September 11 baseline observations are the 39 PNGs under artifacts/finish-20260911.
  * They were directly opened after the successful build in one visible Chromium
  * source preview, at 1440 by 900 pixels on AMD Radeon 8060S / ANGLE D3D11.
  * These are working-scene observations, not a delivery or capture receipt.
@@ -39,10 +39,22 @@ import type { IAutoMovieLibraryDerivedSourceOwner } from "@automovie/interface";
  * and brighter than the reference; foliage and bedding have simpler forms.
  * These observations support the bounded 3D prototype, not photoreal equivalence.
  *
+ * On September 15, the revised settings-to-space ownership was compared with
+ * the current source and 17 directly opened r186 GPU views: reference-exterior,
+ * 04-whole-north-west, both plans, hall/kitchen/ledger/service corner-b,
+ * master corner-b, child-west corner-b, child-east corner-a, washroom
+ * basin-workspace and screen-back, storage corner-c, reference-courtyard,
+ * garden-reverse and pond oblique-a. The source scene and seven texture assets
+ * were serialized for a static 1440 by 900 Chromium observation on AMD Radeon
+ * 8060S / ANGLE D3D11 after a hand-positioned RGB calibration. These views show
+ * the specified furniture parts, differentiated bedding, basin and latrine,
+ * linen shelves, timber enclosure, garden paths and pond. They are working
+ * observations, not delivery receipts; the baseline simplifications remain.
+ *
  * @evidence spaces/001-manor.md#manor-space Selects the current-model environment whose room polygons, shared walls and openings, floor surfaces and placed furniture realize the single manor-space design. The current exterior, both floor plans, stair section, garden and every room were opened in the existing source preview; the builder separately admitted the refreshed environment. The observations above state visible contents and reference simplifications without claiming a delivery receipt.
- * @evidenceReview spaces/001-manor.md#manor-space #b6f87cb Compared the complete manor-space design with the refreshed environment and directly opened the 39 current views listed above. Both plans retain the U-shaped house and one turning stair; separate room views show their specified furniture, three gallery views show the covered edges, and roof plus pond views establish garden placement and water detail. The current build succeeds. The regular pond edging and simplified foliage and bedding remain prototype limits, rather than an unobserved promise of reference-level realism.
+ * @evidenceReview spaces/001-manor.md#manor-space #bc047f7 Reread the complete revised design against the source's unchanged room topology, furniture constructors and placements. Form and reference dimensions now come from settings while this parent keeps room placement and connectivity; the source's table, counter, shelf and bed dimensions match those adopted settings. The 17 September 15 r186 views described above show the corresponding rooms, parts, floor allocations and garden from the current source. Regular pond edging and simplified foliage and bedding remain prototype limits, not a claim of reference-level realism.
  * @evidence spaces/001-manor.md The design field names this file's manor-space H2, and the file itself assigns manorSpaceSource the consumption of the current manor model and instance-derived environment. No second design file is registered by this export.
- * @evidenceReview spaces/001-manor.md #3c6010e Read the complete design file and the sole selected manorSpaceSource export: the exact design address and environment-v24-critical.json bind this one file to the authored manor producer and its instance-derived environment. The successful current build publishes that environment under the manor namespace; no second house or design-file owner is introduced. The separate manor-space review records the actual visual comparison.
+ * @evidenceReview spaces/001-manor.md #129ddbc Read the complete revised design file and the sole selected manorSpaceSource export. The settings handoff changed where recognizable form and reference sizes are stated, not the design address or derived artifact selected by this registration. The same manor-space H2 remains the single current-model environment owner; its separate review records the current source and GPU comparison. No second house or design-file owner was introduced.
  * @evidence principles/core/source-units.md#source-scope-preservation The value binds docs/spaces/001-manor.md#manor-space to the named environment artifact. Its initializer adds no room, transform or opening; deriveManorEnvironment.mjs and manorSpatialState.ts remain the explicit implementation of the file's current-model carrier decision. The current build and working-scene observations are stated separately above.
  * @evidenceReview principles/core/source-units.md#source-scope-preservation #e4bc845 Reading manorSpaceSource and its selected artifact generator together found one design registration and the current source meshes, room polygons and instance transforms carried into that environment. The repaired door-endpoint rejection adds no spatial fact to normal input: both generated payloads stayed byte-identical. This verifies the registration and derivation responsibility; its rendered-realization relationships are supported by the current working-scene observations described above, without a delivery-receipt claim.
  * @evidence principles/core/source-units.md#source-substantive-completion This is a usable IAutoMovieLibraryDerivedSourceOwner value: the installed library owner reader selects the named UTF-8 artifact, refuses an absent artifact or a simultaneous build function, parses its environment contribution and passes it to library contribution validation. A consumer need not invent a build body for this registration; admission of its current payload remains separate.

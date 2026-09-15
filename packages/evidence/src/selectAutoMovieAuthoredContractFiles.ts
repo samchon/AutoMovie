@@ -10,9 +10,11 @@ import type { AutoMovieProductionKind } from "./createAutoMovieEvidenceConfig";
 /**
  * Selects shared contracts by the work an authored layer actually produces.
  *
- * Prose composition and language style govern the narrative ladder. Research,
- * settings, and design select their technical contracts in every production
- * shape. The complete inventory still ships with every production.
+ * Construction principles govern the narrative ladder's meaning and form.
+ * Audience-language naturalness rules are deferred to screenplay
+ * naturalness. Research, settings, and design select their technical contracts
+ * in every production shape. The complete inventory still ships with every
+ * production.
  *
  * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Limits each contract family to the authored role that owes it across all production shapes.
  * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Gives graph claims and account admission the same deterministic applicability selection.
@@ -40,13 +42,7 @@ export function selectAutoMovieAuthoredContractFiles(
     ],
     principles: [
       "principles/core/common.md",
-      ...(narrative
-        ? [
-            "principles/core/defaults.md",
-            "language/principles/common.md",
-            "principles/story/narratives.md",
-          ]
-        : []),
+      ...(narrative ? ["principles/story/narratives.md"] : []),
       ...(!foundation && !narrative
         ? ["principles/core/inherited-units.md"]
         : []),
@@ -67,6 +63,40 @@ export function selectAutoMovieAuthoredContractFiles(
         : []),
     ],
   };
+}
+
+/**
+ * Selects audience-language contracts for final screenplay revision.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Selects shared and creation-language targets for the expression-only final pass.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Gives final screenplay claims one complete role-specific contract inventory.
+ */
+export function selectAutoMovieScreenplayNaturalnessContractFiles(): string[] {
+  return [
+    "naturalness/core/common.md",
+    "naturalness/story/screenplays.md",
+    "language/naturalness/screenplays.md",
+  ];
+}
+
+/**
+ * Binds every final screenplay unit to every selected naturalness target.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Requires each final unit to answer its selected naturalness contracts without exclusions.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Carries the visible final stage into every naturalness target's review requirement.
+ */
+export function createAutoMovieScreenplayNaturalnessReferences(
+  review: boolean,
+): ITtscEvidenceGraphMarkdownReference[] {
+  return selectAutoMovieScreenplayNaturalnessContractFiles().map((file) => ({
+    type: "markdown",
+    root: "docs",
+    files: [file],
+    symbol: "h2",
+    checklist: true,
+    noEvidenceExclude: true,
+    requireReview: review,
+  }));
 }
 
 /**

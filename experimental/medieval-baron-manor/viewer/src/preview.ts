@@ -48,7 +48,7 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) =>
 );
 
 try {
-  const { createPreview } = await import("../preview");
+  const { createPreview } = await import("../../src/createPreview");
   const preview = await Promise.resolve(createPreview());
   if (failed || disposed)
     throw new Error("Preview loading was superseded by a source change.");

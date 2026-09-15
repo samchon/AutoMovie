@@ -40,14 +40,8 @@ packages/*/src/**/*.d.ts
 packages/template/scaffold/src/**/*.js
 packages/template/scaffold/src/**/*.js.map
 packages/template/scaffold/src/**/*.d.ts
-packages/template/scaffold/scripts/**/*.js
-packages/template/scaffold/scripts/**/*.js.map
-packages/template/scaffold/*.js
-packages/template/scaffold/*.js.map
 # the suite is run straight through `ttsx`, so anything emitted beside a case is
 # transpiler spill rather than a source file.
 test/src/**/*.js
 test/src/**/*.js.map
 test/src/**/*.d.ts
-# One-off measurement scratch, never part of the suite.
-test/src/probe.ts

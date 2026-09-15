@@ -7,7 +7,7 @@ description: Defines how automovie runs an ad-hoc experiment: creating a disposa
 
 An experiment answers one question by running the real thing. Create a disposable sandbox, drive it with a live agent, read what happens, and throw the sandbox away.
 
-The sandbox consumes an immutable package generation packed from this working tree. After changing a package, refresh the sandbox before its next script run so the observation uses the new generation. [Create The Sandbox](#create-the-sandbox) owns that refresh boundary.
+The sandbox must execute the package revision being investigated. [Create The Sandbox](#create-the-sandbox) owns dependency provenance and the refresh boundary; a source change outside the sandbox is not proof that its next run uses that change.
 
 An experiment produces an observation, not a score.
 
@@ -15,43 +15,23 @@ Read the [project](../project/SKILL.md) and [scaffold](../scaffold/SKILL.md) ski
 
 ## Create The Sandbox
 
-The typed repository implementation is `build/experimental.ts`, and its package materialization boundary is `build/tgz.ts`.
+Choose one explicit, disposable path under `experimental/` for the authorized question. Resolve its absolute location and inspect any existing content before creation or replacement; the committed manor is not a disposable target.
 
-```bash
-pnpm run experimental <name> --language korean         # create and install a sandbox
-pnpm run experimental <name> --language korean --force # render over an existing one
-pnpm run experimental <name> --refresh                 # repack and reinstall, keeping the production
-```
+Use the ordinary project creator described by the [CLI surface](../../../packages/cli/README.md#cli-surface), with the requested language. For a working-tree experiment, invoke the CLI and template built from the revision under investigation rather than silently downloading a registry release. The scaffold's [ownership contract](../../../packages/template/scaffold/README.md#ownership) applies inside the sandbox.
 
-The name must be one portable directory segment. Creation, including `--force`, requires one explicit language: `chinese`, `english`, `japanese`, or `korean`. Refresh preserves the existing language; an optional `--language` may only confirm it, never switch it. `--force` and `--refresh` cannot be combined.
+Install the required package generation through ordinary package-manager commands. Record the exact revisions, resolved entry points, and dependency versions before launching the agent. The creation command alone does not establish that the sandbox consumes local package changes.
 
-`--no-install` skips packing and installation. Creation renders the scaffold; refresh retains the existing package pins. Both synchronize the owned local reference-client entries against the same captured sandbox root while preserving unrelated settings. Neither form proves a package change reached the sandbox.
+Preserve the authored production when updating dependencies. Rebuild and reinstall the affected package generation, verify what the sandbox actually resolves, and establish a new observation basis before the next run. Recreating a blank scaffold over existing work is not a dependency refresh.
 
-The launcher refuses linked roots, linked sandbox directories, and linked or multiply linked package manifests. It retains the approved directory and manifest generations through packing, publication, and the install boundary; a replacement requires a new invocation. A refused or partial operation is not permission to delete a sandbox or a package generation. These operation-boundary checks do not isolate an external package manager's filesystem namespace while that process runs.
+Create a disposable sandbox only for an active experiment. Delete the sandbox and its temporary scripts, logs, and captures when its question is answered; retain only the findings and verification records needed by the owning workflow. Never commit disposable content, hide it with a broad `experimental/` ignore rule, or leave it as untracked working-tree clutter after the experiment.
 
-Creation packs every workspace package, so it runs each package's build and takes several minutes. A sandbox holds the tarballs it was created from, not a live view of the working tree, so **a change under `packages/` reaches it only when you pack again**.
+## Verify The Consumer Boundary
 
-Use `--refresh` for that once a production is under way. `--force` re-renders the blank scaffold and can overwrite user-authored scaffold-managed files such as `lint.config.ts`, guides, scripts, viewer files, and package wiring; `--refresh` repacks, rewrites the manifest's tarball pins, reinstalls, and synchronizes owned reference-client entries without replacing production content.
+Verify the installed dependency closure, including transitive workspace packages, before interpreting a sandbox failure as a product defect. The execution path must apply the required TypeScript transforms and resolve the generation recorded for the run; a package name or version string alone does not establish either property.
 
-`experimental/` is tracked, but only for `experimental/medieval-baron-manor`, the finished manor production the website publishes (see the project skill). Every other directory there is a disposable sandbox: delete it when its question is answered, and never commit anything from inside one. `git status` shows a live sandbox as untracked; that is the reminder, not an invitation.
+Keep a disposable sandbox outside the tracked workspace membership. Its installation must not add a transient importer to the repository lockfile. If the chosen installation cannot resolve unpublished sibling dependencies, correct the package installation before launching the experiment rather than changing product source to hide the mismatch.
 
-## What The Generator Wires, And Why It Matters
-
-Read this before debugging a sandbox that will not start. Each item is a failure someone already paid for.
-
-| Wiring | Reason |
-| --- | --- |
-| `@automovie/*` install as `file:./.tarballs-<generation>/*.tgz`, packed from the working tree | A tarball carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's transform applied. The sandbox exercises the same resolution a real user's project does |
-| The tarball filename carries a content digest | `file:` specifiers are keyed by path, so a rebuilt package under an unchanged version would leave a sandbox installed against stale bytes |
-| Every packed package is pinned directly, `evidence`, `ingest`, and `render` included | `pnpm pack` rewrites the packed packages' own `workspace:^` ranges into plain semver, which would otherwise resolve from the public registry at a version this monorepo never published |
-| The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either; the same 404 just surfaces one package later |
-| A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, so a disposable directory would leave the lock naming a path no other checkout has. `pnpm-workspace.yaml` lists the committed manor by exact path rather than `experimental/*` for the same reason |
-
-Linking the packages directly was tried first and is not viable. A `link:` resolves through `exports` to untransformed `src/*.ts`, so every sandbox script pays a full compile of the product tree before it does anything; the measured cost was **133 seconds** to reach a first answer, and it is paid again on the next run. Warming that compile is impossible too: `ttsx` writes its emitted output to a **PID-scoped** directory under `node_modules/.cache/ttsc/ttsx/project/`, so no later process reuses it, and a `ttsc` build beforehand changes nothing.
-
-One symptom maps straight to this table: `does not provide an export named` for a symbol the package plainly exports means something is resolving `src` rather than a tarball's `lib`.
-
-A sandbox script fails loudly but exits through a pipe, so `npm run <script> | tail` can print a plausible tail for a command that died. Read the exit code, not the tail.
+When an export is missing, inspect the actual resolved module and its emitted exports. Do not assume that every resolution error has the same cause. Read the invoked command's exit code directly; a successful output filter is not evidence that the command it filtered succeeded.
 
 ## Drive It
 

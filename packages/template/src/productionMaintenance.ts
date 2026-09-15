@@ -1,67 +1,11 @@
-import {
-  type IAutoMovieContractBaseline,
-  applyAutoMovieContractMigrationPlan,
-  createAutoMovieContractBaseline,
-  createAutoMovieContractMigrationReceiptArtifacts,
-  isAutoMovieContractTargetPath,
-  observeAutoMovieContractMigrationOutcomes,
-  parseAutoMovieContractBaseline,
-  planAutoMovieContractMigration,
-  planAutoMovieContractMigrationPublication,
-  planAutoMovieDeliveryToc,
-} from "@automovie/evidence";
-
-/**
- * Project-relative location of the installed scaffold contract generation.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Makes the baseline discoverable without inspecting authored contract prose.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Names the portable receipt consumed by compatibility planning.
- */
-export const AUTO_MOVIE_CONTRACT_BASELINE_PATH =
-  "automovie/contracts-baseline.json";
-
-/**
- * Select the exact scaffold-owned contract bytes from rendered project files.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Supplies the complete target inventory used by migration validation.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Separates scaffold contracts from authored project documents.
- */
-export const autoMovieContractTargetSources = (
-  files: Readonly<Record<string, string>>,
-): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(files).filter(([path]) =>
-      isAutoMovieContractTargetPath(path),
-    ),
-  );
-
-/**
- * Render the portable baseline receipt installed in every new project.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Preserves the immutable source generation used by a future migration.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Serializes the exact path, anchor, and digest inventory beside the project.
- */
-export const renderAutoMovieContractBaseline = (props: {
-  files: Readonly<Record<string, string>>;
-  language: IAutoMovieContractBaseline["language"];
-  version: string;
-}): string =>
-  `${JSON.stringify(
-    createAutoMovieContractBaseline({
-      files: autoMovieContractTargetSources(props.files),
-      language: props.language,
-      version: props.version,
-    }),
-    null,
-    2,
-  )}\n`;
+import { planAutoMovieDeliveryToc } from "@automovie/evidence";
 
 /** Stable code-unit ordering independent of host locale and ICU data. */
 const compareCodeUnits = (left: string, right: string): number =>
   Number(left > right) - Number(left < right);
 
 /**
- * Plan every delivery index in scripts and screenplays from numbered units.
+ * Plan every delivery index in scripts, construction screenplays, and final screenplays from numbered units.
  *
  * @evidence requirements/story/delivery-index.md#story-delivery-index Keeps both delivery indexes linked to their authoritative unit files.
  * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Applies one canonical renderer across every delivery group.
@@ -75,8 +19,15 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
 } => {
   const output = { ...props.files };
   const diagnostics: string[] = [];
-  const deliveryMembers = new Map<"scripts" | "screenplays", Set<string>>();
-  for (const layer of ["scripts", "screenplays"] as const) {
+  const deliveryMembers = new Map<
+    "final/screenplays" | "screenplays" | "scripts",
+    Set<string>
+  >();
+  for (const layer of [
+    "scripts",
+    "screenplays",
+    "final/screenplays",
+  ] as const) {
     const prefix = `docs/${layer}/`;
     const groups = new Set<string>();
     const validMembers = new Set<string>();
@@ -143,6 +94,15 @@ export const planAutoMovieProjectDeliveryTocs = (props: {
         diagnostics.push(
           `Delivery inventory differs between scripts and screenplays at ${relative}.`,
         );
+  const finalScreenplays = deliveryMembers.get("final/screenplays")!;
+  if (screenplays.size !== 0 && finalScreenplays.size !== 0)
+    for (const relative of [
+      ...new Set([...screenplays, ...finalScreenplays]),
+    ].sort(compareCodeUnits))
+      if (screenplays.has(relative) !== finalScreenplays.has(relative))
+        diagnostics.push(
+          `Delivery inventory differs between screenplays and final/screenplays at ${relative}.`,
+        );
   return Object.freeze({
     diagnostics: Object.freeze(diagnostics),
     files: Object.freeze(output),
@@ -165,7 +125,7 @@ export const planAutoMovieDeliveryTocPublication = (props: {
   for (const [relative, source] of Object.entries(props.planned)) {
     if (source === props.current[relative]) continue;
     if (
-      !/^docs\/(?:scripts|screenplays)\/\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\/index\.md$/u.test(
+      !/^docs\/(?:scripts|screenplays|final\/screenplays)\/\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\/index\.md$/u.test(
         relative,
       )
     )
@@ -175,14 +135,4 @@ export const planAutoMovieDeliveryTocPublication = (props: {
     writes[relative] = source;
   }
   return Object.freeze(writes);
-};
-
-export {
-  applyAutoMovieContractMigrationPlan,
-  createAutoMovieContractMigrationReceiptArtifacts,
-  type IAutoMovieContractBaseline,
-  observeAutoMovieContractMigrationOutcomes,
-  parseAutoMovieContractBaseline,
-  planAutoMovieContractMigration,
-  planAutoMovieContractMigrationPublication,
 };

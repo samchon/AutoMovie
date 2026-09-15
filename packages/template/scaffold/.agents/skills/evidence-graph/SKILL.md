@@ -1,6 +1,6 @@
 ---
 name: evidence-graph
-description: Defines this generated project's self-contained contract inventory and evidence obligations. Use before adding or changing discovery, upstream, obligation, principle, or local contract documents; editing lint.config.ts graph state or claims; adding evidence tags, exclusions, reviews, or fingerprints; or advancing a branch stage. Do not use for frame-review evidence or geometry craft except where they pay a declared graph relationship.
+description: Defines this generated project's self-contained contract inventory and evidence obligations. Use before adding or changing discovery, naturalness, upstream, obligation, principle, or local contract documents; editing src/lint.config.ts graph state or claims; adding evidence tags, exclusions, reviews, or fingerprints; or advancing a branch stage. Do not use for frame-review evidence or geometry craft except where they pay a declared graph relationship.
 ---
 
 # Evidence graph

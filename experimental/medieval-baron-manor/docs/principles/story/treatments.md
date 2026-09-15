@@ -16,9 +16,11 @@ Sources: [Purdue OWL on developing a paragraph from a controlling statement into
 
 ## Treatment causal turn {#causal-turn}
 
-Every treatment unit develops a specific event, relationship, process, observation, or formal operation from an initiating condition into a changed or accumulated result. Where agency operates, identify consequential choices, genuine alternatives or resistance, and reactions. Observational, procedural, or non-human films do not invent conflict; they state the ordered process and effect that makes the unit narrative rather than a ledger.
+Every treatment unit develops a specific event, relationship, process, observation, or formal operation from an initiating condition into a changed or accumulated result. It names the participating subjects, objects, spaces, or environmental forces and the story-relevant physical state before and after each causal turn: presence, possession, position relation, integrity, exposure, access, resource, bodily condition, or another observable state as applicable. Where agency operates, identify consequential choices, genuine alternatives or resistance, and reactions. Observational, procedural, or non-human films do not invent conflict; they state the ordered process and effect that makes the unit narrative rather than a ledger.
 
-Review question: what central progression produces the unit's identifiable difference, and why can a later unit inherit that result?
+Treatment precision fixes which physical change matters and why without choosing the executable path, contact sequence, coordinate, duration, camera, or representation that realizes it. Those belong to scripts, screenplay construction, shots, or design according to their boundaries.
+
+Review question: what exact initiating physical and dramatic condition, pressure, choice or operation, resistance or limit, reaction, observable state delta, and result make this unit consequential without pre-choosing its execution?
 
 This item owns development within one treatment unit. Narrative unit connection owns the relation between units, and the common substantive-completion principle rejects cards and summaries that merely promise development.
 

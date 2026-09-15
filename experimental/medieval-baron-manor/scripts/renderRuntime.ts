@@ -15,7 +15,7 @@ import {
   repaintSelectionReviews,
   repaintSequenceBaseline,
   repaintSequenceObservation,
-} from "../repaintSelectionReviews";
+} from "../src/repaintSelectionReviews";
 import { inspectCurrentProxyPublication } from "./assertProxyBundle";
 import { preserveProductionEncoderCleanup } from "./preserveProductionEncoderCleanup";
 import {

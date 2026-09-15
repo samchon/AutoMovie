@@ -1,9 +1,5 @@
 // Resolve the scaffold's dependency versions from the monorepo's real package
-// manifests and pnpm catalogs. Extracted from syncVersions.ts so the
-// repository-local experimental sandbox generator (build/experimental.ts)
-// resolves the same versions the published scaffold bakes in, instead of
-// parsing the generated src/templateVersions.ts back out or drifting its own
-// copy of the catalog rules.
+// manifests and pnpm catalogs for the published template version inventory.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 

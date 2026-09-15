@@ -80,7 +80,7 @@ Selected events, actions, images, sounds, and details arise from this production
 
 Review question: which choice could be transplanted unchanged into an unrelated film, and what production-owned fact should determine it instead?
 
-This item owns production-specific selection. The composition-safe defaults own whether each local rhetorical choice performs literal work, and screenplay audiovisual selection owns which final perceptible details reach the audience.
+This item owns production-specific substantive selection. Common screenplay naturalness owns whether each final rhetorical choice performs literal work, and screenplay audiovisual selection owns which final perceptible details reach the audience.
 
 Sources: [Boston University on creating tension through concrete action](https://www.bu.edu/articles/2019/how-to-create-suspense/); [Purdue OWL on revealing character through specific action and speech](https://owl.purdue.edu/owl/subject_specific_writing/creative_writing/writers/fiction_writing_basics/characters_and_fiction_writing1/building_and_revealing_characters.html)
 

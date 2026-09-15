@@ -7,6 +7,8 @@ export * from "./production/acceptanceScope";
 export * from "./production/AutoMovieLegacyImporter";
 export * from "./production/AutoMovieProductionBuilder";
 export * from "./production/AutoMovieProductionBinder";
+export * from "./production/timedAuthoringKind";
+export * from "./production/parseAutoMovieProductionBookCommand";
 export * from "./production/AutoMovieProductionContext";
 export * from "./production/diagnosticCatalog";
 export * from "./production/captureProductionFrame";
