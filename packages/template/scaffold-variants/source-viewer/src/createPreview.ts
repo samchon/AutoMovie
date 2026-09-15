@@ -6,6 +6,6 @@ import type { IAutoMovieSourcePreview } from "./viewer/sourcePreview";
  */
 export const createPreview = (): IAutoMovieSourcePreview => {
   throw new Error(
-    "Author viewer/preview.ts: export createPreview() returning { scene, camera, target? } built from your actual source modules.",
+    "Author src/createPreview.ts: export createPreview() returning { scene, camera, target? } built from your actual source modules.",
   );
 };
