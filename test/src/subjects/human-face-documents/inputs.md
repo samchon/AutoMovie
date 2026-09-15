@@ -16,7 +16,7 @@ Selected: `generated-black-boy-01_age-15_front-smile.png`. Only original; fronta
 
 ## generated-black-girl-01 {#input-generated-black-girl-01}
 
-Selected: `generated-black-girl-01_age-15_front-smile.png`. Only original; near-frontal smile with readable eyes and lips. Generated source; hair is outside face acceptance.
+Selected: `generated-black-girl-01_age-15_front-smile.png`. Only original; near-frontal smile with readable eyes and lips. Generated source. The visible curl silhouette and forehead coverage also inform the surface-hair study; the image does not measure hidden scalp geometry or individual fibre depth.
 
 | Original source | Pixels | SHA-256 | Quality decision |
 | --- | --- | --- | --- |
