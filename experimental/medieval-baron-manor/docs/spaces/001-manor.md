@@ -17,7 +17,7 @@
 @evidence settings/001-production.md#reference-priority 원본별 외관·절개·정원·홀·상층 질문을 고정 그래프에 적용한다.
 @evidenceReview settings/001-production.md#reference-priority #a00d7bd 이미지02를 이유로 계단을 직선으로 바꾸지 않고 북쪽에서 동쪽으로 꺾이는 한 세트를 유지하며 원본을 평면 텍스처로 붙이지 않는다.
 @evidence settings/001-production.md#visual-grammar 목구조·충전벽·기초·분할 창·지붕과 생활 재료를 전역에 적용한다.
-@evidenceReview settings/001-production.md#visual-grammar #11442bf 외관 문단의 갈색 목재·회백색 벽과 실내의 도기·직물·석재 화구를 같은 본채 배치에 두어 서로 다른 건축 언어의 방을 만들지 않는다.
+@evidenceReview settings/001-production.md#visual-grammar #e8e2921 본문의 외피·정원 구성과 원본01·03을 부모의 기둥/층보/버팀·충전면·기단·연결 지붕·회랑 빈 곳에 대조했다. 설계는 그 형태와 재료 대비를 소비하고 정상 외관·후면·지붕 보조 시점을 남기며, 닫힘과 열린 관찰 상태를 구별한다. 구체적 구현 좌표가 부모 정체성을 재정의하지 않는다.
 @evidence settings/001-production.md#fidelity 실제 모델·배치에서 파생한 환경과 시각 관찰을 연결한다.
 @evidenceReview settings/001-production.md#fidelity #a346a43 공간 carrier는 축약 상자를 대신 쓰지 않고 현재 형상을 소비하며 가구·소품의 형체와 재료를 실제 배치 시점에서 읽도록 계획한다.
 @evidence settings/001-production.md#review-condition 실내 기본 눈높이와 높은 보조 관찰을 구별한다.
@@ -37,23 +37,23 @@
 @evidence settings/002-household.md#household 세 침실과 여섯 자리 홀의 가족 배경을 실제 실 구성으로 소비한다.
 @evidenceReview settings/002-household.md#household #b2e4e7a 주침실과 두 자녀 침실·홀 가구가 같은 본채에 있고 별도 지원자 숙직동이나 인물 모델을 설계하지 않는다.
 @evidence settings/002-household.md#family-hall 홀의 식탁·벤치·화구·함·도기·쟁반·깔개를 배치한다.
-@evidenceReview settings/002-household.md#family-hall #083b751 식탁과 두 벤치·깔개의 중심과 화구·수납 위치를 구체화하여 설정의 물품 목록을 이름만 반복하지 않는다.
+@evidenceReview settings/002-household.md#family-hall #85c3b8b 부모가 고정한 상판·좌판 크기를 그대로 소비하고 식탁 중심(-6.57,2.35), 양쪽 벤치X=-7.22/-6.01, 깔개·화구·수납 배치를 추가한다. 현재 생성자의 판재 상판·네 다리·하부 연결, 여섯 식기와 낮은 벤치가 새 형태 기준에 대응하며 corner-b/d는 실제 배치 관찰 계획이다. 이 대조는 새 캡처 통과를 주장하지 않는다.
 @evidence settings/002-household.md#kitchen-pantry 주방과 식료실의 작업대·도구·화구·저장 물품을 각 방에 둔다.
-@evidenceReview settings/002-household.md#kitchen-pantry #164c0f5 북쪽 작업대와 주방 화구, 별도 식료실 선반 좌표를 나누어 저장실을 필수 경유지로 만든 방 통합을 하지 않는다.
+@evidenceReview settings/002-household.md#kitchen-pantry #cf3789d 작업대의 부모 크기에 중심(-5.80,-4.65)·Y1.34를 배분하고 선반·화구를 별도 방에 귀속했다. 현재 생성자의 작업면·걸린 도구·솥, 식료 선반의 다단 빈 곳·자루·통은 부모의 구별되는 윤곽과 일치하는 구현 대상이다. 좁은 방의 기본 관찰과 물품 oblique의 역할을 분리한다.
 @evidence settings/002-household.md#ledger-room 책상·좌석·선반·잠금함과 필기구·장부를 업무실에 배치한다.
-@evidenceReview settings/002-household.md#ledger-room #a7a9dd5 책상(5.60,-3.60)과 선반(3.85,-5.00)·잠금함(6.60,-1.90)의 실제 배치가 문서 검토와 보관의 두 역할을 남긴다.
+@evidenceReview settings/002-household.md#ledger-room #2bbac2c 책상·좌석·장부 선반·잠금함의 네 중심을 부모가 정한 직사각 상판·등받이·펼친 장부·앞 잠금부에 대조했다. 현재 모델의 두 장부 면과 잉크통·깃털 필기구가 문서 작업을 식사 자리와 다르게 구성하고, 설계는 그 배치와 관찰을 소유한다.
 @evidence settings/002-household.md#service-room 세척대·수납·거치와 대야·통·빗자루를 동쪽 서비스실에 둔다.
-@evidenceReview settings/002-household.md#service-room #9f1f11c 세척대(6.85,2.50)와 건조 거치(5.50,4.80)는 식료 선반과 다른 실에 있어 더러운 세척물과 식료의 표현을 합치지 않는다.
+@evidenceReview settings/002-household.md#service-room #e8fc22b 대야 받침(6.85,2.50), 수납장(6.22,5.32), 건조 거치(5.50,4.80)와 실제 용기·빗자루 생성 내용을 부모의 오목한 대야·빈 통·열린 거치·솔 묶음에 대조했다. 별도 세척실 소속을 유지하고 식료 선반과 섞지 않으며 정면과 측면은 현재 room 시점으로 읽을 대상이다.
 @evidence settings/002-household.md#bedrooms 세 침실의 침대·침구·수납·좌석·탁자를 각각 배치한다.
-@evidenceReview settings/002-household.md#bedrooms #3823886 주침대(-5.40,3.80)와 두 작은 방의 침대 좌표를 구별하고 매트리스·담요·베개·프레임의 차이를 유지한다.
+@evidenceReview settings/002-household.md#bedrooms #e63c6ec 부모의 길이2.05m·부부1.60m/자녀0.95m 폭을 현재 세 bed 호출과 대조했다. 머리/발 높이·매트리스·시트·이불 층과 두 개/한 개 베개·방별 이불색을 가진 원형을 서로 다른 세 방 중심에 배치한다. 모델 생성 내용과 설계 관찰 계획의 일치이며 새 렌더의 완료 판정은 아니다.
 @evidence settings/002-household.md#upper-washroom 대야·측간 물품·주전자·수건·칸막이·빗장을 공용실에 둔다.
-@evidenceReview settings/002-household.md#upper-washroom #6cc0d8c 동쪽 대야(3.74,1.75)와 측간 물품(3.88,3.10)을 한 방에 귀속하며 현대 수세식 설비나 외부 측간탑을 추가하지 않는다.
+@evidenceReview settings/002-household.md#upper-washroom #e0f660b 한 방 안의 대야(3.74,1.75)와 측간 물품(3.88,3.10), 주전자·수건·칸막이를 부모의 입구·깊이·두 면 직물·뚜껑 상태에 대조했다. 현대 설비를 추가하지 않고 screen과 단독 oblique를 가림 해소 역할로만 배정하여 열린 검사와 정상 문 상태를 혼동하지 않는다.
 @evidence settings/002-household.md#upper-storage 공용 직물 선반과 뚜껑 함을 독립 상층 수납에 둔다.
-@evidenceReview settings/002-household.md#upper-storage #8355a24 선반(5.35,3.25)과 보관함(6.65,4.90)에 침구·직물을 구성해 침실의 개인 의복 수납으로 공용 구획을 대신하지 않는다.
+@evidenceReview settings/002-household.md#upper-storage #8a34a67 부모의 선반1.60×0.40×3.60m 기준을 현재 shelf 호출에 대조하고 선반(5.35,3.25)·함(6.65,4.90)의 실제 실 소속을 확인했다. 개방된 칸과 접힌 직물 적층은 공용 건조 수납이며 침실 의복이나 젖은 수건을 대신 배치하지 않는다.
 @evidence settings/002-household.md#water-and-waste 주전자·대야·오수 물품을 해당 생활실에 배치한다.
-@evidenceReview settings/002-household.md#water-and-waste #37fa029 주방 주전자와 침실 야간 주전자·공동 세척 용기가 각각 남고 정원 연못을 공급·배수 설비로 표현하지 않는다.
+@evidenceReview settings/002-household.md#water-and-waste #b4ae240 주방·침실·공동 세척실의 용기와 뚜껑 상태를 각 방에 남기고 연못은 독립 정원 요소로 배치한다. 부모의 입구·수면·외벽 구분과 닫힌 오수 용기 원칙을 소비하며 물 색으로 위생을 보증하거나 정원 연못을 급배수 설비로 재해석하지 않는다.
 @evidence settings/002-household.md#garden 사과나무·자연석 연못·약초밭·자갈길을 중앙정원에 구성한다.
-@evidenceReview settings/002-household.md#garden #9d835ea 외관·정원 문단이 가지·잎의 빈틈·적은 열매와 수면·가장자리·바닥을 남기고 두 정원 기본 시점에서 회랑과 함께 읽도록 한다.
+@evidenceReview settings/002-household.md#garden #29082fb 한 사과나무와 돌·수면·가장자리·바닥·약초·길을 같은 정원에 둔 설계와 현재 생성자의 가지 분기·개별 잎·수관 빈 곳·낮은 수면을 부모에 대조했다. courtyard/reverse와 pond·tree 보조 관찰을 구별하고 카메라 방향에 따라 잎을 재생성할 권한을 두지 않는다. 실제 신규 이미지의 미관 판정과 이 설계 대조는 별개다.
 @evidence settings/002-household.md#make-scope 실제 모델·배치와 공간 carrier의 소유를 구별한다.
 @evidenceReview settings/002-household.md#make-scope #653e17b manorSpaceSource는 모델entry와 instance-set의 환경을 소비하고 물품의 형상 생성 자체를 축약 공간 상자로 다시 정의하지 않는다.
 @evidence settings/003-spatial-basis.md#single-house 남쪽 정원을 감싼 한 ㄷ자 본채와 대지 접근부를 배치한다.
@@ -83,13 +83,13 @@
 @evidenceReview principles/design/spaces.md#space-topology #3f8d925 층별 방 ID와 방향·직접 연결이 가구 좌표보다 먼저 나와 메시를 역분석하지 않고 ground 필수실과 upper 다섯 실의 연결을 찾을 수 있다.
 @evidence principles/design/spaces.md#space-verification-address 공간·물품의 시각 질문을 기본 투시와 보조 절개·근접에 연결한다.
 @evidenceReview principles/design/spaces.md#space-verification-address #a143ab1 외피 윤곽은 reference-exterior와 북서 시점, 층 관계는 평면·골조, 개별 실은 눈높이 코너로 나누어 특정 방의 누락을 지붕 위 사진으로 감추지 않는다.
-@evidenceExclude upstream/design/spaces.md#settings-and-map-revision-from-space-work 현재 시각 납품에서 소비한 coordinate-datum의 축·두 마감면, single-house·ground-access·single-stair·upper-access의 고정 연결과 각 생활실 물품, review-condition·observation-population의 관찰 규격을 배치에 대조했다. 16오름과 한 중간참·일자 복도·모든 실의 직접 문 및 눈높이 관찰 계획이 그 조건 안에서 정해져 이 공간 배치가 추가 부모 결함을 노출하지 않는다. 실건물 물리 검사는 delivery-scope에 비요구이고 map 부모는 소비하지 않는다.
-@evidenceExcludeReview upstream/design/spaces.md#settings-and-map-revision-from-space-work #46f1b62 층간2.88과16×0.18, 상층 다섯 실의 직접 문, 방별 물품 좌표와 눈높이 기본 시점을 실제 공간 본문에 대조했다. 요구를 맞추기 위해 층 기준을 옮기거나 두 번째 계단·침실 경유·높은 기본 카메라를 추가하지 않아 현행 부모를 다시 고칠 공간상 반례는 이 관계에서 나오지 않는다.
+@evidence upstream/design/spaces.md#settings-and-map-revision-from-space-work 방별 배치와 현행 모델의 외형을 대조하자 settings/001-production.md#visual-grammar와 settings/002-household.md의 family-hall, kitchen-pantry, ledger-room, service-room, bedrooms, upper-washroom, upper-storage, water-and-waste, garden이 물품 이름만으로 형상 기준을 넘기는 결함을 드러냈다. 그 부모에 식별 부품·재질 영역·현행 제작 치수·열림 상태를 먼저 보강하고 이 공간은 치수 기준을 참조하며 배치 좌표와 연결을 소유하도록 수정했다. map 부모와 실건물 인증을 새로 도입하지 않는다.
+@evidenceReview upstream/design/spaces.md#settings-and-map-revision-from-space-work #46f1b62 같은 책상·세면대·침구·정원이라는 이름으로 다른 형태가 허용되던 부모와 방별 배치를 비교했다. visual-grammar의 다면 외형과 household 아홉 단원의 부품·치수·상태를 현행 제작 선택으로 명시한 뒤 이 본문의 식탁·작업대 치수 복제를 부모 참조로 바꾸었다. 층 기준과 16오름, 한 중간참, 직접 문 연결은 그대로이며 형상 기준의 누락을 공간의 임의 결정으로 감추지 않았다.
 @evidence contracts/manor-spatial-requirements.md#manor-spatial-requirements 한 ㄷ자 본채·연속 회랑·중앙 꺾임계단·상층 일자 복도의 형체를 같은 실제 환경에서 소유한다.
 @evidenceReview contracts/manor-spatial-requirements.md#manor-spatial-requirements #52ff61b 공간은 현재 모델·배치의 wall segment·opening·surface를 소비하고 중정·계단 개방부를 방 합집합으로 메우지 않는다. 각 실의 직접 문과 두 구간 계단을 명시하여 이름만 등록한 방이나 별도 축약 건물을 계약 실현으로 제출하지 않는다.
 -->
 
-이 설계는 남쪽으로 열린 ㄷ자형 2층 본채 전체를 하나의 3D 환경으로 구성한다. [고정 공간 구성](../settings/003-spatial-basis.md)과 [원본 다섯 장](../settings/001-production.md#reference-priority)을 함께 적용한다. 아래 치수와 좌표로 현재 모델을 배치한다.
+이 설계는 남쪽으로 열린 ㄷ자형 2층 본채 전체를 하나의 3D 환경으로 구성한다. [고정 공간 구성](../settings/003-spatial-basis.md)과 [원본 다섯 장](../settings/001-production.md#reference-priority)을 함께 적용한다. 외피와 물품의 재현할 정체성·기준 규모는 settings가 소유하며, 아래 배치·부재 관계와 관찰 계획은 그 기준을 공간으로 실현한다.
 
 공간 carrier는 현재 모델 entry와 instance-set의 실제 모델·부재·transform을 derived artifact로 받는다. 방 polygon, 층고, 벽과 개구부, 중정·연못·계단을 그 환경의 공간 경계로 쓴다. 별도 축약 상자로 본채를 대체하지 않는다. 등록 소유자는 `src/spaces/manor.ts`의 `manorSpaceSource`이며, `src/models/manor.js`와 `src/instances/manor.js`에서 생성한 현재 파생 공간을 소비한다.
 
@@ -103,11 +103,11 @@
 
 **1층의 가구와 생활 물품**
 
-[생활 홀](../settings/002-household.md#family-hall)의 식탁은 중심 (X=-6.57, Z=2.35), 긴 축은 남북, 길이 2.25m와 너비 0.80m다. 같은 Z에 서측 벤치 X=-7.22와 동측 벤치 X=-6.01을 두며 길이 2.12m와 너비 0.31m를 사용한다. 깔개는 중심 (-6.55, 2.35)에 1.66×2.55m로 놓는다. 깔개 상면 Y=0.456, 좌판 상면 Y=0.906, 식탁 상판의 밑면 Y=1.166과 윗면 Y=1.221은 현재 모델 값으로 유지한다.
+[생활 홀](../settings/002-household.md#family-hall)의 식탁은 중심 (X=-6.57, Z=2.35), 긴 축은 남북으로 놓는다. 같은 Z에 서측 벤치 X=-7.22와 동측 벤치 X=-6.01을 두며 상판과 좌판의 평면 크기는 그 settings 기준을 사용한다. 깔개는 중심 (-6.55, 2.35)에 1.66×2.55m로 놓는다. 깔개 상면 Y=0.456, 좌판 상면 Y=0.906, 식탁 상판의 밑면 Y=1.166과 윗면 Y=1.221은 현재 모델 값으로 유지한다.
 
 홀 서쪽 경계 X=-7.38과 두 창 사이 가새, 창턱, 목재 골조를 같은 실내 구성으로 표현한다. 등잔판 중심은 (X=-7.3725, Y=2.27, Z=1.725)이다. 수납함은 중심 (X=-6.72, Z=5.30)에서 북쪽을 향하고 석재 벽난로는 (X=-6.05, Z=-0.78)에 둔다. 도기 식기·물주전자·쟁반과 직물은 식탁과 난방 공간의 생활 흔적을 만든다. 좌판·상판·다리·가로재의 기존 형상을 보존한다.
 
-[주방](../settings/002-household.md#kitchen-pantry)의 작업대는 중심 (X=-5.80, Z=-4.65), 길이 2.50m, 깊이 0.65m, 작업면 Y=1.34다. 북쪽 창과 도구 걸이, 작업대 위 도마·칼·그릇·주전자를 함께 표현한다. 손잡이와 덮개가 있는 도기 주전자는 (X=-5.18, Z=-4.67), 바닥 Y=1.34, 전체 높이 Y=1.64 안에 놓는 현재 형상을 사용한다. 주방 화구는 (X=-6.05, Z=-1.98), 식료실 선반은 (X=-2.93, Z=-3.60)에 두고 자루·통·뚜껑 용기를 같은 식료실에 귀속한다.
+[주방](../settings/002-household.md#kitchen-pantry)의 작업대는 settings의 길이·깊이를 적용하여 중심 (X=-5.80, Z=-4.65), 작업면 Y=1.34로 놓는다. 북쪽 창과 도구 걸이, 작업대 위 도마·칼·그릇·주전자를 함께 표현한다. 손잡이와 덮개가 있는 도기 주전자는 (X=-5.18, Z=-4.67), 바닥 Y=1.34, 전체 높이 Y=1.64 안에 놓는 현재 형상을 사용한다. 주방 화구는 (X=-6.05, Z=-1.98), 식료실 선반은 (X=-2.93, Z=-3.60)에 두고 자루·통·뚜껑 용기를 같은 식료실에 귀속한다.
 
 [장부실](../settings/002-household.md#ledger-room)은 책상 (X=5.60, Z=-3.60), 좌석 (5.60, -2.70), 장부 선반 (3.85, -5.00), 잠금 표현의 수납함 (6.60, -1.90)을 중심으로 필기구와 펼친 장부를 배치한다. [저장·세척실](../settings/002-household.md#service-room)은 세척대 (6.85, 2.50), 수납장 (6.22, 5.32), 건조 거치대 (5.50, 4.80)와 대야·통·빗자루를 가진다. 식료와 더러운 세척물은 각 방의 서로 다른 생활 표현으로 유지한다.
 
