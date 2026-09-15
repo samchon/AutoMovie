@@ -34,14 +34,11 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `book` | `npm run book -- --layer <layer> --title <title>` | Ignored reader edition; follow [Production lifecycle](.agents/skills/production-lifecycle/index.md#working-memory-and-reader-editions). |
 | `capture:doctor` | `npm run capture:doctor` | Verify the installed capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
 | `capture:install` | `npm run capture:install` | Install the project capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `compile` | `npm run build` | Materialize builder-owned output; follow [Compilation](.agents/skills/source-authoring/compilation.md). |
-| `contracts:migrate` | `npm run contracts:migrate -- --dry-run` or `npm run contracts:migrate` | Plan the shared-contract baseline change before applying its conflict-free actions. |
 | `derive:example` | `npm run derive:example` | Run the non-production derivation specimen; follow [Ownership](.agents/skills/source-authoring/ownership.md). |
 | `design` | `npm run design` | Emit reviewed design records; follow [Source authoring](.agents/skills/source-authoring/index.md). |
 | `external:inspect` | `npm run external:inspect -- <project-path> --profile <profile>` | Inspect external model or motion facts; follow [Models and motions](.agents/skills/source-authoring/models-and-motions.md). |
 | `format` | `npm run format` | Apply the configured source formatter. |
 | `inspect` | `npm run inspect -- --shot <id> --subject <kind:id>` | Inspect one compiled subject; follow [Inspection](.agents/skills/review-verification/inspection.md). |
-| `library:review` | `npm run library:review -- <action> [options]` | Use `inspect`, `plan`, or `record`; follow [Production review](.agents/skills/review-verification/review.md). |
 | `lint` | `npm run lint [-- --scope <scope>]` | Run source and graph lint at `design`, `source`, `review`, or `final` scope; follow [Evidence staging](.agents/skills/evidence-graph/staging.md). |
 | `lint:source` | `npm run lint:source` | Type-check governed source and run registered lint contributors. |
 | `preview` | `npm run preview -- --shot <id> --time <seconds> --pass <pass>` | Capture a current shot frame; follow [Capture](.agents/skills/review-verification/capture.md). |
@@ -49,11 +46,10 @@ The executable command keys live in `package.json`; this table accounts for ever
 | `repaint` | `npm run repaint -- <action> --shot <id> [options]` | Use `reroll`, `retry`, `select`, or `reverse`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
 | `render` | `npm run render -- <action> [options]` | Use `all`, `plan`, `run`, `status`, `verify`, `finalize`, or `gc`; follow [Review verification](.agents/skills/review-verification/index.md). |
 | `routes` | `npm run routes -- <kind>` | Inspect supported capability ownership for `film`, `brief`, or `library`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
-| `sync` | `npm run sync` | Replace generated instructions and synchronize owned local reference-client entries; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
+| `sync` | `npm run sync` | Replace generated instructions; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
 | `texture:scale` | `npm run texture:scale` | Measure bound texture scale; follow [Measurements](.agents/skills/review-verification/measurements.md). |
 | `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate script, construction-screenplay, and final-screenplay delivery indexes; follow [Scripts](.agents/skills/production-lifecycle/scripts.md), [Screenplays](.agents/skills/production-lifecycle/screenplays.md), and [Naturalness](.agents/skills/production-lifecycle/naturalness.md). |
 | `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `verify` | `npm run verify` | Reopen and verify final generated, render, and delivery evidence; follow [Production review](.agents/skills/review-verification/review.md). |
 | `viewer` | `npm run viewer` | Keep the compiled viewer open while source changes recompile and reload; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
 | `viewer:preview` | `npm run viewer:preview` | Inspect ttsc-emitted current source through a production-owned preview factory; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
 
