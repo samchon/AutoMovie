@@ -48,10 +48,8 @@ Sources: [Ronen on necessary indeterminacy in fictional worlds](https://www.camb
 
 ## Observable identity {#observable-identity}
 
-Every settings unit that defines a subject, place, background, or audible identity describes its observable form in enough concrete detail that independent downstream authors imagine and preserve the same owner under the population's delivery review condition. For a person or creature, settle the applicable body plan, proportions, scale, silhouette, face and head structure, hair or covering, posture, habitual expression, skin or surface appearance, distinguishing marks, clothing or carried identity, color relations, visible age or wear, and allowed state variation. For a place or background, settle the applicable spatial character, massing, horizon or enclosure, dominant shapes, landmark relationships, scale cues, circulation or sightline identity, surface and color fields, weathering, atmosphere, time-dependent appearance, and allowed variation. Use production-specific observations rather than aesthetic labels, stock archetypes, or a list copied from this paragraph.
+Every settings unit that defines a subject, place, or audible identity states the characteristics that must remain recognizable under the population's delivery review condition. It owns the identity to observe, not the mesh, material construction, rig, camera, lighting, or sound implementation used to achieve recognition.
 
-Detail is proportional to downstream consequence but never collapses to a name, genre, mood, or single flattering view. Describe the invariant identity and the variations a scene may show from multiple useful angles. This owner states what must be recognizable and how its parts relate; map, model, space, material, instance, motion, camera, lighting, and sound owners choose the deterministic implementation within those facts.
-
-Review question: could two independent design authors reconstruct observably different subjects or places while both claiming to follow this description, and which missing form, relation, surface, scale, or variation decision permits that divergence?
+Review question: what visible or audible observation distinguishes this owner from a merely named placeholder?
 
 Sources: [Academy Digital Source Master on defined image characteristics](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master); [glTF 2.0 scene and asset concepts](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#concepts)

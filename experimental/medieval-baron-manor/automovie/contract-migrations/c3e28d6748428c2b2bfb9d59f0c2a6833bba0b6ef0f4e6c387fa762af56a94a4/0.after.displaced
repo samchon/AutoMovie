@@ -56,7 +56,7 @@
         "work-specific-model-requirements"
       ],
       "path": "docs/discovery/design/models.md",
-      "sha256": "sha256:e506c5e3ff588431edbadf3f13eddadeaf6b3ce19cca64930c51b2eda109f2f1"
+      "sha256": "sha256:c1f0553084f7c659183813b06967170a4792c1efc3691cd97d3226d2a8e7bee6"
     },
     {
       "anchors": [
@@ -116,14 +116,6 @@
     },
     {
       "anchors": [
-        "korean-contextual-relation",
-        "korean-register-ownership"
-      ],
-      "path": "docs/language/naturalness/screenplays.md",
-      "sha256": "sha256:927f1c2ebc40445c68da4d6ea1d6fbb03cb0b4fefc7ab0fa8e778aa6de00e0ed"
-    },
-    {
-      "anchors": [
         "korean-population-interference-account",
         "korean-audience-language-access"
       ],
@@ -132,19 +124,11 @@
     },
     {
       "anchors": [
-        "naturalness-earned-element",
-        "naturalness-performed-whole"
+        "korean-contextual-relation",
+        "korean-register-ownership"
       ],
-      "path": "docs/naturalness/core/common.md",
-      "sha256": "sha256:9520b4d7a814818c1b8ba101dd6978737fd0f91c6916f58e05ceea2c32647623"
-    },
-    {
-      "anchors": [
-        "naturalness-scene-pressure",
-        "naturalness-speech-sound-yield"
-      ],
-      "path": "docs/naturalness/story/screenplays.md",
-      "sha256": "sha256:8593910cfaf0b383d4e4fae69e1c0a5ee7ec83ad8487f29fb8188bcb1865032e"
+      "path": "docs/language/principles/common.md",
+      "sha256": "sha256:33db7162274c617121e6efda0e2d2c374520d4c39f6d3705adbe57fc6f9be18c"
     },
     {
       "anchors": [
@@ -291,7 +275,7 @@
         "unsupported-fidelity-is-explicit"
       ],
       "path": "docs/obligations/design/model-sources.md",
-      "sha256": "sha256:e52629a95e646df70fa7f5337309ceb03aa3ba90463a8d5cfa665173b97627d0"
+      "sha256": "sha256:ff3c1bb354262e02e4a972088151a0cc12a399408abeafe9be4461d269c6a42a"
     },
     {
       "anchors": [
@@ -387,7 +371,7 @@
         "screenplay-revision-realization-handoff"
       ],
       "path": "docs/obligations/story/screenplays.md",
-      "sha256": "sha256:8e10677510dfb8c7508307f9a54ffc67aeeae43caa18c4c1920f3b88ab04e571"
+      "sha256": "sha256:0d371415a513d75f8f757705ec0626a50e065b6c921792245ae0e253265845f7"
     },
     {
       "anchors": [
@@ -433,6 +417,17 @@
     },
     {
       "anchors": [
+        "purposeful-enumeration",
+        "earned-significance",
+        "responsive-qualification",
+        "functional-formatting",
+        "contrastive-definition"
+      ],
+      "path": "docs/principles/core/defaults.md",
+      "sha256": "sha256:8f5687575529f6ae8701d26b064c6de527c60512257f552b7c83501593862770"
+    },
+    {
+      "anchors": [
         "derived-parent-differentiation"
       ],
       "path": "docs/principles/core/inherited-units.md",
@@ -456,7 +451,7 @@
         "observable-identity"
       ],
       "path": "docs/principles/core/settings.md",
-      "sha256": "sha256:e7f7378e31823ea3c3da95a564a560db9476715e43e131cdddef69f539aa8bc2"
+      "sha256": "sha256:5b6542a7291cf6e2dfd1cd451b520a08515ffef3c99d2a8a64c8e2a21fd22076"
     },
     {
       "anchors": [
@@ -510,7 +505,7 @@
         "model-scale-layer-completion"
       ],
       "path": "docs/principles/design/models.md",
-      "sha256": "sha256:e2972005e12de3b89d293dd2fced4ac6ffce1ef9af61d7a31b0a0c1c8694862d"
+      "sha256": "sha256:96f01716482a7b0d5e426617c69edfe38ad387ac0a9c17d9db749e3cfb9a152e"
     },
     {
       "anchors": [
@@ -558,7 +553,7 @@
         "observable-inheritance"
       ],
       "path": "docs/principles/story/narratives.md",
-      "sha256": "sha256:0e939feb89378d0077092236a4ecd5fc9272abe4b47d88a14b73b53774025a60"
+      "sha256": "sha256:f9027b65467d350023e250012e70e17bc52c1a439a594c4b0a3080f690a2d440"
     },
     {
       "anchors": [
@@ -578,7 +573,7 @@
         "screenplay-heading-identity"
       ],
       "path": "docs/principles/story/screenplays.md",
-      "sha256": "sha256:ca7271f723df43c3c3f02f0c55ff679ee71de34bed1faeb64e88038841f312fb"
+      "sha256": "sha256:2b656a95d4fd908d43d91b8f5fe261df028d602606bba957cb890eb9649ff312"
     },
     {
       "anchors": [
@@ -677,7 +672,7 @@
         "design-revision-from-model-source-work"
       ],
       "path": "docs/upstream/design/model-sources.md",
-      "sha256": "sha256:e73986a09a17f607ef597adc6030f9a7c395a6a620ce7c6a95795acba37d09fc"
+      "sha256": "sha256:f1bb8c9434fc73ab8e40c39a501a9a6c0804cc30feafc47d3758cbfa71013b93"
     },
     {
       "anchors": [
@@ -752,5 +747,5 @@
   ],
   "language": "korean",
   "protocol": "automovie.contract-baseline.v1",
-  "version": "0.1.4"
+  "version": "0.1.3"
 }

@@ -4,11 +4,9 @@ Model documents specify the deterministic blocking representation that source co
 
 ## Representation contract {#representation-contract}
 
-Every model H2 names the geometry result, hierarchy, reusable parts, and proxy status used for the represented owner in that unit. It states silhouette-critical sections, intended open and closed boundaries, negative spaces, component connectivity, stable part and surface ownership, required normals, UVs or deformation data, and the occupied bounds its consumers depend on, only where the represented subject and promised observations require them. It applies the population's representation ceiling by naming the observations the proxy can and cannot support. When adjoining visible sides need different downstream responses, it gives them separate stable surface owners; the materials layer chooses their construction and appearance.
+Every model H2 names the geometry strategy, hierarchy, reusable parts, and proxy status used for the represented owner in that unit. It applies the population's representation ceiling by naming the observations the proxy can and cannot support. When adjoining visible sides need different downstream responses, it gives them separate stable surface owners; the materials layer chooses their construction and appearance.
 
-Review question: can an implementer choose an operation and build the intended blocking representation without inventing topology, attributes, part ownership, bounds, or a stronger fidelity claim?
-
-This item owns the required geometry result. Source authoring owns which documented operation realizes it and the consequences that operation preserves, regenerates, omits, or refuses.
+Review question: can an implementer build the intended blocking representation without choosing an unstated form or pretending a proxy is final fidelity?
 
 Sources: [OpenUSD model and asset terminology](https://openusd.org/release/glossary.html); [glTF 2.0 meshes, skins, and instantiation](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#geometry)
 
