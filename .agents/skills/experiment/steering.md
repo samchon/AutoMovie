@@ -8,7 +8,7 @@ Read this document when the experiment is driven by a Claude Code or Codex sessi
 
 ## Timed turn observer
 
-For an authorized native authoring turn, use the [benchmark turn observer](../../../build/README.md#benchmark-turn-observer) with the frozen run's declared command, cadence, private record directory and verification checks. The tool reference owns its plan schema, output and process behavior. Read the resulting observations before applying the [run state machine](records.md#operate-one-frozen-run-as-a-state-machine); the observer does not make the coordinator's judgment.
+Observe an authorized native authoring turn through the session's actual process, transcript, and requested deliverable on the frozen run's declared cadence. Record those observations before applying the [run state machine](records.md#operate-one-frozen-run-as-a-state-machine). No repository observer script is required; an observation does not make the coordinator's judgment.
 
 ## A Turn Is The Unit Of Work
 
@@ -124,7 +124,7 @@ When a wrapper is reaped the transcript survives it: the `exec`ed process keeps 
 
 **And a reader that names fields the record does not have returns a shape rather than an error.** A driver counting a report's gaps by category read `category`, `kind`, `check`, `id` and `name`; the record carries `subject`, `status`, `reason` and `remedy`. Nothing threw. The extractor returned a confident `37 ?/?`, the right count with every category unknown, which is worse than a crash and better than nothing only if somebody notices the question marks. Print the object's own keys before counting them, once, and the whole class disappears.
 
-**A convention can manufacture a false absence in two different ways, and both look like a finding.** The case above searched a file the convention keeps empty. The other searches a line the convention splits: this repository writes prose one clause per line, so a grep for a sentence that wraps returns zero on a document that plainly contains it. A driver hit that, read it as a documentation regression, and was one step from filing it, yet the text was present in all four copies, including the commit it suspected. **Search prose multiline, always**, and when a grep of source returns zero, ask whether the convention puts the value somewhere else before you ask whether the value is gone.
+**A convention can manufacture a false absence in two different ways, and both look like a finding.** The case above searched a file the convention keeps empty. The other searches a line that a historical document split: a grep for a whole sentence returned zero even though the words were present in all four copies. Search across line boundaries when inspecting historical or externally formatted prose, and check where a source convention places a value before declaring it absent. The [documentation skill](../documentation/SKILL.md#prose-line-breaks) owns the current repository prose form.
 
 **A guard that prints and does not gate is worse than no guard.** A driver retiring a script so a sibling could not run it wrote an ownership check, watched it print `DOES NOT match my signature -> LEAVING IT ALONE`, and the next line deleted the file anyway: the `rm` sat outside the conditional it was meant to gate. Nothing was lost that time, and the record would have said the right thing happened while the wrong thing happened, which is worse than a bare `rm`, because a bare `rm` at least does not testify. Make a guard refuse once on purpose before trusting it. The second half is subtler: the check misfired because the script legitimately **names** the other drivers' keys inside its own safety assertions, so a substring test for those names matched its own file. Fragment matching failed one level above where it usually does.
 
@@ -204,13 +204,13 @@ The closing condition itself belongs to the brief, which names the reference set
 
 ## A Repack Is A Change To The Production
 
-Refreshing a sandbox against new packages is not a background upgrade. It moves the compile fingerprint, and everything keyed to that fingerprint follows.
+Refreshing a sandbox against new packages changes its execution basis. Recompute the relevant outputs from the recorded current source before treating them as evidence for the new package generation.
 
 Measured on one sandbox with **zero source changes**: `compile` exited 0, the fingerprint moved, the revision advanced, and frame currency went to **0 of 15 current, 15 of 15 stale**. Fifteen captures had been paid for against a fingerprint that no longer existed. So a before-and-after frame comparison that spans a repack does not measure the product, and worse, it does not measure nothing either: on a second sandbox every target fingerprint moved while every renderer identity stayed constant, because the previous turn's authored source entered the artifact at the same compile. Changed inputs, same renderer. **The pixels moved because the shot moved.**
 
 Take any "before" **after the last compile and before the repack**, and say so when you report it. A stage mark from an earlier round is not a repack comparand; using one measures your own agent's work and attributes it to the product.
 
-The product refuses rather than serving stale frames, which is it behaving: a capture after a repack fails with `generated-stale` until the production is recompiled, and the refusal comes from the capture path itself, which does not compile for you. `preview` refuses the same way while still committing an input snapshot and advancing the revision, so a command that moves the revision is not evidence that it did the work.
+The historical stored-state capture path refused stale frames until recompilation; the blank scaffold no longer supplies that command or its revision store. For a source-authored integration, establish which source and package generation produced the observed frame instead of assuming a removed command enforces currency.
 
 ## Read The Artifact You Are Holding
 
