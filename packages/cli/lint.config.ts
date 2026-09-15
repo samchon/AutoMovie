@@ -32,11 +32,37 @@ const inspectionSurface = [
 const operationsSurface = [
   ...allSources,
   "!src/scaffoldNextSteps.ts",
+  "!src/contractMaintenanceFileSystem.ts",
+  "!src/readAutoMovieMaintenanceMarkdownPaths.ts",
   ...inspectionSurface.map((file) => `!${file}`),
+];
+
+const deliverySurface = [
+  "src/contractMaintenanceFileSystem.ts",
+  "src/readAutoMovieMaintenanceMarkdownPaths.ts",
 ];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
+    ...(
+      [
+        "requirements/story/delivery-index.md",
+        "specifications/narrative-and-intent/delivery-index.md",
+      ] as const
+    ).map(
+      (file): ITtscEvidenceGraphClaim => ({
+        name: "CLI delivery index input implements " + file,
+        type: "typescript",
+        files: deliverySurface,
+        symbol: ["type", "function", "property"],
+        reference: {
+          type: "markdown",
+          root: "../../docs",
+          files: [file],
+          symbol: "h3",
+        },
+      }),
+    ),
     {
       name: "public CLI authoring exports implement requirements",
       type: "typescript",

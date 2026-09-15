@@ -34,7 +34,7 @@ const writeSurface = [
   "src/scaffoldPublication.ts",
 ];
 
-/** Contract baseline and delivery-index renderers used by project maintenance. */
+/** Source-derived delivery-index renderers used by project maintenance. */
 const maintenanceSurface = ["src/productionMaintenance.ts"];
 
 const graph: ITtscEvidenceGraphConfig = {
@@ -135,30 +135,6 @@ const graph: ITtscEvidenceGraphConfig = {
           symbol: ["h3"],
         },
       ],
-    },
-    {
-      name: "template maintenance exports implement contract baseline requirements",
-      type: "typescript",
-      files: maintenanceSurface,
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: ["requirements/operations-and-recovery/contract-baseline.md"],
-        symbol: "h3",
-      },
-    },
-    {
-      name: "template maintenance exports implement contract baseline specifications",
-      type: "typescript",
-      files: maintenanceSurface,
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: ["specifications/execution-and-recovery/contract-baseline.md"],
-        symbol: "h3",
-      },
     },
     {
       name: "template maintenance exports implement delivery index requirements",

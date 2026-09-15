@@ -5,10 +5,16 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "An AutoMovie coding-agent production repository.",
-  "engines": { "node": ">=22.23.2" },
+  "engines": {
+    "node": ">=22.23.2"
+  },
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
@@ -17,43 +23,29 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true,
-    "types": ["node", "vite/client"],
+    "types": [
+      "node",
+      "vite/client"
+    ],
     "rootDir": ".",
     "noEmitOnError": true,
     "inlineSourceMap": true,
     "inlineSources": true,
     "plugins": [
-      { "transform": "@ttsc/lint", "configFile": "src/lint.config.ts" }
+      {
+        "transform": "@ttsc/lint",
+        "configFile": "src/lint.config.ts"
+      }
     ]
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "scripts": {
-    "build": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/build.ts",
-    "building:report": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/deriveBuilding-cli.ts",
-    "building:inspect": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/inspectBuilding-cli.ts",
-    "book": "ttsx --no-plugins --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/book.ts",
-    "capture:doctor": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/capture-doctor.ts",
-    "capture:install": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/capture-install.ts",
-    "derive:example": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/deriveExampleArtifact.ts",
-    "external:inspect": "automovie inspect-external",
-    "design": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/emitDesign.ts",
+    "lint": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p package.json",
     "format": "ttsc format --cache-dir node_modules/.cache/ttsc -p package.json",
-    "lint": "npm run lint:source && ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/lint.ts",
-    "lint:source": "ttsc --cache-dir node_modules/.cache/ttsc --noEmit -p package.json",
-    "inspect": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/inspect.ts",
-    "reference": "ttsx --no-plugins --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/reference.ts",
-    "preview": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/preview.ts",
-    "render": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/render.ts",
-    "routes": "automovie routes",
-    "repaint": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/repaint.ts",
     "sync": "automovie sync",
-    "toc": "automovie toc",
-    "contracts:migrate": "automovie contracts migrate",
-    "texture:scale": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/measureTextureScale.ts",
-    "turntable": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/turntable.ts",
-    "verify": "ttsx --cache-dir node_modules/.cache/ttsc -P package.json src/scripts/verify.ts",
-    "viewer": "vite --config src/vite.config.ts --host 127.0.0.1",
-    "viewer:preview": "vite --config src/vite.config.ts --mode source-preview --host 127.0.0.1"
+    "viewer": "vite --config src/vite.config.ts --host 127.0.0.1"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",
@@ -65,24 +57,14 @@
     "@automovie/production": "{{version:production}}",
     "@automovie/render": "{{version:render}}",
     "@automovie/viewer": "{{version:viewer}}",
-    "@huggingface/transformers": "{{version:huggingFaceTransformers}}",
-    "h264-mp4-encoder": "{{version:h264Mp4Encoder}}",
-    "kokoro-js": "{{version:kokoroJs}}",
-    "libopus-wasm": "{{version:libopusWasm}}",
-    "mp4box": "{{version:mp4box}}",
-    "onnxruntime-node": "{{version:onnxruntimeNode}}",
-    "pngjs": "{{version:pngjs}}",
     "three": "{{version:three}}"
   },
   "devDependencies": {
     "@automovie/evidence": "{{version:evidence}}",
-    "@automovie/mcp": "{{version:mcp}}",
     "@automovie/template": "{{version:template}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
-    "@types/pngjs": "{{version:pngjsTypes}}",
     "@types/three": "{{version:threeTypes}}",
-    "playwright": "{{version:playwright}}",
     "ttsc": "{{version:ttsc}}",
     "typescript": "{{version:typescript}}",
     "vite": "{{version:vite}}"

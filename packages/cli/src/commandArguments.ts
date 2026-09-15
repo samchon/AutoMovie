@@ -13,22 +13,6 @@ import {
   isAutoMovieAuthoringProductionKind,
 } from "@automovie/template";
 
-type AutoMovieRenderAction =
-  | "all"
-  | "plan"
-  | "run"
-  | "status"
-  | "verify"
-  | "finalize"
-  | "gc";
-
-type AutoMovieRenderOption =
-  | "--apply"
-  | "--chunk-frames"
-  | "--deliverable"
-  | "--tier"
-  | "--workers";
-
 type AutoMovieCommand =
   | { command: "help" }
   | { command: "version" }
@@ -45,39 +29,7 @@ type AutoMovieCommand =
     }
   | { command: "toc"; check: boolean }
   | { command: "routes"; kind: AutoMovieAuthoringProductionKind }
-  | { command: "sync" }
-  | { command: "render"; arguments: readonly string[] };
-
-const RENDER_ACTIONS = new Set<string>([
-  "all",
-  "plan",
-  "run",
-  "status",
-  "verify",
-  "finalize",
-  "gc",
-]);
-
-const RENDER_OPTIONS = new Set<string>([
-  "--apply",
-  "--chunk-frames",
-  "--deliverable",
-  "--tier",
-  "--workers",
-]);
-
-const RENDER_ALLOWED_OPTIONS: Record<
-  AutoMovieRenderAction,
-  ReadonlySet<AutoMovieRenderOption>
-> = {
-  all: new Set(["--chunk-frames", "--deliverable", "--tier", "--workers"]),
-  plan: new Set(["--chunk-frames", "--tier"]),
-  run: new Set(["--chunk-frames", "--deliverable", "--tier", "--workers"]),
-  status: new Set(["--tier"]),
-  verify: new Set(["--tier"]),
-  finalize: new Set(["--tier"]),
-  gc: new Set(["--apply"]),
-};
+  | { command: "sync" };
 
 const nonBlankDirectory = (
   command: string,
@@ -124,51 +76,6 @@ const startArguments = (
     force,
     language,
   };
-};
-
-const positiveInteger = (option: string, value: string): void => {
-  if (/^[1-9][0-9]*$/u.test(value) === false)
-    throw new Error(`${option} must be a positive integer.`);
-  if (Number.isSafeInteger(Number(value)) === false)
-    throw new Error(`${option} must be a positive integer.`);
-};
-
-const renderArguments = (args: readonly string[]): readonly string[] => {
-  const action = args[0];
-  if (action === undefined || RENDER_ACTIONS.has(action) === false)
-    throw new Error(
-      `render needs one of all, plan, run, status, verify, finalize, or gc; received ${JSON.stringify(action ?? "")}.`,
-    );
-  const allowed = RENDER_ALLOWED_OPTIONS[action as AutoMovieRenderAction];
-  const seen = new Set<AutoMovieRenderOption>();
-  for (let index = 1; index < args.length; ++index) {
-    const token = args[index]!;
-    if (RENDER_OPTIONS.has(token) === false) {
-      if (token.startsWith("--"))
-        throw new Error(`Unknown render option "${token}".`);
-      throw new Error(`Unexpected render argument "${token}".`);
-    }
-    const option = token as AutoMovieRenderOption;
-    if (allowed.has(option) === false)
-      throw new Error(`${option} is not valid for render ${action}.`);
-    if (seen.has(option))
-      throw new Error(`${option} may be supplied only once.`);
-    seen.add(option);
-    if (option === "--apply") continue;
-    const value = args[++index];
-    if (value === undefined || value.startsWith("--"))
-      throw new Error(`${option} requires a value.`);
-    if (option === "--chunk-frames" || option === "--workers")
-      positiveInteger(option, value);
-    else if (option === "--deliverable") {
-      if (value.trim().length === 0 || value.trim() !== value)
-        throw new Error(
-          "--deliverable must be a non-blank, unpadded deliverable id.",
-        );
-    } else if (value !== "proxy" && value !== "final")
-      throw new Error('--tier must be either "proxy" or "final".');
-  }
-  return [...args];
 };
 
 /**
@@ -239,8 +146,6 @@ export const readAutoMovieCommandArguments = (
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);
     return { command } as const;
   }
-  if (command === "render")
-    return { command, arguments: renderArguments(rest) } as const;
   throw new Error(`Unknown command ${JSON.stringify(command ?? "")}.`);
 };
 

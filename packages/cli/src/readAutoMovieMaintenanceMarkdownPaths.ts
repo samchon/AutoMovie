@@ -9,8 +9,8 @@ import path from "node:path";
 /**
  * Directory-only observations used to enumerate a closed maintenance input.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Keeps enumerated inputs physically under the approved project.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Supplies physical directory and child-entry facts rather than trusting lexical paths.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Keeps enumerated inputs physically under the approved project.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Supplies physical directory and child-entry facts rather than trusting lexical paths.
  */
 export interface IAutoMovieMaintenanceDirectoryIO {
   /** Capture one ordinary directory and its physical identity. */
@@ -43,8 +43,8 @@ const directoryIO: IAutoMovieMaintenanceDirectoryIO = {
 /**
  * Enumerate Markdown paths without following linked or replaced ancestors.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Rejects a linked input tree before its files can enter a maintenance plan.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Retains the captured root and each visited directory through the read-only walk.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Rejects a linked input tree before its files can enter a maintenance plan.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Retains the captured root and each visited directory through the read-only walk.
  */
 export const readAutoMovieMaintenanceMarkdownPaths = (
   root: IScaffoldPhysicalDirectory,
@@ -119,8 +119,8 @@ export const readAutoMovieMaintenanceMarkdownPaths = (
 /**
  * Close delivery maintenance over scripts and both screenplay passes.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Binds delivery publication to every participating Markdown population.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Uses the same complete input inventory during planning and admission.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Binds delivery publication to every participating Markdown population.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Uses the same complete input inventory during planning and admission.
  */
 export const readAutoMovieDeliveryMaintenanceMarkdownPaths = (
   root: IScaffoldPhysicalDirectory,
@@ -133,8 +133,8 @@ export const readAutoMovieDeliveryMaintenanceMarkdownPaths = (
 /**
  * Recheck the complete enumerated population, including newly added siblings.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Keeps a maintenance plan bound to the complete input population it observed.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Refuses added, removed, or reordered members before publication admission.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Keeps a maintenance plan bound to the complete input population it observed.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Refuses added, removed, or reordered members before publication admission.
  */
 export const assertAutoMovieMaintenanceMarkdownInventory = (
   expected: readonly string[],

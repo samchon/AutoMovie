@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import type { IAutoMovieEvidenceConfigProps } from "@automovie/evidence";
 import {
   AUTO_MOVIE_AUTHORING_REACHABILITY,
   ScaffoldPublicationError,
@@ -7,10 +8,11 @@ import {
   planAutoMovieProjectDeliveryTocs,
   publishFiles,
   renderScaffold,
+  writeAutoMovieProductionInstructions,
   writeScaffoldFile,
 } from "@automovie/template";
-import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 
 import { dispatchAutoMovieCommandArguments } from "./commandArguments";
@@ -34,7 +36,6 @@ Usage:
   npx automovie toc [--check]
   npx automovie inspect-external <path> --profile <profile>
   npx automovie routes <film|brief|library>
-  npx automovie render <all|plan|run|status|verify|finalize|gc> [options]
 
 Commands:
   start <directory>   Create <directory> and lay down the blank scaffold:
@@ -47,7 +48,6 @@ Commands:
                        externalMotions adoption without semantic mapping.
   routes <kind>        Print the complete owner/serializer/consumer route
                        matrix for one production kind.
-  render <action>     Run the current project's resumable render job.
 
 Options:
   --force             Scaffold into a non-empty directory (start only).
@@ -55,12 +55,6 @@ Options:
   --check             Refuse a stale delivery table of contents (toc only).
   --profile <name>    Select gltf-static-v1, gltf-humanoid-v1,
                       gltf-motion-v1, or vrm-humanoid-v1.
-  --chunk-frames <n>  Positive render chunk size (all, plan, or run only).
-  --deliverable <id>  Render one deliverable (all or run only).
-  --tier <name>       Select proxy or final (all, plan, run, status, verify,
-                      or finalize only).
-  --workers <n>       Positive render worker count (all or run only).
-  --apply             Apply render garbage collection (gc only).
   -h, --help          Show this help as a standalone request.
   -v, --version       Print the version as a standalone request.
 `;
@@ -195,7 +189,7 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-mixed-version-concurrency The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-downgrade-rollback-compatibility The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-migration-validation The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
- * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-source-authority-separation The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
+ * @evidence specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-source-authority-separation Routes project-owned external bytes through explicit inspection without adopting their results as authored production source.
  * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-acquisition-failure-envelope The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/external-inputs/README.md#외부-입력-요구사항 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/operations-and-recovery/README.md#운영과-복구-요구사항 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
@@ -572,10 +566,31 @@ export const run = (argv: readonly string[]): number => {
         process.stdout.write(`${packageVersion()}\n`);
         return 0;
       }
-      if (command.command === "render")
-        return runProjectScript("render.ts", command.arguments);
-      if (command.command === "sync")
-        return runProjectScript(`${command.command}.ts`, []);
+      if (command.command === "sync") {
+        const root = fs.realpathSync(process.cwd());
+        const declaration = path.join(root, "src", "lint.config.ts");
+        if (readProjectRegularFile(root, declaration) === null)
+          throw new Error(
+            "Instruction sync requires the project's ordinary src/lint.config.ts source.",
+          );
+        const loaded = createRequire(path.join(root, "package.json"))(
+          declaration,
+        ) as {
+          productionEvidence?: IAutoMovieEvidenceConfigProps;
+        };
+        if (loaded.productionEvidence === undefined)
+          throw new Error(
+            "The tracked lint declaration exports no productionEvidence.",
+          );
+        const written = writeAutoMovieProductionInstructions({
+          root,
+          productionEvidence: loaded.productionEvidence,
+        });
+        process.stdout.write(
+          `Synchronized ${written.length} instruction path(s).\n`,
+        );
+        return 0;
+      }
 
       if (command.command === "inspect-external") {
         const root = fs.realpathSync(process.cwd());
@@ -727,37 +742,6 @@ const readProjectRegularFile = (
   } catch {
     return null;
   }
-};
-
-const runProjectScript = (
-  scriptName: string,
-  args: readonly string[],
-): number => {
-  const root = process.cwd();
-  const script = path.join(root, "src", "scripts", scriptName);
-  // The launcher this repository ships, not a second TypeScript runner. The
-  // other one reads the passwd database at its own module load on Windows,
-  // before any project code exists, and dies where that syscall is denied.
-  const launcher = path.join(
-    root,
-    "node_modules",
-    "ttsc",
-    "lib",
-    "launcher",
-    "ttsx.js",
-  );
-  if (fs.existsSync(script) === false || fs.existsSync(launcher) === false) {
-    process.stderr.write(
-      `The current project has no installed src/scripts/${scriptName} + TypeScript launcher. Run this command from a scaffolded project after npm install.\n`,
-    );
-    return 1;
-  }
-  const child = spawnSync(
-    process.execPath,
-    [launcher, "-P", path.join(root, "package.json"), script, ...args],
-    { cwd: root, stdio: "inherit" },
-  );
-  return child.status ?? 1;
 };
 
 if (require.main === module) process.exitCode = run(process.argv);

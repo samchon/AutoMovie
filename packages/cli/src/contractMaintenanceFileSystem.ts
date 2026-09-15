@@ -13,8 +13,8 @@ import * as path from "node:path";
  * Physical observations supplied to maintenance without granting mutation.
  * Every read returns the descriptor-verified generation beside its bytes.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Requires ordinary physical directories and exact file observations below the selected project root.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Supplies the physical observations from which the portable baseline inventory is read.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Requires ordinary physical directories and exact file observations below the selected project root.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Supplies the physical observations from which the current delivery index is planned.
  * @author Samchon
  */
 export interface IAutoMovieMaintenanceObservationIO {
@@ -37,8 +37,8 @@ export interface IAutoMovieMaintenanceObservationIO {
  * Plan-bound physical inventory, including absent targets and every existing
  * ancestor of a rename source even when the plan has no target writes.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Retains the exact physical root, parent generations and bytes that planning admitted.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Keeps portable paths associated with their observed physical identities.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Retains the exact physical root, parent generations and bytes that planning admitted.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Keeps portable paths associated with their observed physical identities.
  * @author Samchon
  */
 export interface IAutoMovieMaintenanceObservation {
@@ -83,8 +83,8 @@ const inside = (root: string, target: string): boolean => {
  * Missing targets are observations, while links, changed parents and read
  * failures are refusals. No directory is created during planning.
  *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Rejects physical escapes and retains absent destination slots without following a linked ancestor.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Reads each selected source only under the same captured project root and ordinary directory generations.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Rejects physical escapes and retains absent destination slots without following a linked ancestor.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Reads each selected source only under the same captured project root and ordinary directory generations.
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Observes an input without counting its directory entries, because the publication it feeds replaces entries instead of rewriting the bytes another pathname shows.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Supplies the observation for the entry-replacing method, whose admission the entry count does not govern.
  */
@@ -191,8 +191,8 @@ export const observeAutoMovieMaintenanceFiles = (props: {
  * The returned fresh read is useful for publication planning, but only after
  * all original file and ancestor identities have remained equal.
  *
- * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Carries the planner's exact predecessor identities across the final observation instead of approving new resident bytes.
- * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Rejects file, parent and root replacement before the transaction acquires mutation authority.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Carries the planner's exact predecessor identities across the final observation instead of approving new resident bytes.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Rejects file, parent and root replacement before Markdown publication acquires mutation authority.
  */
 export const assertAutoMovieMaintenanceObservation = (
   expected: IAutoMovieMaintenanceObservation,
@@ -216,8 +216,8 @@ export const assertAutoMovieMaintenanceObservation = (
  * still be represented. This pure subset comparison ignores only own-open
  * ctime drift; it does not replace the full snapshot admission before IO.
  *
- * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Retains original metadata authority while a later physical observation extends the planning population.
- * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Compares exact bytes and stable pathname and descriptor generations after separately admitted reads without accepting a changed ancestor.
+ * @evidence requirements/story/delivery-index.md#story-delivery-index Retains original metadata authority while a later physical observation extends the planning population.
+ * @evidence specifications/narrative-and-intent/delivery-index.md#narrative-intent-delivery-index Compares exact bytes and stable pathname and descriptor generations after separately admitted reads without accepting a changed ancestor.
  */
 export const assertAutoMovieMaintenanceGeneration = (
   expected: IAutoMovieMaintenanceObservation,
