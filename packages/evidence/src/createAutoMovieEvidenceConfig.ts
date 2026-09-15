@@ -2311,7 +2311,18 @@ const requireReviewedFoundations = (graph: IProductionGraph): void => {
   }
 };
 
-const validateStages = (graph: IProductionGraph): void => {
+/**
+ * Checks the production declaration's parent-before-child stage transitions.
+ *
+ * This decision reads no files. The graph factory separately admits physical
+ * populations, contracts, and reset predecessor identities before publication.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shape-stage Keeps each production shape and final revision behind its applicable reviewed parents.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage Applies the shared stage state machine to typed declarations before any graph claims are returned.
+ */
+export const validateAutoMovieProductionStages = (
+  graph: IProductionGraph,
+): void => {
   const stages = [
     ...Object.keys(MARKDOWN).map((name) => graph[name as MarkdownLayer]),
     revisionStage(graph),
@@ -2697,12 +2708,11 @@ const validateNarrativePopulationTopology = (graph: IProductionGraph): void => {
 
 const acceptsResetEvidenceTags = (
   graph: IProductionGraph,
-  layer: EvidenceBranch,
+  layer: MarkdownLayer | SourceLayer,
 ): boolean => {
   if (graph.populationScope.mode !== "complete-production-reset") return false;
   if (graph.kind === "film")
     return ["treatments", "scripts", "screenplays"].includes(layer);
-  if (layer === "screenplayNaturalness") return false;
   if ((DESIGN_LAYERS as readonly string[]).includes(layer))
     return (Object.keys(SOURCES) as SourceLayer[]).some(
       (source) =>
@@ -3552,7 +3562,7 @@ const validateProductionGraph = (
   validateProjectPopulationBoundary(graph);
   validateReviewReasons(graph);
   const targetIdentities = validateContracts(graph.location, graph.language);
-  validateStages(graph);
+  validateAutoMovieProductionStages(graph);
   if (graph.populationScope.mode === "complete-production-reset") {
     const stages = Object.fromEntries(
       [
