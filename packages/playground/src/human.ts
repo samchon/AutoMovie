@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { humanFaceStudyDocuments } from "../../../test/src/subjects/human-face-documents/studies";
+import { humanFaceStudyDocuments } from "../../../test/studies/human-face/studies";
 import { mountHumanFacePanel } from "./human/panel";
 import { createHumanViewport } from "./human/viewport";
 import { createHumanPreviewWorkerPort } from "./human/workerPort";

@@ -14,7 +14,7 @@ The default development URL is `http://127.0.0.1:5173`. The development command 
 
 ## Anatomical face editor
 
-Open `/face.html`. The editor consumes [human](../human/README.md) and the nineteen numerical [subject documents](../../test/src/subjects/human-face-documents), not photographs or a live fitting service. The old face-package page and `/head.html` have been retired.
+Open `/face.html`. The editor consumes [human](../human/README.md) and the nineteen numerical [subject documents](../../test/studies/human-face), not photographs or a live fitting service. The old face-package page and `/head.html` have been retired.
 
 Select a subject, adjust intermediate traits or an anatomical detail, and wait for the worker to build the model. Scalar fields show units and applied values; the region JSON editor handles nested objects and complete arrays. Eyes, cheeks and ears have independent side overrides. Expression controls and presets include paired blink, brow, smile and gaze plus jaw opening, lip separation and pucker. Camera presets, orbit controls and clay help inspect geometry.
 
