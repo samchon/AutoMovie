@@ -60,12 +60,16 @@ export const writeAutoMovieProductionInstructions = (props: {
     productionEvidence: props.productionEvidence,
   });
   const sources = Object.create(null) as Record<string, string>;
+  collectProjectInstructionTarget(scaffoldRoot, "AGENTS.md", sources);
+  collectProjectInstructionTarget(scaffoldRoot, "CLAUDE.md", sources);
   collectInstructionFiles({
     directory: sourceSkills,
     files: sources,
     relative: path.join(".agents", "skills"),
   });
   for (const relative of new Set([
+    "README.md",
+    "src/lint.config.ts",
     "docs/README.md",
     ...identity.contracts.map((contract) => contract.path),
     ...identity.designOwners.map((owner) => owner.path),

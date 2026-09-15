@@ -26,13 +26,14 @@ type AutoMovieProductionRouterEvidence = Pick<
 const SKILL_PREFIX = ".agents/skills/";
 
 /**
- * Render one generated project's root instruction router from tracked facts.
+ * Preserve the authored instruction router and append tracked production facts.
  *
  * The production kind, active branches, common-contract routes, exact design
  * owners, and local contracts all come from the evidence reader. The renderer
  * carries no second design-branch or contract inventory, so a film, direct
  * brief, object library, and building library each describe only the work they
- * actually selected.
+ * actually selected. Behavior, skill routing, and maintenance rules remain
+ * exclusively in the supplied scaffold instruction source.
  *
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Reconstructs the generated instruction entry point from portable tracked project facts.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Routes an author to the exact active production branches and contract topics.
@@ -42,9 +43,8 @@ const SKILL_PREFIX = ".agents/skills/";
  */
 export const renderAutoMovieProductionRouter = (
   evidence: AutoMovieProductionRouterEvidence,
+  instructionSource: string,
 ): string => {
-  const description =
-    evidence.description === "" ? "" : `\n${evidence.description}\n`;
   const activeBranches = evidence.manifest.branches.map(
     (branch) => `\`${branch.name}\` (\`${branch.stage}\`)`,
   );
@@ -91,58 +91,7 @@ export const renderAutoMovieProductionRouter = (
           return `- \`${owner.branch}\` ${markdownLink(owner.title, owner.path)}: ${units === "" ? "no H2 owner unit" : units}; ${source}.`;
         });
 
-  return `# ${evidence.packageName}
-${description}
-This file governs authoring this production. Read it before acting, then read the documents it routes to.
-
-It is updated from the installed scaffold by \`npm run sync\`. Change production facts in \`package.json\`, \`src/lint.config.ts\`, or \`docs\`, then synchronize. Follow the [static-document update policy](README.md#static-document-updates) to review and commit the instruction changes.
-
-## This production
-
-- Package \`${evidence.packageName}\`.
-- Production authoring language \`${evidence.manifest.language}\`; its exact contract is materialized under \`docs/language\`.
-- \`src/lint.config.ts\` is the single typed production-kind, population-scope, branch, custom-claim, and graph declaration. Lint, sync, and final review consume the same exported value; the generated branch-and-stage view below reports it but never overrides it.
-- ${shapeProcedure(evidence.manifest.kind)}
-- ${branchLine}
-
-## Procedure
-
-- [Contract index](.agents/skills/contract/SKILL.md) locates the project-local shared, language, and production-owned contract questions selected below.
-- [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) owns shape selection and the authored lifecycle selected below.
-- [Evidence graph](.agents/skills/evidence-graph/SKILL.md) owns the local contract inventory, claims, stages, citations, exclusions, and fingerprints.
-- [Source authoring](.agents/skills/source-authoring/SKILL.md) owns design branches, TypeScript, geometry, rigs, motion, spatial design, and compilation.
-- [Review verification](.agents/skills/review-verification/SKILL.md) owns Self-Review, viewer inspection, capture, measurements, and final acceptance.
-
-## Active design owners
-
-These are derived from the evidence factory's live binding manifest. They are the exact H1/H2 denominator, not a catalogue of branches AutoMovie happens to support.
-
-${designOwnerLines.join("\n")}
-
-## Contracts this production answers
-
-Reusable contracts live in this project's own \`docs/{discovery,naturalness,upstream,principles,obligations}\` inventory and are selected by \`src/lint.config.ts\`. Each line below is one factory-derived binding, including the answering host population and relationship; repeated contract addresses are distinct obligations, not duplicates to collapse. Cite contracts by their project-local evidence roots.
-
-${bindingLines.join("\n")}
-
-Project-local contracts are flat files under \`docs/contracts\`; every item below is read from that tracked directory.
-
-${localContractLines.join("\n")}
-${localBindingLines.join("\n")}
-
-Add a local contract only after [Production-specific contract](.agents/skills/evidence-graph/work-specific.md) establishes its owner and authority, activate its host relationship through the typed helper used by \`src/lint.config.ts\`, and run \`npm run sync\` so this router lists it.
-
-## Instruction loading
-
-Start the coding-agent session from this project root. Codex reads this \`AGENTS.md\`; Claude Code follows \`CLAUDE.md -> @AGENTS.md\`. A session started above or below this root is not proof that this production's instructions entered context. Run \`npm run sync\`, then start or restart each coding-agent session from this root; no provider-specific hook substitutes for instruction loading.
-
-## Commands
-
-- \`npm run sync\` overwrites this router and the five shipped skills while preserving tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md).
-- Read and edit authored Markdown and TypeScript with ordinary coding-agent tools. Follow [Ownership](README.md#ownership) for the source and file boundary.
-- \`npm run lint\` checks the complete TypeScript program and active authored evidence.
-- When visual inspection is needed, follow [Live viewing](.agents/skills/review-verification/live-viewing.md) to author the required view over the production's own source.
-- Author requested model and film execution in \`src\` through public package APIs. The scaffold does not provide a completed film publication command.
+  return `${instructionSource}\n\n### Production facts\n\n- Package ${inlineCode(evidence.packageName)}.\n- Description ${inlineCode(evidence.description)}.\n- Production kind ${evidence.manifest.kind === null ? "(unselected)" : inlineCode(evidence.manifest.kind)}.\n- Authoring language ${inlineCode(evidence.manifest.language)}.\n- Population scope ${inlineCode(evidence.manifest.populationScope.mode)}.\n- ${branchLine}\n\n#### Active design owners\n\n${designOwnerLines.join("\n")}\n\n#### Shared contract bindings\n\n${bindingLines.join("\n")}\n\n#### Local contracts and relationships\n\n${localContractLines.join("\n")}\n${localBindingLines.join("\n")}
 `;
 };
 
@@ -160,7 +109,7 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Publishes only the routed capability instructions selected from that complete candidate.
  */
 export const renderAutoMovieProductionInstructionCandidate = (props: {
-  /** Project identity and live contract projection rendered into AGENTS.md. */
+  /** Project-owned facts appended without redefining instruction doctrine. */
   evidence: AutoMovieProductionRouterEvidence;
   /** Complete project-root-relative source population available to links. */
   sources: Readonly<Record<string, string>>;
@@ -176,8 +125,15 @@ export const renderAutoMovieProductionInstructionCandidate = (props: {
   const candidate = Object.create(null) as Record<string, string>;
   for (const [path, content] of available)
     if (path.startsWith(SKILL_PREFIX)) candidate[path] = content;
-  candidate["AGENTS.md"] = renderAutoMovieProductionRouter(props.evidence);
-  candidate["CLAUDE.md"] = "@AGENTS.md\n";
+  const agents = available.get("AGENTS.md");
+  const claude = available.get("CLAUDE.md");
+  if (agents === undefined || claude === undefined)
+    throw new Error("Authored AGENTS.md and CLAUDE.md sources are required.");
+  candidate["AGENTS.md"] = renderAutoMovieProductionRouter(
+    props.evidence,
+    agents,
+  );
+  candidate["CLAUDE.md"] = claude;
 
   const publication = new Map(available);
   for (const [path, content] of Object.entries(candidate))
@@ -257,7 +213,7 @@ const renderManifestBinding = (
 
 /** Render one safe Markdown inline-code value from manifest-owned text. */
 const inlineCode = (value: string): string =>
-  `\`${value.replaceAll("`", "%60")}\``;
+  `\`${value.replaceAll("`", "%60").replaceAll("\r", " ").replaceAll("\n", " ")}\``;
 
 /** Render a nonempty or explicitly empty inline-code inventory. */
 const codeList = (values: readonly string[]): string =>
@@ -272,20 +228,4 @@ const markdownLink = (title: string, file: string, anchor?: string): string => {
   return `[${label}](${destination}${
     anchor === undefined ? "" : `#${encode(anchor)}`
   })`;
-};
-
-/** Explain only the selected production shape, never the other two shapes. */
-const shapeProcedure = (
-  kind: AutoMovieProductionRouterEvidence["manifest"]["kind"],
-): string => {
-  switch (kind) {
-    case "film":
-      return "Production kind `film`; follow the [film procedure](.agents/skills/production-lifecycle/production-kinds.md#film).";
-    case "brief":
-      return "Production kind `brief`; follow the [brief procedure](.agents/skills/production-lifecycle/production-kinds.md#brief).";
-    case "library":
-      return "Production kind `library`; follow the [library procedure](.agents/skills/production-lifecycle/production-kinds.md#library).";
-    case null:
-      return "No production kind is selected. Choose it through [Production kinds](.agents/skills/production-lifecycle/production-kinds.md) and record it in `src/lint.config.ts` before authoring a downstream branch.";
-  }
 };
