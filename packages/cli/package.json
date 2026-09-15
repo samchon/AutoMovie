@@ -51,8 +51,7 @@
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/production": "workspace:^",
-    "@automovie/template": "workspace:^",
-    "tsx": "^4.23.1"
+    "@automovie/template": "workspace:^"
   },
   "devDependencies": {
     "@ttsc/evidence": "catalog:typescript",

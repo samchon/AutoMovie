@@ -28,8 +28,7 @@ type AutoMovieCommand =
       profile: AutoMovieExternalModelIngestProfile;
     }
   | { command: "toc"; check: boolean }
-  | { command: "routes"; kind: AutoMovieAuthoringProductionKind }
-  | { command: "sync" };
+  | { command: "routes"; kind: AutoMovieAuthoringProductionKind };
 
 const nonBlankDirectory = (
   command: string,
@@ -80,7 +79,7 @@ const startArguments = (
 
 /**
  * Resolve one complete CLI request into a closed command-specific operation
- * plan before any target, project, migration, or generated script is opened.
+ * plan before scaffold publication or source inspection begins.
  *
  * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Refuses ambiguous or unconsumed command input before work starts.
  * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision Produces the typed admission plan that is the only input to dispatch.
@@ -141,10 +140,6 @@ export const readAutoMovieCommandArguments = (
         `routes needs exactly one of ${AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS.join(", ")}.`,
       );
     return { command, kind } as const;
-  }
-  if (command === "sync") {
-    if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);
-    return { command } as const;
   }
   throw new Error(`Unknown command ${JSON.stringify(command ?? "")}.`);
 };

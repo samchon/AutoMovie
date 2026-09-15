@@ -1,14 +1,14 @@
-import {
-  type AutoMovieProductionLanguage,
-  createBlankAutoMovieProductionEvidence,
-} from "@automovie/evidence";
+import type { AutoMovieProductionLanguage } from "@automovie/evidence";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
-import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
+import {
+  validateAutoMovieInstructionDocumentLinks,
+  validateAutoMovieSkillRouterLinks,
+} from "./validateAutoMovieSkillRouters";
 
 /**
  * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
@@ -344,12 +344,12 @@ export const scaffoldAssetDirectory = (
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Rendering is one in-memory operation with no persisted execution to resume.
  * @evidenceExclude requirements/agent-authoring/project-ownership.md#agent-sandbox-write-boundary Scaffold rendering returns bytes and does not own a repository experiment root or approve sandbox packing and installation.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-sandbox-physical-ownership The build launcher retains its sandbox ancestry and manifest approval across packing and installation; rendering template bytes does not perform those operations.
- * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
+ * @evidence requirements/agent-authoring/reference-navigation.md#agent-reference-transports Copies the authored reference-navigation guidance without registering clients or changing machine-local configuration.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-selection Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-source Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-bounds Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  * @evidenceExclude requirements/agent-authoring/reference-navigation.md#agent-reference-isolation Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
- * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Materializes the installed reference command, dependency and client-discovery guide; explicit CLI and sync publication own machine-local configuration.
+ * @evidence specifications/authoring-and-authority/reference-navigation.md#spec-reference-transports Copies the authored reference-navigation guidance without registering clients or changing machine-local configuration.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-selection Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-source Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
  * @evidenceExclude specifications/authoring-and-authority/reference-navigation.md#spec-reference-bounds Scaffold rendering publishes authoring documentation but installs no MCP provider and executes no reference navigation.
@@ -392,35 +392,11 @@ export const renderScaffold = (
     ],
     variables,
   );
-  const manifest = JSON.parse(files["package.json"]!) as {
-    name: string;
-    description: string;
-  };
-  const blank = createBlankAutoMovieProductionEvidence(root, props.language);
-  const instructions = renderAutoMovieProductionInstructionCandidate({
-    evidence: {
-      packageName: manifest.name,
-      description: manifest.description.trim(),
-      manifest: {
-        kind: blank.kind,
-        language: blank.language,
-        populationScope: blank.populationScope,
-        branches: [],
-        bindings: [],
-        localBindings: [],
-        localAudits: [],
-      },
-      designOwners: [],
-      contracts: [],
-    },
-    sources: files,
-  });
-  for (const [relative, content] of Object.entries(instructions))
-    Object.defineProperty(files, relative, {
-      configurable: true,
-      enumerable: true,
-      value: content,
-      writable: true,
-    });
+  const instructionSources = Object.entries(files).map(([path, content]) => ({
+    path,
+    content,
+  }));
+  validateAutoMovieSkillRouterLinks(instructionSources);
+  validateAutoMovieInstructionDocumentLinks(instructionSources, "AGENTS.md");
   return files;
 };
