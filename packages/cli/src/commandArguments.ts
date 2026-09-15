@@ -39,12 +39,6 @@ type AutoMovieCommand =
       language: AutoMovieProductionLanguage;
     }
   | {
-      command: "migrate";
-      directory: string;
-      mode: "apply" | "dry-run" | "rollback";
-    }
-  | { command: "contracts"; action: "migrate"; dryRun: boolean }
-  | {
       command: "inspect-external";
       path: string;
       profile: AutoMovieExternalModelIngestProfile;
@@ -52,7 +46,6 @@ type AutoMovieCommand =
   | { command: "toc"; check: boolean }
   | { command: "routes"; kind: AutoMovieAuthoringProductionKind }
   | { command: "sync" }
-  | { command: "verify" }
   | { command: "render"; arguments: readonly string[] };
 
 const RENDER_ACTIONS = new Set<string>([
@@ -133,34 +126,6 @@ const startArguments = (
   };
 };
 
-const oneDirectory = (
-  command: "start" | "migrate",
-  args: readonly string[],
-  allowedOptions: ReadonlySet<string>,
-): { directory: string; options: ReadonlySet<string> } => {
-  const positionals: string[] = [];
-  const options = new Set<string>();
-  for (const token of args) {
-    if (token.startsWith("-")) {
-      if (allowedOptions.has(token) === false)
-        throw new Error(
-          `Unknown or inapplicable ${command} option "${token}".`,
-        );
-      if (options.has(token))
-        throw new Error(`${token} may be supplied only once for ${command}.`);
-      options.add(token);
-    } else positionals.push(token);
-  }
-  if (positionals.length > 1)
-    throw new Error(
-      `${command} accepts exactly one target directory; received ${positionals.length}.`,
-    );
-  return {
-    directory: nonBlankDirectory(command, positionals[0]),
-    options,
-  };
-};
-
 const positiveInteger = (option: string, value: string): void => {
   if (/^[1-9][0-9]*$/u.test(value) === false)
     throw new Error(`${option} must be a positive integer.`);
@@ -226,39 +191,6 @@ export const readAutoMovieCommandArguments = (
 
   const [command, ...rest] = args;
   if (command === "start") return startArguments(rest);
-  if (command === "migrate") {
-    const request = oneDirectory(
-      "migrate",
-      rest,
-      new Set(["--dry-run", "--rollback"]),
-    );
-    if (request.options.has("--dry-run") && request.options.has("--rollback"))
-      throw new Error("migrate accepts only one of --dry-run or --rollback.");
-    return {
-      command,
-      directory: request.directory,
-      mode: request.options.has("--rollback")
-        ? ("rollback" as const)
-        : request.options.has("--dry-run")
-          ? ("dry-run" as const)
-          : ("apply" as const),
-    } as const;
-  }
-  if (command === "contracts") {
-    const [action, ...options] = rest;
-    if (action !== "migrate")
-      throw new Error('contracts needs the "migrate" action.');
-    if (
-      options.some((option) => option !== "--dry-run") ||
-      options.filter((option) => option === "--dry-run").length > 1
-    )
-      throw new Error("contracts migrate accepts --dry-run at most once.");
-    return {
-      command,
-      action,
-      dryRun: options.includes("--dry-run"),
-    } as const;
-  }
   if (command === "toc") {
     if (rest.some((option) => option !== "--check") || rest.length > 1)
       throw new Error("toc accepts --check at most once.");
@@ -303,7 +235,7 @@ export const readAutoMovieCommandArguments = (
       );
     return { command, kind } as const;
   }
-  if (command === "sync" || command === "verify") {
+  if (command === "sync") {
     if (rest.length !== 0) throw new Error(`${command} takes no arguments.`);
     return { command } as const;
   }

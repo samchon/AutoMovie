@@ -5,10 +5,6 @@ import {
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import {
-  AUTO_MOVIE_CONTRACT_BASELINE_PATH,
-  renderAutoMovieContractBaseline,
-} from "./productionMaintenance";
 import { renderAutoMovieLanguageContracts } from "./renderAutoMovieLanguageContracts";
 import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { renderTemplate } from "./renderTemplate";
@@ -116,32 +112,14 @@ const renderKey = (
 const UNSHIPPED_DIRECTORIES = new Set([".cache", ".git", "node_modules"]);
 
 /**
- * Compiler-output shapes excluded unless an exact authored runtime owns them.
+ * Compiler outputs are never authored scaffold inputs.
  *
- * Most authored sources are Markdown, TypeScript, JSON and HTML. The source
- * preview also owns a Node worker and a browser diagnostic shell that must run
- * before the authored TypeScript can compile. Their exact JavaScript paths are
- * declared below; every other builder-output shape remains unshipped.
- *
- * The reason to name the class rather than the two directories alone is that
- * this one is invisible where it happens. Running the type-checker without
- * `--noEmit` drops `.js`, `.js.map` and `.d.ts` beside every source, and the
- * repository `.gitignore` covers exactly those paths under `scaffold/src`,
- * `scaffold/scripts` and the scaffold root, so `git status` stays quiet while
- * this walk reads them straight off the disk. Measured on this tree: planting
- * `scripts/__emitted.js`, `scripts/__emitted.d.ts` and `.cache/stray.json`
- * took the rendered inventory from 244 keys to 247, so every project generated
- * while they sat there would have installed all three, and a generated
- * project's loader prefers an emitted `.js` to the `.ts` beside it.
+ * All executable scaffold sources are TypeScript under src. A prior local
+ * compilation must not add emitted modules, maps or declarations to the next
+ * generated project. There are no filename-specific JavaScript exceptions.
  */
 const UNSHIPPED_FILES =
   /(?:\.(?:c|m)?js(?:\.map)?|\.d\.(?:c|m)?ts|\.tsbuildinfo)$/u;
-
-/** Executable bootstrap sources, never inferred from files left by a build. */
-const AUTHORED_JAVASCRIPT = new Set([
-  "scripts/compileSourcePreview.mjs",
-  "viewer/src/sourcePreviewClient.js",
-]);
 
 /**
  * Every shipped file under `root`, root-relative, in deterministic sorted
@@ -168,11 +146,7 @@ const listFiles = (root: string): string[] => {
         walk(full);
       } else if (entry.isFile()) {
         const relative = path.relative(root, full);
-        if (
-          UNSHIPPED_FILES.test(entry.name) === false ||
-          AUTHORED_JAVASCRIPT.has(toPosix(relative))
-        )
-          out.push(relative);
+        if (UNSHIPPED_FILES.test(entry.name) === false) out.push(relative);
       }
     }
   };
@@ -460,15 +434,5 @@ export const renderScaffold = (
       value: content,
       writable: true,
     });
-  Object.defineProperty(files, AUTO_MOVIE_CONTRACT_BASELINE_PATH, {
-    configurable: true,
-    enumerable: true,
-    value: renderAutoMovieContractBaseline({
-      files,
-      language: props.language,
-      version: AUTOMOVIE_TEMPLATE_VERSIONS.template!.replace(/^[~^]/u, ""),
-    }),
-    writable: true,
-  });
   return files;
 };

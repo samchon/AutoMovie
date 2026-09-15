@@ -9,25 +9,6 @@ import {
 } from "@automovie/template";
 import * as path from "node:path";
 
-import type { IAutoMovieMaintenanceFile } from "./contractMaintenanceTransaction";
-
-/**
- * Carry a descriptor snapshot into the native maintenance boundary. Handle
- * acquisition itself can advance Windows change time, so the mutation token
- * retains physical identity, size and modification time beside exact bytes.
- *
- * @evidence requirements/operations-and-recovery/contract-migration-publication.md#operations-contract-migration-publication Preserves the planner's physical file identity and exact bytes without approving later resident content.
- * @evidence specifications/execution-and-recovery/contract-migration-publication.md#execution-contract-migration-publication Normalizes descriptor observations to the size and modification generation verified by native source handles.
- */
-export const autoMovieMaintenanceFileFromSnapshot = (
-  snapshot: Pick<IScaffoldFileSnapshot, "identity" | "version">,
-  source: string,
-): IAutoMovieMaintenanceFile => ({
-  identity: snapshot.identity,
-  source,
-  version: snapshot.version.split(":").slice(0, -1).join(":"),
-});
-
 /**
  * Physical observations supplied to maintenance without granting mutation.
  * Every read returns the descriptor-verified generation beside its bytes.
@@ -288,14 +269,14 @@ export const assertAutoMovieMaintenanceGeneration = (
       (before !== null &&
         after !== null &&
         (before.identity !== after.identity ||
-          autoMovieMaintenanceFileFromSnapshot(before, "").version !==
-            autoMovieMaintenanceFileFromSnapshot(after, "").version)) ||
+          before.version.split(":").slice(0, -1).join(":") !==
+            after.version.split(":").slice(0, -1).join(":"))) ||
       expected.sources[relative] !== current.sources[relative] ||
       (beforeDescriptor !== null &&
         afterDescriptor !== null &&
         (beforeDescriptor.identity !== afterDescriptor.identity ||
-          autoMovieMaintenanceFileFromSnapshot(beforeDescriptor, "").version !==
-            autoMovieMaintenanceFileFromSnapshot(afterDescriptor, "").version))
+          beforeDescriptor.version.split(":").slice(0, -1).join(":") !==
+            afterDescriptor.version.split(":").slice(0, -1).join(":")))
     )
       throw new Error(`Maintenance input changed after planning: ${relative}.`);
   }

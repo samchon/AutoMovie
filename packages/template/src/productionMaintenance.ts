@@ -1,60 +1,4 @@
-import {
-  type IAutoMovieContractBaseline,
-  applyAutoMovieContractMigrationPlan,
-  createAutoMovieContractBaseline,
-  createAutoMovieContractMigrationReceiptArtifacts,
-  isAutoMovieContractTargetPath,
-  observeAutoMovieContractMigrationOutcomes,
-  parseAutoMovieContractBaseline,
-  planAutoMovieContractMigration,
-  planAutoMovieContractMigrationPublication,
-  planAutoMovieDeliveryToc,
-} from "@automovie/evidence";
-
-/**
- * Project-relative location of the installed scaffold contract generation.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Makes the baseline discoverable without inspecting authored contract prose.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Names the portable receipt consumed by compatibility planning.
- */
-export const AUTO_MOVIE_CONTRACT_BASELINE_PATH =
-  "automovie/contracts-baseline.json";
-
-/**
- * Select the exact scaffold-owned contract bytes from rendered project files.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Supplies the complete target inventory used by migration validation.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Separates scaffold contracts from authored project documents.
- */
-export const autoMovieContractTargetSources = (
-  files: Readonly<Record<string, string>>,
-): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(files).filter(([path]) =>
-      isAutoMovieContractTargetPath(path),
-    ),
-  );
-
-/**
- * Render the portable baseline receipt installed in every new project.
- *
- * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Preserves the immutable source generation used by a future migration.
- * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Serializes the exact path, anchor, and digest inventory beside the project.
- */
-export const renderAutoMovieContractBaseline = (props: {
-  files: Readonly<Record<string, string>>;
-  language: IAutoMovieContractBaseline["language"];
-  version: string;
-}): string =>
-  `${JSON.stringify(
-    createAutoMovieContractBaseline({
-      files: autoMovieContractTargetSources(props.files),
-      language: props.language,
-      version: props.version,
-    }),
-    null,
-    2,
-  )}\n`;
+import { planAutoMovieDeliveryToc } from "@automovie/evidence";
 
 /** Stable code-unit ordering independent of host locale and ICU data. */
 const compareCodeUnits = (left: string, right: string): number =>
@@ -191,14 +135,4 @@ export const planAutoMovieDeliveryTocPublication = (props: {
     writes[relative] = source;
   }
   return Object.freeze(writes);
-};
-
-export {
-  applyAutoMovieContractMigrationPlan,
-  createAutoMovieContractMigrationReceiptArtifacts,
-  type IAutoMovieContractBaseline,
-  observeAutoMovieContractMigrationOutcomes,
-  parseAutoMovieContractBaseline,
-  planAutoMovieContractMigration,
-  planAutoMovieContractMigrationPublication,
 };

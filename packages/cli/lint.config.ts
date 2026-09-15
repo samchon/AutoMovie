@@ -15,7 +15,6 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const allSources = ["src/**/*.ts", "!src/**/index.ts"];
 
 const authoringSurface = ["src/bin.ts", "src/scaffoldNextSteps.ts"];
-const referenceSurface = ["src/synchronizeAutoMovieReferenceClients.ts"];
 
 const inspectionSurface = [
   "src/loadAutoMovieProjectState.ts",
@@ -33,31 +32,11 @@ const inspectionSurface = [
 const operationsSurface = [
   ...allSources,
   "!src/scaffoldNextSteps.ts",
-  ...referenceSurface.map((file) => `!${file}`),
   ...inspectionSurface.map((file) => `!${file}`),
 ];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
-    ...(
-      [
-        "requirements/agent-authoring",
-        "specifications/authoring-and-authority",
-      ] as const
-    ).map(
-      (directory): ITtscEvidenceGraphClaim => ({
-        name: `public CLI reference registration implements ${directory}`,
-        type: "typescript",
-        files: referenceSurface,
-        symbol: ["type", "function", "property"],
-        reference: {
-          type: "markdown",
-          root: "../../docs",
-          files: [`${directory}/reference-navigation.md`],
-          symbol: "h3",
-        },
-      }),
-    ),
     {
       name: "public CLI authoring exports implement requirements",
       type: "typescript",

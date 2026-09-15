@@ -8,8 +8,8 @@ export const renderAutoMovieScaffoldNextSteps = (directory: string): string =>
   `\n\nNext (from ${directory}):\n` +
   `  1. Read README.md, AGENTS.md, and docs/README.md. This is an empty harness.\n` +
   `  2. Run npm install, npm run capture:install, and npm run capture:doctor.\n` +
-  `  3. Select film, brief, or library and its active branches in lint.config.ts; run npm run sync.\n` +
-  `  4. Author and review the required docs, then their source. Extend the marked block in scripts/emitDesign.ts with the records this production owns.\n` +
+  `  3. Select film, brief, or library and its active branches in src/lint.config.ts; run npm run sync.\n` +
+  `  4. Author and review the required docs, then their TypeScript source under src.\n` +
   `  5. Run npm run lint:source, npm run design, npm run build, and npm run lint at their documented authoring stages.\n\n` +
   `The blank kind:null project and the unconfigured design emitter deliberately refuse production compilation.\n` +
   `After current source compilation, use the selected shape's preview/inspection and review commands. Film/brief rendering additionally needs authored shot and delivery source; a library does not need a film.\n` +
