@@ -245,8 +245,12 @@ function createClaim(
     );
 
   const files: string[] = [...props.files];
-  requirePositivePopulation(files, "host");
-  for (const file of files) validateHostPattern(props.layer, pass, file);
+  validateAutoMovieProductionContractHosts({
+    root: "docs",
+    files,
+    layer: props.layer,
+    pass,
+  });
 
   const documents: string[] = Array.isArray(props.document)
     ? [...props.document]
@@ -302,6 +306,30 @@ function createClaim(
       requireReview: props.stage === "review",
     })),
   };
+}
+
+/**
+ * Admit native host selectors against their declared local authored pass.
+ *
+ * Constructors and binding admission share this boundary so an edited native
+ * claim cannot retain final metadata while selecting construction hosts.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-additive-extension Keeps an AutoMovie-bound local principle accountable to its declared authored population.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension Checks the docs root and normalized positive host selectors against construction or final screenplay ownership.
+ */
+export function validateAutoMovieProductionContractHosts(props: {
+  root: string | undefined;
+  files: readonly string[];
+  layer: AutoMovieProductionContractLayer;
+  pass: AutoMovieProductionContractPass;
+}): void {
+  if (props.root !== "docs")
+    throw new Error(
+      "An AutoMovie-bound local principle requires the docs host root.",
+    );
+  requirePositivePopulation(props.files, "host");
+  for (const file of props.files)
+    validateHostPattern(props.layer, props.pass, file);
 }
 
 /** Keep one host glob normalized and confined to its declared authored layer. */

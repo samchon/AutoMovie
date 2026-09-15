@@ -5,6 +5,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * The reader binder resolves the final screenplay tree explicitly.
  *
@@ -51,24 +53,28 @@ export const test_production_document_binder_final_pass = (): void => {
       filename: "working-edition-screenplays.md",
     },
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "non-screenplay final passes are refused",
-    () =>
-      new AutoMovieProductionBinder({
-        root,
-        title: "Invalid",
-        layer: "scripts",
-        pass: "final",
-      }),
+    throwsError(
+      () =>
+        new AutoMovieProductionBinder({
+          root,
+          title: "Invalid",
+          layer: "scripts",
+          pass: "final",
+        }),
+    ),
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "unknown runtime passes are refused",
-    () =>
-      new AutoMovieProductionBinder({
-        root,
-        title: "Invalid",
-        layer: "screenplays",
-        pass: "unknown" as AutoMovieProductionDocumentPass,
-      }),
+    throwsError(
+      () =>
+        new AutoMovieProductionBinder({
+          root,
+          title: "Invalid",
+          layer: "screenplays",
+          pass: "unknown" as AutoMovieProductionDocumentPass,
+        }),
+    ),
   );
 };

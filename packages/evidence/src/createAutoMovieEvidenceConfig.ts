@@ -3223,8 +3223,16 @@ const authoredClaims = (graph: IProductionGraph): IBranchClaim[] => {
   return claims;
 };
 
-/** Final screenplay lineage and audience-language checklist claims. */
-const screenplayNaturalnessClaims = (
+/**
+ * Assemble final screenplay lineage and audience-language checklist claims.
+ *
+ * The graph factory uses this same pure assembly after validating stages and
+ * physical hosts, so file identity and unit-level expression remain distinct.
+ *
+ * @evidence requirements/production-evidence/graph.md#agent-production-evidence-shared-contract Keeps final naturalness checklists separate from construction obligations.
+ * @evidence specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract Emits file and same-depth construction lineage plus the three per-heading naturalness checklists for the selected stage and population.
+ */
+export const createAutoMovieScreenplayNaturalnessClaims = (
   graph: IProductionGraph,
 ): IBranchClaim[] => {
   const stage = revisionStage(graph);
@@ -3588,7 +3596,7 @@ const validateProductionGraph = (
 
 const sharedClaimBindings = (graph: IProductionGraph): IBranchClaim[] => [
   ...authoredClaims(graph),
-  ...screenplayNaturalnessClaims(graph),
+  ...createAutoMovieScreenplayNaturalnessClaims(graph),
   ...sourceClaims(graph),
 ];
 

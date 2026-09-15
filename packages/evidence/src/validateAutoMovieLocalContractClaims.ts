@@ -9,6 +9,7 @@ import type { IAutoMovieEvidenceConfigProps } from "./createAutoMovieEvidenceCon
 import {
   type AutoMovieProductionContractClaim,
   createAutoMovieProductionObligationClaim,
+  validateAutoMovieProductionContractHosts,
 } from "./createAutoMovieProductionContractClaim";
 
 /**
@@ -59,6 +60,12 @@ export function validateAutoMovieLocalContractClaims(
       ? raw.reference
       : [raw.reference];
     if (binding.account === undefined) {
+      validateAutoMovieProductionContractHosts({
+        root: raw.root,
+        files: raw.files,
+        layer: binding.layer,
+        pass: binding.pass,
+      });
       if (
         references.some(
           (reference) =>

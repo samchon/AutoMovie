@@ -1,6 +1,8 @@
 import { validateAutoMovieNaturalnessStages } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Final-pass selection is explicit and cannot conceal a misspelled stage key.
  *
@@ -27,7 +29,8 @@ export const test_evidence_naturalness_stages = (): void => {
     { screenplays: "final" },
     { screenplays: 1 },
   ])
-    TestValidator.error("invalid explicit naturalness map", () =>
-      validateAutoMovieNaturalnessStages(value),
+    TestValidator.predicate(
+      "invalid explicit naturalness map",
+      throwsError(() => validateAutoMovieNaturalnessStages(value)),
     );
 };

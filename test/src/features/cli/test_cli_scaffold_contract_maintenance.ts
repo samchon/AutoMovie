@@ -15,6 +15,12 @@ import { TestValidator } from "@nestia/e2e";
 /**
  * Contract baselines and delivery indexes close their complete pure project
  * inventory before a CLI performs any filesystem mutation.
+ *
+ * Scenarios:
+ * 1. Shared and selected-language targets enter the baseline; local rules do not.
+ * 2. Currentness, publication outcomes, and predecessor receipts bind migration.
+ * 3. Renames retire exact predecessors and adopt already-published successors.
+ * 4. All three delivery passes share deterministic, inventory-checked TOCs.
  */
 export const test_cli_scaffold_contract_maintenance = (): void => {
   const refuses = (closure: () => unknown): boolean => {
@@ -29,6 +35,7 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
     "docs/contracts/local.md": "# Local\n",
     "docs/discovery/core/common.md": "# Discovery\n",
     "docs/language/naturalness/screenplays.md": "# Language\n",
+    "docs/naturalness/core/common.md": "# Naturalness\n",
     "docs/obligations/core/common.md": "# Obligation\n",
     "docs/principles/core/common.md": "# Principle\n",
     "docs/upstream/story/scripts.md": "# Upstream\n",
@@ -56,6 +63,7 @@ export const test_cli_scaffold_contract_maintenance = (): void => {
       paths: [
         "docs/discovery/core/common.md",
         "docs/language/naturalness/screenplays.md",
+        "docs/naturalness/core/common.md",
         "docs/obligations/core/common.md",
         "docs/principles/core/common.md",
         "docs/upstream/story/scripts.md",

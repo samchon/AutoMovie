@@ -7,6 +7,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * A reset freezes the passed final pilot before complete-population rewriting.
  *
@@ -59,9 +61,9 @@ export const test_evidence_film_reset_checkpoint = (): void => {
     ["scripts", "treatments", "screenplays", "screenplayNaturalness"],
     ["treatments", "scripts", "screenplays", "screenplayNaturalness", "shots"],
   ])
-    TestValidator.error(
+    TestValidator.predicate(
       "the predecessor is the exact complete reviewed ladder",
-      () =>
+      throwsError(() =>
         validateAutoMoviePopulationTransition({
           ...props,
           receipt: {
@@ -70,25 +72,28 @@ export const test_evidence_film_reset_checkpoint = (): void => {
               branches as unknown as IAutoMovieFilmPopulationTransitionReceipt["reviewedBranches"],
           },
         }),
+      ),
     );
   for (const stage of ["draft", "evidence", "review"])
-    TestValidator.error(
+    TestValidator.predicate(
       "final remains withdrawn throughout the reset checkpoint",
-      () =>
+      throwsError(() =>
         validateAutoMoviePopulationTransition({
           ...props,
           stages: { ...props.stages, screenplayNaturalness: stage },
         }),
+      ),
     );
   for (const branch of ["treatments", "scripts", "screenplays"])
     for (const stage of ["disabled", "evidence", "review"])
-      TestValidator.error(
+      TestValidator.predicate(
         "all construction branches reset to draft together",
-        () =>
+        throwsError(() =>
           validateAutoMoviePopulationTransition({
             ...props,
             stages: { ...props.stages, [branch]: stage },
           }),
+        ),
       );
   for (const source of [
     hosts[0].source.replace("visitor enters", "visitor leaves"),
@@ -97,11 +102,14 @@ export const test_evidence_film_reset_checkpoint = (): void => {
       "leaves through the established",
     ),
   ])
-    TestValidator.error("checkpoint forbids body or evidence rewriting", () =>
-      validateAutoMoviePopulationTransition({
-        ...props,
-        hosts: [{ ...hosts[0], source }],
-      }),
+    TestValidator.predicate(
+      "checkpoint forbids body or evidence rewriting",
+      throwsError(() =>
+        validateAutoMoviePopulationTransition({
+          ...props,
+          hosts: [{ ...hosts[0], source }],
+        }),
+      ),
     );
   validateAutoMoviePopulationTransition(props);
   const libraryHosts = [

@@ -35,7 +35,7 @@ export const resolveAutoMovieTimedAuthoringKind = (
   const kind = evidence?.manifest.kind ?? null;
   if (evidence !== undefined && kind === null)
     throw new Error(
-      "Select film, brief, or library in lint.config.ts before building or linting a production.",
+      "Select film, brief, or library in lint.config.ts before deriving, building, or linting a production.",
     );
   if (kind === "library") return null;
   if (kind === "brief")

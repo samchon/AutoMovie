@@ -26,7 +26,7 @@ Do not keep an inapplicable or not-yet-started layer active and empty. Keep it `
 | --- | --- | --- | --- |
 | Scale owner | Settings declares the complete film scale and treatment event scope. | The one bounded delivery owns its complete shot and observation scale. | Settings declares the reusable delivery scope; each selected design owner defines its own bounded unit. |
 | Unit map | Treatment event map, then a separately designed script delivery partition. | One delivery, shot, and observation address map. | One owner map per active design and matching source branch. |
-| Pilot | One truthful first delivery-group slice may run through construction, naturalness, and realization. | The brief is already the smallest bounded delivery; record why no smaller slice tests another boundary. | One independently reviewable design owner may run through its real source and observation branch. |
+| Pilot | Use the [narrative pilot](pilot.md) for one truthful first delivery-group slice. | The brief is already the smallest bounded delivery; record why no smaller slice tests another boundary. | One independently reviewable design owner may run through its real source and observation branch. |
 | Program | Scripts own audience-facing delivery partition and executable progression. | The brief owns the complete delivery question directly. | No timed program exists; selected design and source branches are the delivery. |
 
 A familiar subject or small runtime does not change this matrix. Choose from the authored structure and the independently reviewable decisions the work actually needs.

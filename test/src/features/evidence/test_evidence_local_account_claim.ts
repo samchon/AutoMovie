@@ -11,6 +11,8 @@ import {
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 type ITtscEvidenceGraphMarkdownReference = Extract<
   Exclude<AutoMovieProductionContractClaim["reference"], unknown[]>,
   { type: "markdown" }
@@ -70,11 +72,14 @@ export const test_evidence_local_account_claim = (): void => {
     claims: [{ ...claim, severity: undefined }],
   });
   for (const severity of ["off", 0, "warning", "error", 2] as const)
-    TestValidator.error("canonical claim severity cannot be overridden", () =>
-      validateAutoMovieLocalContractClaims({
-        ...accountGraph,
-        claims: [{ ...claim, severity }],
-      }),
+    TestValidator.predicate(
+      "canonical claim severity cannot be overridden",
+      throwsError(() =>
+        validateAutoMovieLocalContractClaims({
+          ...accountGraph,
+          claims: [{ ...claim, severity }],
+        }),
+      ),
     );
   const accountReferences =
     claim.reference as ITtscEvidenceGraphMarkdownReference[];
@@ -83,16 +88,19 @@ export const test_evidence_local_account_claim = (): void => {
     accountReferences.map((reference) => reference.severity),
     ["error"],
   );
-  TestValidator.error("canonical obligation reference cannot be weakened", () =>
-    validateAutoMovieLocalContractClaims({
-      ...accountGraph,
-      claims: [
-        {
-          ...claim,
-          reference: [{ ...accountReferences[0]!, severity: "warning" }],
-        },
-      ],
-    }),
+  TestValidator.predicate(
+    "canonical obligation reference cannot be weakened",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({
+        ...accountGraph,
+        claims: [
+          {
+            ...claim,
+            reference: [{ ...accountReferences[0]!, severity: "warning" }],
+          },
+        ],
+      }),
+    ),
   );
   for (const stage of ["disabled", "draft", "evidence", "review"] as const) {
     const staged = createAutoMovieProductionObligationClaim({
@@ -218,11 +226,14 @@ export const test_evidence_local_account_claim = (): void => {
     { documentRoot: "C:/docs" },
     { document: "contracts/*.md" },
   ])
-    TestValidator.error("invalid local account declaration", () =>
-      createAutoMovieProductionObligationClaim({
-        ...props,
-        ...invalid,
-      } as IAutoMovieProductionObligationClaimProps),
+    TestValidator.predicate(
+      "invalid local account declaration",
+      throwsError(() =>
+        createAutoMovieProductionObligationClaim({
+          ...props,
+          ...invalid,
+        } as IAutoMovieProductionObligationClaimProps),
+      ),
     );
   const principle = createAutoMovieProductionPrincipleClaim({
     ...props,
@@ -255,12 +266,15 @@ export const test_evidence_local_account_claim = (): void => {
     symbol: "h2",
   });
   for (const symbol of [[], ["h1"], "file"])
-    TestValidator.error("principle excludes ungoverned symbols", () =>
-      createAutoMovieProductionPrincipleClaim({
-        ...props,
-        files: ["models/a.md"],
-        symbol: symbol as "h2",
-      }),
+    TestValidator.predicate(
+      "principle excludes ungoverned symbols",
+      throwsError(() =>
+        createAutoMovieProductionPrincipleClaim({
+          ...props,
+          files: ["models/a.md"],
+          symbol: symbol as "h2",
+        }),
+      ),
     );
   const sharedProps = {
     layer: "models",
@@ -302,7 +316,10 @@ export const test_evidence_local_account_claim = (): void => {
       ],
     },
   ])
-    TestValidator.error("invalid shared account inputs", () =>
-      createAutoMoviePopulationAccountClaims({ ...sharedProps, ...invalid }),
+    TestValidator.predicate(
+      "invalid shared account inputs",
+      throwsError(() =>
+        createAutoMoviePopulationAccountClaims({ ...sharedProps, ...invalid }),
+      ),
     );
 };

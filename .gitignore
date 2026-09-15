@@ -5,6 +5,10 @@
 .wiki/
 .references/
 
+# Disposable production sandboxes; the published manor remains tracked.
+/experimental/*
+!/experimental/medieval-baron-manor/
+
 node_modules/
 packages/cli/.cache/
 packages/template/.cache/

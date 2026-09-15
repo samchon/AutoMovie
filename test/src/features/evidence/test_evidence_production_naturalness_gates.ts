@@ -5,6 +5,8 @@ import {
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Final wording is a separate film-only stage between construction and shots.
  *
@@ -24,21 +26,22 @@ export const test_evidence_production_naturalness_gates = (): void => {
   for (const kind of ["film", "brief", "library"] as const) {
     validateAutoMovieProductionStages({ ...blank, kind, settings: "draft" });
     validateAutoMovieProductionStages({ ...blank, kind, research: "draft" });
-    TestValidator.error(
+    TestValidator.predicate(
       "a selected kind begins with an authored foundation",
-      () => validateAutoMovieProductionStages({ ...blank, kind }),
+      throwsError(() => validateAutoMovieProductionStages({ ...blank, kind })),
     );
     for (const stage of ["draft", "evidence", "review"] as const)
       if (kind !== "film")
-        TestValidator.error(
+        TestValidator.predicate(
           "non-film shapes forbid final screenplay stages",
-          () =>
+          throwsError(() =>
             validateAutoMovieProductionStages({
               ...blank,
               kind,
               settings: "review",
               naturalness: { screenplays: stage },
             }),
+          ),
         );
   }
   const film: IAutoMovieEvidenceConfigProps = {
@@ -54,31 +57,43 @@ export const test_evidence_production_naturalness_gates = (): void => {
       ...film,
       naturalness: { screenplays: stage },
     });
-    TestValidator.error("blank cannot activate final", () =>
-      validateAutoMovieProductionStages({
-        ...blank,
-        naturalness: { screenplays: stage },
-      }),
+    TestValidator.predicate(
+      "blank cannot activate final",
+      throwsError(() =>
+        validateAutoMovieProductionStages({
+          ...blank,
+          naturalness: { screenplays: stage },
+        }),
+      ),
     );
     for (const parent of ["disabled", "draft", "evidence"] as const)
-      TestValidator.error("final waits for construction review", () =>
-        validateAutoMovieProductionStages({
-          ...film,
-          screenplays: parent,
-          naturalness: { screenplays: stage },
-        }),
+      TestValidator.predicate(
+        "final waits for construction review",
+        throwsError(() =>
+          validateAutoMovieProductionStages({
+            ...film,
+            screenplays: parent,
+            naturalness: { screenplays: stage },
+          }),
+        ),
       );
     if (stage !== "review")
-      TestValidator.error("shots wait for final review", () =>
-        validateAutoMovieProductionStages({
-          ...film,
-          naturalness: { screenplays: stage },
-          shots: "draft",
-        }),
+      TestValidator.predicate(
+        "shots wait for final review",
+        throwsError(() =>
+          validateAutoMovieProductionStages({
+            ...film,
+            naturalness: { screenplays: stage },
+            shots: "draft",
+          }),
+        ),
       );
   }
-  TestValidator.error("disabled final does not open film shots", () =>
-    validateAutoMovieProductionStages({ ...film, shots: "draft" }),
+  TestValidator.predicate(
+    "disabled final does not open film shots",
+    throwsError(() =>
+      validateAutoMovieProductionStages({ ...film, shots: "draft" }),
+    ),
   );
   validateAutoMovieProductionStages({
     ...film,
@@ -119,14 +134,20 @@ export const test_evidence_production_naturalness_gates = (): void => {
   // Only stage topology is judged here; the separate receipt validator owns hosts.
   validateAutoMovieProductionStages(reset);
   for (const layer of ["treatments", "scripts", "screenplays"] as const)
-    TestValidator.error("film reset is synchronized", () =>
-      validateAutoMovieProductionStages({ ...reset, [layer]: "review" }),
+    TestValidator.predicate(
+      "film reset is synchronized",
+      throwsError(() =>
+        validateAutoMovieProductionStages({ ...reset, [layer]: "review" }),
+      ),
     );
-  TestValidator.error("film reset withdraws final", () =>
-    validateAutoMovieProductionStages({
-      ...reset,
-      naturalness: { screenplays: "draft" },
-    }),
+  TestValidator.predicate(
+    "film reset withdraws final",
+    throwsError(() =>
+      validateAutoMovieProductionStages({
+        ...reset,
+        naturalness: { screenplays: "draft" },
+      }),
+    ),
   );
   const library: IAutoMovieEvidenceConfigProps = {
     ...blank,
@@ -149,7 +170,13 @@ export const test_evidence_production_naturalness_gates = (): void => {
     },
   };
   validateAutoMovieProductionStages(library);
-  TestValidator.error("library reset needs its matching source", () =>
-    validateAutoMovieProductionStages({ ...library, modelSources: "disabled" }),
+  TestValidator.predicate(
+    "library reset needs its matching source",
+    throwsError(() =>
+      validateAutoMovieProductionStages({
+        ...library,
+        modelSources: "disabled",
+      }),
+    ),
   );
 };

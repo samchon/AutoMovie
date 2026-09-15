@@ -140,8 +140,8 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 - \`npm run sync\` overwrites this router and the five shipped skills, and synchronizes the owned local reference-client entries while preserving unrelated client settings and tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md) for client trust, conflicts, and interrupted maintenance.
 - \`npm run reference -- --request '<JSON>'\` uses the same read-only Markdown provider as the local MCP server: \`get_index_of_layer\`, \`get_index_of_file\`, \`read_section_without_annotations\`, and \`read_file_without_annotations\`. These tools navigate authored content; they do not edit files, execute production commands, inspect TypeScript, or replace full evidence review.
-- \`npm run lint:source\` checks TypeScript; \`npm run lint\` checks the evidence graph and production review gate.
-- \`npm run book -- --layer <layer> --pass <construction|final> --title <title>\` binds one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. Screenplays default to the reviewed final pass; other layers default to construction. It preserves numbered groups, removes evidence comments and citation anchors, and preserves visible prose and headings.
+- \`npm run lint:source\` checks TypeScript and authored evidence; \`npm run lint\` also checks the production builder's runtime review gates.
+- \`npm run book -- --layer <layer> --pass <construction|final> --title <title>\` binds one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. Screenplays default to the final pass; other layers default to construction. It preserves numbered groups, removes evidence comments and citation anchors, and preserves visible prose and headings.
 - \`npm run build\` is the only command that may update builder-owned output.
 `;
 };

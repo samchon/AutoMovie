@@ -3,6 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 import path from "node:path";
 
 import { loadSourceModule } from "../internal/loadSourceModule";
+import { throwsError } from "../internal/predicates";
 
 const { resolveAutoMovieTimedAuthoringKind } = loadSourceModule<{
   resolveAutoMovieTimedAuthoringKind: (
@@ -34,9 +35,9 @@ const evidence = (kind: "brief" | "film" | "library" | null) =>
  * 4. An explicitly blank declaration refuses instead of falling back to legacy film.
  */
 export const test_production_timed_authoring_kind = (): void => {
-  TestValidator.error(
+  TestValidator.predicate(
     "an unselected kind cannot borrow legacy film ownership",
-    () => resolveAutoMovieTimedAuthoringKind(evidence(null)),
+    throwsError(() => resolveAutoMovieTimedAuthoringKind(evidence(null))),
   );
   TestValidator.equals(
     "timed authoring ownership is kind-discriminated",

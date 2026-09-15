@@ -1,6 +1,8 @@
 import { parseAutoMovieProductionBookCommand as parseBookCommand } from "@automovie/production";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Book options select the final screenplay without changing non-film defaults.
  *
@@ -60,7 +62,8 @@ export const test_production_book_command = (): void => {
     ["--title", "Film", "--unknown", "value"],
     ["--title", "Film", "--pass", "final", "--pass", "construction"],
   ])
-    TestValidator.error("malformed options " + args.join(" "), () =>
-      parseBookCommand(args),
+    TestValidator.predicate(
+      "malformed options " + args.join(" "),
+      throwsError(() => parseBookCommand(args)),
     );
 };

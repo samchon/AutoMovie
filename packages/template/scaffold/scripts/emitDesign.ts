@@ -2,6 +2,7 @@ import {
   AUTOMOVIE_PRIMITIVE_ARCHETYPES,
   createAutoMovieArchetypeRegistry,
 } from "@automovie/archetypes";
+import { readAutoMovieProductionEvidence } from "@automovie/evidence";
 import type {
   IAutoMovieDefinedShotContract,
   IAutoMovieDesignMutationOutput,
@@ -14,12 +15,14 @@ import {
   type IAutoMovieDesignProducerEntry,
   autoMovieDesignTargetAddress,
   findAutoMovieProjectRoot,
+  resolveAutoMovieTimedAuthoringKind,
   runAutoMovieDesignDerivation,
 } from "@automovie/production";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 
+import { productionEvidence } from "../lint.config";
 import { assertAutoMovieNoArguments } from "./commandArguments";
 import { openAutoMovieProjectProduction } from "./projectIdentity";
 
@@ -27,6 +30,10 @@ assertAutoMovieNoArguments("design", process.argv.slice(2));
 
 /** The project this invocation belongs to, found from the host's own seed. */
 const projectRoot = findAutoMovieProjectRoot(process.cwd());
+
+resolveAutoMovieTimedAuthoringKind(
+  readAutoMovieProductionEvidence({ root: projectRoot, productionEvidence }),
+);
 
 /** This emitter's own project-relative path, which every record's basis names. */
 const EMITTER_PATH = "scripts/emitDesign.ts";

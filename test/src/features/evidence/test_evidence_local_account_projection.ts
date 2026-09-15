@@ -9,6 +9,8 @@ import {
 } from "@automovie/evidence";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Local account metadata is a checked declaration, and its manifest keeps
  * contract addresses distinct from the authored population being compared.
@@ -141,27 +143,36 @@ export const test_evidence_local_account_projection = (): void => {
       ],
     },
   );
-  TestValidator.error("naturalness obligation refused", () =>
-    createAutoMovieProductionObligationClaim({
-      ...props,
-      layer: "screenplays",
-      pass: "naturalness",
-    }),
+  TestValidator.predicate(
+    "naturalness obligation refused",
+    throwsError(() =>
+      createAutoMovieProductionObligationClaim({
+        ...props,
+        layer: "screenplays",
+        pass: "naturalness",
+      }),
+    ),
   );
-  TestValidator.error("naturalness host restricted to screenplays", () =>
-    createAutoMovieProductionPrincipleClaim({
-      ...props,
-      files: ["final/screenplays/*/???-*.md"],
-      layer: "models",
-      pass: "naturalness",
-      symbol: "h2",
-    }),
+  TestValidator.predicate(
+    "naturalness host restricted to screenplays",
+    throwsError(() =>
+      createAutoMovieProductionPrincipleClaim({
+        ...props,
+        files: ["final/screenplays/*/???-*.md"],
+        layer: "models",
+        pass: "naturalness",
+        symbol: "h2",
+      }),
+    ),
   );
-  TestValidator.error("naturalness stage must match declaration", () =>
-    validateAutoMovieLocalContractClaims({
-      ...naturalnessGraph,
-      naturalness: { screenplays: "evidence" },
-    }),
+  TestValidator.predicate(
+    "naturalness stage must match declaration",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({
+        ...naturalnessGraph,
+        naturalness: { screenplays: "evidence" },
+      }),
+    ),
   );
   TestValidator.equals(
     "positive bindings do not create audits",
@@ -288,11 +299,14 @@ export const test_evidence_local_account_projection = (): void => {
       autoMovieBinding: { ...account.autoMovieBinding, account: undefined },
     },
   ])
-    TestValidator.error("detached or weakened account", () =>
-      validateAutoMovieLocalContractClaims({
-        ...graph,
-        claims: [broken as AutoMovieProductionContractClaim],
-      }),
+    TestValidator.predicate(
+      "detached or weakened account",
+      throwsError(() =>
+        validateAutoMovieLocalContractClaims({
+          ...graph,
+          claims: [broken as AutoMovieProductionContractClaim],
+        }),
+      ),
     );
   const scalar = {
     ...principle,
@@ -306,7 +320,12 @@ export const test_evidence_local_account_projection = (): void => {
       symbol: undefined,
     },
   };
-  validateAutoMovieLocalContractClaims({ ...graph, claims: [scalar] });
+  TestValidator.predicate(
+    "projection defaults do not grant binding admission",
+    throwsError(() =>
+      validateAutoMovieLocalContractClaims({ ...graph, claims: [scalar] }),
+    ),
+  );
   TestValidator.equals(
     "native defaults remain explicit in projection",
     projectAutoMovieLocalContractClaims([scalar]).localBindings[0],
