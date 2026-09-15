@@ -1,24 +1,25 @@
-import type {
-  IAutoMovieModelPart,
-  IAutoMovieVector3,
-} from "@automovie/interface";
+/**
+ * Fit a replaceable lip band and publish its shared skin/lining boundaries.
+ * buildHumanFace and direct component callers provide subject-owned socket
+ * identities and millimetre shape values in head coordinates (+Z anterior).
+ * Admission copies caller settings; fit reads an immutable host and returns
+ * constraints/cuts; attachment only labels the assembly cage's lip triangles.
+ * The refined-rim finisher delegates to mouthInterior after shared subdivision,
+ * so the lining consumes the actual opening and material-owned connectivity.
+ * Separate dental components own performed teeth; legacy crowns are refused
+ * with performance. Changing the fitted band invalidates lining, material
+ * coordinates and downstream normals. This owner does not certify likeness.
+ */
+import type { IAutoMovieVector3 } from "@automovie/interface";
 
-import {
-  portraitSpline as interpolate,
-  portraitMix as mix,
-  portraitPoint as p,
-  portraitPatch as patch,
-  portraitPart,
-} from "../geometry/geometry";
+import { portraitPoint as p } from "../geometry/geometry";
 import {
   type IPortraitComponent,
   portraitFacesInsideLoop,
 } from "../geometry/portraitComponents";
-import { createPortraitDentalArc } from "./dentalArc";
 import {
   type IPortraitDentalCrown,
   assertPortraitDentalCrown,
-  buildPortraitDentalCrown,
 } from "./dentalCrown";
 import {
   type IPortraitLipBandKnot,
@@ -27,6 +28,7 @@ import {
   createPortraitLipBandScale,
   createPortraitLipSection,
 } from "./lipSection";
+import { buildPortraitMouth } from "./mouthInterior";
 import {
   type IPortraitMouthPerformance,
   createPortraitMouthPerformance,
@@ -34,11 +36,11 @@ import {
 import {
   type IPortraitOralChamber,
   assertPortraitOralLining,
-  buildPortraitOralLining,
 } from "./oralLining";
 
+export { buildPortraitMouth } from "./mouthInterior";
+
 type Point = IAutoMovieVector3;
-const pi = Math.PI;
 
 /**
  * Subject-owned oral boundaries. Upper and lower curves share their endpoints
@@ -414,127 +416,4 @@ export function createPortraitMouthComponent(
       };
     },
   };
-}
-
-/**
- * Recess the mouth interior behind the photographed lip opening, then place
- * the supplied upper crowns along that opening's curved dental arch. Central crowns
- * are wider and taller; side crowns turn with the arch to remain behind the
- * mouth corners. Widths are authored estimates, in millimetres, not dental data.
- * Lips themselves remain in the shared facial mesh, preserving their skin join.
- * Selecting cavityWall requires final skin indices and replaces the detached
- * backdrop with an enclosure joined to every actual refined oral-rim vertex.
- * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Constructs a recessed oral interior and optional individually sized upper crowns behind the refined opening.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Selects the legacy backdrop or actual-rim enclosure, omits a fully closed performed cavity and rotates each legacy crown and its normals along the common arch.
- */
-export function buildPortraitMouth(
-  source: number[][],
-  socket: IPortraitMouthSocket,
-  shape: IPortraitMouthShape,
-  performance?: IPortraitMouthPerformance,
-  skinIndices?: readonly number[],
-): IAutoMovieModelPart[] {
-  if (shape.cavityWall !== undefined || shape.cavityChamber !== undefined)
-    assertPortraitOralLining(
-      shape.cavityDepth,
-      shape.cavityWall!,
-      shape.cavityChamber,
-    );
-  const parts: IAutoMovieModelPart[] = [];
-  const add = (
-    id: string,
-    mesh: Parameters<typeof portraitPart>[1],
-    finish: string,
-  ): void => {
-    parts.push(portraitPart(id, mesh, finish));
-  };
-  const landmark = (id: number): Point =>
-    p(source[id][0], source[id][1], source[id][2]);
-  const cavity = "mouth-interior",
-    enamel = "teeth";
-  const mouthUpper = socket.upper.map(landmark);
-  const mouthLower = socket.lower.map(landmark);
-  if (
-    performance === undefined ||
-    mouthUpper.some(
-      (point, i) =>
-        point.x !== mouthLower[i].x ||
-        point.y !== mouthLower[i].y ||
-        point.z !== mouthLower[i].z,
-    )
-  ) {
-    if (shape.cavityWall !== undefined && skinIndices === undefined)
-      throw new Error("Oral lining requires the actual refined lip triangles.");
-    add(
-      "oral-cavity",
-      shape.cavityWall !== undefined
-        ? buildPortraitOralLining(
-            { positions: source, indices: skinIndices! },
-            socket.upper[0],
-            shape.cavityDepth,
-            shape.cavityWall,
-            shape.cavityChamber,
-          )
-        : patch(
-            (u, v) => {
-              const top = interpolate(mouthUpper, u),
-                bottom = interpolate(mouthLower, u);
-              return p(
-                mix(bottom.x, top.x, v),
-                mix(bottom.y, top.y, v),
-                mix(bottom.z, top.z, v) -
-                  shape.cavityDepth * (1 + 0.8 * Math.sin(pi * v)),
-              );
-            },
-            100,
-            30,
-          ),
-      cavity,
-    );
-  }
-  if (shape.crowns.length === 0) return parts;
-  // Width is enamel size, not a pitch on the head's X axis. Walk the arch in
-  // millimetres so rotating the side teeth cannot create artificial diastemata.
-  const rowLength =
-    shape.crowns.reduce((sum, crown) => sum + crown.width, 0) +
-    shape.toothGap * (shape.crowns.length - 1);
-  const arch = createPortraitDentalArc(mouthUpper, rowLength);
-  let cursor = arch.center + shape.dentalOffset - rowLength / 2;
-  for (let i = 0; i < shape.crowns.length; i++) {
-    const { width, height } = shape.crowns[i];
-    const distance = cursor + width / 2;
-    const { position: at, tangent } = arch.sample(distance);
-    cursor += width + shape.toothGap;
-    const angleY = -Math.atan2(tangent.z, tangent.x);
-    const crown = buildPortraitDentalCrown(
-      {
-        width,
-        height,
-        depth: shape.dentalDepth,
-        cervicalWidth: shape.crowns[i].cervicalWidth ?? 0.78,
-        edgeRise: shape.crowns[i].edgeRise ?? 0.035 * height,
-        contour: shape.crowns[i].contour,
-      },
-      distance <= arch.center ? 1 : -1,
-    );
-    // Placement and normals use the same rigid arch rotation. The local crown
-    // profile therefore cannot silently change measured interdental clearance.
-    for (let vertex = 0; vertex < crown.positions.length; vertex += 3) {
-      const x = crown.positions[vertex],
-        y = crown.positions[vertex + 1],
-        z = crown.positions[vertex + 2];
-      crown.positions[vertex] =
-        at.x + Math.cos(angleY) * x + Math.sin(angleY) * z;
-      crown.positions[vertex + 1] = at.y - shape.dentalDrop + y;
-      crown.positions[vertex + 2] =
-        at.z - shape.dentalRecess - Math.sin(angleY) * x + Math.cos(angleY) * z;
-      const nx = crown.normals![vertex],
-        nz = crown.normals![vertex + 2];
-      crown.normals![vertex] = Math.cos(angleY) * nx + Math.sin(angleY) * nz;
-      crown.normals![vertex + 2] =
-        -Math.sin(angleY) * nx + Math.cos(angleY) * nz;
-    }
-    add(`tooth-${i}`, crown, enamel);
-  }
-  return parts;
 }
