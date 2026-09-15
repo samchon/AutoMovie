@@ -11,16 +11,6 @@ import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
 /**
- * Files renamed as the scaffold is rendered. npm strips real `.gitignore` and
- * `.npmrc` files from a published package, so the assets ship without dots and
- * the rendered keys restore them.
- */
-const RENAME = new Map<string, string>([
-  ["gitignore", ".gitignore"],
-  ["npmrc", ".npmrc"],
-]);
-
-/**
  * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
  *
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps the generated project's portable identity in explicit source input.
@@ -93,7 +83,7 @@ const renderKey = (
   variables: Readonly<Record<string, string>>,
 ): string => {
   const dir = path.dirname(relative);
-  const base = RENAME.get(path.basename(relative)) ?? path.basename(relative);
+  const base = path.basename(relative);
   return renderTemplate(
     toPosix(dir === "." ? base : path.join(dir, base)),
     variables,
