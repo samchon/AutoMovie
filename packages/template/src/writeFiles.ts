@@ -15,56 +15,18 @@ import {
 } from "./scaffoldPublication";
 
 /**
- * The independent filesystem authorities one publication may hold.
+ * Explicit permission to install into an existing scaffold directory.
  *
- * Admitting a populated root and replacing an exact captured file are separate
- * decisions: a maintenance write into a project that already exists needs the
- * first without the second, so a new path can never overwrite a competitor.
- * `force` remains the compatibility shorthand that grants those two at once.
+ * Existing files are replaced only when their captured ordinary single-link
+ * identity still matches. Other directory entries never grant write authority.
  *
- * Replacing a target's directory entry is a third decision and `force` does not
- * grant it, because a caller that means in-place replacement must keep refusing
- * a target whose inode another pathname also names.
- *
- * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Names the explicit replacement authority a duplicate final path requires, separately from root admission.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Types exact replacement and populated-root admission as distinct explicit grants.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Requires explicit force before a duplicate final path can be replaced.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Carries the permission to admit an existing root and replace exact captured single-link files.
  */
 export interface IScaffoldPublicationOptions {
-  /** Permit publication below an already populated root. */
-  allowExistingRoot?: boolean;
-  /** Compatibility shorthand that enables root admission and exact replacement. */
+  /** Admit an existing root and permit exact captured single-link replacement. */
   force?: boolean;
-  /** Permit replacement of an exact captured ordinary file. */
-  overwriteExistingFiles?: boolean;
-  /**
-   * Permit replacing a target's directory entry when another entry names it.
-   *
-   * This authority is never implied by `force`, because a caller that means
-   * in-place replacement must keep refusing a target whose inode another
-   * pathname also names: rewriting that inode would change what the other
-   * pathname shows. Only a caller whose surface is regenerated rather than
-   * recovered grants it.
-   */
-  replaceAliasedEntries?: boolean;
 }
-
-/**
- * Resolve root admission and exact replacement from their explicit grant, else
- * from `force`. Entry replacement resolves from its own grant only, so a caller
- * cannot acquire it by asking for `force`.
- */
-const resolveScaffoldPublicationAuthority = (
-  options: IScaffoldPublicationOptions | undefined,
-): {
-  allowExistingRoot: boolean;
-  overwriteExistingFiles: boolean;
-  replaceAliasedEntries: boolean;
-} => ({
-  allowExistingRoot: options?.allowExistingRoot ?? options?.force === true,
-  overwriteExistingFiles:
-    options?.overwriteExistingFiles ?? options?.force === true,
-  replaceAliasedEntries: options?.replaceAliasedEntries === true,
-});
 
 /**
  * Error raised by the compatibility write API with its exact publication
@@ -125,9 +87,8 @@ export class ScaffoldPublicationError extends Error {
  *
  * Refuses lexical escapes, colliding targets, linked physical parents, and
  * pathname successors. New files reserve their final slot directly; `force`
- * remains the compatibility shorthand for allowing a populated root and
- * replacing exact captured ordinary single-link files. Maintenance callers
- * separate those authorities so a new path can never overwrite a competitor.
+ * permits a populated root and replacement of exact captured ordinary
+ * single-link files.
  * Rendering the map is {@link renderScaffold}'s job; this is its write half.
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Repeated explicit writes converge on the same scaffold bytes while an unforced duplicate is refused.
@@ -182,7 +143,7 @@ export const publishFiles = (
 ): IScaffoldPublicationReceipt => {
   const base = path.resolve(process.cwd(), location);
   const candidate = planScaffoldPublication({ files, root: base });
-  const authority = resolveScaffoldPublicationAuthority(options);
+  const force = options?.force === true;
   let baseOwnership: IScaffoldPhysicalDirectory | undefined;
   let directories: Map<string, IScaffoldPhysicalDirectory> | undefined;
   return publishScaffoldCandidate({
@@ -192,10 +153,7 @@ export const publishFiles = (
         if (baseOwnership === undefined) {
           baseOwnership = ensureScaffoldBaseDirectory(base);
           assertScaffoldPhysicalDirectory(baseOwnership);
-          if (
-            fs.readdirSync(base).length > 0 &&
-            authority.allowExistingRoot === false
-          )
+          if (fs.readdirSync(base).length > 0 && force === false)
             throw new Error(
               `target directory is not empty: ${base}; pass --force to scaffold into it anyway`,
             );
@@ -210,9 +168,8 @@ export const publishFiles = (
         return writeScaffoldFile({
           base: baseOwnership,
           bytes: Uint8Array.from(entry.bytes),
-          force: authority.overwriteExistingFiles,
+          force,
           parent,
-          replaceAliasedEntries: authority.replaceAliasedEntries,
           target: entry.target,
         });
       } catch (error) {

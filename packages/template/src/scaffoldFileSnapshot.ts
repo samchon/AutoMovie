@@ -400,8 +400,8 @@ export const ensureScaffoldFileDirectory = (props: {
  *
  * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Refuses an existing file unless the caller explicitly authorizes exact-target replacement.
  * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Resolves a repeated file write without creating a second logical target.
- * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Rewrites the resident inode only while one entry names it, and otherwise replaces the entry so another pathname keeps the bytes it had.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Chooses between the two admitted methods from the entry count observed on the descriptor it writes through, and reports a post-removal failure as partial.
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-alias-visible-bytes Refuses replacement when another directory entry names the resident inode, preserving the unrequested path's bytes.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-alias-visible-bytes Admits in-place replacement only after the write descriptor proves that exactly one entry names its file.
  */
 export const writeScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -410,13 +410,6 @@ export const writeScaffoldFile = (props: {
   capability?: IScaffoldParentPublicationCapability;
   force: boolean;
   parent: IScaffoldPhysicalDirectory;
-  /**
-   * Permit replacing the target's directory entry when another entry names it.
-   *
-   * Absent, a target with a second entry is refused exactly as before, so a
-   * caller that means in-place replacement keeps its stricter contract.
-   */
-  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   const absolute = path.resolve(props.target);
@@ -452,22 +445,17 @@ export const writeScaffoldFile = (props: {
 };
 
 /**
- * Replace one existing scaffold file by the method its directory entries permit.
+ * Replace one existing ordinary single-link scaffold file in place.
  *
  * The entry count is read from the descriptor this operation writes through
  * rather than from a pathname stat, so the decision and the write cannot be
  * looking at different files. Rewriting the resident inode is admissible only
  * while exactly one entry names it, because that write is precisely what every
- * other pathname naming it would observe. When another entry exists and the
- * caller holds the aliased-entry authority, the directory entry is replaced
- * instead, which leaves any peer pointing at the untouched old inode.
+ * other pathname naming it would observe. Another entry causes refusal.
  *
  * A window remains between this stat and the truncation on the in-place branch:
  * a link created inside it is not seen, and the rewrite would then reach the new
  * peer. That window exists today, and this branch neither widens nor narrows it.
- * The replacement branch has no such window, because it never rewrites the
- * resident inode, so a link appearing at any instant still leaves the peer's
- * bytes unchanged.
  */
 const overwriteScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -475,7 +463,6 @@ const overwriteScaffoldFile = (props: {
   capability?: IScaffoldParentPublicationCapability;
   existing: IScaffoldFileSnapshot;
   parent: IScaffoldPhysicalDirectory;
-  replaceAliasedEntries?: boolean;
   target: string;
 }): ScaffoldFilePublicationOutcome => {
   let descriptor: number;
@@ -495,13 +482,7 @@ const overwriteScaffoldFile = (props: {
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (props.replaceAliasedEntries === true)
-      assertOrdinaryScaffoldFile(opened, props.target);
-    else assertOrdinarySingleLinkFile(opened, props.target);
-    if (opened.nlink !== 1n) {
-      fs.closeSync(descriptor);
-      return replaceScaffoldFileEntry(props);
-    }
+    assertOrdinarySingleLinkFile(opened, props.target);
     assertScaffoldFileDescriptor(
       props.existing,
       descriptor,
@@ -574,65 +555,6 @@ const overwriteScaffoldFile = (props: {
         parentIdentity: props.parent.identity,
         status: "partial",
       });
-};
-
-/**
- * Replace the target's own directory entry, leaving every peer entry alone.
- *
- * Removing one entry does not touch the inode, so a pathname that shares it
- * keeps the bytes it already had; the successor is then created exclusively at
- * the same name through the ordinary new-file boundary, which owns the write,
- * the sync, the readback and the resident verification.
- *
- * Instruction synchronization can recreate its candidate from the installed
- * template and production owners after interruption. Git preserves the prior
- * committed instructions; the caller inspects the complete replacement diff.
- * This function itself neither journals nor recovers predecessor content.
- *
- * A publication that refuses after the entry is gone is reported as partial
- * rather than refused: the predecessor no longer exists, so claiming that
- * nothing happened would be untrue.
- *
- * The predecessor is rechecked without its change time, because the caller has
- * already opened this pathname to read the entry count and a Windows host moves
- * change time when any handle opens a path. Comparing it here would refuse the
- * replacement on the strength of this operation's own open. Physical identity,
- * size and modification time are still compared, so a substituted or rewritten
- * predecessor is still refused before its name is detached.
- */
-const replaceScaffoldFileEntry = (props: {
-  base: IScaffoldPhysicalDirectory;
-  bytes: Uint8Array;
-  capability?: IScaffoldParentPublicationCapability;
-  existing: IScaffoldFileSnapshot;
-  parent: IScaffoldPhysicalDirectory;
-  target: string;
-}): ScaffoldFilePublicationOutcome => {
-  try {
-    assertOpenedScaffoldFileSnapshot(props.existing);
-    assertScaffoldOwnership(props.base, props.parent);
-    fs.unlinkSync(props.target);
-  } catch (error) {
-    return Object.freeze({
-      error,
-      reason: "create-failed" as const,
-      status: "refused" as const,
-    });
-  }
-  const outcome = publishScaffoldFileToCapturedParent({
-    bytes: Array.from(props.bytes),
-    capability: props.capability ?? { publish: publishNativeScaffoldFile },
-    parent: props.parent,
-    target: props.target,
-  });
-  return outcome.status === "refused"
-    ? Object.freeze({
-        bytesWritten: 0,
-        error: outcome.error,
-        parentIdentity: props.parent.identity,
-        status: "partial" as const,
-      })
-    : outcome;
 };
 
 /**
