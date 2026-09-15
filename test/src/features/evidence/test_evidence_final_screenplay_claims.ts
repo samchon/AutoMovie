@@ -21,10 +21,11 @@ export const test_evidence_final_screenplay_claims = (): void => {
     "/production",
     "english",
   );
+  const depths = ["file", "h2", "h3", "h4"] as const;
   for (const scope of [
-    { mode: "complete-production" as const },
-    { mode: "first-pilot" as const, partitionGroup: "001-first" },
-  ])
+    { mode: "complete-production" },
+    { mode: "first-pilot", partitionGroup: "001-first" },
+  ] as const)
     for (const construction of ["disabled", "review"] as const)
       for (const stage of [
         "disabled",
@@ -47,12 +48,12 @@ export const test_evidence_final_screenplay_claims = (): void => {
         TestValidator.equals(
           "one lineage claim per host depth",
           claims.map(({ branch, claim }) => ({ branch, symbol: claim.symbol })),
-          ["file", "h2", "h3", "h4"].map((symbol) => ({
-            branch: "screenplayNaturalness",
+          depths.map((symbol) => ({
+            branch: "screenplayNaturalness" as const,
             symbol,
           })),
         );
-        for (const { claim } of claims) {
+        for (const [index, { claim }] of claims.entries()) {
           TestValidator.equals(
             "final hosts",
             {
@@ -78,7 +79,7 @@ export const test_evidence_final_screenplay_claims = (): void => {
               type: "markdown",
               root: "docs",
               files: constructionFiles,
-              symbol: claim.symbol,
+              symbol: depths[index]!,
               noEvidenceExclude: true,
               uniqueEvidence: true,
               singleEvidencePerSymbol: true,
