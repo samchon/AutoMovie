@@ -44,9 +44,6 @@ export const test_cli_command_arguments = (): void => {
       force: true,
     },
   );
-  TestValidator.equals("instruction synchronization", read("sync"), {
-    command: "sync",
-  });
   TestValidator.equals("index publication", read("toc"), {
     command: "toc",
     check: false,
@@ -94,6 +91,7 @@ export const test_cli_command_arguments = (): void => {
     ["start", "project", "--language", "english", "--unknown"],
     ["start", "one", "two", "--language", "english"],
     ["start", " ", "--language", "english"],
+    ["sync"],
     ["sync", "extra"],
     ["toc", "--check", "--check"],
     ["toc", "--unknown"],
@@ -122,12 +120,12 @@ export const test_cli_command_arguments = (): void => {
       throwsError(() => dispatchAutoMovieCommandArguments(args, () => ++calls)),
     );
   TestValidator.equals("no invalid input reaches effects", calls, 0);
-  const result = dispatchAutoMovieCommandArguments(["sync"], (command) => {
+  const result = dispatchAutoMovieCommandArguments(["--help"], (command) => {
     ++calls;
     return command;
   });
   TestValidator.equals("valid dispatch returns its selected command", result, {
-    command: "sync",
+    command: "help",
   });
   TestValidator.equals("valid dispatch runs once", calls, 1);
 };
