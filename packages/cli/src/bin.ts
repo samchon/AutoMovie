@@ -39,14 +39,13 @@ Usage:
 
 Commands:
   start <directory>   Create <directory> and lay down the blank scaffold:
-                      production skill, typed source branches, deterministic
-                      builder, local viewer, capture, tests, and evidence gates.
+                      authoring documents, local skills, and source lint.
   sync                Overwrite generated agent instructions from the installed
                       template and tracked production evidence declaration.
   toc                  Generate canonical script and screenplay index links.
   inspect-external     Inspect exact glTF, GLB, or VRM bytes for explicit
                        externalMotions adoption without semantic mapping.
-  routes <kind>        Print the complete owner/serializer/consumer route
+  routes <kind>        Print the complete owner/input/consumer route
                        matrix for one production kind.
 
 Options:
@@ -93,7 +92,7 @@ const projectNameOf = (targetDir: string): string =>
  * @evidence requirements/product/capability-and-content.md#product-unplanted-subject-authoring Leaves subject facts in editable generated-project source.
  * @evidence requirements/product/capability-and-content.md#product-project-owned-content Writes production content into the created project rather than package-private state.
  * @evidence requirements/product/capability-and-content.md#product-catalogue-refusal Ships technique examples without presenting a finished-content catalogue.
- * @evidence requirements/product/capability-and-content.md#product-example-role Uses scaffold examples to teach controls and verification paths.
+ * @evidenceExclude requirements/product/capability-and-content.md#product-example-role The blank scaffold ships no example production; authored examples are not a CLI responsibility.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility Creates the boundary between bundled capability and project-owned facts.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Publishes the blank scaffold as an available, documented authoring capability.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-not-content-invariant Keeps generated examples reusable instead of substituting finished production content.
@@ -103,72 +102,72 @@ const projectNameOf = (targetDir: string): string =>
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Treats the target name and pinned template versions as explicit derivation inputs.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Refuses invalid target ownership and unsafe paths.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Leaves all authoring state in portable generated-project files.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness Dispatches render verification against complete checkpoint records.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-acknowledged-completion-boundary Exposes status and verify actions that recognize only durable completion.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resume-eligibility Routes resume through the generated render state checks.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits Keeps retries inside the generated render job lifecycle.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-retry-eligibility-limit Routes retry through the generated eligibility and attempt-limit contract.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-changed-input-restart Routes changed inputs through plan and verification before execution.
- * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resumed-result-validation Exposes verify and finalize as separate post-resume gates.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention Dispatches cleanup through the generated reference-aware collector.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Exposes render status before the explicit gc action.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety Delegates gc to the generated render ownership and lock checks.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record Returns the generated gc process outcome to the caller.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-sensitive-data-minimization Limits render cleanup to generated project state.
- * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility Preserves the generated gc exit status.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation Dispatches actions into the generated job and attempt state machine.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Routes render options as explicit job inputs.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Separates the requested action from work selected by the generated plan.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary Exposes plan, run, status, verify, finalize, and gc lifecycle actions.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-transition-history Delegates state transitions to the generated render record.
- * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision Routes lifecycle commands through the generated admission decision and its explicit states.
- * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-allowed-state-transitions Delegates allowed transitions and their durable history to the generated render record.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Returns the generated process exit status without converting failure to success.
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-deterministic-reexecution-identity Routes reexecution through the same project-owned render script and inputs.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Dispatches render only after generated-project compilation responsibilities.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Separates plan from run and materialized verification.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope Routes explicit render action and options into the project script.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-deterministic-lane Uses the project-pinned tsx runtime and script.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Delegates changed input checks to the generated render lifecycle.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact Exposes status and verify before finalization.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Preserves refusal from the generated render process.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Dispatches deterministic render planning and bounded chunks.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Exposes resumable execution through the run and all actions.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication Keeps finalize separate from chunk execution.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work Delegates concurrent ownership to the generated render job.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery Preserves failed process status for recovery.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity Reuses the project script and explicit action inputs on retry.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Dispatches verify and finalize after chunk execution.
- * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Preserves unsafe-resume refusal from the generated script.
- * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Dispatches explicit plan, run, status, verify, and finalize phases.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Routes partition, resume, publication, and recovery through one generated render lifecycle.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Dispatches render planning through the generated worst-case budget gate.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Routes materialization, verification, and finalization through content-addressed frame state.
- * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Delegates exact frame scheduling and direct seek to the generated render script.
- * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Delegates frame, view, and pass isolation to the generated render script.
- * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Runs the project-pinned headless capture script and preserves its exit status.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-checkpoint-closure Dispatches render work against complete generated checkpoints.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-durable-completion-boundary Exposes verification before durable completion is finalized.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resume-eligibility Routes resume through generated identity and integrity checks.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-changed-input-restart Delegates input-change invalidation to the generated planner.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resumed-result-validation Exposes verify and finalize after resumed execution.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-authority-boundary Keeps cache decisions inside the generated project script.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-identity-invalidation Delegates cache identity checks to the render job.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-corrupt-cache-quarantine Preserves generated-script refusal and exit status for corrupt state.
- * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-dependency-availability-loss Preserves missing-dependency failure from the project script.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-retention-classes Dispatches gc against generated render-state classes.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-reference-aware-retention Leaves reference checks to the generated collector.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Exposes status before explicit cleanup.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-concurrency-safety Keeps cleanup inside the generated ownership protocol.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-deletion-outcome-tombstone Preserves the collector's deletion outcome.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-sensitive-retention-minimization Limits cleanup dispatch to project-owned render state.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-failure-capacity Preserves cleanup failure status for operators.
- * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-quarantine-boundary Delegates quarantined-state handling to the generated collector.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Routes render actions into one generated logical job identity.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-attempt-identity-lineage Keeps retry attempts inside generated project state.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-deterministic-output-identity Uses explicit project script and action inputs for output identity.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-record-input-output Delegates requested and effective work recording to the render job.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation Returns operational exit status without rewriting rendered-domain results.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-acknowledged-completion-boundary The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resume-eligibility The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-retry-eligibility-limit The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-changed-input-restart The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resumed-result-validation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-sensitive-data-minimization The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-transition-history The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/state-machine-and-admission.md#execution-admission-decision The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/state-machine-and-admission.md#execution-allowed-state-transitions The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-deterministic-reexecution-identity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-deterministic-lane The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-resume The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-checkpoint-closure The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-durable-completion-boundary The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resume-eligibility The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-changed-input-restart The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resumed-result-validation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-authority-boundary The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-identity-invalidation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-corrupt-cache-quarantine The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-dependency-availability-loss The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-retention-classes The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-reference-aware-retention The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-concurrency-safety The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-deletion-outcome-tombstone The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-sensitive-retention-minimization The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-failure-capacity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-quarantine-boundary The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/scope-and-execution-identities.md#execution-attempt-identity-lineage The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/scope-and-execution-identities.md#execution-deterministic-output-identity The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/scope-and-execution-identities.md#execution-record-input-output The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
  * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-authority-boundary The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-acquisition-failure The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-channel-parity The CLI accepts an explicit local legacy file only; it does not claim equivalent API or tool acquisition channels.
@@ -193,8 +192,8 @@ const projectNameOf = (targetDir: string): string =>
  * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-acquisition-failure-envelope The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/external-inputs/README.md#외부-입력-요구사항 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/operations-and-recovery/README.md#운영과-복구-요구사항 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
- * @evidence requirements/rendering/README.md#rendering-요구사항 Routes explicit planning, execution, verification, finalization, and recovery actions to the generated render host.
- * @evidence specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications Dispatches exact scheduling and headless render lifecycle actions without reimplementing them.
+ * @evidenceExclude requirements/rendering/README.md#rendering-요구사항 The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
+ * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications The CLI creates and synchronizes source documents; it does not execute render jobs, capture frames, or maintain persisted job state.
  * @evidenceExclude specifications/execution-and-recovery/README.md#실행과-복구-시스템-계약 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 The source-first CLI carries no serialized production or contract migration protocol; reviewed source changes and Git own that transition.
  * @evidenceExclude requirements/operations-and-recovery/observability-and-secret-protection.md#operations-failure-diagnostic The CLI dispatcher does not implement the operations failure diagnostic requirement; it only routes explicit local commands and preserves delegated outcomes.

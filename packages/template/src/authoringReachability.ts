@@ -1,3 +1,4 @@
+import { AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES } from "@automovie/ingest";
 import type {
   IAutoMovieActionCall,
   IAutoMovieExternalMotionAdoptionMode,
@@ -67,19 +68,6 @@ const EXTERNAL_MOTION_MODES = Object.freeze(
 );
 const RENDER_TIERS = Object.freeze(Object.keys(RENDER_TIER_REGISTRY));
 
-/**
- * Versioned byte-inspection profiles the generated `external:inspect` command
- * accepts. `@automovie/ingest` owns the runtime vocabulary; the template does
- * not depend on it, so this copy is held equal to that export by the route
- * test rather than by the type system.
- */
-const EXTERNAL_MODEL_INSPECTION_PROFILES = Object.freeze([
-  "gltf-static-v1",
-  "gltf-humanoid-v1",
-  "gltf-motion-v1",
-  "vrm-humanoid-v1",
-]);
-
 type AutoMovieProductionDesignField = keyof IAutoMovieProductionDesign;
 
 type AutoMovieAuthoringCapability =
@@ -90,7 +78,6 @@ type AutoMovieAuthoringCapability =
   | "film-sources"
   | "external-model-inspection"
   | "acceptance"
-  | "examples"
   | "camera-actions";
 
 type AutoMovieAuthoringRoute =
@@ -131,7 +118,7 @@ const ROUTE_REGISTRY = {
 /**
  * One public capability's complete route from author decision to consumer.
  *
- * @evidence requirements/product/authorability.md#product-discoverable-control Carries the owner, serializer, consumer, and route fields one capability needs to be provably reachable, or its concrete inapplicable reason.
+ * @evidence requirements/product/authorability.md#product-discoverable-control Carries the owner, input, consumer, and route fields one capability needs to be provably reachable, or its concrete inapplicable reason.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Is the typed row the production-kind route query returns.
  * @author Samchon
  */
@@ -152,8 +139,8 @@ export interface IAutoMovieAuthoringReachabilityRow {
   owner: string | null;
   /** Generated-project skill that teaches the author how to reach the owner. */
   route: AutoMovieAuthoringRoute | null;
-  /** Concrete emitter or record that carries the authored decision. */
-  serializer: string | null;
+  /** Typed value or document passed directly to the named public consumer. */
+  input: string | null;
 }
 
 interface IAuthoringRouteDefinition {
@@ -161,7 +148,7 @@ interface IAuthoringRouteDefinition {
   consumer: string;
   owner: string;
   route: AutoMovieAuthoringRoute;
-  serializer: string;
+  input: string;
 }
 
 interface IProductionFieldRouteDefinition {
@@ -201,16 +188,15 @@ export const isAutoMovieAuthoringProductionKind = (
 const KINDS = AUTO_MOVIE_AUTHORING_PRODUCTION_KINDS;
 
 /**
- * The production design record is authored in the reviewed `src/production.ts`
- * source that `productionSources` binds, published through the generated
- * `scripts/emitDesign.ts`, and read back only by the timed compile.
- * `AutoMovieProductionBuilder.run` dispatches a library to `runLibrary`
- * before the record is opened, so every field row below is applicable to film
- * and brief alike and inapplicable to a library.
+ * Design rows describe source values and the public APIs that accept them.
+ * They do not promise an installed emitter, fixed source filename, serialized
+ * project store, or ready-made renderer. A project authors its own composition
+ * and passes these values to the selected validation or runtime boundary.
  */
-const PRODUCTION_DESIGN_OWNER = "docs/settings -> src/production.ts";
-const PRODUCTION_DESIGN_SERIALIZER =
-  "scripts/emitDesign.ts -> AutoMovieProductionProject.setProductionDesign";
+const PRODUCTION_DESIGN_OWNER =
+  "docs/settings and project-authored source under src";
+const PRODUCTION_DESIGN_INPUT =
+  "@automovie/interface IAutoMovieProductionDesign value in a caller-owned design graph";
 
 const field = (
   consumer: string,
@@ -224,86 +210,86 @@ const field = (
 
 const PRODUCTION_DESIGN_FIELD_ROUTES = {
   id: field(
-    "AutoMovieProductionProject.setProductionDesign production address gate and AutoMovieProductionBuilder film identity",
+    "@automovie/production validateAutoMovieProductionGraph identity validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   title: field(
-    "validateProductionDesign non-blank text gate",
+    "@automovie/production validateAutoMovieProductionGraph text validation",
     ".agents/skills/production-lifecycle/settings.md",
   ),
   logline: field(
-    "validateProductionDesign non-blank text gate",
+    "@automovie/production validateAutoMovieProductionGraph text validation",
     ".agents/skills/production-lifecycle/settings.md",
   ),
   targetRuntimeSeconds: field(
-    "AutoMovieProductionBuilder film runtime and caption verification",
+    "@automovie/production validateAutoMovieProductionGraph runtime validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   visualDelivery: field(
-    "AutoMovieProductionBuilder delivery-lane planner and scripts/renderPublicationRuntime.ts",
+    "@automovie/production validateAutoMovieProductionGraph delivery configuration validation",
     ".agents/skills/production-lifecycle/configuration.md",
     VISUAL_DELIVERIES,
   ),
   visualDeliveryLanes: field(
-    "AutoMovieProductionBuilder occurrence-lane planner",
+    "@automovie/production validateAutoMovieProductionGraph occurrence-lane validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   mixedVisualDeliveryPolicy: field(
-    "AutoMovieProductionBuilder lane-crossing verifier",
+    "@automovie/production validateAutoMovieProductionGraph lane-crossing validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   storyClock: field(
-    "validateProductionDesign story-pin admission and @automovie/engine autoMovieStoryTime",
+    "@automovie/engine autoMovieStoryTime",
     ".agents/skills/production-lifecycle/settings.md",
   ),
   lighting: field(
-    "AutoMovieProductionBuilder shot build context and @automovie/engine production lighting sampler",
+    "@automovie/engine resolveProductionLighting",
     ".agents/skills/source-authoring/cinematography.md",
   ),
   renderBudgets: field(
-    "scripts/renderBudgetSnapshot.ts budget preflight",
+    "@automovie/render assessAutoMovieRenderBudget",
     ".agents/skills/source-authoring/composition.md",
   ),
   externalMotions: field(
-    "AutoMovieProductionBuilder external motion admission",
+    "@automovie/ingest adoptAutoMovieExternalMotion",
     ".agents/skills/source-authoring/models-and-motions.md",
     EXTERNAL_MOTION_MODES,
   ),
   captionReadabilityProfiles: field(
-    "openAutoMovieProduction caption readability verdicts",
+    "@automovie/production validateAutoMovieProductionGraph caption profile validation",
     ".agents/skills/source-authoring/sound.md",
   ),
   sound: field(
-    "AutoMovieProductionBuilder sound planning and scripts/renderSoundRuntime.ts",
+    "@automovie/engine deriveProductionSoundPlan",
     ".agents/skills/source-authoring/sound.md",
   ),
   renderTiers: field(
-    "scripts/renderRuntime.ts render tier selection",
+    "@automovie/production validateAutoMovieProductionGraph render tier validation",
     ".agents/skills/production-lifecycle/configuration.md",
     RENDER_TIERS,
   ),
   repaint: field(
-    "AutoMovieProductionRepaintService and scripts/repaint.ts",
+    "@automovie/production validateAutoMovieProductionGraph repaint configuration validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   simulation: field(
-    "scripts/renderRuntime.ts, scripts/captureDialogueRuntime.ts, and scripts/generatedShotPlugin.ts live soft-body admission",
+    "@automovie/production validateAutoMovieProductionGraph simulation configuration validation",
     ".agents/skills/source-authoring/design-branches.md",
   ),
   environmentContext: field(
-    "AutoMovieProductionBuilder environment analyses",
+    "@automovie/engine validateAutoMovieEnvironmentContext",
     ".agents/skills/source-authoring/spatial-design.md",
   ),
   frameFormat: field(
-    "AutoMovieProductionBuilder frame clock, productionRenderJob, and scripts/renderPlanningRuntime.ts",
+    "@automovie/engine resolveProductionFrameRate",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
   artDirection: field(
-    "validateProductionDesign art-direction gate",
+    "@automovie/production validateAutoMovieProductionGraph art-direction validation",
     ".agents/skills/production-lifecycle/settings.md",
   ),
   deliverables: field(
-    "AutoMovieProductionBuilder deliverable contracts and productionRenderJob",
+    "@automovie/production validateAutoMovieProductionGraph deliverable validation",
     ".agents/skills/production-lifecycle/configuration.md",
   ),
 } satisfies Record<
@@ -314,39 +300,34 @@ const PRODUCTION_DESIGN_FIELD_ROUTES = {
 const BASE_ROUTE_DEFINITIONS = {
   settings: {
     owner: "docs/settings",
-    serializer: "Markdown H2 evidence hosts",
+    input: "Markdown H2 evidence hosts",
     consumer: "@automovie/evidence production graph",
     route: ".agents/skills/production-lifecycle/settings.md",
   },
   "design-branches": {
     owner:
       "docs/{maps,models,spaces,materials,instances,motions,systems} -> src/<branch>",
-    serializer:
-      "scripts/emitDesign.ts records and reviewed source-owner exports",
-    consumer: "AutoMovieProductionBuilder source scope",
+    input:
+      "reviewed TypeScript values passed directly to selected package APIs",
+    consumer:
+      "@automovie/engine geometry, material, spatial, instance and motion APIs",
     route: ".agents/skills/source-authoring/design-branches.md",
   },
   "production-sources": {
-    owner: "src/production.ts",
-    serializer: "lint.config.ts productionSources source-owner bindings",
-    consumer: "AutoMovieProductionBuilder",
+    owner: "project-authored TypeScript modules under src",
+    input:
+      "src/lint.config.ts source populations and their typed source exports",
+    consumer:
+      "@automovie/evidence source graph and selected public runtime APIs",
     route: ".agents/skills/source-authoring/compilation.md",
   },
   "external-model-inspection": {
-    choices: EXTERNAL_MODEL_INSPECTION_PROFILES,
-    owner: "public assets registered in automovie/assets.json",
-    serializer:
-      "npm run external:inspect -- <project-path> --profile <profile>",
+    choices: AUTO_MOVIE_EXTERNAL_MODEL_INGEST_PROFILES,
+    owner: "project-owned external bytes and their reviewed source adoption",
+    input: "exact source bytes and an explicit inspection profile",
     consumer:
-      "automovie/assets.json provenance and the author's explicit model or motion adoption record",
+      "@automovie/ingest inspectAutoMovieExternalModelBytes; automovie inspect-external",
     route: ".agents/skills/source-authoring/models-and-motions.md",
-  },
-  examples: {
-    owner: "src/examples",
-    serializer: "typed TypeScript exports",
-    consumer:
-      "production-owned source adaptation; never imported by delivered source",
-    route: ".agents/skills/source-authoring/index.md",
   },
 } satisfies Record<
   Exclude<
@@ -370,7 +351,7 @@ const applicable = (
   kind,
   owner: definition.owner,
   route: definition.route,
-  serializer: definition.serializer,
+  input: definition.input,
 });
 
 const inapplicable = (
@@ -387,7 +368,7 @@ const inapplicable = (
   kind,
   owner: null,
   route: null,
-  serializer: null,
+  input: null,
 });
 
 const fieldRows = (
@@ -402,7 +383,7 @@ const fieldRows = (
       ? inapplicable(
           kind,
           "production-design-field",
-          `A library compiles its selected design and source branches directly; no library path reads production-design.${name}.`,
+          `A library selects reusable source capabilities rather than a timed-production design; production-design.${name} belongs to that timed composition.`,
           name,
         )
       : applicable(
@@ -411,7 +392,7 @@ const fieldRows = (
           {
             ...definition,
             owner: PRODUCTION_DESIGN_OWNER,
-            serializer: PRODUCTION_DESIGN_SERIALIZER,
+            input: PRODUCTION_DESIGN_INPUT,
           },
           name,
         ),
@@ -422,24 +403,24 @@ const timedRows = (
 ): IAutoMovieAuthoringReachabilityRow[] => [
   applicable(kind, "film-sources", {
     owner: kind === "film" ? "docs/final/screenplays" : "docs/briefs",
-    serializer: "src/shots/**/*.ts and src/film.ts",
-    consumer: "AutoMovieProductionBuilder edit assembly",
+    input: "IAutoMovieDefinedShot exports and caller-owned sequence inputs",
+    consumer: "@automovie/engine compileDefinedShot and cutSequence",
     route:
       kind === "film"
         ? ".agents/skills/production-lifecycle/naturalness.md"
         : ".agents/skills/production-lifecycle/briefs.md",
   }),
   applicable(kind, "acceptance", {
-    owner: "acceptance scenario exports beside src/shots/**/*.ts",
-    serializer:
-      "scripts/emitDesign.ts -> AutoMovieProductionProject.setAcceptanceScenario",
-    consumer: "AutoMovieProductionBuilder review and final scopes",
+    owner: "project-authored shot contracts and review expectations under src",
+    input:
+      "IAutoMovieDefinedShot registration, build callback, context and runtime",
+    consumer: "@automovie/engine compileDefinedShot contract realization",
     route: ".agents/skills/source-authoring/compilation.md",
   }),
   applicable(kind, "camera-actions", {
     choices: AUTO_MOVIE_CAMERA_ACTIONS,
-    owner: "src/shots/**/*.ts frame actions",
-    serializer: 'IAutoMovieActionCall verb "frame" move',
+    owner: "project-authored frame actions under src",
+    input: 'IAutoMovieActionCall verb "frame" move',
     consumer: "@automovie/engine compileCameraMove",
     route: ".agents/skills/source-authoring/cinematography.md",
   }),
@@ -478,7 +459,7 @@ const commonRows = (
  * Canonical production-kind capability matrix shipped to every author.
  *
  * @evidence requirements/product/authorability.md#product-discoverable-control Makes every supported capability reachable through a named author route rather than package archaeology.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Publishes owner, serializer, consumer, and truthful inapplicability as one typed answer.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Publishes owner, input, consumer, and truthful inapplicability as one typed answer.
  */
 export const AUTO_MOVIE_AUTHORING_REACHABILITY: readonly IAutoMovieAuthoringReachabilityRow[] =
   Object.freeze(
@@ -545,7 +526,7 @@ const blank = (value: string | null): boolean =>
  * the matrix can refuse the whole answer rather than publish a route an author
  * would have to complete by guessing.
  *
- * @evidence requirements/product/authorability.md#product-discoverable-control Refuses to claim a capability whose owner, serializer, consumer, or route the author could not find, and refuses an absent capability presented as a blank path.
+ * @evidence requirements/product/authorability.md#product-discoverable-control Refuses to claim a capability whose owner, input, consumer, or route the author could not find, and refuses an absent capability presented as a blank path.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Diagnoses blank supported fields, duplicated kind and capability addresses, and inapplicable rows that also claim a route.
  */
 export const inspectAutoMovieAuthoringReachability = (
@@ -583,7 +564,7 @@ export const inspectAutoMovieAuthoringReachability = (
     if (row.inapplicableReason === null) {
       for (const [name, value] of [
         ["owner", row.owner],
-        ["serializer", row.serializer],
+        ["input", row.input],
         ["consumer", row.consumer],
         ["route", row.route],
       ] as const)
@@ -602,7 +583,7 @@ export const inspectAutoMovieAuthoringReachability = (
       if (
         row.choices !== null ||
         row.owner !== null ||
-        row.serializer !== null ||
+        row.input !== null ||
         row.consumer !== null ||
         row.route !== null
       )

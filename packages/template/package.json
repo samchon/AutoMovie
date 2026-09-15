@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@automovie/evidence": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "koffi": "^3.2.1",
     "yaml": "^2.9.0"
   },
@@ -55,7 +56,6 @@
     "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
     "@automovie/human": "workspace:^",
-    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/mcp": "workspace:^",
     "@automovie/production": "workspace:^",
