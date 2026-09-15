@@ -7,7 +7,6 @@ import type { Plugin } from "vite";
 import { isViewerWatchOutput } from "./viewerWatchOptions";
 
 const GENERATION_QUERY = "automovie-source-generation";
-const OUTPUT_PREFIX = "node_modules/.cache/automovie/source-preview/";
 
 /** Serve only the JavaScript emitted by one successful source compilation. */
 export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
@@ -35,18 +34,14 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
     return relative;
   };
   const compilerModule = (file: string): boolean =>
-    (/\.[cm]?[jt]sx?$/.test(file) && !/\.d\.[cm]?ts$/.test(file)) ||
-    /\.json$/.test(file);
+    /\.[cm]?[jt]sx?$/.test(file) && !/\.d\.[cm]?ts$/.test(file);
   const sourceInput = (file: string): boolean => {
     const relative = relativeSource(file);
     return (
       relative !== undefined &&
       !isViewerWatchOutput(root, file) &&
-      (/^(src|docs|assets|public|scripts|viewer|vendor|automovie)\//.test(
-        relative,
-      ) ||
-        /\.[cm]?[jt]sx?$/.test(relative) ||
-        /^[^/]+\.(?:json|ya?ml)$/.test(relative) ||
+      (/^(src|docs|public)\//.test(relative) ||
+        relative === "package.json" ||
         importedInputs.has(relative))
     );
   };
@@ -74,7 +69,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
     const code = output.get(key);
     if (code === undefined)
       throw new Error(
-        `ttsc emitted no preview module for ${relative}. Include the actual source in tsconfig.preview.json; declaration-only substitutes cannot supply its runtime.`,
+        `ttsc emitted no preview module for ${relative}. Include the actual source in package.json; declaration-only substitutes cannot supply its runtime.`,
       );
     return code;
   };
@@ -126,7 +121,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
       const parameters = new URLSearchParams(query);
       if (
         relative === undefined ||
-        relative === "viewer/src/sourcePreviewClient.js" ||
+        relative === "src/viewer/sourcePreviewClient.ts" ||
         parameters.has("raw") ||
         parameters.has("url")
       )
@@ -145,8 +140,8 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         const started = generation;
         const result = await new Promise<ITtscCompilerResult>((resolve) => {
           const worker = new Worker(
-            path.join(root, "scripts/compileSourcePreview.mjs"),
-            { workerData: { root } },
+            new URL("./compileSourcePreview.ts", import.meta.url),
+            { workerData: { root }, execArgv: [] },
           );
           worker.once("message", resolve);
           worker.once("error", (error) =>
@@ -175,30 +170,15 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
             if (typeof diagnostic.file === "string")
               rememberInput(path.resolve(root, diagnostic.file));
         if (result.type === "success") {
-          const entries = Object.entries(result.output);
-          if (
-            result.output[`${OUTPUT_PREFIX}viewer/src/preview.js`] !==
-              undefined &&
-            entries.every(([file]) => file.startsWith(OUTPUT_PREFIX))
-          ) {
-            importedInputs.clear();
-            for (const [file] of entries)
-              if (file.endsWith(".json"))
-                importedInputs.add(file.slice(OUTPUT_PREFIX.length));
-            output = new Map(
-              entries.map(([file, code]) => [
-                file.slice(OUTPUT_PREFIX.length),
-                code,
-              ]),
-            );
-            state = {
-              ...state,
-              phase: "ready",
-              message:
-                "Current source compiled with ttsc. Production admission is separate.",
-            };
-            return;
-          }
+          importedInputs.clear();
+          output = new Map(Object.entries(result.output));
+          state = {
+            ...state,
+            phase: "ready",
+            message:
+              "Current source compiled with ttsc. Production admission is separate.",
+          };
+          return;
         }
         state = {
           ...state,
@@ -207,9 +187,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
             "Preview source compilation refused. Previous output is not current.\n" +
             (result.type === "failure"
               ? JSON.stringify(result.diagnostics, null, 2)
-              : result.type === "exception"
-                ? JSON.stringify(result.error, null, 2)
-                : "Keep the rootDir and outDir layout declared by tsconfig.preview.json."),
+              : JSON.stringify(result.error, null, 2)),
         };
         server.config.logger.error(state.message);
       };
@@ -231,26 +209,13 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
       const changed = (file: string): void => {
         if (sourceInput(file)) invalidate();
       };
-      const added = (file: string): void => {
-        const relative = relativeSource(file);
-        // A missing data import has no browser module yet. Its creation can
-        // recover an already refused compilation without disrupting a view.
-        if (
-          sourceInput(file) ||
-          (state.phase === "error" &&
-            relative !== undefined &&
-            /\.(?:json|ya?ml)$/.test(relative) &&
-            !isViewerWatchOutput(root, file))
-        )
-          invalidate();
-      };
-      server.watcher.on("add", added);
+      server.watcher.on("add", changed);
       server.watcher.on("change", changed);
       server.watcher.on("unlink", changed);
       server.httpServer?.once("close", () => {
         closed = true;
         clearTimeout(timer);
-        server.watcher.off("add", added);
+        server.watcher.off("add", changed);
         server.watcher.off("change", changed);
         server.watcher.off("unlink", changed);
         // A worker already inside the native compiler finishes normally.
@@ -281,7 +246,7 @@ export const sourcePreviewCompilerPlugin = (root: string): Plugin => {
         response.setHeader("Cache-Control", "no-store");
         response.end(JSON.stringify(state));
       });
-      changed(path.join(root, "viewer/preview.ts"));
+      invalidate();
     },
   };
 };
