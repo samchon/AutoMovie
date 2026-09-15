@@ -1,5 +1,7 @@
 # English obligations
 
+Apply the mechanical-specification boundary in `obligations/core/defaults.md` when comparing language patterns; these language-specific accounts do not override it.
+
 ## Population register and frame account {#english-population-register-frame-account}
 
 ```contract-rule

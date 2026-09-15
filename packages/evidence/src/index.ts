@@ -30,3 +30,4 @@ export * from "./walkAutoMovieProjectPopulationFiles";
 export { evidence } from "@ttsc/evidence";
 export * from "./createAutoMovieSourceRealizationReferences";
 export * from "./assertAutoMovieProductionMaintenanceComplete";
+export * from "./validateAutoMovieFinalScreenplayPopulation";

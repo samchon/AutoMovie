@@ -2,13 +2,21 @@ import { TestValidator } from "@nestia/e2e";
 import {
   type IAutoMovieMaintenanceDirectoryIO,
   assertAutoMovieMaintenanceMarkdownInventory,
+  readAutoMovieDeliveryMaintenanceMarkdownPaths,
   readAutoMovieMaintenanceMarkdownPaths,
 } from "automovie";
 import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
-/** A directory-only walk rejects aliases and closes added/removed siblings. */
+/**
+ * A directory-only walk rejects aliases and closes added/removed siblings.
+ *
+ * Scenarios:
+ * 1. Nested, missing, and non-Markdown entries determine the exact input set.
+ * 2. Changed inventories, aliases, escapes, and failed observations refuse.
+ * 3. Delivery maintenance includes final screenplays at both observation points.
+ */
 export const test_cli_maintenance_markdown_inventory = (): void => {
   const root = {
     path: path.resolve("maintenance-project"),
@@ -134,6 +142,34 @@ export const test_cli_maintenance_markdown_inventory = (): void => {
           throw new Error("denied");
         },
       }),
+    ),
+  );
+  TestValidator.equals(
+    "absent delivery populations are empty",
+    readAutoMovieDeliveryMaintenanceMarkdownPaths(root, io),
+    [],
+  );
+  for (const layer of ["scripts", "screenplays", "final/screenplays"])
+    entries.set(path.join(root.path, "docs", layer), [
+      { name: "index.md", kind: "file" },
+    ]);
+  const delivery = readAutoMovieDeliveryMaintenanceMarkdownPaths(root, io);
+  TestValidator.equals("all delivery passes participate", delivery, [
+    "docs/scripts/index.md",
+    "docs/screenplays/index.md",
+    "docs/final/screenplays/index.md",
+  ]);
+  entries.set(path.join(root.path, "docs/final/screenplays"), [
+    { name: "index.md", kind: "file" },
+    { name: "new.md", kind: "file" },
+  ]);
+  TestValidator.predicate(
+    "final sibling cannot appear between plan and publication",
+    throwsError(() =>
+      assertAutoMovieMaintenanceMarkdownInventory(
+        delivery,
+        readAutoMovieDeliveryMaintenanceMarkdownPaths(root, io),
+      ),
     ),
   );
 };

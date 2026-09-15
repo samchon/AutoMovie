@@ -16,8 +16,8 @@ Sources: [Warhol on how instalment publication alters attention, interpretation,
 
 ## Script boundary {#script-boundary}
 
-Across the complete script population, settle every physical progression and consequential exchange required for screenplay. The population names the operative subjects and parts, inherited and terminal physical relations, required paths or bounded magnitudes, contact and support order, transfer or obstruction, action and reaction, and observable result wherever the event depends on them. It leaves final audience language, visual and aural selection, camera and lighting grammar, editorial mapping, exact shot-owned time, representation construction, and source interpolation to the contracts that own them.
+Across the complete script population, allocate every inherited event's physical progression and consequential exchange to its executable unit or coordinated units. Their union covers the complete treatment without leaving a physical or conversational gap between owners. `principles/story/scripts.md#executable-progression` owns each unit's blocking precision; screenplay owns audience presentation and source owns shooting implementation.
 
-Review question: could a screenplay author refine the complete script population without inventing an actor, affected part, physical relation, contact, order, bounded magnitude, reaction, or result, and which script sentence would have to move downward because it chooses final presentation or implementation?
+Review question: which inherited event or cross-unit progression has no complete executable owner, and which script decision instead belongs to downstream presentation or implementation?
 
 Sources: [Plan-and-Write on separating planning from realization](https://doi.org/10.1609/aaai.v33i01.33017378); [NASA systems engineering handbook on allocation and traceability](https://www.nasa.gov/reference/systems-engineering-handbook/)

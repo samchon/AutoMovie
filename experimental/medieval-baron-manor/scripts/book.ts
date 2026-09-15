@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 interface IBookCommand {
   layer: AutoMovieAuthoredDocumentLayer;
   output: string | undefined;
+  pass: "construction" | "final";
   title: string;
 }
 
@@ -31,6 +32,7 @@ export const bindProductionBook = async (
     root,
     title: command.title,
     layer: command.layer,
+    pass: command.pass,
     output: command.output,
   }).bind();
 };
@@ -40,7 +42,12 @@ const parseBookCommand = (args: readonly string[]): IBookCommand => {
   const values = new Map<string, string>();
   for (let index = 0; index < args.length; index += 1) {
     const option = args[index]!;
-    if (option !== "--layer" && option !== "--output" && option !== "--title")
+    if (
+      option !== "--layer" &&
+      option !== "--output" &&
+      option !== "--pass" &&
+      option !== "--title"
+    )
       throw new Error(`Unknown book option: ${option}`);
     if (values.has(option))
       throw new Error(`Book option ${option} was provided more than once.`);
@@ -53,11 +60,18 @@ const parseBookCommand = (args: readonly string[]): IBookCommand => {
   const title = values.get("--title");
   if (title === undefined)
     throw new Error("Book binding requires an explicit --title.");
+  const layer = (values.get("--layer") ??
+    "screenplays") as AutoMovieAuthoredDocumentLayer;
+  const pass =
+    values.get("--pass") ??
+    (layer === "screenplays" ? "final" : "construction");
+  if (pass !== "construction" && pass !== "final")
+    throw new Error("Book option --pass must be construction or final.");
   return {
     title,
-    layer: (values.get("--layer") ??
-      "screenplays") as AutoMovieAuthoredDocumentLayer,
+    layer,
     output: values.get("--output"),
+    pass,
   };
 };
 

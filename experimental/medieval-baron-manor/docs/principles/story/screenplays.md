@@ -1,6 +1,6 @@
 # Screenplay principles
 
-Construction screenplay files are the complete human-readable audiovisual content contract. They preserve script and treatment ancestry while choosing exactly what the audience sees, reads, and hears. Final screenplay naturalness later revises expression without changing any decision owned here.
+Construction screenplay files are the complete human-readable audiovisual content contract. They preserve script and treatment ancestry while choosing exactly what the audience sees, reads, and hears. Final screenplay naturalness later revises eligible audience language without changing any decision or mechanical description owned here.
 
 ## Screenplay blocks {#screenplay-blocks}
 
@@ -19,6 +19,16 @@ Every screenplay H2, H3, and H4 expresses present audience-visible action, on-sc
 Review question: what would the audience see, read, or hear for every sentence in the unit?
 
 Sources: [Academy Nicholl screenwriting resources](https://www.oscars.org/nicholl/screenwriting-resources); [BBC Writersroom script library and format examples](https://www.bbc.co.uk/writersroom/scripts/)
+
+## Mechanical audiovisual description {#mechanical-audiovisual-description}
+
+Every external appearance, spatial relation, physical state, action, contact, material response, and transition required for equivalent realization is mechanically explicit at the narrowest screenplay unit that owns it. Name the stable subject and affected part, observable entry condition, direction or bounded relation, ordered intermediate change where it matters, and observable terminal result; retain exact values and production units wherever magnitude or timing changes what the audience receives. A mood adjective, ornamental image, plausible stock gesture, or natural-sounding paraphrase never substitutes for a required shape, surface, placement, motion, or state.
+
+This item owns audience-facing physical and audiovisual specificity inherited from settings, treatment, and script. Design owns reusable representation and behavior, screenplay timing owns exact audience time, and shots own camera, lighting, coordinate realization, and source calls. Final naturalness must copy these mechanical clauses without softening, embellishing, condensing, or translating them into literary prose; a defective clause returns to construction.
+
+Review question: could independent shot authors recover the same visible subjects, parts, relations, ordered physical changes, material behavior, and terminal state without choosing a missing fact or mistaking prose atmosphere for geometry or action?
+
+Sources: [BBC screenplay format](https://downloads.bbc.co.uk/writersroom/scripts/screenplay.pdf); [NASA systems engineering handbook on verifiable requirements and traceability](https://www.nasa.gov/reference/systems-engineering-handbook/)
 
 ## Audiovisual voice {#audiovisual-voice}
 
@@ -94,7 +104,7 @@ The screenplay selects only visible, written, audible, and silent details that c
 
 Review question: what work does each selected audiovisual detail perform, and which omitted detail would leave a real gap rather than useful audience inference?
 
-This item owns which final perceptible facts the audience receives. Shot source owns how local composition presents them, and film source owns their global mapping.
+This item owns which final perceptible facts the audience receives. Mechanical audiovisual description owns the exact externally realized form and state of selected facts, shot source owns how local composition presents them, and film source owns their global mapping.
 
 Sources: [Oregon State University on setting as an active narrative element](https://liberalarts.oregonstate.edu/wlf/what-setting); [Ingarden on indeterminacy and concretization](https://plato.stanford.edu/entries/ingarden/); [Iser on gaps and reader participation](https://doi.org/10.2307/468316)
 

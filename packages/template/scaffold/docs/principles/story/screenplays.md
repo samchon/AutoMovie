@@ -1,6 +1,6 @@
 # Screenplay principles
 
-Construction screenplay files are the complete human-readable audiovisual content contract. They preserve script and treatment ancestry while choosing exactly what the audience sees, reads, and hears. Final screenplay naturalness later revises expression without changing any decision owned here.
+Construction screenplay files are the complete human-readable audiovisual content contract. They preserve script and treatment ancestry while choosing exactly what the audience sees, reads, and hears. Final screenplay naturalness later revises eligible audience language without changing any decision or mechanical description owned here.
 
 ## Screenplay blocks {#screenplay-blocks}
 

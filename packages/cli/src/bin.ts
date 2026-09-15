@@ -41,7 +41,7 @@ import {
 } from "./publishAutoMovieProjectMaintenance";
 import {
   assertAutoMovieMaintenanceMarkdownInventory,
-  readAutoMovieMaintenanceMarkdownPaths,
+  readAutoMovieDeliveryMaintenanceMarkdownPaths,
 } from "./readAutoMovieMaintenanceMarkdownPaths";
 import { renderAutoMovieScaffoldNextSteps } from "./scaffoldNextSteps";
 import { synchronizeAutoMovieReferenceClients } from "./synchronizeAutoMovieReferenceClients";
@@ -661,13 +661,7 @@ export const run = (argv: readonly string[]): number => {
       if (command.command === "toc") {
         const root = process.cwd();
         const physical = recoverProjectMaintenance(root, "toc", !command.check);
-        const paths = [
-          ...readAutoMovieMaintenanceMarkdownPaths(physical, "docs/scripts"),
-          ...readAutoMovieMaintenanceMarkdownPaths(
-            physical,
-            "docs/screenplays",
-          ),
-        ];
+        const paths = readAutoMovieDeliveryMaintenanceMarkdownPaths(physical);
         const observation = observeAutoMovieMaintenanceFiles({
           root: physical,
           paths,
@@ -678,13 +672,10 @@ export const run = (argv: readonly string[]): number => {
         });
         if (plan.diagnostics.length !== 0)
           throw new Error(plan.diagnostics.join("\n"));
-        assertAutoMovieMaintenanceMarkdownInventory(paths, [
-          ...readAutoMovieMaintenanceMarkdownPaths(physical, "docs/scripts"),
-          ...readAutoMovieMaintenanceMarkdownPaths(
-            physical,
-            "docs/screenplays",
-          ),
-        ]);
+        assertAutoMovieMaintenanceMarkdownInventory(
+          paths,
+          readAutoMovieDeliveryMaintenanceMarkdownPaths(physical),
+        );
         const current = assertAutoMovieMaintenanceObservation(observation);
         const writes = planAutoMovieDeliveryTocPublication({
           current: observation.sources,

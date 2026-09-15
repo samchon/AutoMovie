@@ -2,6 +2,8 @@
 
 These questions become meaningful only after one selected authored population is complete. Counts locate literal passages and never decide merit, provenance, or authorship.
 
+Compare rhetorical choices, not the regularity required by mechanical specification. Stable subject and part names, units, coordinate conventions, state records, and repeated physical clauses retain their exact form. Never introduce synonyms, ornamental variation, or sentence rhythm that weakens reproducibility. Final audience-language revision has its separate per-unit naturalness targets.
+
 ## Recurrent frame distribution {#recurrent-frame-distribution}
 
 ```contract-rule

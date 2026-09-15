@@ -46,6 +46,7 @@ import {
   createAutoMovieScreenplayNaturalnessReferences,
   selectAutoMovieAuthoredContractFiles,
 } from "./selectAutoMovieAuthoredContractFiles";
+import { validateAutoMovieFinalScreenplayPopulation } from "./validateAutoMovieFinalScreenplayPopulation";
 import {
   type IAutoMovieLocalContractProjection,
   projectAutoMovieLocalContractClaims,
@@ -84,6 +85,7 @@ type Stage = AutoMovieEvidenceStage;
 /**
  * Independent audience-language revision stages for a finished film script.
  *
+ * @author Samchon
  * @evidence requirements/production-evidence/input.md#agent-production-evidence-visible-selection Makes final screenplay revision visible independently from construction.
  * @evidence specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state Defines the closed screenplay naturalness stage map.
  */
@@ -2817,85 +2819,36 @@ const validateHosts = (graph: IProductionGraph): void => {
     titles.set(name, layerTitles);
   }
 
-  const finalStage = revisionStage(graph);
   const finalRoot = path.join(graph.location, DOCS, "final", "screenplays");
-  const finalResidents = walkProjectFiles(graph, finalRoot, ".md");
-  const selectedFinalFiles = finalScreenplayFiles(graph);
-  if (!isActive(finalStage) && finalResidents.length !== 0)
-    throw new Error(
-      `screenplayNaturalness is disabled but governed hosts remain: ${finalResidents.map((file) => posix(path.relative(graph.location, file))).join(", ")}.`,
-    );
-  if (isActive(finalStage) && selectedFinalFiles.length === 0)
-    throw new Error(
-      `screenplayNaturalness cannot enter ${finalStage} without a final screenplay host.`,
-    );
-  if (isActive(finalStage)) {
-    const draftIdentities = identities.get("screenplays")!;
-    const draftTitles = titles.get("screenplays")!;
-    const finalRelative = selectedFinalFiles.map((file) =>
+  validateAutoMovieFinalScreenplayPopulation({
+    stage: revisionStage(graph),
+    residents: walkProjectFiles(graph, finalRoot, ".md").map((file) =>
+      posix(path.relative(graph.location, file)),
+    ),
+    files: finalScreenplayFiles(graph).map((file) =>
       posix(path.relative(finalRoot, file)),
-    );
-    const draftRelative = [...draftIdentities.keys()];
-    if (
-      finalRelative.length !== draftRelative.length ||
-      finalRelative.some((file, index) => file !== draftRelative[index])
-    )
-      throw new Error(
-        `final screenplay filenames must exactly preserve construction screenplays; received [${finalRelative.join(", ")}], expected [${draftRelative.join(", ")}].`,
-      );
-    const seen = new Set<string>();
-    for (const file of selectedFinalFiles) {
-      const relative = posix(path.relative(finalRoot, file));
-      const source = fs.readFileSync(file, "utf8");
-      if (
-        finalStage === "draft" &&
-        parseAutoMovieEvidenceSyntax({
-          path: posix(path.relative(graph.location, file)),
-          source,
-        }).length !== 0
-      )
-        throw new Error(
-          `${posix(path.relative(graph.location, file))} is draft and must be completed before evidence tags are authored.`,
-        );
-      if (narrativeH1(file) !== draftTitles.get(relative))
-        throw new Error(
-          `final/screenplays/${relative} must exactly preserve the construction screenplay H1 title.`,
-        );
-      const received = markdownIdentities(file, MARKDOWN.screenplays.headings);
-      const expected = draftIdentities.get(relative)!;
-      const signature = (items: readonly IHeadingIdentity[]): string[] =>
-        items.map((item) => `H${item.depth}:${item.lineage}`);
-      const receivedSignature = signature(received);
-      const expectedSignature = signature(expected);
-      if (
-        receivedSignature.length !== expectedSignature.length ||
-        receivedSignature.some(
-          (identity, index) => identity !== expectedSignature[index],
-        )
-      )
-        throw new Error(
-          `final/screenplays/${relative} must exactly preserve construction screenplay identity, nesting, and order; received [${receivedSignature.join(", ")}], expected [${expectedSignature.join(", ")}].`,
-        );
-      for (const unit of received) {
-        if (seen.has(unit.anchor))
-          throw new Error(
-            `final/screenplays repeats #${unit.anchor}; identities are unique across the final layer.`,
-          );
-        seen.add(unit.anchor);
-      }
-    }
-    const groups = new Set(finalRelative.map((file) => file.split("/")[0]!));
-    for (const group of groups)
-      if (
-        narrativeH1(path.join(finalRoot, group, "index.md")) !==
-        narrativeH1(
-          path.join(graph.location, DOCS, "screenplays", group, "index.md"),
-        )
-      )
-        throw new Error(
-          `final/screenplays/${group}/index.md must exactly preserve the construction screenplay delivery-group H1 title.`,
-        );
-  }
+    ),
+    construction: new Map(
+      [...(identities.get("screenplays") ?? [])].map(([file, units]) => [
+        file,
+        { title: titles.get("screenplays")!.get(file)!, units, source: "" },
+      ]),
+    ),
+    readFinal: (relative) => {
+      const file = path.join(finalRoot, relative);
+      return {
+        source: fs.readFileSync(file, "utf8"),
+        title: narrativeH1(file),
+        units: markdownIdentities(file, MARKDOWN.screenplays.headings),
+      };
+    },
+    readGroupTitles: (group) => ({
+      final: narrativeH1(path.join(finalRoot, group, "index.md")),
+      construction: narrativeH1(
+        path.join(graph.location, DOCS, "screenplays", group, "index.md"),
+      ),
+    }),
+  });
 
   assertSourceTreeIsClosed(graph);
 

@@ -117,6 +117,20 @@ export const readAutoMovieMaintenanceMarkdownPaths = (
 };
 
 /**
+ * Close delivery maintenance over scripts and both screenplay passes.
+ *
+ * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Binds delivery publication to every participating Markdown population.
+ * @evidence specifications/execution-and-recovery/contract-baseline.md#execution-contract-baseline-identity Uses the same complete input inventory during planning and admission.
+ */
+export const readAutoMovieDeliveryMaintenanceMarkdownPaths = (
+  root: IScaffoldPhysicalDirectory,
+  io: IAutoMovieMaintenanceDirectoryIO = directoryIO,
+): string[] =>
+  ["docs/scripts", "docs/screenplays", "docs/final/screenplays"].flatMap(
+    (relative) => readAutoMovieMaintenanceMarkdownPaths(root, relative, io),
+  );
+
+/**
  * Recheck the complete enumerated population, including newly added siblings.
  *
  * @evidence requirements/operations-and-recovery/contract-baseline.md#operations-contract-baseline-identity Keeps a maintenance plan bound to the complete input population it observed.

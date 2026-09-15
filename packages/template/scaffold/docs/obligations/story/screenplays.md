@@ -4,11 +4,11 @@ Duties the complete screenplay H2 owner population satisfies across its handoff 
 
 ## Realization-ready contract {#realization-ready-contract}
 
-Across the complete screenplay population, every scene supplies the dramatic and audiovisual requirements that local shot and audience-facing edit tracks must jointly satisfy. External appearance and action remain mechanically exact: selected subjects and parts, observable states and spatial relations, ordered contacts and changes, material behavior, terminal results, production units, and render-critical timing are explicit wherever equivalent realization depends on them. The screenplay leaves engine calls, geometry construction, reusable interpolation, camera and lighting solution, and editorial mapping to their distinct source contracts. A source realizes its assigned portion but does not invent missing story action, physical fact, caption text, dialogue, sound, or audience effect.
+Across the complete construction screenplay population, allocate every required dramatic and audiovisual result to the scene or coordinated scenes that supply it. Their union must leave no unowned result for shot or edit authors to invent. Per-unit mechanical precision belongs to `principles/story/screenplays.md#mechanical-audiovisual-description`; this obligation owns complete coverage across the handoff, including results realized jointly by several scenes.
 
 Review question: could independent shot and edit implementers build one equivalent blocking pass from the complete screenplay without making different narrative or audience-content decisions?
 
-This obligation owns the handoff from final screenplay to realization. The common substantive-completion principle owns completion of every addressed unit, and shot and film-source obligations own implementation boundaries across their source populations.
+This obligation owns construction's realization coverage. The revision-handoff obligation below carries that coverage through reviewed final to source, and shot and film-source obligations own implementation boundaries across their source populations.
 
 Sources: [NASA systems engineering handbook on verification-ready requirements](https://www.nasa.gov/reference/systems-engineering-handbook/); [Academy Digital Source Master project](https://www.oscars.org/science-technology/sci-tech-projects/academy-digital-source-master)
 

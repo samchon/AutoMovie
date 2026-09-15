@@ -52,7 +52,7 @@ In every H2, H3, or H4 where speech or silence changes a choice, knowledge, powe
 
 Review question: which spoken, withheld, interrupted, or nonverbal exchange changes the scene, and is its consequence executable from the script?
 
-This item owns the tactic and result of exchange. `executable-progression` owns its place in the action sequence, `knowledge-state` owns information transfer, and screenplay dialogue voice owns final audience wording and performance texture.
+This item owns the tactic and result of exchange. `executable-progression` owns its place in the action sequence, `knowledge-state` owns information transfer, screenplay dialogue and sound identity owns audible identity, and final naturalness owns the eligible language realization.
 
 Sources: [Center for Fiction on dialogue as narrative action](https://centerforfiction.org/writing-tools/tips-for-writing-dialogue/); [Cambridge Companion to Narrative on dialogue functions](https://www.cambridge.org/core/books/abs/cambridge-companion-to-narrative/dialogue/DA260BBCE7DBBA9BCB4196CE7F35ABDC)
 
