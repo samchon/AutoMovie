@@ -1,5 +1,7 @@
 # Human face study observations
 
+Current working documents now include numerical surface hair for all nineteen subjects and explicit resting-skin profiles for Alan Rickman, Maggie Smith, Michael Gambon and Miriam Margolyes. The source basis and reference records are retained. The first subject's time-capped facial parameters are unchanged. The artifact hashes and dated face-only observations below are historical, not identities or acceptance records for these new working documents. Current replay, hair and skin render verification must be recorded separately before this revision is shipped. All nineteen likenesses remain unaccepted.
+
 All nineteen subject documents are numerical studies, not accepted photographic likenesses. The first subject's fitting effort stopped after approximately 57 minutes within the user's one-hour upper bound. The remaining eighteen were each adjusted through the actual face editor and saved as JSON, GLB and glTF. The files in this directory retain their numerical construction and performance inputs. No original photograph, detector or fitting runtime is required to construct these documents.
 
 The per-person `Replay document bytes` below identify the original saved artifacts used for the recorded captures, not the current repository file bytes. Repository formatting added one final LF to all nineteen JSON files; the first subject also retains empty `controls`, `detail` and left/right `asymmetry` objects that do not alter its resolved recipe. On 2026-09-13, all nineteen current documents were built and exported twice under Node 22.23.2. Each pair reproduced the same model JSON and GLB bytes, and all model JSON digests matched the historical artifacts below. Independently decoded historical/current GLBs had exact positions, indices, UVs, materials and metadata; sixteen GLBs were byte-identical, while Alan, Michael and Park each differed in one same-sign Float32 normal component by one ULP. The first subject's frozen model and GLB remained byte-identical. This replay observation does not accept likeness or replace the capture-specific records.
@@ -16,9 +18,75 @@ Construction, document replay and glTF admission passed for the artifacts named 
 
 [Replay document](generated-black-boy-01.json) · [Original selection and quality](inputs.md#input-generated-black-boy-01). Selected original: `generated-black-boy-01_age-15_front-smile.png`.
 
+2026-09-15 dental update: adjust four individual upper-crown heights and the two central crowns’ proximal incisal contours, and author a separate lower row through the existing mandibular component. The previous numerical basis, reference, expression, appearance, hair and every non-dental part are retained. Two whole source builds reproduce identical models and 7,630,744-byte GLBs. The cached component contrast differs from canonical model JSON only in part insertion order; its GLB is byte-identical.
+
+The main agent directly inspected all ten observed-pose views below and three angles each for neutral, lip-only and 10-degree jaw states on AMD Radeon 8060S/ANGLE. Central incisal exposure and the previously absent lower-tooth strip are closer to the source. Flat-looking enamel, dark cervical gaps without gingiva, lateral crown contours and the existing orbital, nasal, skin and hair discrepancies remain. This is a partial dental improvement, not accepted likeness.
+
+Neutral anterior-enclosure sampling finds no uncovered or protruding tooth points among 65,416 vertices, triangle centres and edge midpoints. Opposing-arch depth-envelope samples find no overlap in observed, neutral, lip-only or 10-degree jaw states. The upper row stays fixed; lower enamel remains fixed under lip-only movement and follows the authored hinge under jaw rotation. These finite samples are not complete triangle intersection or physiological occlusion certificates.
+
+Before the reference-continuation change, a 25-degree jaw with lipPart 12 failed cervical construction in both the preceding public document and the dental revision. The isolated facial-performance collar reached Y=-113.820 mm while the upper cervical section remained at Y=-107 mm. This was a shared assembly failure rather than a dental regression.
+
+The subsequent 2026-09-15 source update constructs cranial and cervical continuation in the reference frame, then poses only its appended vertices. The observed artifact remains exact and its authored neck is unchanged. Two source builds each at 12.5 and 25 degrees reproduce exact models and GLBs. The main agent directly inspected all ten GPU views of each state, including both profiles, clay and source-pose framing. The shared lips remain connected; the maximum still has a deep submental fold, an empty-looking oral cavity and simplified enamel. These are construction and continuity observations, not physiological or likeness acceptance.
+
+The 12.5-degree GLB has 7,630,744 bytes and SHA-256 `0f9a3b3b53d8bd6d0cad9aa88239477bacbbdc78f9deccecfe251ec0e7681684`; the 25-degree GLB has 7,630,740 bytes and SHA-256 `ca8d0f8ff7c87dab2b0cf8d2f21cf5e2809758966a4bcdc3c4c1fa965d4b60bf`. Their capture directories are `.shots/human-2469/subject-jaw-continuation-{half,maximum}/generated-black-boy-01`. The actual editor's calibrated GPU check verifies midpoint/endpoint edits, 25.1-degree refusal with document retention, exact undo/redo and JSON save, and a downloaded maximum GLB identical to that source artifact. Ten related native unit scenarios pass; this is not the whole change's Self-Review or CI gate.
+
+Current dental-update artifact identities:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Numerical document bytes | `1cdacc384277be529691a14564bbf97185ed29b1aec3e35c856029bc4c915486` |
+| Node model JSON | `283a8c93dc1660c421d19b4c97dae82db4a76ef2e0fc6c75d4e582eb0068ddda` |
+| Rendered GLB | `20244813a33045ba9ed68da0f61b6cd435826bdb9cdc300e4108f5a9289650a1` |
+
+Local current capture directory: `.shots/human-2469/subject-dental-display-incisal-source/generated-black-boy-01`. Likeness remains **unaccepted**.
+
+| Current inspected view | File SHA-256 |
+| --- | --- |
+| front | `f1e5f1330ffbe5c23e017f58668c02f5b8adf60daafce1295f189b9db320eef0` |
+| left-oblique | `bfdcfe56fe1e9128d4e7e13b619cea0f8db06a4f85cd41ac927dc9192843a43a` |
+| right-oblique | `7f92a788770cade71110d6f0e5f851730bf5b5979722c98d5d2b82a7e6b5a0ed` |
+| left-profile | `7d6ec3b501444cea321e2a7b7739857e6354e8bab8d86fe1d082069e73b638e7` |
+| right-profile | `89035ccd95ea3289b26cb354219c473afbe79bb440553ad71709731cf2617c6f` |
+| back | `e2322d952a61781645e74dc304f362878a2d86fff4713201f8fc404dce978f49` |
+| clay | `40d9af016e23aa6ee993f57ad014557200fba885efa6a22986bda424e3849180` |
+| clay-oblique | `a4d621cb2fbd035c4e000ef0a2a4510b7c472a48026293893c928929eab2e0e1` |
+| reference-close | `0a317b80e73ad8ab53037d44e6e5c242f3ce105a49dafb30d3ce4c743fb9320e` |
+| reference | `de6cdf1aed9edfca1ae79e1a1c287576f4084f22a94c145a2ab21487c19e1069` |
+
+The following hair-only and original face-only records are historical.
+
 Direct source/render comparison: excessive white-eye exposure, heavy regular brows and overly even visible tooth row. Preserve observed facial proportions; reduce identity lid opening and brow fibre mass, move lateral crowns posteriorly and lift the fixed upper row.
 
 Front and reference show a broad smiling mouth, individually constructed upper crowns and dark iris pigmentation. Both obliques and clay still expose regular lower-lid shelves and a simplified angular alar/columellar transition. Both profiles and back show the shared inferred cranial and neck form, including posterior lobulation. The final exported face was inspected after the editor shadow-bias correction; absence of the prior WebGL shadow acne does not make the anatomy or likeness accepted.
+
+2026-09-14 hair update: replace the large coiled strips with 1,024 rooted surface patches and a saved curled alpha/normal profile. Seeded tangent directions and centred footprints reduce the large crown gap visible in the preceding uniform-direction trial. Two whole source builds produce identical models and 7,461,304-byte GLBs. Every non-hair part, the facial appearance, expression, basis and reference remain unchanged from the preceding brow-depth5 document. The changed fixture is a partial hair improvement, not a new likeness acceptance.
+
+The main agent directly opened all ten views listed below from the actual exported GLB on AMD Radeon 8060S/ANGLE. Front/reference have a fuller hair envelope but retain an unnaturally sharp fringe; obliques, profiles and back still show broad patches rather than the photographed tight curls. Clay retains the existing orbital, nasal and lip discrepancies. A dark upper-hair occupancy comparison gives IoU 0.838/0.852/0.849 for source brightness thresholds 60/70/80, excluding eyebrows and lower temples. These are occupancy measurements, not overall likeness scores. At 100,352 Float32-equivalent hair vertices and triangle centroids, radial head-clearance samples are outside the skin with a minimum of 0.757 mm. Finite sampling is not a complete triangle collision certificate.
+
+Earlier hair-update artifact identities:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Numerical document bytes | `e8732d52650bf16e816fbf5a04261e347e4ba8fc2188f00fb636a3ed6358f398` |
+| Node model JSON | `19c04ab4664f79bbe03fc6bb9ded39c721d78b2ef7990828016fdc3be6443481` |
+| Rendered GLB | `c28a1db999f9902493ca5a693a0ef85bfef88f22e5ac97142e19e4cb34978c96` |
+
+Earlier hair-only capture directory: `.shots/human-2469/subject-hair-curl-direction-source/generated-black-boy-01`. All ten captures are present and directly inspected; likeness remains **unaccepted**.
+
+| Earlier inspected view | File SHA-256 |
+| --- | --- |
+| back | `e2322d952a61781645e74dc304f362878a2d86fff4713201f8fc404dce978f49` |
+| clay-oblique | `d024514135b25e01ae8159013967e41280a3c2106f3c0e7c63704737022424e6` |
+| clay | `062159cf0867e59a265db33f88a8e4906e4a0af67c200e715bbc2e319c15d1ed` |
+| front | `1cddfdebde5ac5575f040da73badffdfa7f61949e4893bd71ea3c4597b49bc00` |
+| left-oblique | `bb808a1a3eff39e091f2ce1db8a5192234b9be74275a369e2c3192b402547258` |
+| left-profile | `b99856308ef78540702c0641e9d49a9ee229f1846810d7a820cf254e03f43b2a` |
+| reference-close | `04c5a47f75be08cc88669e779c5418f506426a4a898992b564c55d8ad30aa7fb` |
+| reference | `63ea1a48be9ab0f39ce450ff82485c8be9a3467410063913042da2194627d486` |
+| right-oblique | `10d5a5163af95bbf4e11598e862824065376595c1e120d4feda0ec981d55a9cb` |
+| right-profile | `f8aaff7668b02659936711e8df54c7f35af35c7f6b6157bc5a826681528e537a` |
+
+The following artifact identities and nine-view table record the earlier hair-free study.
 
 Artifact identities:
 
@@ -208,6 +276,14 @@ State: construction admitted; standalone document replay admitted; static glTF a
 
 [Replay document](lee-tae-ri.json) · [Original selection and quality](inputs.md#input-lee-tae-ri). Selected original: `lee-tae-ri_age-31_handsome-trot.jpg`.
 
+2026-09-15 aperture revision: removing the common `eye.openingScale` override of 0.93 restores the unchanged observation recipe's 1.025. Actual projected lid-boundary height divided by the recorded observation changes from right 0.91410 / left 0.89907 to right 1.00009 / left 0.99133; width ratios are right 0.99318 / left 0.99319. These measurements describe aperture, not likeness or certainty about photograph-derived anatomy. The complete observed model and GLB repeat exactly in two independent source builds; basis, reference, caller and all materials remain exact. The observed GLB is 7,012,312 bytes, SHA-256 `b8bf128dab525481946d8850450b252857db9ba4141457c58b06f04127e2b0a6`.
+
+All thirteen observed views and the fresh baseline reference comparison were directly inspected under the same directional light and camera procedure. Neutral, half-blink and full blink were independently built and captured in thirteen views each; front, right profile and clay oblique were directly inspected for each state. The opening narrows at half-blink and the lids meet at full blink in these views. Neutral clears every expression channel, whereas both blink documents retain the observed closed-smile channels. The thick superior orbital hood, sharp nasal base, uniform skin, simplified lip contour and blunt centre-part hair remain unlike the source. Only the aperture improvement is adopted; likeness remains **unaccepted**. Current capture directory: `.shots/human-2469/subject-eye-observation-opening/lee-tae-ri`.
+
+The rebuilt actual editor selects the current document from nineteen built-in choices. Observed, neutral, half-blink and blink each save exact JSON and export byte-identical GLBs against their independent source builds. Undo restores the observed document even though its lip separation is zero. All four editor fronts were directly inspected out of twenty-four captured views, with AMD 8060S hardware rendering and no page errors. This verifies the authored states and export path, not a natural blink trajectory or full likeness. The local editor record is `.shots/human-2469/eye-opening-built-in-lee-tae-ri/receipt.json`; its inherited prose mentions eighteen captures, while its four state entries and six saved angles per state record twenty-four.
+
+The following face-only observations and artifact identities are historical and do not identify the current hair-bearing aperture revision.
+
 Compared directly with the event photograph: broad white eye exposure and smooth exaggerated lip bands dominate the initial reconstruction. Narrow those anatomical bands, soften fibre mass and retain the observed closed smile.
 
 The explicit chin-frame adjustment reaches the final geometry, and front/reference retain a closed smile. Eye shape, lip contour and cheek support remain generalized. Obliques and clay expose the regular orbital bands; profiles and back retain inferred jaw depth and posterior lobes. A numerical chin displacement is an effective control, not proof that the photographed chin has been recovered.
@@ -305,6 +381,24 @@ State: construction admitted; standalone document replay admitted; static glTF a
 
 [Replay document](yoo-seung-ho.json) · [Original selection and quality](inputs.md#input-yoo-seung-ho). Selected original: `yoo-seung-ho_age-22_the-magician.png`.
 
+2026-09-15 fringe revision: the final 96 hair-card guides and their transverse frames now sweep laterally toward hand-observed fringe endpoints. The other 312 cards, every non-hair part, all materials including generated hair textures, identity basis, reference and expression remain exact. Two independent complete source builds and GLB exports are byte-identical. The adopted GLB is 7,217,076 bytes, SHA-256 `d145d95049dd7d4f4f93644aa9ebbce470f831ca40ee754dd9e5ecb9677af7c6`. The other eighteen subject documents remain byte-identical across this adoption.
+
+All thirteen observed views were directly inspected, together with the previous reference comparison, rear view and right profile. The fringe flows sideways instead of ending in vertical spikes, but its uniform clumps, broad crown strips, crown gap and patterned shadows remain artificial. The directional-light view still exposes the unresolved orbital volume, uniform brown skin, simplified nose and mouth. This is a partial hair improvement, not a likeness acceptance. Current capture directory: `.shots/human-2469/subject-fringe-contour-visible/yoo-seung-ho`.
+
+The six hand-observed image columns are a sparse 2D fringe-boundary study, not an anatomical or likeness score. Fitting nominal guide endpoints first left the alpha-tested visible boundary too high. After an 8.5-image-pixel nominal extension, the last-fragment residual is 0.73 to 2.18 pixels in magnitude, but a fractional-pixel translation probe exposes up to 2.10 pixels of sampling sensitivity. A separate lock-body boundary, defined by a four-image-pixel-wide, three-raster-row box at 25 percent occupancy, has residuals of 0.35 to 3.31 pixels and a maximum 0.43-pixel shift error for this candidate. Both measures follow an exact seventeen-raster-row translation exactly. These observed probe results do not establish a universal uncertainty bound; the manual photograph annotation has its own uncertainty. The records retain both measures rather than presenting the unstable fragment residual as subpixel accuracy.
+
+Neutral, half-blink and full blink were independently rebuilt and captured in thirteen views each; front, right profile and clay oblique were directly inspected for each. Their non-hair parts exactly match the corresponding pre-fringe expression, and their hair part exactly matches the observed candidate. The original lip separation remains in the blink documents. The rebuilt actual editor selects the new document from nineteen built-in choices. Observed, neutral, half-blink and blink save exact JSON and export byte-identical GLBs against their independent source builds; undo restores the observed document. Four editor fronts were directly inspected out of twenty-four captured views. AMD 8060S rendering, a measured 16-pixel calibration cube and zero page errors are recorded in `.shots/human-2469/yoo-fringe-built-in/receipt.json`. This verifies these authored states, not natural motion or likeness. The editor paragraph below records the earlier aperture revision.
+
+The following aperture measurements and editor record precede the fringe revision. The eye values remain adopted, but their recorded GLBs do not identify the current groom.
+
+2026-09-15 aperture revision: removing the common `eye.openingScale` override of 0.89 restores the unchanged observation recipe's 1.025. Actual projected lid-boundary height divided by the recorded observation changes from right 0.88727 / left 0.86149 to right 1.00750 / left 0.99810; width ratios are right 0.99199 / left 0.99561. These measurements describe aperture, not likeness or certainty about photograph-derived anatomy. The complete observed model and GLB repeat exactly in two independent source builds; basis, reference, caller and all materials remain exact. The observed GLB is 7,217,076 bytes, SHA-256 `708b2ffd03829ce94fab14ce095869de09267517e8109764b866a7cd8b302eb6`.
+
+All thirteen observed views and the fresh baseline reference comparison were directly inspected under the same directional light and camera procedure. Neutral, half-blink and full blink were independently built and captured in thirteen views each; front, right profile and clay oblique were directly inspected for each state. The opening narrows at half-blink and the lids meet at full blink in these views. Neutral closes the mouth because every expression channel is cleared; the blink documents retain the observed lip separation, so their visible enamel is not a blink-induced mouth change. Heavy orbital and lip bodies, simplified nasal volume, brown uniform skin, regular crowns and the straight striped fringe remain unlike the source. Only the aperture improvement is adopted; likeness remains **unaccepted**. Current capture directory: `.shots/human-2469/subject-eye-observation-opening/yoo-seung-ho`.
+
+The rebuilt actual editor selects the current document from nineteen built-in choices. Observed, neutral, half-blink and blink each save exact JSON and export byte-identical GLBs against their independent source builds. Undo restores the observed document. All four editor fronts were directly inspected out of twenty-four captured views, with AMD 8060S hardware rendering and no page errors. This verifies the authored states and export path, not a natural blink trajectory or full likeness. The local editor record is `.shots/human-2469/eye-opening-built-in-yoo-seung-ho/receipt.json`; its inherited prose mentions eighteen captures, while its four state entries and six saved angles per state record twenty-four.
+
+The following face-only observations and artifact identities are historical and do not identify the current hair-bearing aperture revision.
+
 The source has a narrow partly open mouth with only a small tooth strip; initial replay shows a much larger, uniformly exposed upper row. Reduce current lip separation and reposition the maxillary arch while thinning the vermilion and brow mass.
 
 Front/reference retain slightly parted lips, visible upper enamel and narrowed eyes. Both obliques and clay still show heavy lip and lid bodies, and the profile jaw remains angular. The two profiles and back confirm the actual inferred rear continuation rather than a source-observed shape. The small selected original and fringe limit superior-orbit and fine surface measurements.
@@ -336,6 +430,16 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## alan-rickman {#alan-rickman}
 
 [Replay document](alan-rickman.json) · [Original selection and quality](inputs.md#input-alan-rickman). Selected original: `alan-rickman_age-65_portrait.jpg`.
+
+2026-09-15 aperture revision: the current document removes only the common `eye.openingScale` override of 0.84 and inherits 1.025 from its unchanged observation recipe. Projected actual lid-boundary heights, divided by the independently recorded basis heights, change from right 0.82434 / left 0.80697 to right 1.00290 / left 0.99191. Width ratios remain right 0.98251 / left 1.00400. These are geometric aperture comparisons, not a likeness score or proof that the photograph-derived basis is exact anatomy.
+
+The observed document builds twice to identical complete models and GLBs. Materials, basis, reference and the caller remain exact. Shared attachment reconstruction also changes head and nostril tessellation, so this is not an eye-only mesh delta. Matched lip vertices move by at most 0.000397mm; differently tessellated parts are not assigned a fabricated matched-index displacement. The observed GLB is 8,429,716 bytes, SHA-256 `e6f7f1bd00124a92cc3d334774fcdcee6bff623939de845d2889fa356ece6b30`.
+
+Fresh baseline and candidate captures use the same directional lighting and camera procedure. All thirteen candidate views were directly inspected: front, both obliques, both profiles, back, two close clay views, three full clay views and two registered reference distances. The former aperture is too compressed; removing the override improves its opening while preserving the recorded asymmetry. Neutral and bilateral blink were independently built and captured in thirteen views each; front, right profile and clay oblique were directly inspected for each state. The lips close in neutral and the lids meet in blink in these views. Deep orbital shadows, simplified nasal and oral volume, smooth young-looking tissue, brown uniform skin and striped cap-like hair remain. This is a partial aperture improvement with likeness **unaccepted**, not physiological performance certification. Current local capture directory: `.shots/human-2469/subject-alan-eye-opening/alan-rickman`.
+
+The rebuilt editor loads this exact built-in document and preserves saved JSON, neutral, undo and bilateral blink. Three of its eighteen captures, the front of each state, were directly inspected. Strict browser/Node byte comparison fails: each state differs in one skin NORMAL Float32 component, 0.507296621799469 versus 0.5072966814041138. All other bytes, including positions, indices, UVs, materials and textures, are exact. The observed browser GLB SHA-256 is `8d5dfb3a97deb5ac437a48692c23312df588b1ce976a574e891d9af83f75a930`. Separate audit records retain this mismatch; each saved state was independently rebuilt in the browser and required byte-exact same-runtime repetition. A negative probe refuses a two-step normal change and any one-step position change. This measurement does not identify the originating arithmetic operation or claim exact cross-runtime normals. Local editor record: `.shots/human-2469/alan-opening-built-in/receipt.json`.
+
+Earlier face-only record, retained separately from this aperture revision:
 
 Direct source comparison: the inferred aperture and tooth exposure are too broad, creases too regular and lips too full. Narrow current lid/oral openings, lift the maxillary arch and reduce vermilion bands. Age-related fine folds and far-side skull remain unaccepted, not inferred as measured detail.
 
@@ -401,6 +505,14 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## emma-watson {#emma-watson}
 
 [Replay document](emma-watson.json) · [Original selection and quality](inputs.md#input-emma-watson). Selected original: `emma-watson_age-24_british-fashion-awards.jpg`.
+
+The current surface-haired study adopts only a global skin-colour adjustment, from linear RGB `[0.61, 0.37, 0.29]` to `[0.9662499999999999, 0.72625, 0.6162500000000002]`. Camera, geometry, expression, roughness and review lights remain fixed. Cheeks and chin supply the fit; nose and both orbital bands are held out, and the hair-covered forehead is excluded from both groups. The directly inspected source overlay excludes eyes, brows and vermilion from the skin samples. On the 0–255 RGB scale, training-region RMS falls from 61.95 to 32.93 and held-out RMS from 44.19 to 36.90. The held-out score rises slightly during the later training improvements, so neither the numerical fit nor the selected colour is a complete facial reconstruction or a recovered physical albedo.
+
+Two full source builds and exports agree exactly; every part and every non-skin material is unchanged, as are the observation basis and reference. The main agent inspected all thirteen new views, including front, both obliques/profiles, back, five clay frames and both registered distances. The previous dark brown cast is reduced, but pale uniform skin, heavy orbital planes, nasal form, lip volume and ribbon-like hair remain unlike the photograph. The actual AMD capture measures 44 pixels for the 45-pixel reference cube and records both resident texture samplers at 16 with no page errors. This is a partial colour improvement, not accepted likeness. Current capture directory: `.shots/human-2469/subject-skin-fixed-fit/emma-watson`; GLB `82a9a056463c8a87f9d55dc1beb2ead9a3aed3ced79ecbcdedf7a74a2c6f32b7`, 6,327,424 bytes.
+
+The rebuilt editor's built-in Emma selection and its actual JSON/GLB downloads match that current document and independent source exactly. The separate receipt in the capture directory's `editor/` records AMD8060S, 16 expected/observed calibration pixels, nineteen subject options and no page errors. Six editor angles were captured; the main agent read front, left oblique and right profile. The colour survives the wider actual editor framing; those checks do not accept the remaining anatomy, hair or skin variation.
+
+The following paragraphs and table retain the earlier hair-free construction review.
 
 The original closed-mouth makeup portrait has thinner vermilion and less rigid brows than the reconstructed face. Reduce those bands and inferior-lid relief. The sharp inferred under-eye planes remain a defect requiring direct final inspection.
 
@@ -562,6 +674,26 @@ State: construction admitted; standalone document replay admitted; static glTF a
 ## miriam-margolyes {#miriam-margolyes}
 
 [Replay document](miriam-margolyes.json) · [Original selection and quality](inputs.md#input-miriam-margolyes). Selected original: `miriam-margolyes_age-71_portrait.jpg`.
+
+2026-09-15 layered-hair partial adoption: retain the colour/brow document below and replace only its hair profiles and resident hair finishes with independently authored inner and outer layers (1,024 and 640 cards). Every non-hair part and its material, the source basis/reference, neck and expression remain exact. The other eighteen working documents are byte-identical. Two complete source builds reproduce the same model and 12,007,388-byte GLB. These numerical cards use procedural textures, not pixels from the source photograph.
+
+The main agent directly inspected all thirteen new views: front, both obliques, both profiles, back, close clay, close clay-oblique, full clay, full clay-oblique, full clay-profile and two registered reference distances. Fine white coverage replaces the broad grey coils at both distances, and the side/back no longer read as rows of thick ribbons. The silhouette is still a uniform cap rather than the source's irregular curl masses; the fringe, hairline and strong patterned forehead shadows remain wrong. Facial planes, skin variation, aged tissue, oral contents and cervical proportions are unresolved. This is a partial improvement, not accepted likeness. The AMD GPU capture measures 44 pixels for a 45-pixel calibration span and records all four resident texture samplers at anisotropy 16, with no page errors.
+
+Current layered identities: document `61de229a4f2b347e17e06bd44defaa449a995456f4830fec30ff96e724ff06d2`; model JSON `76691a7a5ad6901b99d6d5899a9fad6b2c43a281c8648391294c5e5eb1f0b3dd`; GLB `011bc040e9fdfd48d97583e4e2992c46132fb2eed6c99e0f2a6a440df68a1da7`. Current capture directory: `.shots/human-2469/subject-hair-layered-current-face/miriam-margolyes`. The gallery selects this revision and its downloadable document matches the tracked study.
+
+The rebuilt editor's new built-in selection, neutral button, undo and bilateral-blink import were verified separately for these layers. All three saved documents and GLBs match independent source output exactly. The AMD GPU receipt at `.shots/human-2469/miriam-layered-built-in/receipt.json` records 16 expected/observed calibration pixels, nineteen subject options and no page errors. Eighteen editor views were captured; the main agent directly read the observed, neutral and blink fronts. The fine white coverage survives the editor's wider framing and mouth/eye closure works, while the cap-like hair, eye folds and synthetic skin persist. Resetting expression channels is not a reconstruction of the person's physiological neutral face.
+
+Earlier colour/brow revision:
+
+2026-09-15 partial colour and superior-orbit update: change only the skin's linear RGB from [0.51, 0.28, 0.215] to [0.64875, 0.2875, 0.2375] and the detailed brow-foundation projection from -1 to -3 mm. Source observations, basis, expression, hair, neck and every other authored material/profile remain unchanged. Two full-source builds reproduce the same model and 12,080,884-byte GLB. This is an authored colour under fixed review lighting, not recovered physical albedo or accepted likeness.
+
+The initial orbital measurement accidentally included the photographed fringe. Reassessment restricts the two orbital regions to the skin between the brow and upper lid and a band below the lower lid, with 104/119 sampled locations. The hair-covered forehead is excluded from the summary. Across six equally weighted skin regions, image RGB RMS decreases from 34.96 to 32.50 after colour alone and 30.67 after the additional brow change; orbital RMS decreases from 38.46 to 34.73 to 29.29. A -5 mm brow trial and nasal-depth reductions did not improve those respective comparisons and were not selected. These fixed-light pixel differences are not identity scores.
+
+The main agent directly inspected all ten current captures: front, both obliques, both profiles, back, clay, clay-oblique, reference-close and reference. Front/reference show warmer skin and less recessed-looking upper-lid illumination. Both obliques and clay still expose an artificial lid shelf, angular nasal base and insufficient aged tissue; the large oral opening still lacks the photographed interior form. Profiles/back retain the inferred narrow submental transition and broad coiled hair strips. Nose and cervical-depth trials remain separate, unadopted studies. Likeness remains **unaccepted**.
+
+Earlier colour/brow identities: model JSON `82a882d024d74439bf70e4785dae1a88e33c5fa0d2b0e7d993ac6e8d112e6e7d`; GLB `d2352e8b987112dc64e1a34b521f2c876bc8d64a5fed2c2adaef25ed7cc81cd5`. The pretty-serialized candidate document has SHA-256 `2365a2f79f285414432935f03857ed341c756b2c40c1491a96c9b36dffd747d9`; the tracked JSON used different whitespace and was checked by parsed document equality. Earlier capture directory: `.shots/human-2469/subject-face-brow3/miriam-margolyes`.
+
+The rebuilt editor's built-in subject selection loads this exact tracked document. Its observed, zero-channel neutral and bilateral-blink JSON/GLB exports match independent source outputs, with exact undo back to the observed document. The actual AMD GPU receipt at `.shots/human-2469/miriam-built-in/receipt.json` records 16 expected/observed calibration pixels and no page errors. Eighteen editor views were captured; the main agent directly read the three front views. Neutral closes the mouth and blink covers the optical apertures, but both retain synthetic lid folds and coiled strips. Channel reset is not an observed physiological neutral reconstruction. The following face-only observations and identities are historical.
 
 The large source shows both dental arches, a broad cervical connection and a deeply expressive tilted face. Add an independent lower arch and widen the neck; keep the established left-cheek safety profile. The unmodeled tongue and detailed age folds remain explicit likeness defects.
 
