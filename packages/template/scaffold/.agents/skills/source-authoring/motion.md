@@ -61,44 +61,7 @@ Feed them from the record rather than from a constant. `spaceGround` adapts a sp
 
 Two of the answers come with a correction, and neither applies itself. `plantStanceFeet` is the pass that removes skate: it detects stance, solves the leg back onto the pinned contact, and clamps the result into the rig's own range of motion, so a residual it cannot hold stays a warning rather than a silent edit. `detectBodyCollision` returns the response `suggestCollisionResponse` computes at the deepest contact, bounded by joint range of motion into a flinch. Both are hints; the authored reaction stays yours, and this document's contact section already says why a stronger or subtler one can be right.
 
-These calls run in a project script under `src/scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
-
-```ts
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "automovie";
-import { validateFootSkate, validateGroundContact } from "@automovie/engine";
-import type { IAutoMovieValidation } from "@automovie/interface";
-
-/** Physical-plausibility feedback, whether the run succeeded or failed. */
-const findings = (
-  validation: IAutoMovieValidation,
-): IAutoMovieValidation.IFailure["violations"] =>
-  validation.success ? (validation.warnings ?? []) : validation.violations;
-
-const state = requireCurrentAutoMovieProjectState(
-  loadAutoMovieProjectState({ root: process.cwd() }),
-);
-const compiled = state.generated.shots.get("approach");
-if (compiled === undefined) throw new Error('shot "approach" is not compiled');
-for (const motion of compiled.motions) {
-  const rigged = [...state.generated.models.values()].find(
-    (model) => model.skeleton !== null && model.skeleton.id === motion.skeleton,
-  );
-  if (rigged === undefined || rigged.skeleton === null) continue;
-  const checks = [
-    validateGroundContact({ motion, skeleton: rigged.skeleton }),
-    validateFootSkate({
-      motion,
-      skeleton: rigged.skeleton,
-      contacts: [{ bone: "leftFoot", start: 0, end: 0.4 }],
-    }),
-  ];
-  for (const violation of checks.flatMap(findings))
-    console.log(motion.id, violation.severity, violation.path, violation.expected);
-}
-```
+Call these queries in a production-owned source module over the exact motion, skeleton, ground, and authored contact intervals returned or selected by the producer. Preserve warnings on successful validation results and failures on invalid input. No query invents the contact semantics the author omitted.
 
 Sampling decides what can be seen. Each check samples on its own clock rather than on your keyframes, so a contact shorter than one sample interval falls between samples, and a rate far above the delivery frame rate buys precision the frame never shows.
 
@@ -114,8 +77,8 @@ Watch at speed, half speed, and frame step. Look for foot slide, penetration, fl
 
 Reading a clip's numbers is not watching it move. Capture the frames the fault would be on rather than the frames that happen to be convenient.
 
-1. `npm run preview` on the shot target at each contact, each extreme, and one frame either side of the moment the fault would appear. Foot slide, penetration, and contact drift are visible in adjacent frames and invisible in one.
-2. `npm run preview` with the `pose` structural pass when the question is skeletal rather than pictorial.
+1. Capture the shot target at each contact, each extreme, and one frame either side of the moment the fault would appear. Foot slide, penetration, and contact drift are visible in adjacent frames and invisible in one.
+2. Capture with the `pose` structural pass when the question is skeletal rather than pictorial.
 3. State what the motion actually did, in the evidence citation on the source that owns it. A verdict nobody can trace to a frame is not one.
 
 A shot contract's declared review times are the floor, not the whole answer. Add the times this motion makes decisive.

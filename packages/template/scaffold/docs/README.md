@@ -25,6 +25,6 @@ The [contract-target procedure](../.agents/skills/evidence-graph/contract-target
 | `final/screenplays` | Expression-only final screenplay units, mirroring reviewed construction identity exactly. |
 | `briefs` | Direct-brief delivery, shot, and observation units. |
 
-Reviewed delivery configuration is emitted from governed source into the production design record rather than authored as another document tree. `repaintSelectionReviews.ts` is the one tracked observation file outside `docs` and `src`; it records candidate observations, not production decisions.
+Reviewed delivery decisions are implemented as typed source values. Record observations at the authored owner that claims the result; [Ownership](../README.md#ownership) owns source placement and the project file boundary.
 
-This README is a tracked snapshot created with the scaffold. Follow [Static-document updates](../README.md#static-document-updates) before expecting an installed package upgrade, instruction sync, or contract migration to replace it.
+This README is a tracked snapshot created with the scaffold. Follow [Static-document updates](../README.md#static-document-updates) before expecting an installed package upgrade or instruction sync to replace it.

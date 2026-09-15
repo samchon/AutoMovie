@@ -14,17 +14,17 @@ The census separates owned models, external references, parts, population sets a
 
 ## Building reports
 
-Run `npm run building:report` when a compiled building's spatial or system review needs drawings, schedules, quantities, services, or declared performance studies. The command collects every building this production holds: the ones compiled shots stage, and the ones a library materialized as the delivered work itself. It takes each once by id and refuses two different records under one id instead of choosing one by shot order; where a shot and a library carry the same id, the staged record wins, because that is the one a frame was drawn from.
+Use the public engine building-report functions when current geometry needs drawings, schedules, quantities, services, or declared performance studies. Pass the exact built environments from the production's current producer and preserve each subject's identity and provenance.
 
 Keep derived drawings as SVG and record measurements in the authored review. Read the room schedule's declared volume box and measured content box as separate facts: the first says what the space claims to contain, while the second says what its staged members actually occupy. Read every declared gap with its status, reason, and remedy. A gap may name an unsupported derivation or a study that could run but lacks a production input; neither is repaired by editing the report.
 
-The command exits successfully when no built environment is staged or materialized and says that there was nothing to draw, count, or study. That is a truthful empty population, not a clean building review. It also tallies the two provenances apart, and the difference is what a citation may rest on: a staged building has frames a delivery review can open, while a materialized one has none, so a claim about how it looks rests on these drawings and nothing else. Never stage a dummy shot to make a library building look photographed.
+An empty building population is no work measured, not a clean building review. Distinguish a reusable environment inspected directly from one actually staged in a delivered frame. Never invent a dummy shot to make a library building look photographed.
 
 Reports are tracked sidecars worth comparing across revisions, but they remain derivations. Correct the design or declared study inputs and run the command again instead of hand-editing a sheet or report.
 
 ## Texture scale
 
-Run `npm run texture:scale` when reviewed material work binds textures whose physical or normalized scale must survive the geometry that receives them. The command measures each distinct model produced by compiled shots or materialized recipes and refuses two different model records under one id.
+Use the public engine texture-scale queries when material work declares physical or normalized texture coordinates. Measure each actual model produced by the current source and preserve distinct identities rather than silently collapsing different records.
 
 Read the final census together with the findings. It counts models, parts, parts carrying texture coordinates, structured texture bindings, and bindings that declare a checkable `normalized` or `surface-metres` coordinate source. An empty finding list with zero checkable claims means nothing was measured and is not a texture-scale review. Declare `coordinateSource` on the bindings whose scale matters, compile, and measure again.
 

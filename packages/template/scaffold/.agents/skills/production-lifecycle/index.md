@@ -63,7 +63,7 @@ Correct the earliest owner when a later layer exposes a defect, propagate the co
 
 Use the ignored `.wiki/` for local ideas, research, questions, and continuity aids. Nothing there binds the production; promote every retained fact or decision into its canonical `docs` owner and never commit `.wiki`.
 
-Run `npm run book -- --layer <layer> --pass <construction|final> --title <title>` for a deterministic reader-facing Markdown edition. Screenplays default to `final`; other layers default to `construction`. The command writes only beneath ignored `artifacts`, removes evidence comments and citation anchors, preserves visible prose and headings, and never edits authored documents.
+When a reader edition is requested, bind the selected authored population into a Markdown artifact without changing its canonical files. Select construction or final explicitly, preserve visible prose, headings, and ordered groups, and omit evidence comments and citation anchors. Read the complete edition as an audience; formatting it does not pay authorship or review obligations.
 
 ## Handoff
 

@@ -62,7 +62,7 @@ Image lighting is what makes a physically-based interior read. An equirectangula
 
 Tone mapping has one owner. The render spec's `toneMapping` is the delivery default across a whole sequence; a scene that declares an environment overrides it, because the curve is chosen against that scene's own exposure and lighting and a night interior and a noon exterior do not share one. A scene that declares no environment keeps the spec's value, which is exactly what every production authored before environments existed renders.
 
-That is the contract; the frame in front of you may be narrower. A scene's own environment always reaches the renderer, while the delivery default reaches it only when the page drawing the frame carries a `tone` parameter, and the scaffold's capture script does not set one. So judge a delivery curve from a page you opened with it, and read a captured review frame as the scene's own response until that gap closes.
+Verify that the actual source viewer and delivery consumer apply the intended environment and delivery response. A field declared in source but omitted by its renderer is an unimplemented consumer, not an accepted photographic choice.
 
 Shadows are a declared cost, not a default. Enable them in the environment, choose the filter family deliberately, and give every casting light explicit map size, bias, normal bias, and near/far. A light that claims to cast without those settings is refused rather than staged with whatever a renderer happens to default to.
 
@@ -88,8 +88,8 @@ For each beat, design an establishing or orienting view when geography matters, 
 
 A camera number is a claim about a frame; only the frame settles it. Capture at the production raster and never at a smaller one, because a downgraded frame can never discharge a required view.
 
-1. `npm run preview` on the shot target at every review time the contract declares, in `beauty`.
-2. `npm run preview` in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
+1. Capture the shot target at every review time the contract declares, in `beauty`.
+2. Capture in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
 3. State what those frames showed about composition, staging, and continuity in the evidence citation on the shot source that claims the scene is realized.
 
 Judge from what came back, not from what the solve intended. `captured:false` is a refusal, not a frame.

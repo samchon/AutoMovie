@@ -140,9 +140,9 @@ Start the coding-agent session from this project root. Codex reads this \`AGENTS
 
 - \`npm run sync\` overwrites this router and the five shipped skills while preserving tracked production facts. Follow the generated-instructions procedure in [Production lifecycle](.agents/skills/production-lifecycle/SKILL.md).
 - Read and edit authored Markdown and TypeScript with ordinary coding-agent tools. Follow [Ownership](README.md#ownership) for the source and file boundary.
-- \`npm run lint:source\` checks TypeScript and authored evidence; \`npm run lint\` also checks the production builder's runtime review gates.
-- \`npm run book -- --layer <layer> --pass <construction|final> --title <title>\` binds one deterministic reader-facing Markdown file under the ignored \`artifacts\` directory. Screenplays default to the final pass; other layers default to construction. It preserves numbered groups, removes evidence comments and citation anchors, and preserves visible prose and headings.
-- \`npm run build\` is the only command that may update builder-owned output.
+- \`npm run lint\` checks the complete TypeScript program and active authored evidence.
+- \`npm run viewer\` opens the production-owned source preview. Follow [Live viewing](.agents/skills/review-verification/live-viewing.md) for its execution and observation boundary.
+- Author requested model and film execution in \`src\` through public package APIs. The scaffold does not provide a completed film publication command.
 `;
 };
 

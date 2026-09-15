@@ -362,11 +362,11 @@ export const exampleBuildingIdentities = (): string[] => {
 };
 
 /**
- * The asset ids `automovie/assets.json` registers for this example.
+ * The asset ids declared by this example's typed source.
  *
  * Lineage spans every graph a production publishes ids from, not only the
  * building, so the roll-call it is checked against has to span them too. The
- * asset manifest is one of those graphs: a texture is an identity with bytes,
+ * source asset declaration is one of those graphs: a texture has identity and bytes,
  * and phasing or impact-tracing it is the same act as phasing a wall.
  */
 export const exampleRegisteredAssets = (): string[] => ["oak-floor-texture"];

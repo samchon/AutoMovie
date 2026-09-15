@@ -2,7 +2,7 @@
 
 Screenplay construction belongs only to a film. Mirror the reviewed script delivery partition in `docs/screenplays`: preserve every delivery-group directory, index H1, unit filename and H1, and exact H2/H3/H4 identity, nesting, and order. This tree is the complete content-bearing construction screenplay, not the final naturalness edition.
 
-Run `npm run toc` after the mirrored inventory changes and `npm run toc -- --check` before advancing evidence. The generated managed block links units in canonical filename order; prose remains in the unit files and never moves into the index.
+Run `npx --no-install automovie toc` after the mirrored inventory changes and `npx --no-install automovie toc --check` before advancing evidence. The generated managed block links units in canonical filename order; prose remains in the unit files and never moves into the index.
 
 Write the complete human-readable audiovisual contract under the [Screenplay principles](../../../docs/principles/story/screenplays.md). Apply their mechanical-description criterion while enacting each scene from its actual script parents, and ask an independent shot author to identify any physical or audiovisual decision still missing. Repair that decision at its construction owner before final audience-language revision begins.
 

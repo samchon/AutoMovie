@@ -18,42 +18,25 @@ Use ordinary coding-agent tools for authoring. Scaffold creation and instruction
 
 ```bash
 npm install
-npm run lint:source
+npm run lint
 ```
 
 The blank scaffold is intentionally incomplete. Select the production kind through the routed lifecycle procedure, author its prerequisites, then use the commands below at the stages their linked procedures name.
 
 ## Canonical command routes
 
-The executable command keys live in `package.json`; this table accounts for every script exactly once and provides its human route. Change the manifest and this inventory together.
+Use the commands declared in `package.json`:
 
-| Script | Command route | Purpose or procedure |
-| --- | --- | --- |
-| `build` | `npm run build` | Compatibility alias for the compile route. |
-| `building:report` | `npm run building:report` | Building measurements; follow [Measurements](.agents/skills/review-verification/measurements.md). |
-| `book` | `npm run book -- --layer <layer> --title <title>` | Ignored reader edition; follow [Production lifecycle](.agents/skills/production-lifecycle/index.md#working-memory-and-reader-editions). |
-| `capture:doctor` | `npm run capture:doctor` | Verify the installed capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `capture:install` | `npm run capture:install` | Install the project capture runtime; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `derive:example` | `npm run derive:example` | Run the non-production derivation specimen; follow [Ownership](.agents/skills/source-authoring/ownership.md). |
-| `design` | `npm run design` | Emit reviewed design records; follow [Source authoring](.agents/skills/source-authoring/index.md). |
-| `external:inspect` | `npm run external:inspect -- <project-path> --profile <profile>` | Inspect external model or motion facts; follow [Models and motions](.agents/skills/source-authoring/models-and-motions.md). |
-| `format` | `npm run format` | Apply the configured source formatter. |
-| `inspect` | `npm run inspect -- --shot <id> --subject <kind:id>` | Inspect one compiled subject; follow [Inspection](.agents/skills/review-verification/inspection.md). |
-| `lint` | `npm run lint [-- --scope <scope>]` | Run source and graph lint at `design`, `source`, `review`, or `final` scope; follow [Evidence staging](.agents/skills/evidence-graph/staging.md). |
-| `lint:source` | `npm run lint:source` | Type-check governed source and run registered lint contributors. |
-| `preview` | `npm run preview -- --shot <id> --time <seconds> --pass <pass>` | Capture a current shot frame; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `reference` | `npm run reference -- --request '<JSON>'` | Read-only authored Markdown navigation; follow [Read-only authored reference](.agents/skills/production-lifecycle/index.md#read-only-authored-reference). |
-| `repaint` | `npm run repaint -- <action> --shot <id> [options]` | Use `reroll`, `retry`, `select`, or `reverse`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
-| `render` | `npm run render -- <action> [options]` | Use `all`, `plan`, `run`, `status`, `verify`, `finalize`, or `gc`; follow [Review verification](.agents/skills/review-verification/index.md). |
-| `routes` | `npm run routes -- <kind>` | Inspect supported capability ownership for `film`, `brief`, or `library`; follow [Production delivery decisions](.agents/skills/production-lifecycle/configuration.md). |
-| `sync` | `npm run sync` | Replace generated instructions; follow [Generated instructions](.agents/skills/production-lifecycle/index.md#generated-instructions). |
-| `texture:scale` | `npm run texture:scale` | Measure bound texture scale; follow [Measurements](.agents/skills/review-verification/measurements.md). |
-| `toc` | `npm run toc -- --check` or `npm run toc` | Check or regenerate script, construction-screenplay, and final-screenplay delivery indexes; follow [Scripts](.agents/skills/production-lifecycle/scripts.md), [Screenplays](.agents/skills/production-lifecycle/screenplays.md), and [Naturalness](.agents/skills/production-lifecycle/naturalness.md). |
-| `turntable` | `npm run turntable -- --asset <id>` | Capture the required asset view set; follow [Capture](.agents/skills/review-verification/capture.md). |
-| `viewer` | `npm run viewer` | Keep the compiled viewer open while source changes recompile and reload; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
-| `viewer:preview` | `npm run viewer:preview` | Inspect ttsc-emitted current source through a production-owned preview factory; follow [Live viewing](.agents/skills/review-verification/live-viewing.md). |
+| Command | Purpose |
+| --- | --- |
+| `npm run lint` | Check the complete TypeScript program and active authored evidence. |
+| `npm run format` | Format source with the configured compiler formatter. |
+| `npm run sync` | Replace generated instructions from tracked production facts. |
+| `npm run viewer` | Open the production-owned source preview. |
 
-The table names entry points, not completion evidence. Read the linked procedure for accepted arguments, applicability, refusals, and the observation required before treating an execution as evidence.
+The scaffold does not provide a completed film build, capture, render, or publication command. Author the requested producer and consumers under `src` using the installed packages' public APIs. A source preview is an authoring instrument, not proof that a delivery pipeline exists or a film is complete.
+
+The installed `automovie` CLI separately provides Markdown TOC maintenance, external-asset inspection, and capability routes. Read its local help before invoking a command. These operations do not authorize a project state store.
 
 ## Source preview navigation
 

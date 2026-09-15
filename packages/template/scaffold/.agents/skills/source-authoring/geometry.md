@@ -35,6 +35,6 @@ Keep a production-specific implementation local until its contract and repeated 
 
 ## Verification
 
-Run the operation's pure tests and `npm run lint:source`, then use `inspectAutoMovieMeshTopology` and the relevant bounds or measurement helpers against the authored result. Compare the output with the exact model, space, map, material, and motion owners it realizes.
+Run the operation's pure tests and `npm run lint`, then use `inspectAutoMovieMeshTopology` and the relevant bounds or measurement helpers against the authored result. Compare the output with the exact model, space, map, material, and motion owners it realizes.
 
 Numeric inspection proves geometric facts, not appearance. Follow [Capture](../review-verification/capture.md) for reproducible views, [Inspection](../review-verification/inspection.md) for observation, and [Measurements](../review-verification/measurements.md) for numeric questions. Use whole-model views for silhouette and targeted part views for joints, openings, thin features, intersections, and surface boundaries. Every accepted view records camera, target, compiled source identity, and the specific contract it tested.
