@@ -14,7 +14,7 @@ Read each applicable sibling in full before acting:
 - [Ownership](ownership.md) separates author-, builder-, and renderer-owned bytes.
 - [TypeScript](typescript.md) defines deterministic module shape and typed registration.
 - [Composition](composition.md) arranges repeated production source as a program that emits shots and records.
-- [Compilation](compilation.md) owns design, source, and final scopes plus atomic publication.
+- [Compilation](compilation.md) owns deterministic source execution and its verification boundary.
 
 ## Craft routes
 
