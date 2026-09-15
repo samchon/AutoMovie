@@ -1,10 +1,7 @@
 import { resolvePortraitEyeInputs } from "@automovie/human/components/eyeComponentInputs";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitEyeShape,
-  portraitEyeSockets,
-} from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { throwsError } from "../internal/predicates";
 
 /**
@@ -20,8 +17,17 @@ import { throwsError } from "../internal/predicates";
  * 4. Copied socket and sampling inputs do not alias the caller's arrays/object.
  */
 export const test_subject_eye_input_admission = (): void => {
-  const socket = structuredClone(portraitEyeSockets[0]);
-  const valid = structuredClone(portraitEyeShape);
+  // Admission owns these identities but does not consult host coordinates.
+  // Distinct arrays make aliasing observable without a photograph-derived cage.
+  const socket = {
+    name: "right" as const,
+    top: [0, 1, 2],
+    bottom: [0, 3, 2],
+    iris: 4,
+    browTop: [5, 6, 7],
+    browBottom: [8, 9, 10],
+  };
+  const valid = portraitEyeShapeFixture();
   const admit = (change: Record<string, unknown> = {}) =>
     resolvePortraitEyeInputs(socket, { ...valid, ...change });
   const refuse = (change: Record<string, unknown>) => {

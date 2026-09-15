@@ -5,7 +5,7 @@ import {
 import type { IPortraitEyeSocket } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose } from "../internal/predicates";
 
 /**
@@ -36,7 +36,7 @@ export const test_subject_eye_lid_row_arithmetic = (): void => {
     browBottom: [],
   };
   const shape = {
-    ...portraitEyeShape,
+    ...portraitEyeShapeFixture(),
     foldWidth: 2,
     foldDepth: 0.4,
     upperLidVolume: 0.3,
