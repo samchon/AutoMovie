@@ -5,9 +5,8 @@
 .wiki/
 .references/
 
-# Disposable production sandboxes; the published manor remains tracked.
-/experimental/*
-!/experimental/medieval-baron-manor/
+# Local experiments. Existing tracked production files remain tracked.
+/experimental/
 
 node_modules/
 packages/cli/.cache/
