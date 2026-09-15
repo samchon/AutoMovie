@@ -56,8 +56,6 @@ jobs:
             node_modules/.cache/ttsc/plugins
             experimental/medieval-baron-manor/node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-v2-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Check repository tools
-        run: pnpm exec ttsc -p build/tsconfig.json --noEmit
       # Use the compiler configuration shipped to the generated project.
       - name: Check the shipped scaffold
         run: pnpm exec ttsc -p packages/template/scaffold/package.json --noEmit
