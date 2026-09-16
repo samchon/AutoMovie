@@ -43,6 +43,7 @@ export * from "./components/oralFrame";
 export * from "./components/tongueShape";
 export * from "./components/tongue";
 export * from "./components/oralLining";
+export * from "./components/oralBoundary";
 export * from "./components/mandibularDentition";
 export * from "./components/nasalAperture";
 export * from "./components/nasalEnvelope";

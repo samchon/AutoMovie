@@ -1,6 +1,17 @@
+/**
+ * Build the existing rim-relative cavity and optional expanded chamber.
+ * mouthInterior calls this after the actual lip surface has been refined.
+ * Inputs are read-only skin positions/indices and authored head-millimetre
+ * dimensions. oralBoundary owns attachment topology; this module owns the
+ * depth rings, optional chamber expansion, posterior cap and resident normals.
+ * The returned mesh owns all arrays and starts with exact copied rim points.
+ * These legacy rings follow the performed aperture; they do not provide an
+ * independent maxillary palate or mandibular floor, nor certify tooth clearance.
+ */
 import type { IAutoMovieMesh } from "@automovie/interface";
 
 import { portraitNormals } from "../geometry/geometry";
+import { tracePortraitOralBoundary } from "./oralBoundary";
 
 /**
  * Interior room beyond the lip vestibule, independently of the visible aperture.
@@ -80,54 +91,8 @@ export function buildPortraitOralLining(
   chamber?: IPortraitOralChamber,
 ): IAutoMovieMesh {
   assertPortraitOralLining(depth, wall, chamber);
-  if (
-    surface.indices.length % 3 !== 0 ||
-    surface.indices.some(
-      (id) => !Number.isInteger(id) || id < 0 || id >= surface.positions.length,
-    )
-  )
-    throw new Error("Oral lining needs resident complete skin triangles.");
-  const edges = new Map<string, { a: number; b: number; count: number }>();
-  for (let i = 0; i < surface.indices.length; i += 3) {
-    const face = surface.indices.slice(i, i + 3);
-    if (new Set(face).size !== 3)
-      throw new Error("Oral lining skin triangles need distinct vertices.");
-    for (let j = 0; j < 3; j++) {
-      const a = face[j],
-        b = face[(j + 1) % 3];
-      const key = `${Math.min(a, b)}/${Math.max(a, b)}`;
-      const edge = edges.get(key);
-      if (edge === undefined) edges.set(key, { a, b, count: 1 });
-      else {
-        if (edge.count === 2 || edge.a === a)
-          throw new Error(
-            "Oral lining skin must have manifold, opposed edges.",
-          );
-        edge.count++;
-      }
-    }
-  }
-  const next = new Map<number, number>();
-  for (const edge of edges.values())
-    if (edge.count === 1) {
-      if (next.has(edge.a))
-        throw new Error("Oral lining skin boundary must not branch.");
-      next.set(edge.a, edge.b);
-    }
-  if (!next.has(seed))
-    throw new Error("Oral lining seed must lie on a free skin boundary.");
-  // Opposed internal edges cancel each triangle's incoming/outgoing balance.
-  // Unique outgoing free edges therefore also have unique incoming edges:
-  // every remaining connected boundary is a cycle, including this seed's.
-  const boundary = [seed];
-  for (let id = next.get(seed)!; id !== seed; id = next.get(id)!)
-    boundary.push(id);
+  const boundary = tracePortraitOralBoundary(surface, seed);
   const rim = boundary.map((id) => surface.positions[id]);
-  if (rim.some((p) => p.length !== 3 || !p.every(Number.isFinite)))
-    throw new Error("Oral lining rim must contain finite XYZ points.");
-  for (let i = 0; i < rim.length; i++)
-    if (rim[i].every((v, axis) => v === rim[(i + 1) % rim.length][axis]))
-      throw new Error("Oral lining rim edges must have positive length.");
   const count = rim.length,
     rows = 24;
   const center = [0, 1, 2].map((axis) =>
