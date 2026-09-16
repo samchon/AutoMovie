@@ -1,16 +1,16 @@
 import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
-import { buildPortraitHead } from "@automovie/human/components/head";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitEyeShape,
-  portraitEyeSockets,
-} from "../../subjects/generated-korean-girl-01/configuration";
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
+import { portraitEyelashEyeFixture } from "../internal/portraitEyelashFixture";
 import { throwsError } from "../internal/predicates";
 
 /**
  * A closed performance retains its complete globe and optical surfaces under the lids.
+ * The host is an independent tilted plane with a diamond aperture; its small
+ * connected skin patch reaches actual fit, attachment and finish without
+ * identity data. Cranial assembly has its own complete-host scenarios.
  *
  * Scenarios:
  * 1. Closed lids with nonzero gaze produce finite resident optics and no exposed wet strip.
@@ -18,8 +18,9 @@ import { throwsError } from "../internal/predicates";
  * 3. Aperture-clipped optics refuse performance before allocation.
  */
 export const test_subject_eye_performance_component = (): void => {
+  const { host, socket } = portraitEyeHostFixture();
   const shape = {
-    ...portraitEyeShape,
+    ...portraitEyeShapeFixture(),
     browFibres: 0,
     upperLashes: 1,
     sampling: { eyeColumns: 12, eyeRows: 8, irisColumns: 12, irisRows: 3 },
@@ -29,7 +30,7 @@ export const test_subject_eye_performance_component = (): void => {
     "clipped optical shape refuses",
     throwsError(() =>
       createPortraitEyeComponent(
-        portraitEyeSockets[0],
+        socket,
         { ...shape, cornealBoundary: "aperture" },
         performance,
       ),
@@ -39,19 +40,15 @@ export const test_subject_eye_performance_component = (): void => {
     "missing full-shell contact refuses",
     throwsError(() =>
       createPortraitEyeComponent(
-        portraitEyeSockets[0],
+        socket,
         { ...shape, lidContact: "globe" },
         performance,
       ),
     ),
   );
-  const component = createPortraitEyeComponent(
-    portraitEyeSockets[0],
-    shape,
-    performance,
-  );
+  const component = createPortraitEyeComponent(socket, shape, performance);
   performance.blink = -1;
-  const head = buildPortraitHead(referenceControlNet, [component], 0);
+  const head = portraitEyelashEyeFixture(component, host);
   TestValidator.predicate(
     "resident closed optics",
     ["right-sclera", "right-cornea", "right-pupil"].every((id) =>

@@ -1,43 +1,41 @@
 import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
-import { buildPortraitHead } from "@automovie/human/components/head";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitEyeShape,
-  portraitEyeSockets,
-} from "../../subjects/generated-korean-girl-01/configuration";
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
+import { portraitEyelashEyeFixture } from "../internal/portraitEyelashFixture";
 import { nclose } from "../internal/predicates";
 
 /**
- * Independent optical depth reaches the assembled optical body and remains
+ * Independent optical depth reaches the finished optical body and remains
  * identity, not an offset added again when the same eye blinks.
+ * An analytic tilted orbital patch and round dimensions keep the optical
+ * translation contract independent of any photographed person. Actual fit,
+ * attachment and finish are exercised; cranial assembly has separate scenarios.
  *
  * Scenarios:
- * 1. A one-millimetre depth change translates the assembled sclera, iris,
+ * 1. A one-millimetre depth change translates the finished sclera, iris,
  *    pupil and cornea by one normalized view-ray millimetre without scaling.
  * 2. Closing the shifted eye retains the same optical population and geometry.
  * 3. Combined yaw and pitch keep the same translation, proving that gaze uses
  *    the shifted identity centre rather than rotating about the old socket.
  */
 export const test_subject_eye_globe_depth_performance = (): void => {
+  const { host, socket } = portraitEyeHostFixture();
   const shape = {
-    ...portraitEyeShape,
+    ...portraitEyeShapeFixture(),
     browFibres: 0,
     upperLashes: 1,
     sampling: { eyeColumns: 8, eyeRows: 4, irisColumns: 8, irisRows: 2 },
   };
   const build = (globeLift: number, blink: number, yaw = 0, pitch = 0) =>
-    buildPortraitHead(
-      referenceControlNet,
-      [
-        createPortraitEyeComponent(
-          portraitEyeSockets[0],
-          { ...shape, globeLift },
-          { blink, observedBlink: 0, yaw, pitch },
-        ),
-      ],
-      0,
+    portraitEyelashEyeFixture(
+      createPortraitEyeComponent(
+        socket,
+        { ...shape, globeLift },
+        { blink, observedBlink: 0, yaw, pitch },
+      ),
+      host,
     );
   const optical = (head: ReturnType<typeof build>) =>
     head.parts.filter((p) =>
@@ -56,7 +54,7 @@ export const test_subject_eye_globe_depth_performance = (): void => {
     shifted.map((p) => p.id),
     base.map((p) => p.id),
   );
-  const ray = referenceControlNet.viewRay,
+  const ray = host.viewRay,
     norm = Math.hypot(...ray);
   const translated = (original: typeof base, moved: typeof base): void => {
     TestValidator.equals(

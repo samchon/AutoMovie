@@ -1,17 +1,16 @@
 import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
-import {
-  portraitEyeShape,
-  portraitEyeSockets,
-} from "../../subjects/generated-korean-girl-01/configuration";
-import { referenceControlNet } from "../../subjects/generated-korean-girl-01/controlNet";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { portraitEyelashEyeFixture } from "../internal/portraitEyelashFixture";
 import { throwsError } from "../internal/predicates";
 
 /**
  * The selected sphere fit reaches real lid rows and optical finishers while
  * omission retains the existing component, independent of caller mutation.
+ * The analytic host lies on Z=X/4 while its observation ray is axial, so the
+ * two fitting frames differ by construction rather than by subject identity.
  *
  * Scenarios:
  * 1. Explicit aperture-plane fitting equals omission through the complete
@@ -21,9 +20,9 @@ import { throwsError } from "../internal/predicates";
  * 3. An unknown identity mode refuses immediately, beside both admitted modes.
  */
 export const test_subject_eye_sphere_alignment_component = (): void => {
-  const host = { ...referenceControlNet, viewRay: [0, 0, 1] };
+  const { host, socket } = portraitEyeHostFixture();
   const base = {
-    ...portraitEyeShape,
+    ...portraitEyeShapeFixture(),
     skinAttachment: undefined,
     skinBridge: undefined,
     browFibres: 0,
@@ -32,7 +31,7 @@ export const test_subject_eye_sphere_alignment_component = (): void => {
   };
   const build = (sphereFit?: "aperture-plane" | "observation-ray") =>
     portraitEyelashEyeFixture(
-      createPortraitEyeComponent(portraitEyeSockets[0], { ...base, sphereFit }),
+      createPortraitEyeComponent(socket, { ...base, sphereFit }),
       host,
     );
   const old = build();
@@ -42,7 +41,7 @@ export const test_subject_eye_sphere_alignment_component = (): void => {
     old,
   );
   const shape = { ...base, sphereFit: "observation-ray" as const };
-  const component = createPortraitEyeComponent(portraitEyeSockets[0], shape);
+  const component = createPortraitEyeComponent(socket, shape);
   Object.assign(shape, { sphereFit: "invalid" });
   const observed = portraitEyelashEyeFixture(component, host);
   TestValidator.equals(
@@ -65,7 +64,7 @@ export const test_subject_eye_sphere_alignment_component = (): void => {
   );
   const performed = portraitEyelashEyeFixture(
     createPortraitEyeComponent(
-      portraitEyeSockets[0],
+      socket,
       { ...base, sphereFit: "observation-ray" },
       { blink: 0.5, observedBlink: 0, yaw: 2, pitch: 1 },
     ),
@@ -85,7 +84,7 @@ export const test_subject_eye_sphere_alignment_component = (): void => {
     "unknown mode refuses at component admission",
     throwsError(
       () =>
-        createPortraitEyeComponent(portraitEyeSockets[0], {
+        createPortraitEyeComponent(socket, {
           ...base,
           sphereFit: "invalid" as "observation-ray",
         }),
