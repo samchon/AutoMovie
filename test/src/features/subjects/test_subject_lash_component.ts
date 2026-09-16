@@ -2,7 +2,8 @@ import { createPortraitEyeComponent } from "@automovie/human";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { coarseHumanFaceFixture } from "../internal/humanFaceFixture";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import {
   portraitEyelashEyeFixture,
   portraitEyelashFixture,
@@ -11,7 +12,8 @@ import {
 import { throwsError, vclose } from "../internal/predicates";
 
 /**
- * A fitted eye consumes optional lash shape without altering its other parts.
+ * A fitted eye on an independent mirrored plane consumes optional lash shape
+ * without altering its other parts. No portrait identity supplies the inputs.
  *
  * Scenarios:
  * 1. Omission retains the legacy lash, while an explicit straight eight-mm
@@ -19,17 +21,16 @@ import { throwsError, vclose } from "../internal/predicates";
  * 2. Out-of-envelope lash dimensions refuse before component fitting.
  */
 export const test_subject_lash_component = (): void => {
-  const source = coarseHumanFaceFixture("lash-unit");
-  const shape = source.basis.recipe.eye,
-    socket = source.basis.bindings.eyes.left;
+  const { host, socket } = portraitEyeHostFixture("left");
+  const shape = portraitEyeShapeFixture();
   const neutral = portraitEyelashEyeFixture(
     createPortraitEyeComponent(socket, shape),
-    source.basis.host,
+    host,
   );
   const profile = portraitEyelashFixture();
   const changed = portraitEyelashEyeFixture(
     createPortraitEyeComponent(socket, { ...shape, upperLashProfile: profile }),
-    source.basis.host,
+    host,
   );
   const lash = (model: typeof changed): IAutoMovieMesh =>
     (

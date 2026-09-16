@@ -2,7 +2,8 @@ import { createPortraitEyeComponent } from "@automovie/human";
 import type { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { coarseHumanFaceFixture } from "../internal/humanFaceFixture";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import {
   portraitEyelashEyeFixture,
   portraitEyelashFixture,
@@ -11,7 +12,8 @@ import {
 import { nclose, vclose } from "../internal/predicates";
 
 /**
- * The new strand follows the current closed margin, not the observed open root.
+ * The strand follows the current closed margin on an independent tilted plane.
+ * The analytic aperture and lash dimensions are unrelated to a fitted person.
  *
  * Scenarios:
  * 1. Closed legacy and explicit-profile eyes share the same root and non-lash
@@ -20,9 +22,8 @@ import { nclose, vclose } from "../internal/predicates";
  *    profile keeps its length and turns down with the closing lid.
  */
 export const test_subject_lash_blink = (): void => {
-  const source = coarseHumanFaceFixture("lash-blink");
-  const shape = source.basis.recipe.eye,
-    socket = source.basis.bindings.eyes.right;
+  const { host, socket } = portraitEyeHostFixture();
+  const shape = portraitEyeShapeFixture();
   const performance = { blink: 1, observedBlink: 0, yaw: 0, pitch: 0 };
   const build = (selected = false) =>
     portraitEyelashEyeFixture(
@@ -34,7 +35,7 @@ export const test_subject_lash_blink = (): void => {
         },
         performance,
       ),
-      source.basis.host,
+      host,
     );
   const legacy = build(),
     changed = build(true);
@@ -59,9 +60,7 @@ export const test_subject_lash_blink = (): void => {
     "same closed root",
     vclose(root, portraitEyelashRingCenter(lash(legacy), 0), 1e-10),
   );
-  const observedUpper = socket.top.map(
-    (i) => source.basis.host.positions[i][1],
-  );
+  const observedUpper = socket.top.map((i) => host.positions[i][1]);
   TestValidator.predicate(
     "root moved below observed upper crest",
     root.y < Math.max(...observedUpper) / 1000 - 0.001,

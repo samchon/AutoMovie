@@ -1,7 +1,8 @@
 import { createPortraitEyeComponent } from "@automovie/human";
 import { TestValidator } from "@nestia/e2e";
 
-import { coarseHumanFaceFixture } from "../internal/humanFaceFixture";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import {
   portraitEyelashEyeFixture,
   portraitEyelashFixture,
@@ -9,7 +10,8 @@ import {
 import { throwsError } from "../internal/predicates";
 
 /**
- * A fitted eye owns its selected lash profile across deferred construction.
+ * An eye on an independent plane owns its selected lash profile across
+ * deferred construction; the fixture carries no subject identity data.
  *
  * Scenarios:
  * 1. Mutating the caller's profile after eye creation cannot change the later
@@ -17,17 +19,16 @@ import { throwsError } from "../internal/predicates";
  * 2. A fresh component created after that mutation rejects the invalid value.
  */
 export const test_subject_lash_ownership = (): void => {
-  const doc = coarseHumanFaceFixture("lash-ownership");
+  const { host, socket } = portraitEyeHostFixture();
   const shape = {
-    ...doc.basis.recipe.eye,
+    ...portraitEyeShapeFixture(),
     upperLashProfile: portraitEyelashFixture(),
   };
-  const socket = doc.basis.bindings.eyes.right;
   const control = createPortraitEyeComponent(socket, shape);
   const retained = createPortraitEyeComponent(socket, shape);
-  const expected = portraitEyelashEyeFixture(control, doc.basis.host);
+  const expected = portraitEyelashEyeFixture(control, host);
   shape.upperLashProfile.length = 21;
-  const actual = portraitEyelashEyeFixture(retained, doc.basis.host);
+  const actual = portraitEyelashEyeFixture(retained, host);
   TestValidator.equals("deferred component owns profile", actual, expected);
   TestValidator.predicate(
     "fresh invalid shape refuses",

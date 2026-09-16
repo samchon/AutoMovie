@@ -13,8 +13,13 @@ import type {
  * comparing the two sphere-fit modes must therefore exercise distinct frames.
  * Each invocation owns its arrays. No photographed landmark, named subject or
  * fitted identity profile participates, and the patch is not a whole cranium.
+ * The left-eye variant reflects X and reverses triangle winding. Its socket
+ * lists are also reversed to retain the component's increasing-head-X boundary
+ * convention; reflecting positions alone would select the exterior region.
  */
-export const portraitEyeHostFixture = (): {
+export const portraitEyeHostFixture = (
+  name: "right" | "left" = "right",
+): {
   host: IPortraitComponentHost;
   socket: IPortraitEyeSocket;
 } => {
@@ -36,12 +41,17 @@ export const portraitEyeHostFixture = (): {
     const j = (i + 1) % 4;
     indices.push(outer[i], outer[j], inner[i], outer[j], inner[j], inner[i]);
   }
+  if (name === "left") {
+    for (const point of positions) point[0] = -point[0];
+    for (let i = 0; i < indices.length; i += 3)
+      [indices[i], indices[i + 1]] = [indices[i + 1], indices[i]];
+  }
   return {
     host: { positions, indices, viewRay: [0, 0, 1] },
     socket: {
-      name: "right",
-      top: [0, 1, 2],
-      bottom: [0, 3, 2],
+      name,
+      top: name === "right" ? [0, 1, 2] : [2, 1, 0],
+      bottom: name === "right" ? [0, 3, 2] : [2, 3, 0],
       iris: 4,
       browTop: [1],
       browBottom: [1],

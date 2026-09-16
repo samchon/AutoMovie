@@ -1,7 +1,8 @@
 import { createPortraitEyeComponent } from "@automovie/human";
 import { TestValidator } from "@nestia/e2e";
 
-import { coarseHumanFaceFixture } from "../internal/humanFaceFixture";
+import { portraitEyeHostFixture } from "../internal/portraitEyeHostFixture";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import {
   portraitEyelashEyeFixture,
   portraitEyelashFixture,
@@ -11,7 +12,8 @@ import { vclose } from "../internal/predicates";
 
 /**
  * Opening from a partly closed observation reverses lash transport; gaze is
- * not a substitute for lid motion.
+ * not a substitute for lid motion. An independent mirrored orbital plane
+ * supplies the attachment without a photographed person's configuration.
  *
  * Scenarios:
  * 1. Matching observed/current closure with a nonzero gaze leaves the authored
@@ -20,18 +22,19 @@ import { vclose } from "../internal/predicates";
  *    distinct from the reference root; the other eye is not constructed here.
  */
 export const test_subject_lash_reopen = (): void => {
-  const source = coarseHumanFaceFixture("lash-reopen");
+  const { host, socket } = portraitEyeHostFixture("left");
+  const shape = portraitEyeShapeFixture();
   const build = (blink: number) => {
     const result = portraitEyelashEyeFixture(
       createPortraitEyeComponent(
-        source.basis.bindings.eyes.left,
+        socket,
         {
-          ...source.basis.recipe.eye,
+          ...shape,
           upperLashProfile: portraitEyelashFixture(),
         },
         { blink, observedBlink: 0.4, yaw: 10, pitch: 5 },
       ),
-      source.basis.host,
+      host,
     );
     const geometry = result.parts.find(
       (part) => part.id === "left-upper-lash-0",
