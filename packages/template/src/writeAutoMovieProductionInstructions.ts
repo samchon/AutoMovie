@@ -1,3 +1,13 @@
+/**
+ * Publish generated instructions from installed skills and current project facts.
+ * CLI synchronization calls this filesystem boundary after loading the tracked
+ * production declaration. Read every advertised project target and validate the
+ * complete candidate before replacing any instruction bytes; then remove stale
+ * generated entries. Project documents and configuration remain read-only.
+ * Pure link selection/validation lives in validateAutoMovieSkillRouters, while
+ * publishFiles owns physical publication and recovery. This operation does not
+ * perform the semantic or visual review described by the instructions it writes.
+ */
 import {
   type IAutoMovieEvidenceConfigProps,
   readAutoMovieProductionEvidence,
@@ -7,6 +17,7 @@ import path from "node:path";
 
 import { renderAutoMovieProductionInstructionCandidate } from "./renderAutoMovieProductionRouter";
 import { scaffoldAssetDirectory } from "./renderScaffold";
+import { getAutoMovieInstructionProjectTargets } from "./validateAutoMovieSkillRouters";
 import { ScaffoldPublicationError, publishFiles } from "./writeFiles";
 
 /**
@@ -67,6 +78,7 @@ export const writeAutoMovieProductionInstructions = (props: {
   });
   for (const relative of new Set([
     "docs/README.md",
+    ...getAutoMovieInstructionProjectTargets(sources),
     ...identity.contracts.map((contract) => contract.path),
     ...identity.designOwners.map((owner) => owner.path),
   ]))

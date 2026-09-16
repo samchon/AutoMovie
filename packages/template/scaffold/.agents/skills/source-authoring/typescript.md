@@ -29,6 +29,10 @@ Implement each scaffold placeholder before claiming that its source is complete.
 
 Prefer small deterministic functions named for domain decisions: frame conversion, camera placement, event construction, motion selection, formation state, or EDL interval. Validate meaning through engine contracts rather than duplicating math and accepting divergent behavior.
 
+Keep every authored file containing executable logic within 500 physical lines, including comments and blank lines. Split by cohesive responsibility with explicit inputs and outputs and one owner for each formula, boundary and mutable state transition. Keep orchestration readable; compression, removal of necessary explanation and forwarding chains do not satisfy the limit.
+
+Each logic file explains its responsibility, real entry points and consumers, inputs and outputs, ownership and mutation, processing order and why that order matters. Document applicable units, frames, signs, formula assumptions, degeneracies and non-obvious derivations beside their owner. Separate caller preconditions, established invariants and unresolved limits, and state which downstream results become stale when a shared result changes. Keep shared contracts at their canonical owner and link to them from callers.
+
 These rules govern any module you write. How a production's source is arranged once its shots repeat is a separate decision with its own document: read [Composition](composition.md).
 
 ## Package APIs

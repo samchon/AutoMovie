@@ -2,7 +2,7 @@ import { appendPortraitEyeMargins } from "@automovie/human/components/eyes";
 import type { IPortraitLowerLidProfile } from "@automovie/human/components/lowerLidSection";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose } from "../internal/predicates";
 
 /**
@@ -17,6 +17,7 @@ import { nclose } from "../internal/predicates";
  *    translation masquerading as independently oriented tissue detail.
  */
 export const test_subject_lower_lid_handedness = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const source = [
     [-4, 0, 0],
     [0, 2, 0],

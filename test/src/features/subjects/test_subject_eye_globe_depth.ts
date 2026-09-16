@@ -1,7 +1,7 @@
 import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -17,6 +17,7 @@ import { nclose, throwsError } from "../internal/predicates";
  * 3. Nonfinite depth refuses beside valid signed values at component admission.
  */
 export const test_subject_eye_globe_depth = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const positions = [
     [-2, 0],
     [0, 1],

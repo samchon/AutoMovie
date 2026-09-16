@@ -1,5 +1,4 @@
 import {
-  Vector3,
   mergeAutoMovieMeshes,
   separateAutoMovieMeshSequence,
 } from "@automovie/engine";
@@ -12,6 +11,7 @@ import {
   assertPortraitDentalCrown,
   buildPortraitDentalCrown,
 } from "./dentalCrown";
+import { attachPortraitOralMesh } from "./oralFrame";
 
 /**
  * One upper dental arch in a local millimetre frame. Individual crown profiles
@@ -170,50 +170,6 @@ export function attachPortraitDentalRow(
   input: IAutoMovieMesh,
   attachment: IPortraitDentalAttachment,
 ): IAutoMovieMesh {
-  const { rightCorner, leftCorner, upperLipMiddle, up, lift, recess } =
-    attachment;
-  if (
-    ![rightCorner, leftCorner, upperLipMiddle, up].every((v) =>
-      [v.x, v.y, v.z].every(Number.isFinite),
-    ) ||
-    ![lift, recess].every(Number.isFinite)
-  )
-    throw new Error("Dental attachment needs finite points and offsets.");
-  const x = Vector3.normalize(Vector3.subtract(leftCorner, rightCorner));
-  const y = Vector3.normalize(
-    Vector3.subtract(up, Vector3.scale(x, Vector3.dot(up, x))),
-  );
-  const z = Vector3.cross(x, y);
-  if (Vector3.length(x) === 0 || Vector3.length(y) === 0)
-    throw new Error(
-      "Dental attachment needs a nonzero chord and independent upward guide.",
-    );
-  const origin = Vector3.add(
-    upperLipMiddle,
-    Vector3.subtract(Vector3.scale(y, lift), Vector3.scale(z, recess)),
-  );
-  const mesh = structuredClone(input);
-  if (mesh.normals === null || mesh.normals.length !== mesh.positions.length)
-    throw new Error("Dental attachment needs aligned resident normals.");
-  for (let i = 0; i < mesh.positions.length; i += 3) {
-    const point = [
-        mesh.positions[i],
-        mesh.positions[i + 1],
-        mesh.positions[i + 2],
-      ],
-      normal = [mesh.normals[i], mesh.normals[i + 1], mesh.normals[i + 2]];
-    for (const [a, key] of ["x", "y", "z"].entries()) {
-      const axis = key as "x" | "y" | "z";
-      mesh.positions[i + a] =
-        origin[axis] +
-        x[axis] * point[0] +
-        y[axis] * point[1] +
-        z[axis] * point[2];
-      mesh.normals[i + a] =
-        x[axis] * normal[0] + y[axis] * normal[1] + z[axis] * normal[2];
-    }
-  }
-  if (![...mesh.positions, ...mesh.normals].every(Number.isFinite))
-    throw new Error("Dental attachment exceeds its representable range.");
-  return mesh;
+  const { upperLipMiddle, ...frame } = attachment;
+  return attachPortraitOralMesh(input, { ...frame, origin: upperLipMiddle });
 }

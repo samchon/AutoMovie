@@ -192,6 +192,7 @@ export const measureAutoMovieRenderInventory = (props: {
   const owners: IAutoMovieRenderOwnerCost[] = [];
   const gaps: IAutoMovieRenderAnalysisGap[] = [];
   const drawnModels = new Set<string>();
+  const flattenedModels = new Set<string>();
   const add = (
     owner: string,
     source: string,
@@ -341,6 +342,7 @@ export const measureAutoMovieRenderInventory = (props: {
         finest.tier,
       );
       drawnModels.add(cost.model);
+      flattenedModels.add(cost.model);
       worstTriangles = Math.max(worstTriangles, cost.triangles);
       worstVertices = Math.max(worstVertices, cost.vertices);
       partsPerChunk += cost.parts;
@@ -385,6 +387,7 @@ export const measureAutoMovieRenderInventory = (props: {
         lod.tier,
       );
       drawnModels.add(cost.model);
+      flattenedModels.add(cost.model);
       worstTriangles = Math.max(worstTriangles, cost.triangles);
       worstVertices = Math.max(worstVertices, cost.vertices);
       worstParts = Math.max(worstParts, cost.parts);
@@ -698,6 +701,25 @@ export const measureAutoMovieRenderInventory = (props: {
   let geometryBytes = groundBytes + simulatedBytes;
   for (const id of [...drawnModels].sort(compareAutoMovieRenderIds)) {
     const cost = costs.get(id)!;
+    if (flattenedModels.has(id)) {
+      // Flattening mixed RGB/bare parts gives every vertex a white-default RGB
+      // triple. Count that resident padding once per prototype, not per slot.
+      const coloredComponents = byId
+        .get(id)!
+        .parts.reduce(
+          (sum, part) =>
+            sum +
+            (part.geometry.type === "mesh" &&
+            part.geometry.mesh.colors !== undefined
+              ? part.geometry.mesh.positions.length
+              : 0),
+          0,
+        );
+      if (coloredComponents !== 0)
+        cost.geometryBytes +=
+          (cost.vertices * 3 - coloredComponents) *
+          Float32Array.BYTES_PER_ELEMENT;
+    }
     geometryBytes += cost.geometryBytes;
     add(`model:${id}`, `models["${id}"]`, "geometryBytes", cost.geometryBytes);
   }
@@ -915,6 +937,7 @@ const measure = (
         (AUTOMOVIE_POSITION_BYTES +
           (mesh.normals === null ? 0 : AUTOMOVIE_NORMAL_BYTES) +
           (mesh.uvs === null ? 0 : AUTOMOVIE_UV_BYTES) +
+          (mesh.colors === undefined ? 0 : 3 * Float32Array.BYTES_PER_ELEMENT) +
           (mesh.skin === null ? 0 : AUTOMOVIE_SKIN_BYTES)) +
       (mesh.indices === null ? 0 : mesh.indices.length) * AUTOMOVIE_INDEX_BYTES;
   }

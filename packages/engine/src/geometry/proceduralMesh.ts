@@ -1215,6 +1215,9 @@ export const loftAutoMovieSections = (props: {
  * attribute makes the loss visible at the binding instead. The three builders
  * that carry no coordinates each name the atlas-bearing operation that replaces
  * them, so a member that needs to survive a merge is built with one of those.
+ * RGB multipliers have an honest identity, white: a coloured member retains
+ * its colour while bare neighbours receive white. Entirely bare inputs do not
+ * acquire a colour buffer.
  *
  * Every buffer is appended element by element rather than by spreading the
  * source into `push`. A spread is an argument list, and an argument list has a
@@ -1238,12 +1241,17 @@ export const mergeAutoMovieMeshes = (
   const keepNormals = meshes.every((mesh) => mesh.normals !== null);
   const keepUvs = meshes.every((mesh) => mesh.uvs !== null);
   const uvs: number[] = [];
+  const keepColors = meshes.some((mesh) => mesh.colors !== undefined);
+  const colors: number[] = [];
   for (const mesh of meshes) {
     const base = positions.length / 3;
     const count = mesh.positions.length / 3;
     for (const value of mesh.positions) positions.push(value);
     if (keepNormals) for (const value of mesh.normals!) normals.push(value);
     if (keepUvs) for (const value of mesh.uvs!) uvs.push(value);
+    if (keepColors)
+      for (let index = 0; index < mesh.positions.length; ++index)
+        colors.push(mesh.colors === undefined ? 1 : mesh.colors[index]!);
     if (mesh.indices === null)
       for (let index = 0; index < count; ++index) indices.push(index + base);
     else for (const index of mesh.indices) indices.push(index + base);
@@ -1252,6 +1260,7 @@ export const mergeAutoMovieMeshes = (
     positions,
     normals: keepNormals ? normals : null,
     uvs: keepUvs ? uvs : null,
+    ...(keepColors ? { colors } : {}),
     indices,
     skin: null,
   };
@@ -1264,6 +1273,7 @@ export const mergeAutoMovieMeshes = (
  * non-uniform scale does not tilt them off the surface), and a mirroring scale
  * flips triangle winding so the outward face stays outward. UVs ride along
  * untouched, because a placement moves a surface without re-cutting its atlas.
+ * Linear RGB follows the same vertex identities and is copied unchanged.
  *
  * That is what makes a placed member's coordinates local rather than global,
  * and it is the one thing to know before rotating an atlas-bearing member.
@@ -1350,6 +1360,7 @@ export const transformAutoMovieMesh = (
     positions,
     normals: mesh.normals === null ? null : normals,
     uvs: mesh.uvs === null ? null : [...mesh.uvs],
+    ...(mesh.colors === undefined ? {} : { colors: [...mesh.colors] }),
     indices,
     skin: null,
   };
@@ -1424,7 +1435,8 @@ export const inspectAutoMovieMeshTopology = (
   const nonFinite =
     countNonFinite(mesh.positions) +
     countNonFinite(mesh.normals) +
-    countNonFinite(mesh.uvs);
+    countNonFinite(mesh.uvs) +
+    countNonFinite(mesh.colors ?? null);
   const indices = triangleIndicesOf(mesh, "mesh topology");
   const key = (at: number): string =>
     [0, 1, 2]

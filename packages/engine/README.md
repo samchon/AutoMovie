@@ -1,5 +1,7 @@
 # `@automovie/engine`
 
+`polygonIsSimple` exposes the shared metre-space planar self-intersection predicate. Facial fold admission uses it for transverse tissue curves, closed by an auxiliary edge below the curve. A simple section does not certify collision-free three-dimensional skin after attachment and subdivision.
+
 ## Deterministic film grammar
 
 `analyzeFilmGrammar` consumes shots in edited order and reports axis crossings,

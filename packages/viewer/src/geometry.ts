@@ -45,6 +45,8 @@ export const buildGeometry = (
   // same buffer that no material could ever address.
   if (mesh.uvs !== null)
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uvs, 2));
+  if (mesh.colors !== undefined)
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(mesh.colors, 3));
   if (mesh.indices !== null) geo.setIndex(mesh.indices);
   if (mesh.skin !== null) {
     geo.setAttribute(

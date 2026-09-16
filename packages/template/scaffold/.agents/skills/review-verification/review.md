@@ -65,3 +65,9 @@ What a fingerprint proves is narrow, and knowing its limit is what keeps a revie
 For a film or brief, a model nothing stages owes nothing here. The gate stays on what that delivery actually consumes, so an unused recipe is not review work.
 
 For a library, inspect the actual authored model, map, or building through views and measurements that answer its design claims. Record what was examined, what was observed, and what was corrected in the source evidence.
+
+## Final whole-production review
+
+After the required author boundaries and verification gates pass, review the complete declared production alone against its current source, contracts, compiled output and actual delivery artifacts. Include every active owner, dependency, source realization, evidence relationship, required observation and whole-work consequence. Read and inspect that entire surface before repairing the collected findings; a clean sample or an earlier boundary review does not cover omitted work.
+
+Repair every sound finding at its earliest owner, regenerate affected output, renew invalidated evidence from fresh observations and run the applicable gates again. Any edit restarts the complete review and clears the clean-round count. Finish only after two consecutive complete rounds find no sound improvement and make no edit. Report the exact reviewed revision and population, verification results, resolved findings and any remaining limitation in the production's normal evidence and Git record. Completion of this review does not imply human approval or authorize publication beyond the user's request.

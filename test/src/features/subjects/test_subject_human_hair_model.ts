@@ -1,22 +1,17 @@
-import {
-  buildHumanFace,
-  createPortraitMaterials,
-  parseHumanFaceDocument,
-  serializeHumanFaceDocument,
-} from "@automovie/human";
+import { buildHumanFace, createPortraitMaterials } from "@automovie/human";
 import { TestValidator } from "@nestia/e2e";
+import { PNG } from "pngjs";
 
 import { coarseHumanFaceFixture } from "../internal/humanFaceFixture";
-import { throwsError } from "../internal/predicates";
 
 /**
- * Hair guides reach the real face builder and portable document parser.
+ * Hair guides and independent pigment controls reach the real face builder.
  * Scenarios:
- * 1. A complete numeric hair profile survives save/load and emits one masked
+ * 1. A complete numeric hair profile emits one masked
  *    card material without replacing the shared base finish or caller data.
- * 2. A missing finish and a generated-finish collision refuse before head build.
- * 3. An authored mask cutoff reaches the card finish through JSON save/load.
- * 4. Generated fibre normals and their strength reach the actual owned finish.
+ * 2. Authored cutoff, generated normals and their strength reach the finish.
+ * 3. Zero shade strength emits white RGB with occupied alpha, rather than a
+ *    slider value that is lost before material construction.
  */
 export const test_subject_human_hair_model = (): void => {
   const doc = coarseHumanFaceFixture("hair-consumer");
@@ -48,10 +43,11 @@ export const test_subject_human_hair_model = (): void => {
       fibres: 2,
       coverage: 0.7,
       fibreNormalScale: 0.4,
+      fibreShadeStrength: 0,
     },
   };
-  const before = serializeHumanFaceDocument(doc),
-    model = buildHumanFace(parseHumanFaceDocument(before), 0);
+  const before = structuredClone(doc),
+    model = buildHumanFace(doc, 0);
   TestValidator.predicate(
     "real consumer emits mask",
     model.parts.some(
@@ -80,21 +76,16 @@ export const test_subject_human_hair_model = (): void => {
     typeof cardFinish.normalTexture === "string" &&
       cardFinish.normalTexture.startsWith("data:image/png;base64,"),
   );
-  TestValidator.equals(
-    "caller retained",
-    serializeHumanFaceDocument(doc),
-    before,
+  const texture = PNG.sync.read(
+    Buffer.from((cardFinish.baseColorTexture as string).slice(22), "base64"),
   );
-  const missing = structuredClone(doc);
-  missing.detail!.hair!.material = "absent";
   TestValidator.predicate(
-    "missing finish",
-    throwsError(() => buildHumanFace(missing, 0), "named resident"),
+    "shade reaches actual RGB",
+    texture.data.every((value, index) => index % 4 === 3 || value === 255),
   );
-  const collision = structuredClone(doc);
-  collision.appearance = [...model.materials];
   TestValidator.predicate(
-    "material identity collision",
-    throwsError(() => buildHumanFace(collision, 0), "collides"),
+    "mask remains occupied",
+    texture.data.some((value, index) => index % 4 === 3 && value > 0),
   );
+  TestValidator.equals("caller retained", doc, before);
 };

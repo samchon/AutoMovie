@@ -1,7 +1,7 @@
 import { createPortraitEyeComponent } from "@automovie/human/components/eyes";
 import { TestValidator } from "@nestia/e2e";
 
-import { portraitEyeShape } from "../../subjects/generated-korean-girl-01/configuration";
+import { portraitEyeShapeFixture } from "../internal/portraitEyeShapeFixture";
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
@@ -11,6 +11,7 @@ import { nclose, throwsError } from "../internal/predicates";
  * 2. Removing the surrounding skin makes the same expanded attachment refuse.
  */
 export const test_subject_eyelid_support = (): void => {
+  const portraitEyeShape = portraitEyeShapeFixture();
   const positions = [
     [-2, 0],
     [0, 1],

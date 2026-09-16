@@ -1,4 +1,19 @@
+import { polygonIsSimple } from "@automovie/engine";
+
+import {
+  type IPortraitEyePerformance,
+  assertPortraitEyePerformance,
+} from "./eyePerformance";
 import { createPortraitLidSectionSampler } from "./lidSection";
+
+const roles = [
+  "margin",
+  "tarsal",
+  "creaseInner",
+  "creaseOuter",
+  "hood",
+  "preseptal",
+] as const;
 
 /**
  * One visible upper-lid tissue station over the ocular-to-skin support bridge.
@@ -16,12 +31,13 @@ export interface IPortraitUpperLidPoint {
 
 /**
  * Upper tissue from the dry margin through the tarsal body and supratarsal
- * crease into the hood and preseptal transition. Offsets increase strictly in
- * this order; separate projections control a shallow fold or a prominent hood
- * without adding the basic fold depth or tarsal volume a second time.
+ * crease into the hood and preseptal transition. The ordinary profile orders
+ * all offsets strictly. A profile with explicit closed sections can return
+ * the hood across the crease, while retaining a simple transverse skin curve.
+ * Relief replaces the basic fold depth and volume rather than adding them twice.
  * @author Samchon
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Names independent margin, tarsal, crease, hood and preseptal surface controls.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines six ordered upper tissue stations ending at a live host-skin attachment.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Defines six named upper tissue stations with a live host-skin attachment and an explicit folded-profile alternative.
  */
 export interface IPortraitUpperLidSection {
   /** Narrow dry margin outside the ocular contact rim. */
@@ -32,7 +48,7 @@ export interface IPortraitUpperLidSection {
   creaseInner: IPortraitUpperLidPoint;
   /** Upper bank of the crease before the overlying hood. */
   creaseOuter: IPortraitUpperLidPoint;
-  /** Visible hood edge above the crease. */
+  /** Visible hood edge; only an explicitly unfolding profile permits its inward return. */
   hood: IPortraitUpperLidPoint;
   /** Broader continuation toward orbital skin. */
   preseptal: IPortraitUpperLidPoint;
@@ -58,21 +74,117 @@ export interface IPortraitUpperLidProfile {
     /** Complete transverse tissue section at this witness. */
     section: IPortraitUpperLidSection;
   }[];
+  /**
+   * Optional fully closed, unfolded sections at exactly the same witnesses and
+   * with unchanged attachment distances. Selecting them admits an inward hood
+   * return in the observed sections. Current closure interpolates from those
+   * observed sections; opening farther extrapolates and must remain valid.
+   * Omission retains strictly ordered observed sections and prior performance.
+   */
+  closedSections?: IPortraitUpperLidProfile["sections"];
 }
 
 /**
  * Own and interpolate upper tissue without duplicating the lower lid's numerical
- * interpolation. Shared convex smoothstep preserves the order of all six rows;
- * the eye consumes each returned section for attachment and visible geometry.
+ * interpolation. Shared smoothstep interpolates each longitudinal witness.
+ * Explicit closed sections permit a returning hood and supply its unfolding
+ * target without changing the outer skin attachment or station identities.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-anatomical-components Supplies the eye's independent upper tissue section from authored anatomical witnesses.
- * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Validates and copies the upper profile through the common order-preserving lid sampler.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Keeps the ordinary ordered sampler and validates explicit folded transverse sections with a fixed outer attachment.
+ * @evidence requirements/actors/facial-authoring/contract.md#actor-face-expression Unfolds the same named upper tissue stations from observed closure toward an authored closed section.
+ * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-expression Uses observed-relative closure without changing optical dimensions or inferring hidden tissue from a photograph.
  */
 export function createPortraitUpperLidProfile(
   input: IPortraitUpperLidProfile,
+  performance?: IPortraitEyePerformance,
 ): (at: number) => IPortraitUpperLidSection {
-  return createPortraitLidSectionSampler(
+  if (input.closedSections === undefined)
+    return createPortraitLidSectionSampler(input.sections, roles, "Upper-lid");
+  if (performance !== undefined) assertPortraitEyePerformance(performance);
+  const observed = createPortraitLidSectionSampler(
     input.sections,
-    ["margin", "tarsal", "creaseInner", "creaseOuter", "hood", "preseptal"],
+    roles,
+    "Upper-lid",
+    assertFoldedSection,
+  );
+  const closed = createPortraitLidSectionSampler(
+    input.closedSections,
+    roles,
     "Upper-lid",
   );
+  if (
+    input.sections.length !== input.closedSections.length ||
+    input.sections.some(
+      (witness, i) =>
+        witness.at !== input.closedSections![i].at ||
+        witness.section.attachment !==
+          input.closedSections![i].section.attachment,
+    )
+  )
+    throw new Error(
+      "Upper-lid unfolding needs the same witnesses and fixed attachment distances.",
+    );
+  const closure =
+    performance === undefined
+      ? 0
+      : (performance.blink - performance.observedBlink) /
+        (1 - performance.observedBlink);
+  if (closure === 0) return observed;
+  return (at) => {
+    const from = observed(at),
+      to = closed(at);
+    for (const role of roles) {
+      from[role].offset += closure * (to[role].offset - from[role].offset);
+      from[role].projection +=
+        closure * (to[role].projection - from[role].projection);
+    }
+    assertFoldedSection(from);
+    return from;
+  };
+}
+
+/** Check the explicit transverse skin curve, not a head-wide collision claim. */
+function assertFoldedSection(section: IPortraitUpperLidSection): void {
+  let previous = 0;
+  for (const role of roles) {
+    const point = section[role];
+    if (
+      !Number.isFinite(point.offset) ||
+      !Number.isFinite(point.projection) ||
+      point.offset <= 0 ||
+      point.offset >= section.attachment
+    )
+      throw new Error(
+        "Upper-lid folded tissue must remain finite inside its attachment.",
+      );
+    if (role === "hood") continue;
+    if (point.offset <= previous)
+      throw new Error(
+        "Upper-lid folding only permits the hood to return inward.",
+      );
+    previous = point.offset;
+  }
+  if (
+    section.hood.offset <= section.margin.offset ||
+    section.hood.offset >= section.preseptal.offset
+  )
+    throw new Error(
+      "Upper-lid hood must remain between margin and preseptal skin.",
+    );
+  const floor =
+    Math.min(0, ...roles.map((role) => section[role].projection)) - 1;
+  // Close below the entire tissue curve. This auxiliary edge is only for the
+  // engine's shared metre-space intersection predicate; it is never rendered.
+  const polygon = [
+    { x: 0, y: 0 },
+    ...roles.map((role) => ({
+      x: section[role].offset / 1000,
+      y: section[role].projection / 1000,
+    })),
+    { x: section.attachment / 1000, y: 0 },
+    { x: section.attachment / 1000, y: floor / 1000 },
+    { x: 0, y: floor / 1000 },
+  ];
+  if (!polygonIsSimple(polygon))
+    throw new Error("Upper-lid folded tissue must not cross or touch itself.");
 }

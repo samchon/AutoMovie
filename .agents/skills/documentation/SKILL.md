@@ -26,6 +26,14 @@ Source JSDoc is English, in the interia voice: state what the type or function i
 
 When a public export participates in the committed contract graph, preserve and revise its citations under the [evidence graph skill](../evidence-graph/SKILL.md). This skill owns the prose and comment form; the evidence graph skill owns the cited layers and reachability.
 
+### Logic-file context
+
+Every authored logic source file must explain enough context within that file for a reader to understand its purpose without reconstructing the conversation or reading a private worklog. Provide a module-level explanation of the responsibility, actual entry points and consumers, inputs and outputs, ownership and mutation rules, processing order, and the reason that order matters. State units, coordinate frames, sign conventions, formula assumptions and degeneracies where they apply. For other domains, explain the corresponding state, protocol or execution assumptions rather than adding irrelevant geometry prose.
+
+Explain the non-obvious calculation and its derivation or source beside the code that owns it. Distinguish the invariants this module establishes from preconditions supplied by callers and limitations it does not solve. Name downstream consequences of changing a shared result, including which derived data becomes stale. A test or external link can provide additional evidence, but cannot replace the explanation of what this file does and why.
+
+Keep shared contracts at their canonical owner. A caller explains its role in that contract and links to the owner instead of copying another implementation or its full documentation. Sufficient local context and one semantic owner are complementary: the file explains its own responsibility, not every dependency's internals. The development skill's [Logic source structure](../development/SKILL.md#logic-source-structure) owns file size and decomposition; reduce responsibility rather than explanation when both obligations cannot fit.
+
 ## Agent instructions
 
 `AGENTS.md` and `SKILL.md` files are operational documents for humans and agents. `AGENTS.md ## Maintenance` decides where a rule belongs; these rules decide how it is written. A revision should read as if it had always been there.

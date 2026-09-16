@@ -13,7 +13,9 @@ import {
   createPortraitFacialFrame,
   resolvePortraitFacialFrameShape,
 } from "./components/facialFrame";
+import type { IPortraitHairShape } from "./components/hairCards";
 import { createPortraitMaterials } from "./components/materials";
+import { resolvePortraitSkinShape } from "./components/skinShape";
 import { applyHumanFaceControls } from "./humanFaceControls";
 import { resolveHumanFaceExpression } from "./humanFaceExpression";
 import { mergeHumanFaceSettings } from "./mergeHumanFaceSettings";
@@ -23,6 +25,8 @@ import { mergeHumanFaceSettings } from "./mergeHumanFaceSettings";
  * intermediate traits, explicit detailed overrides, then independent sides.
  * Observed and current expressions remain separate resolved records. This
  * numerical stage does not fetch, fit a photo, tessellate or accept likeness.
+ * An explicit switch between final nasal shape alternatives replaces that
+ * payload; partial fields within one alternative keep ordinary inheritance.
  *
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-document Resolves one standalone face without person-specific package defaults.
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement Gives defaults, arrays, detailed overrides and side profiles one deterministic precedence.
@@ -134,8 +138,31 @@ export function resolveHumanFaceDocument(input: IAutoMovieHumanFaceDocument) {
     applyHumanFaceControls(baseline, chinY, document.controls),
     document.detail,
   );
-  if (recipe.hair !== undefined && recipe.hair.fibreNormalScale === undefined)
-    recipe.hair.fibreNormalScale = 0;
+  const nasalOverride = document.detail?.nose?.body?.shape;
+  const nasalBasis = baseline.nose.body?.shape;
+  if (nasalOverride !== undefined && nasalBasis !== undefined) {
+    // A new alternative replaces the old shape's complete payload. Within the
+    // same alternative, ordinary detailed-field inheritance still applies.
+    // Ambiguous inputs remain ambiguous for geometry admission to refuse.
+    const keys = ["stations", "section", "lobules"] as const;
+    const incoming = keys.filter((key) => key in nasalOverride);
+    const inherited = keys.filter((key) => key in nasalBasis);
+    if (
+      incoming.length === 1 &&
+      inherited.length === 1 &&
+      incoming[0] !== inherited[0]
+    )
+      recipe.nose.body!.shape = structuredClone(nasalOverride) as NonNullable<
+        IAutoMovieHumanFaceRecipe["nose"]["body"]
+      >["shape"];
+  }
+  recipe.skin = resolvePortraitSkinShape(recipe.skin);
+  if (recipe.hair !== undefined) recipe.hair = resolveHair(recipe.hair);
+  if (recipe.hairLayers !== undefined)
+    recipe.hairLayers = recipe.hairLayers.map((layer) => ({
+      ...layer,
+      profile: resolveHair(layer.profile),
+    }));
   const side = (name: "right" | "left") => ({
     eye: mergeHumanFaceSettings(recipe.eye, document.asymmetry?.[name]?.eye),
     ear: mergeHumanFaceSettings(recipe.ear!, document.asymmetry?.[name]?.ear),
@@ -164,6 +191,18 @@ export function resolveHumanFaceDocument(input: IAutoMovieHumanFaceDocument) {
   if (recipe.lowerDentition !== undefined && bindings.jawHinge === undefined)
     throw new Error("Mandibular dentition requires an explicit jaw hinge.");
   const expression = resolveHumanFaceExpression(document.expression);
+  if (recipe.tongue !== undefined && bindings.jawHinge === undefined)
+    throw new Error("A tongue profile requires an explicit jaw hinge.");
+  if (
+    recipe.tongue === undefined &&
+    [
+      observation.tongueRaise,
+      observation.tongueAdvance,
+      expression.tongueRaise,
+      expression.tongueAdvance,
+    ].some((v) => v !== 0)
+  )
+    throw new Error("Tongue performance requires an explicit tongue profile.");
   if (observation.blink.right > 0.95 || observation.blink.left > 0.95)
     throw new Error(
       "A fully hidden observed eye cannot determine its neutral aperture.",
@@ -180,5 +219,17 @@ export function resolveHumanFaceDocument(input: IAutoMovieHumanFaceDocument) {
     materials: structuredClone(
       document.appearance ?? createPortraitMaterials(),
     ),
+  };
+}
+
+/** Defaults belong to each applied profile, never to an aliased authored object. */
+function resolveHair(shape: IPortraitHairShape): IPortraitHairShape {
+  return {
+    ...shape,
+    fibreNormalScale:
+      shape.fibreNormalScale === undefined ? 0 : shape.fibreNormalScale,
+    taperStart: shape.taperStart === undefined ? 0 : shape.taperStart,
+    fibreShadeStrength:
+      shape.fibreShadeStrength === undefined ? 1 : shape.fibreShadeStrength,
   };
 }

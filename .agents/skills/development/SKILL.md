@@ -9,6 +9,7 @@ description: Defines automovie implementation rules, testing standards (pure uni
 
 - [Forbidden](#forbidden)
 - [Work Rules](#work-rules)
+- [Logic source structure](#logic-source-structure)
 - [Consequence Analysis](#consequence-analysis)
 - [Testing](#testing)
 - [Coverage is 100% on what you write](#coverage-is-100-on-what-you-write)
@@ -36,6 +37,14 @@ These four are never acceptable; choosing any one means the approach is already 
 - **A configured check is not a running check until it has been made to fail.** A guard you disabled and restored is armed by definition; a guard configured by a selector may never have been armed at all, and it reports the same green either way. The former scaffold graph config carried a claim binding every shot to the script scene it realizes, with `symbol: "function"`. A shot is `export const opening = defineShot(...)`, a `const` initialized with a call, which `@ttsc/evidence` classifies as a `property`. The claim selected no host, a claim with an empty host population is dropped before its references are read, and deleting **every** citation it was supposed to require still reported PASS. It had enforced nothing since the day it was written. The same shape has already cost this repository twice more: a lint probe with no `package.json` produced no diagnostics for anything, and a CI workflow reported success having run zero steps. So when you add or inherit a lint rule, an evidence claim, a coverage threshold, or a CI job, delete the thing it is supposed to catch and watch it go red before you believe the green. Where the check has a population, count what it selected rather than trusting that it selected anything. Read a gate by its exit code and its own output, never by a number you derived from it: one owner's harness captured the run into a variable, consulted `$?` after that capture, and reported `errors=0` for a run that exited 2, so a red evidence graph was recorded as green until an unrelated `pnpm pack` failed on the same two diagnostics. A derived count that disagrees with an exit code is not a measurement, it is a false witness.
 - Run `pnpm run format` before every commit and stage the result; never commit unformatted output. That script writes across the whole repository, so when you share a checkout with other agents use `pnpm run format:check` and format only your own paths instead; the [issue-campaign rules](../issue-campaign/development.md#implement-in-parallel) own that case.
 - Update the matching `.wiki/` doc in the same change when behavior, architecture, or a decision changes (see `documentation/SKILL.md`).
+
+## Logic source structure
+
+Every authored source file containing logic is limited to 500 physical lines, including comments and blank lines. This applies to library code, application code, scripts and test logic. A file that mixes declarations or data with logic still owes the same limit. Do not compress statements, remove necessary explanation, change formatting or move executable logic into nominal data files to evade it.
+
+Split by cohesive responsibility and explicit inputs and outputs. Keep one owner for each formula, boundary and mutable state transition, with a small orchestrator naming their order. A forwarding chain that only redistributes lines does not establish those responsibilities. Preserve public behavior and the real consumer path during a split, and apply the existing per-change test obligation to the extracted code.
+
+Each logic file also owes the documentation skill's [Logic-file context](../documentation/SKILL.md#logic-file-context). The size limit never excuses missing context. Existing oversized files are unresolved violations, not precedents or exemptions; identify them in the task's consequence surface and do not report that surface as compliant until they are resolved.
 
 ## Consequence Analysis
 

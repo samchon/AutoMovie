@@ -9,6 +9,7 @@ import { humanFaceFixture } from "../internal/humanFaceFixture";
  * Scenarios:
  * 1. A non-Error read rejection is displayed and retains the previous document.
  * 2. A valid text payload loads a new document and clears the file selection.
+ *    Unknown IDs leave no catalogue selection; a known imported ID selects itself.
  */
 export const test_subject_human_panel_load = async (): Promise<void> => {
   const f = createHumanPanelFixture();
@@ -54,5 +55,19 @@ export const test_subject_human_panel_load = async (): Promise<void> => {
     "loaded",
   );
   TestValidator.equals("selection cleared", loaded.value, "");
+  TestValidator.equals(
+    "import cannot retain another subject label",
+    f.element<HTMLSelectElement>("face-subject").value,
+    "",
+  );
+  loaded.files[0].text = async () => JSON.stringify(humanFaceFixture("second"));
+  await file.onchange!.call(file, {
+    currentTarget: loaded,
+  } as unknown as Event);
+  TestValidator.equals(
+    "known imported subject is selected",
+    f.element<HTMLSelectElement>("face-subject").value,
+    "second",
+  );
   f.dom.window.close();
 };

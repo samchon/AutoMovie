@@ -6,6 +6,8 @@ import type { IControlMesh } from "./subdivideControlMesh";
  * The append operation receives the actual oriented boundary and preserves its
  * resident vertex identities. It adds source geometry and its joining faces;
  * it does not move or remove surviving host vertices or unrelated faces.
+ * An appender also extends any resident reference/RGB attributes in the same
+ * vertex order. The head assembler pairs current and reference appenders.
  *
  * @author Samchon
  * @evidence requirements/actors/facial-authoring/contract.md#actor-face-controls-replacement Assigns a component a reserved refined-skin region and its owned appended geometry.
@@ -53,6 +55,12 @@ export function applyPortraitRegionReplacements(
     positions: mesh.positions.map((p) => [...p]),
     indices: [],
     groups: [],
+    ...(mesh.reference === undefined
+      ? {}
+      : { reference: mesh.reference.map((p) => [...p]) }),
+    ...(mesh.colors === undefined
+      ? {}
+      : { colors: mesh.colors.map((p) => [...p]) }),
   };
   for (let face = 0; face < mesh.groups.length; face++)
     if (!groups.has(mesh.groups[face])) {
@@ -61,5 +69,13 @@ export function applyPortraitRegionReplacements(
     }
   for (const { replacement, boundary } of plans)
     replacement.append(cage, boundary);
+  if (
+    (cage.reference !== undefined &&
+      cage.reference.length !== cage.positions.length) ||
+    (cage.colors !== undefined && cage.colors.length !== cage.positions.length)
+  )
+    throw new Error(
+      "A replacement must preserve aligned reference and colour attributes.",
+    );
   return cage;
 }

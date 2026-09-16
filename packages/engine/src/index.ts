@@ -1,6 +1,7 @@
 export * from "./math";
 export * from "./analysis";
 export * from "./architecture";
+export { polygonIsSimple } from "./architecture/planarGeometry";
 export * from "./drawing";
 export * from "./text";
 export * from "./film";

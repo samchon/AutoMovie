@@ -49,5 +49,9 @@ packages/template/scaffold/*.js.map
 test/src/**/*.js
 test/src/**/*.js.map
 test/src/**/*.d.ts
+# Portable studies share that native TypeScript program and emission behavior.
+test/studies/**/*.js
+test/studies/**/*.js.map
+test/studies/**/*.d.ts
 # One-off measurement scratch, never part of the suite.
 test/src/probe.ts

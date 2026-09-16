@@ -6,8 +6,17 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const subjects = ["generated-korean-girl-01"];
 const sharedSources = [
   "src/subjects/**/*.ts",
-  "!src/subjects/human-face-documents/**/*.ts",
   ...subjects.map((subject) => `!src/subjects/${subject}/**/*.ts`),
+];
+// Domain review carriers remain attached to the root construction record.
+// Match their explicit suffix, so a future preview.ts is still source to review.
+const studyReviews = [
+  "studies/human-face/review.ts",
+  "studies/human-face/**/*-review.ts",
+];
+const studySources = [
+  "studies/human-face/**/*.ts",
+  ...studyReviews.map((file) => `!${file}`),
 ];
 
 /**
@@ -50,7 +59,10 @@ const graph: ITtscEvidenceGraphConfig = {
       {
         name: `${subject}: reviewed construction basis`,
         type: "typescript" as const,
-        files: [`src/subjects/${subject}/review.ts`],
+        files: [
+          `src/subjects/${subject}/review.ts`,
+          `src/subjects/${subject}/**/*-review.ts`,
+        ],
         symbol: "property" as const,
         reference: [
           {
@@ -60,6 +72,7 @@ const graph: ITtscEvidenceGraphConfig = {
               ...sharedSources,
               `src/subjects/${subject}/**/*.ts`,
               "!src/subjects/**/review.ts",
+              `!src/subjects/${subject}/**/*-review.ts`,
             ],
             symbol: ["type", "function", "property"],
             noEvidenceExclude: true,
@@ -74,6 +87,19 @@ const graph: ITtscEvidenceGraphConfig = {
             requireReview: true,
           },
         ],
+      },
+      {
+        name: `${subject}: construction review retains domain inspections`,
+        type: "typescript" as const,
+        files: [`src/subjects/${subject}/review.ts`],
+        symbol: "property" as const,
+        reference: {
+          type: "typescript" as const,
+          files: [`src/subjects/${subject}/**/*-review.ts`],
+          symbol: "property" as const,
+          requireReview: true,
+          noEvidenceExclude: true,
+        },
       },
       {
         name: `${subject}: model retains its review carrier`,
@@ -92,15 +118,12 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "portable face studies retain every per-person observation",
       type: "typescript",
-      files: [
-        "src/subjects/human-face-documents/**/*.ts",
-        "!src/subjects/human-face-documents/**/review.ts",
-      ],
+      files: studySources,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
-          files: ["src/subjects/human-face-documents/review.md"],
+          files: ["studies/human-face/review.md"],
           symbol: "h2",
           checklist: true,
           noEvidenceExclude: true,
@@ -108,7 +131,7 @@ const graph: ITtscEvidenceGraphConfig = {
         },
         {
           type: "markdown",
-          files: ["src/subjects/human-face-documents/review.md"],
+          files: ["studies/human-face/review.md"],
           symbol: "h2",
           checklist: true,
           noEvidenceExclude: true,
@@ -120,14 +143,11 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "portable face studies retain their construction review",
       type: "typescript",
-      files: [
-        "src/subjects/human-face-documents/**/*.ts",
-        "!src/subjects/human-face-documents/**/review.ts",
-      ],
+      files: studySources,
       symbol: ["type", "function", "property"],
       reference: {
         type: "typescript",
-        files: ["src/subjects/human-face-documents/review.ts"],
+        files: ["studies/human-face/review.ts"],
         symbol: "property",
         singleEvidencePerSymbol: true,
         noEvidenceExclude: true,
@@ -136,7 +156,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "portable face construction source is inspected",
       type: "typescript",
-      files: ["src/subjects/human-face-documents/review.ts"],
+      files: studyReviews,
       symbol: "property",
       reference: [
         {
@@ -149,10 +169,7 @@ const graph: ITtscEvidenceGraphConfig = {
         },
         {
           type: "typescript",
-          files: [
-            "src/subjects/human-face-documents/**/*.ts",
-            "!src/subjects/human-face-documents/**/review.ts",
-          ],
+          files: studySources,
           symbol: ["type", "function", "property"],
           noEvidenceExclude: true,
           requireReview: true,
@@ -160,9 +177,22 @@ const graph: ITtscEvidenceGraphConfig = {
       ],
     },
     {
+      name: "portable face construction review retains its domain inspections",
+      type: "typescript",
+      files: ["studies/human-face/review.ts"],
+      symbol: "property",
+      reference: {
+        type: "typescript",
+        files: ["studies/human-face/**/*-review.ts"],
+        symbol: "property",
+        requireReview: true,
+        noEvidenceExclude: true,
+      },
+    },
+    {
       name: "portable face studies retain the provenance and review contract",
       type: "typescript",
-      files: ["src/subjects/human-face-documents/**/*.ts"],
+      files: ["studies/human-face/**/*.ts"],
       symbol: ["type", "function", "property"],
       reference: [
         {

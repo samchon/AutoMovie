@@ -4,7 +4,7 @@ import type {
 } from "../IAutoMovieHumanFaceDocument";
 import type { IPortraitComponent } from "../geometry/portraitComponents";
 import { resolveHumanFaceExpression } from "../humanFaceExpression";
-import { posePortraitJawPoint } from "./jawPerformance";
+import { portraitJawSkinWeight, posePortraitJawPoint } from "./jawPerformance";
 import { portraitLipTriangles } from "./mouth";
 
 /**
@@ -54,20 +54,17 @@ export function createPortraitFacePerformanceComponent(
         const middle = (curve: number[]) =>
           host.positions[curve[Math.floor(curve.length / 2)]];
         const upperY = middle(bindings.mouth.upper)[1];
-        const transition = Math.max(
-          4,
-          upperY - middle(bindings.mouth.lower)[1],
-        );
+        const lowerY = middle(bindings.mouth.lower)[1];
         for (const id of new Set(host.indices)) {
           if (lipVertices.has(id)) continue;
           const point = host.positions[id];
-          const t = Math.max(0, Math.min(1, (upperY - point[1]) / transition));
-          if (t === 0) continue;
+          const weight = portraitJawSkinWeight(point[1], upperY, lowerY);
+          if (weight === 0) continue;
           const moved = posePortraitJawPoint(
             { x: point[0], y: point[1], z: point[2] },
             bindings.jawHinge!,
             jaw,
-            t * t * (3 - 2 * t),
+            weight,
           );
           constraints.set(id, {
             vertex: id,

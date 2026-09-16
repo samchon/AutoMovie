@@ -18,7 +18,12 @@ export function createPortraitHairMaterial(
   finish: IAutoMovieMaterial,
   shape: Pick<
     IPortraitHairShape,
-    "seed" | "fibres" | "coverage" | "fibreNormalScale"
+    | "seed"
+    | "fibres"
+    | "coverage"
+    | "fibreNormalScale"
+    | "fibreCurl"
+    | "fibreShadeStrength"
   >,
 ): IAutoMovieMaterial {
   const scale =
@@ -37,6 +42,8 @@ export function createPortraitHairMaterial(
       shape.seed,
       shape.fibres,
       shape.coverage,
+      shape.fibreCurl,
+      shape.fibreShadeStrength,
     ),
     ...(scale === 0
       ? {}
@@ -45,6 +52,7 @@ export function createPortraitHairMaterial(
             shape.seed,
             shape.fibres,
             shape.coverage,
+            shape.fibreCurl,
           ),
           normalScale: scale,
         }),

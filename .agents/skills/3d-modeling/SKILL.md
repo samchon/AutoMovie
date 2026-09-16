@@ -11,6 +11,8 @@ A figure must carry readable structure: joints obey range-of-motion limits, feet
 
 Facial work uses the anatomical components and numerical documents in [`packages/human`](../../../packages/human/README.md). Its contract does not replace the engine's independent actor, rig or expression vocabulary.
 
+Before investigating, planning or changing numerical facial likeness, components or their interactions, read [Human face investigation](human-face.md). It owns the whole-face diagnosis and cause-group experiment procedure; package use remains in the README and product promises remain in the linked contracts.
+
 What this skill governs is everything the product does model: procedural geometry, spaces and boundaries, rigs and skeletons, morph and expression channels, gait and motion tables, ingested assets, and every value derived from them.
 
 ## Measure before you conclude

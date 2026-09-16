@@ -100,6 +100,7 @@ export function applyPortraitFinalSurfaces(
     }
   if (targets.size === 0) return mesh;
   return {
+    ...mesh,
     positions: mesh.positions.map(
       (point, id) => targets.get(id)?.point ?? [...point],
     ),

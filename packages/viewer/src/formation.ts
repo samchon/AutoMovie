@@ -723,6 +723,37 @@ const flattenRigidParts = (
     geometries.push(flattened);
     materials.push(mesh.material);
   });
+  // Mixed colour presence has a defined identity, unlike a missing UV layout.
+  // Normalize imported integer/interleaved RGB(A) to one Float32 layout and
+  // fill bare vertices (and RGB alpha) with one. Only owned clones are changed.
+  let colorSize = 0;
+  for (const geometry of geometries) {
+    const color = geometry.getAttribute("color");
+    if (color === undefined) continue;
+    if (
+      (color.itemSize !== 3 && color.itemSize !== 4) ||
+      color.count !== geometry.getAttribute("position").count
+    )
+      throw new Error(`${owner} needs one RGB or RGBA colour per vertex.`);
+    colorSize = Math.max(colorSize, color.itemSize);
+  }
+  if (colorSize !== 0)
+    for (const geometry of geometries) {
+      const color = geometry.getAttribute("color");
+      const count = geometry.getAttribute("position").count;
+      const values = new Float32Array(count * colorSize).fill(1);
+      if (color !== undefined)
+        for (let vertex = 0; vertex < count; ++vertex)
+          for (let channel = 0; channel < color.itemSize; ++channel)
+            values[vertex * colorSize + channel] = color.getComponent(
+              vertex,
+              channel,
+            );
+      geometry.setAttribute(
+        "color",
+        new THREE.Float32BufferAttribute(values, colorSize),
+      );
+    }
   const geometry = mergeGeometries(geometries, true);
   if (geometry === null || materials.length === 0)
     throw new Error(`${owner} cannot be flattened for instancing.`);

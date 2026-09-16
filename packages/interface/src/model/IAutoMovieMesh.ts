@@ -48,6 +48,16 @@ export interface IAutoMovieMesh {
   uvs: number[] | null;
 
   /**
+   * Optional linear RGB multipliers `[r,g,b,...]`, one triple per vertex.
+   * Components are finite in [0,1]. Omission means white, without a buffer.
+   * These multiply material and texture base colour, never opacity or light.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Carries authored surface colour alongside the vertices of a freeform mesh.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Defines optional aligned linear RGB multipliers with explicit bounds and an identity default.
+   */
+  colors?: number[];
+
+  /**
    * Triangle indices into the vertex arrays (every 3 form one triangle). `null`
    * for a non-indexed mesh (vertices taken in order).
    *

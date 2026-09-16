@@ -205,18 +205,31 @@ export const buildModel = (
     }
   }
 
-  const materials = new Map(
-    model.materials.map(
-      (m) => [m.id, buildMaterial(m, resolveTexture)] as const,
-    ),
-  );
+  const definitions = new Map(model.materials.map((m) => [m.id, m]));
+  const materials = new Map<string, Map<boolean, THREE.MeshStandardMaterial>>();
   const parts = new Map<string, THREE.Object3D>();
   for (const part of model.parts) {
     const geo = buildGeometry(part.geometry);
-    const mat =
-      part.material !== null
-        ? (materials.get(part.material) ?? defaultMaterial())
-        : defaultMaterial();
+    const colored = geo.hasAttribute("color");
+    const definition =
+      part.material === null ? undefined : definitions.get(part.material);
+    let mat: THREE.MeshStandardMaterial;
+    if (definition === undefined) {
+      mat = defaultMaterial();
+      mat.vertexColors = colored;
+    } else {
+      let variants = materials.get(definition.id);
+      if (variants === undefined) {
+        variants = new Map();
+        materials.set(definition.id, variants);
+      }
+      const cached = variants.get(colored);
+      if (cached === undefined) {
+        mat = buildMaterial(definition, resolveTexture);
+        mat.vertexColors = colored;
+        variants.set(colored, mat);
+      } else mat = cached;
+    }
     const skin =
       part.attachedBone === null && part.geometry.type === "mesh"
         ? part.geometry.mesh.skin

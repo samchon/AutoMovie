@@ -253,6 +253,13 @@ export interface IPortraitNeckSection {
  * @evidence specifications/asset-and-representation/facial-authoring/contract.md#face-spec-components Supplies three ordered cervical sections for the shared head-to-neck surface.
  */
 export interface IPortraitNeckShape {
+  /**
+   * Anterior submental bulge in mm, from 0 through 40; omission is zero.
+   * Peaks halfway from collar to upper neck on the anterior meridian, fading
+   * with squared positive cosine laterally. Both ends retain their tangents.
+   * This authored surface envelope is not a measured fat thickness.
+   */
+  submentalProjection?: number;
   /** Upper cervical section below the complete cranial attachment. */
   upper: IPortraitNeckSection;
   /** Wider lower section above the crop. */
@@ -289,6 +296,10 @@ export function appendPortraitNeck(
   shape: IPortraitNeckShape = portraitNeckShape,
 ): number[] {
   const { positions, indices, groups } = cage;
+  const projection =
+    shape.submentalProjection === undefined ? 0 : shape.submentalProjection;
+  if (!Number.isFinite(projection) || projection < 0 || projection > 40)
+    throw new Error("Submental projection must be from zero through 40 mm.");
   const roots = collar.boundary.map((id) => positions[id]);
   if (
     roots.length < 3 ||
@@ -395,15 +406,27 @@ export function appendPortraitNeck(
     const t = row / 12,
       s = 1 - t;
     addRing(
-      roots.map((root, i) =>
-        root.map(
+      roots.map((root, i) => {
+        const point = root.map(
           (value, axis) =>
             value * s ** 3 +
             3 * handles[i].first[axis] * s * s * t +
             3 * handles[i].second[axis] * s * t * t +
             upper[i][axis] * t ** 3,
-        ),
-      ),
+        );
+        // A compact quartic adds only anterior volume and has zero value and
+        // derivative at both joins. Omission preserves the original arithmetic.
+        if (projection !== 0)
+          point[2] +=
+            projection *
+            16 *
+            t *
+            t *
+            s *
+            s *
+            Math.max(0, Math.cos(angles[i])) ** 2;
+        return point;
+      }),
     );
   }
   for (const [from, to, count] of [
